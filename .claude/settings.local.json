@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mysql:*)",
+      "Bash(node --version:*)",
+      "Bash(npm run build:*)",
+      "WebFetch(domain:www.intrasam.com)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d.get\\(''totalRecords'', d.get\\(''message'', d\\)\\)\\)\")",
+      "Bash(python3 -c \"import requests, pymysql; print\\(''OK''\\)\")",
+      "Bash(pip3 install pymysql requests -q)",
+      "Bash(pip3 install --break-system-packages pymysql requests -q)",
+      "Bash(__NEW_LINE_836beac046fe550f__ mysql -h 14.63.25.49 -u voomerang -psgsone bidding_agency --skip-ssl -e \":*)",
+      "Bash(python3 -c \":*)",
+      "Bash(# 백엔드 로그 파일 확인 ls -la /Users/sykim/Documents/GitHub/bidding-agency-platform/backend/logs/ || echo \"\"logs dir not found\"\" ls -la /Users/sykim/Documents/GitHub/bidding-agency-platform/backend/*.log || echo \"\"no log files\"\" # 프로세스 확인 ps aux)",
+      "Bash(TOKEN=\"eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJzeWtpbTE4NTBAZ21haWwuY29tIiwiaWF0IjoxNzcxOTE4NTI5LCJleHAiOjE3NzE5MTk0MjksImp0aSI6ImFiMGZiOWZkLTk5MTUtNDY2NC1hOGQ1LTRlYzVmOTAyZjQyMiJ9.CcTwliVt0KEFiEpz88yMer1ZDmJfpr0vrDy4Dla13j5cYPkKdNoUtyVlqMVi7FE30iRPcjnfgYWjaIhkT-S2rg\")",
+      "Bash(__NEW_LINE_6a9dcb6c1d939eea__ curl -s -X POST \"http://localhost:8088/api/admin/collection/trigger?daysBack=7\" -H \"Authorization: Bearer $TOKEN\" -H \"Content-Type: application/json\")"
+    ]
+  }
+}

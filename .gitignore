@@ -1,0 +1,102 @@
+# ====================================
+# SAM.gov Bidding Agency Platform
+# .gitignore
+# ====================================
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+
+# Backend (Java/Spring Boot)
+backend/target/
+backend/build/
+backend/.gradle/
+backend/gradle/
+backend/gradlew
+backend/gradlew.bat
+backend/out/
+backend/bin/
+backend/.idea/
+backend/*.iml
+backend/*.iws
+backend/*.ipr
+backend/.vscode/
+backend/logs/
+backend/*.log
+
+# Frontend (React/Vite)
+frontend/*/node_modules/
+frontend/*/dist/
+frontend/*/build/
+frontend/*/.vite/
+frontend/*/.env.local
+frontend/*/.env.*.local
+frontend/*/npm-debug.log*
+frontend/*/yarn-debug.log*
+frontend/*/yarn-error.log*
+frontend/*/pnpm-debug.log*
+frontend/*/lerna-debug.log*
+frontend/*/.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+*.log
+
+# Docker
+docker/init-scripts/*.sql
+docker/prometheus/data/
+
+# Secrets
+*.key
+*.pem
+*.p12
+*.jks
+*credentials*
+*secrets*
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~.nib
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Build artifacts
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+
+# Package files
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Test coverage
+coverage/
+*.lcov
+.nyc_output/
+
+# Misc
+*.pid
+*.seed
+*.pid.lock

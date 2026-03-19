@@ -1,0 +1,58 @@
+@import "tailwindcss";
+
+/* Professional corporate palette */
+@theme {
+  --color-navy:     #0c1e3d;   /* 브랜드 딥 네이비 */
+  --color-primary:  #0c1e3d;   /* 하위호환 */
+  --color-blue:     #1a56db;   /* 단일 액센트 블루 */
+  --color-secondary: #1a56db;  /* 하위호환 */
+  --color-surface:  #f5f7fa;   /* 페이지 배경 */
+  --color-border:   #e2e8f0;   /* 기본 테두리 */
+}
+
+:root {
+  --nav-height: 4rem;
+}
+
+body {
+  background: #f5f7fa;
+  color: #111827;
+  font-family: 'Pretendard', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 스크롤바 */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #f1f5f9; }
+::-webkit-scrollbar-thumb { background: #c8d0da; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* 네비게이션 그림자 */
+.nav-shadow {
+  box-shadow: 0 1px 0 0 #e2e8f0, 0 2px 8px 0 rgba(0,0,0,0.04);
+}
+
+/* 로딩 스피너 */
+@keyframes spinner {
+  to { transform: rotate(360deg); }
+}
+.loader {
+  border: 2px solid #e2e8f0;
+  border-top-color: #1a56db;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  animation: spinner 0.8s linear infinite;
+}
+
+/* 제안서 문서 */
+.proposal-doc {
+  background: white;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  padding: 3rem 4rem;
+  max-width: 800px;
+  margin: 0 auto;
+  border: 1px solid #e2e8f0;
+  font-family: 'Pretendard', 'Malgun Gothic', sans-serif;
+  line-height: 1.8;
+}

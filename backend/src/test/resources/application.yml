@@ -1,0 +1,41 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;MODE=MYSQL;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+  flyway:
+    enabled: false
+
+app:
+  jwt:
+    secret: test-secret-key-for-unit-tests-must-be-at-least-256-bits-long-1234567890
+    expiration: 900000
+    refresh-expiration: 604800000
+  sam-gov:
+    api-url: https://api.sam.gov/opportunities/v2/search
+    api-key: test-key
+    collection-cron: "-"
+  s3:
+    endpoint: http://localhost:9000
+    access-key: test
+    secret-key: test
+    bucket-name: test-bucket
+  llm-platform:
+    base-url: http://localhost:9999
+    workflows:
+      requirement-extraction: test-extraction
+      document-generation: test-generation
+  ai:
+    default-provider: openai
+
+logging:
+  level:
+    root: WARN
+    com.biddingagency: DEBUG

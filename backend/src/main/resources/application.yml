@@ -1,0 +1,222 @@
+spring:
+  application:
+    name: bidding-agency-platform
+
+  # Database Configuration (MySQL/MariaDB)
+  datasource:
+    url: ${DB_URL:jdbc:mysql://14.63.25.49:3306/bidding_agency?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useUnicode=true&useSSL=false&allowPublicKeyRetrieval=true}
+    username: ${DB_USERNAME:voomerang}
+    password: ${DB_PASSWORD:sgsone}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  # JPA Configuration
+  jpa:
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MariaDBDialect
+        format_sql: true
+        use_sql_comments: true
+        show_sql: false
+    open-in-view: false
+
+  # Flyway Migration
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+    validate-on-migrate: true
+
+  # Redis Configuration
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 2
+
+  # Servlet Multipart (File Upload)
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 50MB
+      max-request-size: 100MB
+
+# Logging
+logging:
+  level:
+    root: INFO
+    com.biddingagency: DEBUG
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/bidding-agency.log
+
+# Server Configuration
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    context-path: /api
+  compression:
+    enabled: true
+    mime-types: application/json,text/html,text/plain
+  error:
+    include-message: always
+    include-binding-errors: always
+
+# Actuator Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+# Swagger/OpenAPI Configuration
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    operations-sorter: method
+    tags-sorter: alpha
+
+# Application-Specific Configuration
+app:
+  # JWT Configuration
+  jwt:
+    secret: ${JWT_SECRET:your-secret-key-change-this-in-production-must-be-at-least-256-bits}
+    expiration: 900000  # 15 minutes (in milliseconds)
+    refresh-expiration: 604800000  # 7 days (in milliseconds)
+
+  # S3 Configuration (for document storage)
+  s3:
+    endpoint: ${S3_ENDPOINT:http://localhost:9000}  # MinIO endpoint
+    access-key: ${S3_ACCESS_KEY:minioadmin}
+    secret-key: ${S3_SECRET_KEY:minioadmin}
+    bucket-name: ${S3_BUCKET:bidding-agency}
+    region: ${S3_REGION:us-east-1}
+
+  # SAM.gov API Configuration
+  sam-gov:
+    api-url: https://api.sam.gov/opportunities/v2/search
+    api-key: ${SAM_GOV_API_KEY:your-api-key-here}
+    # Collection Schedule: 4 times daily (06:00, 12:00, 18:00, 23:00 KST)
+    collection-cron: "0 0 6,12,18,23 * * *"  # Spring @Scheduled cron expression
+    keywords:
+      main:
+        - "411th csb"
+      korea:
+        - "korea"
+      usfk-locations:
+        - "Camp Casey"
+        - "Osan AB"
+        - "Osan Air Base"
+        - "Kunsan AB"
+        - "Kunsan Air Base"
+        - "Camp Humphreys"
+        - "Humphreys"
+        - "Camp Henry"
+        - "USAG Daegu"
+        - "Camp Walker"
+        - "Camp Carroll"
+
+  # LLM Platform Configuration (Workflow 기반)
+  llm-platform:
+    base-url: ${LLM_PLATFORM_URL:http://localhost:9000}
+    connect-timeout: 5000     # 5 seconds
+    read-timeout: 300000      # 5 minutes (워크플로우 실행 포함)
+    polling:
+      interval-ms: 2000       # 폴링 간격 (2초)
+      max-attempts: 90        # 최대 폴링 횟수 (90 * 2초 = 3분)
+    workflows:
+      requirement-extraction: requirement-extraction
+      document-generation: bid-document-generation
+
+  # AI 설정 (자동화 + Multi-Provider)
+  ai:
+    auto-generate-document-types: COVER_LETTER,TECHNICAL_PROPOSAL  # DOCUMENT_DRAFTING 진입 시 자동 생성할 문서 타입
+    # 기본 제공자
+    default-provider: openai
+
+    # Provider 설정
+    providers:
+      # OpenAI
+      openai:
+        enabled: true
+        api-key: ${OPENAI_API_KEY:}
+        default-model: ${OPENAI_MODEL:gpt-4}
+        temperature: 0.3
+        max-tokens: 4000
+        timeout: 300  # seconds
+
+      # Claude (Phase 2)
+      claude:
+        enabled: false
+        api-key: ${CLAUDE_API_KEY:}
+        default-model: claude-3-5-sonnet-20240620
+        temperature: 0.3
+        max-tokens: 4000
+        timeout: 300
+
+      # Gemini (Phase 2)
+      gemini:
+        enabled: false
+        api-key: ${GEMINI_API_KEY:}
+        default-model: gemini-pro
+        temperature: 0.3
+        max-tokens: 4000
+        timeout: 300
+
+  # CORS Configuration
+  cors:
+    allowed-origins:
+      - http://localhost:3000  # Customer Portal
+      - http://localhost:5173  # Admin Console
+    allowed-methods:
+      - GET
+      - POST
+      - PUT
+      - PATCH
+      - DELETE
+      - OPTIONS
+    allowed-headers:
+      - "*"
+    allow-credentials: true
+    max-age: 3600
+
+  # FSM State Configuration
+  fsm:
+    states:
+      - CREATED
+      - WAITING_FOR_CLIENT_DOCS
+      - CLIENT_DOCS_RECEIVED
+      - REQUIREMENT_ANALYSIS
+      - DOCUMENT_DRAFTING
+      - INTERNAL_REVIEW
+      - CLIENT_CONFIRMATION
+      - READY_FOR_SUBMISSION
+      - SUBMITTING
+      - SUBMITTED
+      - SUBMIT_FAILED
+      - CLOSED
