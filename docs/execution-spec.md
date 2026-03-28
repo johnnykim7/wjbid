@@ -252,27 +252,34 @@ SAM.gov에 올라오는 미군(USFK) 조달 입찰 공고를 자동 수집하고
 
 ---
 
-### Sprint 5: MCP 서버 + Aimbase 연동
+### Sprint 5: MCP 서버 + Aimbase 연동 (CR-002 갱신)
 
 **전제:** Sprint 4 완료
-**기능:** 5개 (BID-MCP-001~004, 작업 5-1)
+**기능:** 6개 (BID-MCP-001~005, 작업 5-1)
 
 #### BE 참조
 
 | 순서 | 읽을 파일 | 참조 범위 |
 |------|----------|----------|
 | 1 | `CLAUDE.md` | BE 규칙, AI 연동 섹션 |
-| 2 | `docs/T3-2_API_설계.md` | MCP 서버 전체 |
-| 3 | `docs/T1-1_기능요구사항_명세서.md` | BID-MCP-001~004 |
+| 2 | `docs/T3-2_API_설계.md` | MCP 서버 전체 + Aimbase 워크플로우 호출 |
+| 3 | `docs/T1-1_기능요구사항_명세서.md` | BID-MCP-001~005 |
 | 4 | `docs/T1-3_비즈니스_규칙.md` | BIZ-013 (MCP 무상태) |
 | 5 | `docs/T3-5_단위테스트_명세.md` | TC-MCP 전체 |
 
-**핵심 설계 결정:**
-- JSON-RPC 2.0 over HTTP (`POST /mcp`)
-- 8개 Tool: get_opportunity, search_opportunities, get_opportunity_requirements, save_requirements, get_bid_request, save_document_version, get_document_template, transition_bid_state
-- 기존 LLMPlatformClient 제거, Aimbase 경유로 전환
+**핵심 설계 결정 (CR-002):**
+- MCP 전송: HTTP POST (`POST /mcp`) + **SSE** (`GET /mcp/sse` + `POST /mcp/message`) 이중 지원
+- 8개 Tool 유지 (기존 구현 활용)
+- McpDispatcher 추출 → HTTP/SSE 공유
+- LLMPlatformClient: `localhost:9000` → Aimbase `14.63.25.49:8280`, `X-API-Key` 인증 추가
+- AIWorkflowService: 후처리 저장 로직 제거 (Aimbase MCP 콜백으로 대체)
+- 순환 트리거 방지 가드 추가
 
-**핵심 검증:** Aimbase에서 discover → Tool 목록 확인 → 각 Tool 호출 성공
+**핵심 검증:**
+1. Aimbase 연결 확인 (LLMPlatformClient.isHealthy())
+2. Aimbase에서 SSE로 MCP 서버 등록 → discover → 8개 Tool 목록 확인
+3. 워크플로우 실행 → MCP 콜백 → 데이터 저장 확인
+4. Aimbase 셋업 스크립트 실행 (Connection, MCP Server, Workflow 생성)
 
 ---
 

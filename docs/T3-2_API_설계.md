@@ -1,6 +1,6 @@
 # SAM.gov Bidding Agency Platform API 설계
 
-> 설계 버전: 1.0 | 최종 수정: 2026-03-19 | 관련 CR: -
+> 설계 버전: 1.2 | 최종 수정: 2026-03-28 | 관련 CR: CR-001, CR-002
 
 > 단계: 3. Detail Design | 실행스펙 섹션 3에 포함
 >
@@ -176,13 +176,17 @@
 
 ---
 
-## MCP 서버 (Aimbase 연동) — Sprint 5
+## MCP 서버 (Aimbase 연동) — Sprint 5, CR-002 갱신
 
 ### 엔드포인트
 
-| 메서드 | 경로 | 설명 |
-|--------|------|------|
-| POST | /mcp | JSON-RPC 2.0 엔드포인트 (Aimbase → Bidding Platform) |
+| 메서드 | 경로 | 설명 | 비고 |
+|--------|------|------|------|
+| POST | /mcp | JSON-RPC 2.0 (HTTP 전송) | 기존. 직접 호출용 |
+| GET | /mcp/sse | SSE 스트림 연결 | **CR-002 신규**. Aimbase 연결용 |
+| POST | /mcp/message?sessionId={id} | SSE 세션 메시지 수신 | **CR-002 신규**. SSE 응답 반환 |
+
+> SSE 전송: Aimbase가 `GET /mcp/sse`로 연결 → `endpoint` 이벤트로 메시지 URL 수신 → `POST /mcp/message`로 JSON-RPC 메시지 전송 → SSE `message` 이벤트로 응답 수신
 
 ### JSON-RPC 메서드
 
@@ -208,6 +212,44 @@
 > 모든 MCP Tool은 무상태(BIZ-013). 각 호출은 독립적으로 처리.
 > requestId를 멱등 키로 사용.
 
+### Aimbase 워크플로우 호출 (CR-002 신규, BID-MCP-005)
+
+플랫폼 → Aimbase 방향 호출. `LLMPlatformClient`가 담당.
+
+| 용도 | Aimbase API | 메서드 | 비고 |
+|------|-------------|--------|------|
+| 워크플로우 실행 | `/api/v1/workflows/{id}/run` | POST | 비동기 시작 |
+| 실행 결과 폴링 | `/api/v1/workflows/{id}/runs/{runId}` | GET | 3초 간격, 최대 60회 |
+
+**인증**: `X-API-Key: plat-20cf57fbc623424584eeda2e355cbb43`
+
+**설정 프로퍼티**:
+```yaml
+app.aimbase:
+  base-url: ${AIMBASE_URL:http://14.63.25.49:8280}
+  api-key: ${AIMBASE_API_KEY:plat-...}
+  polling.interval-ms: 3000
+  polling.max-attempts: 60
+  workflows:
+    requirement-extraction: requirement-extraction
+    document-generation: bid-document-generation
+```
+
+---
+
+## M. FlowGuard 연동 (CR-001) — 인프라
+
+| 메서드 | 경로 | 설명 | 인증 | 비고 |
+|--------|------|------|------|------|
+| GET | /health | 헬스체크 (DB 연결 포함) | | FlowGuard 5분 폴링 |
+| GET | /validation/bid-requests/{id} | BidRequest 상태 조회 | | Probe용 읽기 전용 |
+| GET | /validation/bid-requests?state= | 상태별 BidRequest 목록 | | Probe용 읽기 전용 |
+| GET | /validation/opportunities/{id} | Opportunity 조회 | | Probe용 읽기 전용 |
+| GET | /validation/bid-documents?bidRequestId= | BidDocument 목록 조회 | | Probe용 읽기 전용 |
+
+> Validation API는 내부 네트워크 전용. 운영 환경에서는 방화벽/네트워크 정책으로 보호.
+> X-Flow-Id 헤더는 FlowIdFilter에서 전체 요청에 대해 자동 수신·전파.
+
 ---
 
 ## API 요약
@@ -226,5 +268,8 @@
 | J. 문서 편집 | 7 | 7 |
 | K. 회원 관리 (Admin) | 1 | — |
 | L. 요금 안내 | 1 | 7 |
+| M. FlowGuard 연동 | 5 | — (CR-001) |
 | MCP Tools | 8 | 5 |
-| **합계** | **REST 51 + MCP 8** | |
+| MCP SSE 엔드포인트 | 2 | CR-002 |
+| Aimbase 워크플로우 호출 | 2 | CR-002 |
+| **합계** | **REST 56 + MCP 8 + SSE 2 + Aimbase 2** | |
