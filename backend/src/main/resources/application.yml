@@ -47,6 +47,21 @@ spring:
           max-idle: 8
           min-idle: 2
 
+  # Mail Configuration
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          timeout: 5000
+          connection-timeout: 5000
+
   # Servlet Multipart (File Upload)
   servlet:
     multipart:
@@ -141,17 +156,18 @@ app:
         - "Camp Walker"
         - "Camp Carroll"
 
-  # LLM Platform Configuration (Workflow 기반)
-  llm-platform:
-    base-url: ${LLM_PLATFORM_URL:http://localhost:9000}
+  # Aimbase Configuration (CR-002: LLM Platform → Aimbase 전환)
+  aimbase:
+    base-url: ${AIMBASE_URL:http://14.63.25.49:8280}
+    api-key: ${AIMBASE_API_KEY:plat-20cf57fbc623424584eeda2e355cbb43}
     connect-timeout: 5000     # 5 seconds
     read-timeout: 300000      # 5 minutes (워크플로우 실행 포함)
     polling:
-      interval-ms: 2000       # 폴링 간격 (2초)
-      max-attempts: 90        # 최대 폴링 횟수 (90 * 2초 = 3분)
+      interval-ms: 3000       # 폴링 간격 (3초, Aimbase 권장)
+      max-attempts: 60        # 최대 폴링 횟수 (60 * 3초 = 3분)
     workflows:
-      requirement-extraction: requirement-extraction
-      document-generation: bid-document-generation
+      requirement-extraction: ${AIMBASE_WF_REQ_EXTRACTION:requirement-extraction}
+      document-generation: ${AIMBASE_WF_DOC_GENERATION:bid-document-generation}
 
   # AI 설정 (자동화 + Multi-Provider)
   ai:

@@ -2,7 +2,6 @@ package com.biddingagency.domain.bid.service;
 
 import com.biddingagency.domain.bid.entity.BidRequest;
 import com.biddingagency.domain.document.entity.DocumentType;
-import com.biddingagency.domain.document.service.DocumentVersionService;
 import com.biddingagency.domain.opportunity.entity.Opportunity;
 import com.biddingagency.domain.opportunity.entity.OpportunityRequirementItem;
 import com.biddingagency.domain.opportunity.entity.RequirementCategory;
@@ -34,10 +33,6 @@ public class AIWorkflowService {
 
     private final LLMPlatformClient llmPlatformClient;
     private final OpportunityRequirementItemRepository requirementItemRepository;
-    private final DocumentVersionService documentVersionService;
-
-    /** 시스템 자동 생성 시 사용하는 편집자 UUID */
-    private static final UUID SYSTEM_EDITOR = new UUID(0L, 0L);
 
     /** DOCUMENT_DRAFTING 진입 시 자동 생성할 문서 타입 목록 */
     @Value("${app.ai.auto-generate-document-types:COVER_LETTER,TECHNICAL_PROPOSAL}")
@@ -67,12 +62,12 @@ public class AIWorkflowService {
                 return;
             }
 
-            saveExtractedRequirements(opp, response.getRequirements());
-            log.info("[AI] 요구사항 추출 완료: bidRequestId={}, 추출={}건", bidRequestId,
-                response.getRequirements() != null ? response.getRequirements().size() : 0);
+            // CR-002: Aimbase 워크플로우가 MCP save_requirements를 직접 호출하여 DB에 저장.
+            // saveExtractedRequirements() 호출 불필요.
+            log.info("[AI] 요구사항 추출 완료 (Aimbase MCP 콜백으로 저장됨): bidRequestId={}", bidRequestId);
 
         } catch (LLMPlatformException e) {
-            log.error("[AI] LLM Platform 오류 (요구사항 추출): bidRequestId={}", bidRequestId, e);
+            log.error("[AI] Aimbase 오류 (요구사항 추출): bidRequestId={}", bidRequestId, e);
         } catch (Exception e) {
             log.error("[AI] 예상치 못한 오류 (요구사항 추출): bidRequestId={}", bidRequestId, e);
         }
@@ -126,11 +121,12 @@ public class AIWorkflowService {
                 return;
             }
 
-            documentVersionService.createDocument(bidRequestId, documentType, response.getDocument(), SYSTEM_EDITOR);
-            log.info("[AI] {} 문서 저장 완료: bidRequestId={}", documentType, bidRequestId);
+            // CR-002: Aimbase 워크플로우가 MCP save_document_version을 직접 호출하여 DB에 저장.
+            // documentVersionService.createDocument() 호출 불필요.
+            log.info("[AI] {} 문서 생성 완료 (Aimbase MCP 콜백으로 저장됨): bidRequestId={}", documentType, bidRequestId);
 
         } catch (LLMPlatformException e) {
-            log.error("[AI] LLM Platform 오류 ({} 생성): bidRequestId={}", documentType, bidRequestId, e);
+            log.error("[AI] Aimbase 오류 ({} 생성): bidRequestId={}", documentType, bidRequestId, e);
         } catch (Exception e) {
             log.error("[AI] 예상치 못한 오류 ({} 생성): bidRequestId={}", documentType, bidRequestId, e);
         }

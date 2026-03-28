@@ -50,7 +50,13 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
 
-                        // MCP Server — LLM Platform에서 server-to-server 호출 (JWT 불필요)
+                        // FlowGuard — 헬스체크 + Validation API (내부 네트워크 전용)
+                        .requestMatchers(HttpMethod.GET, "/health").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/validation/**").permitAll()
+
+                        // MCP Server — Aimbase에서 server-to-server 호출 (JWT 불필요)
+                        // HTTP POST + SSE 전송 모두 허용 (CR-002)
+                        .requestMatchers("/mcp/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/mcp").permitAll()
 
                         // Public read endpoints (opportunities)

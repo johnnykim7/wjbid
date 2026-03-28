@@ -1,11 +1,15 @@
 package com.biddingagency.integration.llmplatform;
 
 import com.biddingagency.integration.ai.client.dto.*;
+import com.biddingagency.integration.llmplatform.dto.AimbaseApiResponse;
 import com.biddingagency.integration.llmplatform.dto.WorkflowRunResponse;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
@@ -15,13 +19,15 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * LLM Platform Workflow 기반 클라이언트
- * AIServiceClient(Python FastAPI)를 대체하며 동일한 인터페이스를 제공합니다.
+ * Aimbase Workflow 기반 클라이언트 (CR-002)
  *
  * 흐름:
- *   1. POST /api/v1/workflows/{workflowId}/run → 실행 시작, runId 반환
+ *   1. POST /api/v1/workflows/{workflowId}/run → 비동기 실행 시작, runId 반환
  *   2. GET  /api/v1/workflows/{workflowId}/runs/{runId} → 완료될 때까지 폴링
- *   3. output 필드에서 결과 추출 → 기존 DTO로 변환
+ *   3. Aimbase가 워크플로우 실행 중 MCP 도구를 콜백하여 데이터 저장
+ *   4. 플랫폼은 상태 확인만 (데이터는 MCP 콜백으로 이미 저장됨)
+ *
+ * Aimbase 응답 형식: { success: true, data: { id, status, stepResults, ... } }
  */
 @Slf4j
 @Service
@@ -29,47 +35,57 @@ import java.util.Map;
 public class LLMPlatformClient {
 
     private final RestTemplate llmPlatformRestTemplate;
-    private final ObjectMapper objectMapper;
 
-    @Value("${app.llm-platform.base-url}")
+    @Value("${app.aimbase.base-url}")
     private String baseUrl;
 
-    @Value("${app.llm-platform.workflows.requirement-extraction:requirement-extraction}")
+    @Value("${app.aimbase.workflows.requirement-extraction:requirement-extraction}")
     private String requirementExtractionWorkflowId;
 
-    @Value("${app.llm-platform.workflows.document-generation:bid-document-generation}")
+    @Value("${app.aimbase.workflows.document-generation:bid-document-generation}")
     private String documentGenerationWorkflowId;
 
-    @Value("${app.llm-platform.polling.interval-ms:2000}")
+    @Value("${app.aimbase.polling.interval-ms:3000}")
     private long pollingIntervalMs;
 
-    @Value("${app.llm-platform.polling.max-attempts:90}")
+    @Value("${app.aimbase.polling.max-attempts:60}")
     private int maxPollingAttempts;
 
+    private static final ParameterizedTypeReference<AimbaseApiResponse<WorkflowRunResponse>> WORKFLOW_RESPONSE_TYPE =
+        new ParameterizedTypeReference<>() {};
+
     // ─────────────────────────────────────────────────────────────────────────
-    // Public API (기존 AIServiceClient와 동일한 시그니처)
+    // Public API
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * 요구사항 추출 — requirement-extraction 워크플로우 실행
+     * 요구사항 추출 — requirement-extraction 워크플로우 실행.
+     * Aimbase가 MCP save_requirements 도구를 콜백하여 결과를 직접 저장.
      */
     public RequirementExtractionResponse extractRequirements(RequirementExtractionRequest request) {
-        log.info("LLM Platform: 요구사항 추출 시작 opportunityId={}", request.getOpportunityId());
+        log.info("Aimbase: 요구사항 추출 시작 opportunityId={}", request.getOpportunityId());
 
         Map<String, Object> input = new HashMap<>();
         input.put("opportunityId", request.getOpportunityId() != null ? request.getOpportunityId().toString() : null);
         input.put("opportunityText", request.getOpportunityText());
         input.put("metadata", request.getMetadata());
 
-        WorkflowRunResponse result = runWorkflowAndWait(requirementExtractionWorkflowId, input);
-        return toRequirementExtractionResponse(result);
+        runWorkflowAndWait(requirementExtractionWorkflowId, input);
+
+        // Aimbase 워크플로우가 MCP save_requirements를 직접 호출하므로
+        // 여기서는 성공 상태만 반환 (데이터는 이미 DB에 저장됨)
+        return RequirementExtractionResponse.builder()
+            .status("success")
+            .requirements(List.of())
+            .build();
     }
 
     /**
-     * 문서 생성 — bid-document-generation 워크플로우 실행
+     * 문서 생성 — bid-document-generation 워크플로우 실행.
+     * Aimbase가 MCP save_document_version 도구를 콜백하여 결과를 직접 저장.
      */
     public DocumentGenerationResponse generateDocument(DocumentGenerationRequest request) {
-        log.info("LLM Platform: 문서 생성 시작 bidRequestId={}, documentType={}",
+        log.info("Aimbase: 문서 생성 시작 bidRequestId={}, documentType={}",
             request.getBidRequestId(), request.getDocumentType());
 
         Map<String, Object> input = new HashMap<>();
@@ -79,25 +95,30 @@ public class LLMPlatformClient {
         input.put("requirements", request.getRequirements());
         input.put("context", request.getContext());
 
-        WorkflowRunResponse result = runWorkflowAndWait(documentGenerationWorkflowId, input);
-        return toDocumentGenerationResponse(result);
+        runWorkflowAndWait(documentGenerationWorkflowId, input);
+
+        // Aimbase 워크플로우가 MCP save_document_version을 직접 호출하므로
+        // 여기서는 성공 상태만 반환
+        return DocumentGenerationResponse.builder()
+            .status("success")
+            .build();
     }
 
     /**
-     * LLM Platform 헬스체크
+     * Aimbase 헬스체크
      */
     public boolean isHealthy() {
         try {
-            llmPlatformRestTemplate.getForEntity(baseUrl + "/health", String.class);
+            llmPlatformRestTemplate.getForEntity(baseUrl + "/api/v1/connections", String.class);
             return true;
         } catch (Exception e) {
-            log.warn("LLM Platform health check failed", e);
+            log.warn("Aimbase health check failed: {}", e.getMessage());
             return false;
         }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // 워크플로우 실행 + 폴링
+    // 워크플로우 실행 + 폴링 (Aimbase API 규격)
     // ─────────────────────────────────────────────────────────────────────────
 
     private WorkflowRunResponse runWorkflowAndWait(String workflowId, Map<String, Object> input) {
@@ -107,22 +128,33 @@ public class LLMPlatformClient {
         // 1단계: 워크플로우 실행 시작
         WorkflowRunResponse runResponse;
         try {
-            runResponse = llmPlatformRestTemplate.postForObject(runUrl, input, WorkflowRunResponse.class);
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("inputData", input);
+
+            ResponseEntity<AimbaseApiResponse<WorkflowRunResponse>> responseEntity =
+                llmPlatformRestTemplate.exchange(runUrl, HttpMethod.POST,
+                    new HttpEntity<>(requestBody), WORKFLOW_RESPONSE_TYPE);
+
+            AimbaseApiResponse<WorkflowRunResponse> apiResponse = responseEntity.getBody();
+            if (apiResponse == null || !apiResponse.isSuccess() || apiResponse.getData() == null) {
+                String error = apiResponse != null ? apiResponse.getError() : "null response";
+                throw new LLMPlatformException("Aimbase 워크플로우 실행 실패: " + error);
+            }
+            runResponse = apiResponse.getData();
         } catch (RestClientException e) {
-            log.error("LLM Platform workflow 실행 요청 실패: workflowId={}", workflowId, e);
-            throw new LLMPlatformException("LLM Platform 연결 실패: " + e.getMessage(), e);
+            log.error("Aimbase workflow 실행 요청 실패: workflowId={}", workflowId, e);
+            throw new LLMPlatformException("Aimbase 연결 실패: " + e.getMessage(), e);
         }
 
-        if (runResponse == null || runResponse.getId() == null) {
-            throw new LLMPlatformException("LLM Platform에서 runId를 반환하지 않았습니다: workflowId=" + workflowId);
+        if (runResponse.getId() == null) {
+            throw new LLMPlatformException("Aimbase에서 runId를 반환하지 않았습니다: workflowId=" + workflowId);
         }
 
         String runId = runResponse.getId();
-        log.info("LLM Platform: 워크플로우 실행 시작됨 workflowId={}, runId={}", workflowId, runId);
+        log.info("Aimbase: 워크플로우 실행 시작됨 workflowId={}, runId={}", workflowId, runId);
 
-        // 이미 완료된 경우 (동기 실행)
         if (runResponse.isCompleted()) {
-            log.info("LLM Platform: 워크플로우 즉시 완료 runId={}", runId);
+            log.info("Aimbase: 워크플로우 즉시 완료 runId={}", runId);
             return runResponse;
         }
 
@@ -135,21 +167,26 @@ public class LLMPlatformClient {
 
             WorkflowRunResponse pollResponse;
             try {
-                pollResponse = llmPlatformRestTemplate.getForObject(pollUrl, WorkflowRunResponse.class);
+                ResponseEntity<AimbaseApiResponse<WorkflowRunResponse>> responseEntity =
+                    llmPlatformRestTemplate.exchange(pollUrl, HttpMethod.GET,
+                        null, WORKFLOW_RESPONSE_TYPE);
+
+                AimbaseApiResponse<WorkflowRunResponse> apiResponse = responseEntity.getBody();
+                if (apiResponse == null || apiResponse.getData() == null) {
+                    log.warn("Aimbase 폴링 null 응답 (attempt={}/{}): runId={}", attempt, maxPollingAttempts, runId);
+                    continue;
+                }
+                pollResponse = apiResponse.getData();
             } catch (RestClientException e) {
-                log.warn("LLM Platform 폴링 실패 (attempt={}/{}): runId={}", attempt, maxPollingAttempts, runId, e);
+                log.warn("Aimbase 폴링 실패 (attempt={}/{}): runId={}", attempt, maxPollingAttempts, runId, e);
                 continue;
             }
 
-            if (pollResponse == null) {
-                continue;
-            }
-
-            log.debug("LLM Platform 폴링 attempt={}, status={}, runId={}", attempt, pollResponse.getStatus(), runId);
+            log.debug("Aimbase 폴링 attempt={}, status={}, runId={}", attempt, pollResponse.getStatus(), runId);
 
             if (pollResponse.isCompleted()) {
                 long elapsed = System.currentTimeMillis() - startTime;
-                log.info("LLM Platform: 워크플로우 완료 runId={}, 소요={}ms", runId, elapsed);
+                log.info("Aimbase: 워크플로우 완료 runId={}, 소요={}ms", runId, elapsed);
                 return pollResponse;
             }
 
@@ -159,41 +196,6 @@ public class LLMPlatformClient {
         }
 
         throw new LLMPlatformException("워크플로우 타임아웃: runId=" + runId + " (" + maxPollingAttempts + "회 폴링 초과)");
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // output → 기존 DTO 변환
-    // ─────────────────────────────────────────────────────────────────────────
-
-    @SuppressWarnings("unchecked")
-    private RequirementExtractionResponse toRequirementExtractionResponse(WorkflowRunResponse result) {
-        Map<String, Object> output = result.getOutput();
-        if (output == null) {
-            throw new LLMPlatformException("워크플로우 output이 비어 있습니다 (요구사항 추출)");
-        }
-
-        try {
-            // output 전체가 RequirementExtractionResponse 형식이라고 가정
-            return objectMapper.convertValue(output, RequirementExtractionResponse.class);
-        } catch (Exception e) {
-            log.error("RequirementExtractionResponse 변환 실패, output={}", output, e);
-            throw new LLMPlatformException("요구사항 추출 결과 파싱 실패: " + e.getMessage(), e);
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    private DocumentGenerationResponse toDocumentGenerationResponse(WorkflowRunResponse result) {
-        Map<String, Object> output = result.getOutput();
-        if (output == null) {
-            throw new LLMPlatformException("워크플로우 output이 비어 있습니다 (문서 생성)");
-        }
-
-        try {
-            return objectMapper.convertValue(output, DocumentGenerationResponse.class);
-        } catch (Exception e) {
-            log.error("DocumentGenerationResponse 변환 실패, output={}", output, e);
-            throw new LLMPlatformException("문서 생성 결과 파싱 실패: " + e.getMessage(), e);
-        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────

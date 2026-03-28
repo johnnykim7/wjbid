@@ -4,10 +4,11 @@ import com.biddingagency.mcp.tool.DocumentMcpTool;
 import com.biddingagency.mcp.tool.DocumentTemplateMcpTool;
 import com.biddingagency.mcp.tool.OpportunityMcpTool;
 import com.biddingagency.mcp.tool.RequirementMcpTool;
+import com.biddingagency.mcp.tool.StateMcpTool;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -18,7 +19,7 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.BDDMockito.*;
 
 /**
- * TC-MCP-001 ~ TC-MCP-005: McpServerController 테스트
+ * TC-MCP-001 ~ TC-MCP-005: McpServerController + McpDispatcher 테스트 (CR-002 리팩토링)
  */
 @ExtendWith(MockitoExtension.class)
 class McpServerControllerTest {
@@ -31,9 +32,18 @@ class McpServerControllerTest {
     private DocumentMcpTool documentMcpTool;
     @Mock
     private DocumentTemplateMcpTool documentTemplateMcpTool;
+    @Mock
+    private StateMcpTool stateMcpTool;
 
-    @InjectMocks
     private McpServerController mcpServerController;
+
+    @BeforeEach
+    void setUp() {
+        McpDispatcher dispatcher = new McpDispatcher(
+            opportunityMcpTool, requirementMcpTool, documentMcpTool,
+            documentTemplateMcpTool, stateMcpTool);
+        mcpServerController = new McpServerController(dispatcher);
+    }
 
     // TC-MCP-001: initialize 메서드
     @Test
@@ -81,9 +91,7 @@ class McpServerControllerTest {
         assertThat(result).containsKey("tools");
         java.util.List<?> tools = (java.util.List<?>) result.get("tools");
         assertThat(tools).isNotEmpty();
-        // 7개 도구: get_opportunity, search_opportunities, get_opportunity_requirements,
-        //          save_requirements, get_bid_request, save_document_version, get_document_template
-        assertThat(tools).hasSize(7);
+        assertThat(tools).hasSize(8);
     }
 
     // TC-MCP-003: tools/call 유효 도구 (get_opportunity)
