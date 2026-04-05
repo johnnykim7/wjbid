@@ -1,0 +1,17 @@
+{
+  "type": "ACTION",
+  "name": "상태 전이 이력 조회 검증",
+  "connector": "bidding-api",
+  "action": {
+    "method": "GET",
+    "endpoint": "/api/bid-requests/{{steps.bid.create-request.output.bidRequestId}}/history",
+    "headers": {
+      "Authorization": "Bearer {{steps.auth.login.output.accessToken}}"
+    }
+  },
+  "assert": [
+    { "field": "$.statusCode", "operator": "==", "value": 200 },
+    { "field": "$.body.success", "operator": "==", "value": true }
+  ],
+  "failMode": "soft"
+}

@@ -1,0 +1,24 @@
+{
+  "type": "ACTION",
+  "name": "MCP get_document_template Tool 호출",
+  "connector": "bidding-api",
+  "action": {
+    "method": "POST",
+    "endpoint": "/api/mcp",
+    "headers": { "Content-Type": "application/json" },
+    "body": {
+      "jsonrpc": "2.0",
+      "id": 6,
+      "method": "tools/call",
+      "params": {
+        "name": "get_document_template",
+        "arguments": { "documentType": "TECHNICAL_PROPOSAL" }
+      }
+    }
+  },
+  "assert": [
+    { "field": "$.statusCode", "operator": "==", "value": 200 },
+    { "field": "$.body.result.content", "operator": "!=", "value": null }
+  ],
+  "failMode": "soft"
+}

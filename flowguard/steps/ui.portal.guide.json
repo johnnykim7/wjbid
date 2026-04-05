@@ -1,0 +1,13 @@
+{
+  "type": "UI_SMOKE",
+  "name": "[Portal] 이용 가이드 페이지 렌더링",
+  "connector": "customer-portal",
+  "action": {
+    "url": "http://localhost:5173/guide",
+    "waitForSelector": "main"
+  },
+  "assert": [
+    { "field": "$.statusCode", "operator": "==", "value": 200 }
+  ],
+  "failMode": "soft"
+}

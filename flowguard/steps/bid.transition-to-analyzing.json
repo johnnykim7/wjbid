@@ -1,0 +1,22 @@
+{
+  "type": "ACTION",
+  "name": "FSM: DOCS_RECEIVED → ANALYZING",
+  "connector": "bidding-api",
+  "action": {
+    "method": "POST",
+    "endpoint": "/api/admin/bid-requests/{{steps.bid.create-request.output.bidRequestId}}/transition",
+    "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer {{vars.adminToken}}"
+    },
+    "body": {
+      "toState": "ANALYZING",
+      "notes": "FlowGuard: 분석 시작"
+    }
+  },
+  "assert": [
+    { "field": "$.statusCode", "operator": "==", "value": 200 },
+    { "field": "$.body.data.state", "operator": "==", "value": "ANALYZING" }
+  ],
+  "failMode": "hard"
+}

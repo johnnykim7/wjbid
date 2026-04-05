@@ -20,7 +20,8 @@ import java.util.Map;
                 @Index(name = "idx_opportunities_notice_id", columnList = "notice_id"),
                 @Index(name = "idx_opportunities_posted_date", columnList = "posted_date"),
                 @Index(name = "idx_opportunities_deadline", columnList = "response_deadline"),
-                @Index(name = "idx_opportunities_active", columnList = "active")
+                @Index(name = "idx_opportunities_active", columnList = "active"),
+                @Index(name = "idx_opportunities_visibility", columnList = "visibility")
         })
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -52,6 +53,11 @@ public class Opportunity extends BaseEntity {
     @Column(name = "active", nullable = false)
     @Builder.Default
     private Boolean active = true;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "visibility", nullable = false, length = 20)
+    @Builder.Default
+    private OpportunityVisibility visibility = OpportunityVisibility.HIDDEN;
 
     @Column(name = "ui_link", columnDefinition = "TEXT")
     private String uiLink;
@@ -93,6 +99,18 @@ public class Opportunity extends BaseEntity {
     public void markAsInactive() {
         this.active = false;
         this.lastModifiedAt = LocalDateTime.now();
+    }
+
+    public void approve() {
+        this.visibility = OpportunityVisibility.VISIBLE;
+    }
+
+    public void hide() {
+        this.visibility = OpportunityVisibility.HIDDEN;
+    }
+
+    public boolean isVisible() {
+        return this.visibility == OpportunityVisibility.VISIBLE;
     }
 
     public boolean isDeadlinePassed() {

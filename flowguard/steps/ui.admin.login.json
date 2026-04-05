@@ -1,0 +1,15 @@
+{
+  "type": "UI_SMOKE",
+  "name": "[Admin] 로그인 페이지 렌더링",
+  "connector": "admin-console",
+  "action": {
+    "url": "http://localhost:5174/login",
+    "waitForSelector": "form"
+  },
+  "assert": [
+    { "field": "$.statusCode", "operator": "==", "value": 200 },
+    { "field": "$.elementsFound.form", "operator": ">", "value": 0 },
+    { "field": "$.elementsFound.input[type=email]", "operator": ">", "value": 0 }
+  ],
+  "failMode": "hard"
+}

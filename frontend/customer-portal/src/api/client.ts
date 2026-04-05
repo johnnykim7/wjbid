@@ -91,6 +91,10 @@ export const addBookmark = (opportunityId: string) =>
 export const removeBookmark = (opportunityId: string) =>
   api.delete(`/bookmarks/${opportunityId}`)
 
+// Pricing
+export const getPricing = () =>
+  api.get('/pricing')
+
 // Members (Profile)
 export const getMyProfile = () =>
   api.get('/members/me')
@@ -98,3 +102,18 @@ export const getMyProfile = () =>
 export const updateMyProfile = (data: {
   companyName: string; contactPerson?: string; phone?: string; address?: string
 }) => api.patch('/members/me', data)
+
+// Client Documents
+export const getClientDocuments = (bidRequestId: string) =>
+  api.get(`/client-documents/${bidRequestId}`)
+
+export const uploadClientDocument = (bidRequestId: string, file: File) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  return api.post(`/client-documents/${bidRequestId}`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+}
+
+export const deleteClientDocument = (id: string) =>
+  api.delete(`/client-documents/${id}`)

@@ -1,10 +1,18 @@
 package com.biddingagency.domain.bid.service;
 
 import com.biddingagency.domain.bid.entity.BidRequest;
+import com.biddingagency.domain.bid.entity.BidRequestState;
+import com.biddingagency.domain.bid.entity.ClientDocument;
+import com.biddingagency.domain.bid.repository.BidRequestRepository;
+import com.biddingagency.domain.bid.repository.ClientDocumentRepository;
+import com.biddingagency.domain.document.entity.BidDocument;
 import com.biddingagency.domain.document.entity.DocumentType;
+import com.biddingagency.domain.document.repository.BidDocumentRepository;
+import com.biddingagency.domain.opportunity.entity.AnalysisStatus;
 import com.biddingagency.domain.opportunity.entity.Opportunity;
 import com.biddingagency.domain.opportunity.entity.OpportunityRequirementItem;
 import com.biddingagency.domain.opportunity.entity.RequirementCategory;
+import com.biddingagency.domain.opportunity.repository.OpportunityAnalysisRepository;
 import com.biddingagency.domain.opportunity.repository.OpportunityRequirementItemRepository;
 import com.biddingagency.integration.ai.client.dto.*;
 import com.biddingagency.integration.llmplatform.LLMPlatformClient;
@@ -33,6 +41,10 @@ public class AIWorkflowService {
 
     private final LLMPlatformClient llmPlatformClient;
     private final OpportunityRequirementItemRepository requirementItemRepository;
+    private final OpportunityAnalysisRepository opportunityAnalysisRepository;
+    private final ClientDocumentRepository clientDocumentRepository;
+    private final BidRequestRepository bidRequestRepository;
+    private final BidDocumentRepository bidDocumentRepository;
 
     /** DOCUMENT_DRAFTING 진입 시 자동 생성할 문서 타입 목록 */
     @Value("${app.ai.auto-generate-document-types:COVER_LETTER,TECHNICAL_PROPOSAL}")
@@ -103,15 +115,15 @@ public class AIWorkflowService {
         log.info("[AI] {} 문서 생성 중: bidRequestId={}", documentType, bidRequestId);
 
         try {
+            // CR-003: 3파이프라인 context 조합
+            Map<String, Object> context = build3PipelineContext(bidRequest, opp);
+
             DocumentGenerationRequest request = DocumentGenerationRequest.builder()
                 .bidRequestId(bidRequestId)
                 .documentType(documentType.name())
                 .opportunityText(buildOpportunityText(opp))
                 .requirements(requirements)
-                .context(Map.of(
-                    "opportunityId", opp.getId().toString(),
-                    "organizationName", opp.getOrganizationName() != null ? opp.getOrganizationName() : ""
-                ))
+                .context(context)
                 .build();
 
             DocumentGenerationResponse response = llmPlatformClient.generateDocument(request);
@@ -164,6 +176,55 @@ public class AIWorkflowService {
         }).collect(Collectors.toList());
 
         requirementItemRepository.saveAll(entities);
+    }
+
+    /**
+     * CR-003: 3파이프라인 context 조합
+     * ①공고 사전 분석 캐시 + ②사용자 제출 서류 + ③과거 제출 이력
+     * 조건 분기 없음 — 조회해서 넘기면 끝. 비어있으면 빈 배열/null.
+     */
+    private Map<String, Object> build3PipelineContext(BidRequest bidRequest, Opportunity opp) {
+        Map<String, Object> context = new HashMap<>();
+        context.put("opportunityId", opp.getId().toString());
+        context.put("organizationName", opp.getOrganizationName() != null ? opp.getOrganizationName() : "");
+
+        // Pipeline 1: 공고 사전 분석 결과 (캐시)
+        opportunityAnalysisRepository.findByOpportunityId(opp.getId())
+            .filter(a -> a.getStatus() == AnalysisStatus.COMPLETED)
+            .ifPresent(analysis -> context.put("opportunityAnalysis", Map.of(
+                "summary", analysis.getSummaryJson() != null ? analysis.getSummaryJson() : Map.of(),
+                "documentFormats", analysis.getDocumentFormatsJson() != null ? analysis.getDocumentFormatsJson() : Map.of(),
+                "requiredDocuments", analysis.getRequiredDocumentsJson() != null ? analysis.getRequiredDocumentsJson() : Map.of(),
+                "llmPromptPreset", analysis.getLlmPromptPresetJson() != null ? analysis.getLlmPromptPresetJson() : Map.of()
+            )));
+
+        // Pipeline 2: 사용자 제출 서류
+        List<ClientDocument> clientDocs = clientDocumentRepository.findByBidRequestId(bidRequest.getId());
+        context.put("clientDocuments", clientDocs.stream().map(cd -> Map.of(
+            "fileName", cd.getFileName(),
+            "category", cd.getDocumentCategory() != null ? cd.getDocumentCategory() : "",
+            "storageUrl", cd.getStorageUrl() != null ? cd.getStorageUrl() : ""
+        )).toList());
+
+        // Pipeline 3: 과거 제출 이력 (같은 사용자의 SUBMITTED 건)
+        List<BidRequest> pastSubmissions = bidRequestRepository.findByMemberIdAndState(
+                bidRequest.getMember().getId(), BidRequestState.SUBMITTED);
+        List<Map<String, Object>> pastDocs = new ArrayList<>();
+        for (BidRequest past : pastSubmissions) {
+            if (past.getId().equals(bidRequest.getId())) continue;
+            List<BidDocument> docs = bidDocumentRepository.findByBidRequestId(past.getId());
+            for (BidDocument doc : docs) {
+                pastDocs.add(Map.of(
+                    "bidRequestId", past.getId().toString(),
+                    "opportunityTitle", past.getOpportunity().getTitle(),
+                    "documentType", doc.getDocumentType().name(),
+                    "documentId", doc.getId().toString()
+                ));
+            }
+        }
+        context.put("pastSubmissions", pastDocs);
+
+        return context;
     }
 
     private List<RequirementDTO> loadRequirementsAsDto(UUID opportunityId) {

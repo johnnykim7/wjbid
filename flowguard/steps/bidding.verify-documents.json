@@ -1,0 +1,14 @@
+{
+  "type": "ACTION",
+  "name": "문서 생성 결과 검증 (Validation API)",
+  "connector": "bidding-api",
+  "action": {
+    "method": "GET",
+    "endpoint": "/api/validation/bid-documents?bidRequestId={{steps.create-bid-request.output.bidRequestId}}"
+  },
+  "assert": [
+    { "field": "$.statusCode", "operator": "==", "value": 200 },
+    { "field": "$.body.bidDocuments", "operator": "!=", "value": null }
+  ],
+  "failMode": "soft"
+}

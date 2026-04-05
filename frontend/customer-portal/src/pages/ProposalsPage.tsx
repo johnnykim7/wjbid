@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Badge } from '../components/ui/badge'
 import { LoadingSpinner } from '../components/ui/loading-spinner'
 import { EmptyState } from '../components/ui/empty-state'
@@ -104,6 +105,7 @@ function StateGuide({ state }: { state: string }) {
 }
 
 export default function ProposalsPage() {
+  const navigate = useNavigate()
   const [proposals, setProposals] = useState<BidRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<BidRequest | null>(null)
@@ -194,7 +196,15 @@ export default function ProposalsPage() {
                   <p className="text-sm font-medium text-gray-800 line-clamp-2 leading-snug">
                     {p.opportunityTitle}
                   </p>
-                  <p className="text-xs text-gray-400 mt-1">{p.createdAt?.slice(0, 10)}</p>
+                  <div className="flex items-center justify-between mt-1">
+                    <p className="text-xs text-gray-400">{p.createdAt?.slice(0, 10)}</p>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); navigate(`/proposals/${p.id}`) }}
+                      className="text-xs text-secondary hover:underline"
+                    >
+                      상세 &rarr;
+                    </button>
+                  </div>
                 </button>
               ))}
             </div>

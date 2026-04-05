@@ -17,6 +17,7 @@ const NAV_ITEMS: NavItem[] = [
 ]
 
 const SETTING_ITEMS: NavItem[] = [
+  { to: '/guide', icon: 'fa-solid fa-book-open', label: '이용 가이드' },
   { to: '/pricing', icon: 'fa-solid fa-credit-card', label: '요금제 및 결제' },
   { to: '/profile', icon: 'fa-solid fa-gear', label: '기업 프로필 설정' },
 ]

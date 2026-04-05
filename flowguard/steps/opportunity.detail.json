@@ -1,0 +1,16 @@
+{
+  "type": "ACTION",
+  "name": "공고 상세 조회",
+  "connector": "bidding-api",
+  "action": {
+    "method": "GET",
+    "endpoint": "/api/opportunities/{{steps.opportunity.list.output.firstOpportunityId}}"
+  },
+  "assert": [
+    { "field": "$.statusCode", "operator": "==", "value": 200 },
+    { "field": "$.body.data.id", "operator": "!=", "value": null },
+    { "field": "$.body.data.title", "operator": "!=", "value": null },
+    { "field": "$.body.data.noticeId", "operator": "!=", "value": null }
+  ],
+  "failMode": "hard"
+}

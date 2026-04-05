@@ -1,0 +1,22 @@
+{
+  "type": "ACTION",
+  "name": "FSM: CREATED → DOCS_PENDING",
+  "connector": "bidding-api",
+  "action": {
+    "method": "POST",
+    "endpoint": "/api/admin/bid-requests/{{steps.bid.create-request.output.bidRequestId}}/transition",
+    "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer {{vars.adminToken}}"
+    },
+    "body": {
+      "toState": "DOCS_PENDING",
+      "notes": "FlowGuard: 문서 요청"
+    }
+  },
+  "assert": [
+    { "field": "$.statusCode", "operator": "==", "value": 200 },
+    { "field": "$.body.data.state", "operator": "==", "value": "DOCS_PENDING" }
+  ],
+  "failMode": "hard"
+}

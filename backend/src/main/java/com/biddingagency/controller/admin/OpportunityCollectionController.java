@@ -1,6 +1,11 @@
 package com.biddingagency.controller.admin;
 
+import com.biddingagency.domain.collection.entity.CollectorRun;
+import com.biddingagency.domain.collection.repository.CollectorRunRepository;
 import com.biddingagency.integration.samgov.scheduler.OpportunityCollectionScheduler;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +30,7 @@ import java.util.Map;
 public class OpportunityCollectionController {
 
     private final OpportunityCollectionScheduler collectionScheduler;
+    private final CollectorRunRepository collectorRunRepository;
 
     /**
      * Manually trigger opportunity collection
@@ -56,5 +62,15 @@ public class OpportunityCollectionController {
                 "status", "NOT_IMPLEMENTED",
                 "message", "Status tracking will be implemented in Phase 2"
         ));
+    }
+
+    /**
+     * Get collection run history
+     */
+    @GetMapping("/runs")
+    @Operation(summary = "수집 이력", description = "수집 실행 이력 조회 (페이징)")
+    public ResponseEntity<Page<CollectorRun>> getCollectionRuns(
+            @PageableDefault(size = 20) Pageable pageable) {
+        return ResponseEntity.ok(collectorRunRepository.findAllByOrderByStartedAtDesc(pageable));
     }
 }

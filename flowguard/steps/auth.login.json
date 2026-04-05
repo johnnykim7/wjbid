@@ -1,0 +1,24 @@
+{
+  "type": "ACTION",
+  "name": "로그인 → JWT 발급",
+  "connector": "bidding-api",
+  "action": {
+    "method": "POST",
+    "endpoint": "/api/auth/login",
+    "headers": { "Content-Type": "application/json" },
+    "body": {
+      "email": "{{steps.auth.register.output.email}}",
+      "password": "Test1234!@"
+    }
+  },
+  "extract": {
+    "accessToken": "$.body.data.accessToken",
+    "refreshToken": "$.body.data.refreshToken"
+  },
+  "assert": [
+    { "field": "$.statusCode", "operator": "==", "value": 200 },
+    { "field": "$.body.data.accessToken", "operator": "!=", "value": null },
+    { "field": "$.body.data.refreshToken", "operator": "!=", "value": null }
+  ],
+  "failMode": "hard"
+}

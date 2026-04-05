@@ -1,0 +1,24 @@
+{
+  "type": "ACTION",
+  "name": "회원가입",
+  "connector": "bidding-api",
+  "action": {
+    "method": "POST",
+    "endpoint": "/api/auth/register",
+    "headers": { "Content-Type": "application/json" },
+    "body": {
+      "email": "flowguard-{{flowId}}@test.com",
+      "password": "Test1234!@",
+      "companyName": "FlowGuard Test Corp"
+    }
+  },
+  "extract": {
+    "memberId": "$.body.data.id",
+    "email": "$.body.data.email"
+  },
+  "assert": [
+    { "field": "$.statusCode", "operator": "==", "value": 200 },
+    { "field": "$.body.success", "operator": "==", "value": true }
+  ],
+  "failMode": "hard"
+}

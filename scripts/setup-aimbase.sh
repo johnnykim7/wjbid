@@ -4,9 +4,8 @@
 # 입찰제안시스템을 Aimbase에 연동하기 위한 초기 설정을 수행합니다.
 #
 # 사전 조건:
-#   - Aimbase가 실행 중이어야 합니다
+#   - Aimbase가 실행 중이어야 합니다 (14.63.25.49:8280)
 #   - API Key가 유효해야 합니다
-#   - 입찰 플랫폼이 PLATFORM_HOST:8088에서 실행 중이어야 합니다 (MCP 서버 등록용)
 #
 # 사용법:
 #   ./scripts/setup-aimbase.sh
@@ -29,46 +28,92 @@ echo "Platform: ${PLATFORM_HOST}:${PLATFORM_PORT}"
 echo ""
 
 # ─── 1. 연결 확인 ────────────────────────────────────────────────────────────
-echo "[1/6] Aimbase 연결 확인..."
-HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${HEADER[@]}" "${AIMBASE_API}/connections")
+echo "[1/5] Aimbase 연결 확인..."
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "${HEADER[@]}" "${AIMBASE_API}/connections")
 if [ "$HTTP_CODE" != "200" ]; then
     echo "ERROR: Aimbase 연결 실패 (HTTP ${HTTP_CODE})"
     exit 1
 fi
 echo "  OK (HTTP 200)"
 
-# ─── 2. LLM Connection 생성 ──────────────────────────────────────────────────
+# ─── 2. LLM Connection 확인/생성 ─────────────────────────────────────────────
 echo ""
-echo "[2/6] LLM Connection 확인/생성..."
+echo "[2/5] LLM Connection 확인/생성..."
 
-# 기존 connection 확인
 EXISTING_CONN=$(curl -s "${HEADER[@]}" "${AIMBASE_API}/connections" | \
-    python3 -c "import sys,json; data=json.load(sys.stdin).get('data',[]); print(next((c['id'] for c in data if 'bidding' in c.get('name','').lower()), ''))" 2>/dev/null || echo "")
+    python3 -c "
+import sys,json
+data = json.load(sys.stdin).get('data',[])
+# content가 list가 아니면 pagination 처리
+if isinstance(data, dict): data = data.get('content', [])
+result = next((c['id'] for c in data if 'bidding' in c.get('name','').lower()), '')
+print(result)
+" 2>/dev/null || echo "")
 
 if [ -n "$EXISTING_CONN" ]; then
     echo "  기존 Connection 발견: ${EXISTING_CONN}"
     CONNECTION_ID="${EXISTING_CONN}"
 else
-    echo "  Connection이 없습니다. 수동으로 생성해주세요:"
-    echo "  POST ${AIMBASE_API}/connections"
-    echo '  { "name": "bidding-claude-sonnet", "type": "LLM", "provider": "ANTHROPIC", "config": { "apiKey": "sk-ant-...", "model": "claude-sonnet-4-20250514", "maxTokens": 4096 } }'
-    echo ""
-    echo "  또는 환경변수 LLM_CONNECTION_ID를 설정하세요."
-    CONNECTION_ID="${LLM_CONNECTION_ID:-}"
+    ANTHROPIC_KEY="${ANTHROPIC_API_KEY:-}"
+    if [ -z "$ANTHROPIC_KEY" ]; then
+        echo "  Connection이 없고 ANTHROPIC_API_KEY 환경변수도 없습니다."
+        echo "  다음 중 하나를 실행하세요:"
+        echo "    export ANTHROPIC_API_KEY=sk-ant-... && ./scripts/setup-aimbase.sh"
+        echo "    export LLM_CONNECTION_ID=<기존ID> && ./scripts/setup-aimbase.sh"
+        CONNECTION_ID="${LLM_CONNECTION_ID:-}"
+    else
+        echo "  Claude Sonnet Connection 생성 중..."
+        # Aimbase Connection 필드: name, adapter(not provider), type(소문자), config
+        CONN_RESPONSE=$(curl -s "${HEADER[@]}" -X POST "${AIMBASE_API}/connections" \
+            -d "{
+                \"name\": \"bidding-claude-sonnet\",
+                \"adapter\": \"anthropic\",
+                \"type\": \"llm\",
+                \"config\": {
+                    \"apiKey\": \"${ANTHROPIC_KEY}\",
+                    \"model\": \"claude-sonnet-4-20250514\",
+                    \"maxTokens\": 4096
+                }
+            }")
+        CONNECTION_ID=$(echo "$CONN_RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin).get('data',{}).get('id',''))" 2>/dev/null || echo "")
+        if [ -n "$CONNECTION_ID" ]; then
+            echo "  생성 완료: ${CONNECTION_ID}"
+            # 연결 테스트
+            TEST_RESULT=$(curl -s "${HEADER[@]}" -X POST "${AIMBASE_API}/connections/${CONNECTION_ID}/test" | \
+                python3 -c "import sys,json; d=json.load(sys.stdin).get('data',{}); print(f'ok={d.get(\"ok\")}, latency={d.get(\"latencyMs\")}ms')" 2>/dev/null || echo "test failed")
+            echo "  연결 테스트: ${TEST_RESULT}"
+        else
+            echo "  ERROR: Connection 생성 실패. 응답: ${CONN_RESPONSE}"
+            CONNECTION_ID="${LLM_CONNECTION_ID:-}"
+        fi
+    fi
+fi
+
+if [ -z "${CONNECTION_ID:-}" ]; then
+    echo "  WARNING: CONNECTION_ID가 없습니다. 워크플로우의 LLM_CALL 스텝이 동작하지 않습니다."
 fi
 
 # ─── 3. MCP 서버 등록 ────────────────────────────────────────────────────────
 echo ""
-echo "[3/6] MCP 서버 등록..."
+echo "[3/5] MCP 서버 등록..."
 
 MCP_SSE_URL="http://${PLATFORM_HOST}:${PLATFORM_PORT}/api/mcp/sse"
 
-# 기존 MCP 서버 확인
 EXISTING_MCP=$(curl -s "${HEADER[@]}" "${AIMBASE_API}/mcp-servers" | \
-    python3 -c "import sys,json; data=json.load(sys.stdin).get('data',[]); print(next((s['id'] for s in data if 'bidding' in s.get('name','').lower()), ''))" 2>/dev/null || echo "")
+    python3 -c "
+import sys,json
+data = json.load(sys.stdin).get('data',[])
+if isinstance(data, dict): data = data.get('content', [])
+result = next((s['id'] for s in data if 'bidding' in s.get('name','').lower()), '')
+print(result)
+" 2>/dev/null || echo "")
 
 if [ -n "$EXISTING_MCP" ]; then
     echo "  기존 MCP 서버 발견: ${EXISTING_MCP}"
+    # URL 업데이트
+    curl -s "${HEADER[@]}" -X PUT "${AIMBASE_API}/mcp-servers/${EXISTING_MCP}" \
+        -d "{\"name\":\"bidding-agency-mcp\",\"transport\":\"sse\",\"config\":{\"url\":\"${MCP_SSE_URL}\"}}" > /dev/null
+    echo "  URL 업데이트: ${MCP_SSE_URL}"
     MCP_SERVER_ID="${EXISTING_MCP}"
 else
     echo "  MCP 서버 등록 중... (URL: ${MCP_SSE_URL})"
@@ -76,53 +121,54 @@ else
         -d "{
             \"name\": \"bidding-agency-mcp\",
             \"transport\": \"sse\",
-            \"config\": {
-                \"url\": \"${MCP_SSE_URL}\"
-            },
+            \"config\": { \"url\": \"${MCP_SSE_URL}\" },
             \"autoStart\": true
         }")
     MCP_SERVER_ID=$(echo "$MCP_RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin).get('data',{}).get('id',''))" 2>/dev/null || echo "")
-
     if [ -n "$MCP_SERVER_ID" ]; then
         echo "  등록 완료: ${MCP_SERVER_ID}"
     else
-        echo "  WARNING: MCP 서버 등록 실패. 응답: ${MCP_RESPONSE}"
+        echo "  WARNING: 등록 실패. 응답: ${MCP_RESPONSE}"
     fi
 fi
 
-# ─── 4. Tool Discovery ───────────────────────────────────────────────────────
-echo ""
-echo "[4/6] Tool Discovery..."
-
-if [ -n "$MCP_SERVER_ID" ]; then
-    DISCOVER_RESPONSE=$(curl -s "${HEADER[@]}" -X POST "${AIMBASE_API}/mcp-servers/${MCP_SERVER_ID}/discover")
+# Tool Discovery (플랫폼이 실행 중일 때만 성공)
+if [ -n "${MCP_SERVER_ID:-}" ]; then
+    echo "  Tool Discovery 시도..."
+    DISCOVER_RESPONSE=$(curl -s --max-time 10 "${HEADER[@]}" -X POST "${AIMBASE_API}/mcp-servers/${MCP_SERVER_ID}/discover" 2>/dev/null || echo "{}")
     TOOL_COUNT=$(echo "$DISCOVER_RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin).get('data',{}).get('toolCount',0))" 2>/dev/null || echo "0")
-    echo "  발견된 도구: ${TOOL_COUNT}개"
-
-    if [ "$TOOL_COUNT" = "0" ]; then
-        echo "  WARNING: 도구가 발견되지 않았습니다. 플랫폼이 실행 중인지 확인하세요."
-        echo "  플랫폼 MCP SSE URL: ${MCP_SSE_URL}"
+    if [ "$TOOL_COUNT" != "0" ]; then
+        echo "  발견된 도구: ${TOOL_COUNT}개"
+    else
+        echo "  도구 미발견 (플랫폼 미실행 또는 네트워크 접근 불가). 나중에 재시도 가능."
     fi
-else
-    echo "  SKIP: MCP 서버 ID가 없습니다."
 fi
 
-# ─── 5. 워크플로우 생성 ──────────────────────────────────────────────────────
+# ─── 4. 워크플로우 생성 ──────────────────────────────────────────────────────
 echo ""
-echo "[5/6] 워크플로우 확인/생성..."
+echo "[4/5] 워크플로우 확인/생성..."
 
-# requirement-extraction 워크플로우
+# Aimbase WorkflowRequest 필수 필드: name(@NotBlank), triggerConfig(@NotNull), steps(@NotNull)
+
+# --- requirement-extraction ---
 EXISTING_WF_REQ=$(curl -s "${HEADER[@]}" "${AIMBASE_API}/workflows" | \
-    python3 -c "import sys,json; data=json.load(sys.stdin).get('data',[]); print(next((w['id'] for w in data if 'requirement' in w.get('name','').lower()), ''))" 2>/dev/null || echo "")
+    python3 -c "
+import sys,json
+data = json.load(sys.stdin).get('data',[])
+if isinstance(data, dict): data = data.get('content', [])
+result = next((w['id'] for w in data if 'requirement' in w.get('name','').lower()), '')
+print(result)
+" 2>/dev/null || echo "")
 
 if [ -n "$EXISTING_WF_REQ" ]; then
-    echo "  requirement-extraction 워크플로우 존재: ${EXISTING_WF_REQ}"
+    echo "  requirement-extraction 존재: ${EXISTING_WF_REQ}"
 else
-    echo "  requirement-extraction 워크플로우 생성 중..."
+    echo "  requirement-extraction 생성 중..."
     WF_REQ_RESPONSE=$(curl -s "${HEADER[@]}" -X POST "${AIMBASE_API}/workflows" \
         -d "{
             \"name\": \"requirement-extraction\",
             \"domain\": \"bidding\",
+            \"triggerConfig\": { \"type\": \"api\" },
             \"inputSchema\": {
                 \"type\": \"object\",
                 \"properties\": {
@@ -145,26 +191,9 @@ else
                     \"id\": \"extract_requirements\",
                     \"type\": \"LLM_CALL\",
                     \"config\": {
-                        \"connection_id\": \"${CONNECTION_ID}\",
-                        \"system\": \"You are an expert government procurement analyst. Extract all requirements from the given RFP/opportunity text. Categorize each requirement as: DOCUMENT, FORMAT, SUBMISSION, DEADLINE, ELIGIBILITY, TECHNICAL, or OTHER. Identify blockers (mandatory requirements). Also extract submission format requirements (Word/PDF/page limits).\",
-                        \"prompt\": \"Analyze the following opportunity and extract structured requirements:\\n\\nOpportunity Details:\\n{{fetch_opportunity.output}}\\n\\nFull Text:\\n{{input.opportunityText}}\\n\\nReturn a JSON array of requirements with fields: category, title, description, isBlocker (boolean).\",
-                        \"response_schema\": {
-                            \"type\": \"object\",
-                            \"properties\": {
-                                \"requirements\": {
-                                    \"type\": \"array\",
-                                    \"items\": {
-                                        \"type\": \"object\",
-                                        \"properties\": {
-                                            \"category\": { \"type\": \"string\" },
-                                            \"title\": { \"type\": \"string\" },
-                                            \"description\": { \"type\": \"string\" },
-                                            \"isBlocker\": { \"type\": \"boolean\" }
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                        \"connection_id\": \"${CONNECTION_ID:-}\",
+                        \"system\": \"You are an expert US government procurement analyst specializing in USFK contracts. Extract ALL requirements from the given RFP/opportunity. Categorize each as: DOCUMENT, FORMAT, SUBMISSION, DEADLINE, ELIGIBILITY, TECHNICAL, or OTHER. Mark mandatory requirements as blockers. Also extract submission format requirements (Word/PDF/page limits).\",
+                        \"prompt\": \"Analyze this opportunity and extract structured requirements.\\n\\nOpportunity Details:\\n{{fetch_opportunity.output}}\\n\\nFull Text:\\n{{input.opportunityText}}\\n\\nReturn JSON: { \\\"requirements\\\": [{ \\\"category\\\": \\\"...\\\", \\\"title\\\": \\\"...\\\", \\\"description\\\": \\\"...\\\", \\\"isBlocker\\\": true/false }] }\"
                     },
                     \"depends_on\": [\"fetch_opportunity\"]
                 },
@@ -183,21 +212,32 @@ else
             ]
         }")
     WF_REQ_ID=$(echo "$WF_REQ_RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin).get('data',{}).get('id',''))" 2>/dev/null || echo "")
-    echo "  생성 완료: ${WF_REQ_ID:-FAILED}"
+    if [ -n "$WF_REQ_ID" ]; then
+        echo "  생성 완료: ${WF_REQ_ID}"
+    else
+        echo "  FAILED. 응답: $(echo "$WF_REQ_RESPONSE" | head -c 200)"
+    fi
 fi
 
-# bid-document-generation 워크플로우
+# --- bid-document-generation ---
 EXISTING_WF_DOC=$(curl -s "${HEADER[@]}" "${AIMBASE_API}/workflows" | \
-    python3 -c "import sys,json; data=json.load(sys.stdin).get('data',[]); print(next((w['id'] for w in data if 'document' in w.get('name','').lower()), ''))" 2>/dev/null || echo "")
+    python3 -c "
+import sys,json
+data = json.load(sys.stdin).get('data',[])
+if isinstance(data, dict): data = data.get('content', [])
+result = next((w['id'] for w in data if 'document' in w.get('name','').lower()), '')
+print(result)
+" 2>/dev/null || echo "")
 
 if [ -n "$EXISTING_WF_DOC" ]; then
-    echo "  bid-document-generation 워크플로우 존재: ${EXISTING_WF_DOC}"
+    echo "  bid-document-generation 존재: ${EXISTING_WF_DOC}"
 else
-    echo "  bid-document-generation 워크플로우 생성 중..."
+    echo "  bid-document-generation 생성 중..."
     WF_DOC_RESPONSE=$(curl -s "${HEADER[@]}" -X POST "${AIMBASE_API}/workflows" \
         -d "{
             \"name\": \"bid-document-generation\",
             \"domain\": \"bidding\",
+            \"triggerConfig\": { \"type\": \"api\" },
             \"inputSchema\": {
                 \"type\": \"object\",
                 \"properties\": {
@@ -230,16 +270,9 @@ else
                     \"id\": \"generate_content\",
                     \"type\": \"LLM_CALL\",
                     \"config\": {
-                        \"connection_id\": \"${CONNECTION_ID}\",
-                        \"system\": \"You are an expert proposal writer for US government contracts (USFK). Generate professional proposal content based on the RFP requirements, bid request details, and document template. Output in TipTap JSON format.\",
-                        \"prompt\": \"Generate a {{input.documentType}} document for this bid request.\\n\\nBid Request:\\n{{fetch_bid.output}}\\n\\nTemplate Structure:\\n{{fetch_template.output}}\\n\\nOpportunity Text:\\n{{input.opportunityText}}\\n\\nRequirements:\\n{{input.requirements}}\\n\\nGenerate comprehensive, professional content in TipTap JSON format.\",
-                        \"response_schema\": {
-                            \"type\": \"object\",
-                            \"properties\": {
-                                \"contentJson\": { \"type\": \"object\" },
-                                \"changeSummary\": { \"type\": \"string\" }
-                            }
-                        }
+                        \"connection_id\": \"${CONNECTION_ID:-}\",
+                        \"system\": \"You are an expert proposal writer for US government contracts (USFK). Generate professional proposal content in TipTap JSON format based on the RFP requirements, bid details, and template structure.\",
+                        \"prompt\": \"Generate a {{input.documentType}} document.\\n\\nBid Request:\\n{{fetch_bid.output}}\\n\\nTemplate:\\n{{fetch_template.output}}\\n\\nOpportunity:\\n{{input.opportunityText}}\\n\\nRequirements:\\n{{input.requirements}}\\n\\nReturn JSON: { \\\"contentJson\\\": { \\\"type\\\": \\\"doc\\\", \\\"content\\\": [...] }, \\\"changeSummary\\\": \\\"...\\\" }\"
                     },
                     \"depends_on\": [\"fetch_bid\", \"fetch_template\"]
                 },
@@ -273,21 +306,24 @@ else
             ]
         }")
     WF_DOC_ID=$(echo "$WF_DOC_RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin).get('data',{}).get('id',''))" 2>/dev/null || echo "")
-    echo "  생성 완료: ${WF_DOC_ID:-FAILED}"
+    if [ -n "$WF_DOC_ID" ]; then
+        echo "  생성 완료: ${WF_DOC_ID}"
+    else
+        echo "  FAILED. 응답: $(echo "$WF_DOC_RESPONSE" | head -c 200)"
+    fi
 fi
 
-# ─── 6. 요약 ─────────────────────────────────────────────────────────────────
+# ─── 5. 요약 ─────────────────────────────────────────────────────────────────
 echo ""
 echo "=== 셋업 완료 ==="
 echo ""
-echo "다음 환경변수를 application.yml 또는 환경에 설정하세요:"
-echo "  AIMBASE_URL=${AIMBASE_URL}"
-echo "  AIMBASE_API_KEY=${API_KEY}"
-[ -n "${CONNECTION_ID:-}" ] && echo "  LLM_CONNECTION_ID=${CONNECTION_ID}"
-[ -n "${MCP_SERVER_ID:-}" ] && echo "  AIMBASE_MCP_SERVER_ID=${MCP_SERVER_ID}"
+echo "등록된 리소스:"
+[ -n "${CONNECTION_ID:-}" ]  && echo "  Connection:  ${CONNECTION_ID}"
+[ -n "${MCP_SERVER_ID:-}" ]  && echo "  MCP Server:  ${MCP_SERVER_ID}"
+[ -n "${EXISTING_WF_REQ:-}${WF_REQ_ID:-}" ] && echo "  Workflow 1:  ${EXISTING_WF_REQ:-$WF_REQ_ID} (requirement-extraction)"
+[ -n "${EXISTING_WF_DOC:-}${WF_DOC_ID:-}" ] && echo "  Workflow 2:  ${EXISTING_WF_DOC:-$WF_DOC_ID} (bid-document-generation)"
 echo ""
-echo "주의사항:"
-echo "  - LLM Connection에 실제 API Key가 설정되어야 합니다"
-echo "  - 플랫폼이 ${PLATFORM_HOST}:${PLATFORM_PORT}에서 실행 중이어야 MCP 연동이 작동합니다"
-echo "  - Tool Discovery는 플랫폼 실행 후 다시 실행할 수 있습니다:"
-echo "    curl -X POST ${AIMBASE_API}/mcp-servers/${MCP_SERVER_ID:-<ID>}/discover -H 'X-API-Key: ${API_KEY}'"
+echo "다음 단계:"
+echo "  1. 플랫폼 기동: cd backend && SERVER_PORT=8088 ./gradlew bootRun"
+echo "  2. Tool Discovery: curl -X POST ${AIMBASE_API}/mcp-servers/\${MCP_SERVER_ID}/discover -H 'X-API-Key: ${API_KEY}'"
+echo "  3. E2E 테스트: 입찰 요청 → REQUIREMENT_ANALYSIS 전이 → 자동 추출 확인"

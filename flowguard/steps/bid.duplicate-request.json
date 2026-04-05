@@ -1,0 +1,22 @@
+{
+  "type": "ACTION",
+  "name": "BIZ-006 동일 공고 중복 신청 거부",
+  "connector": "bidding-api",
+  "action": {
+    "method": "POST",
+    "endpoint": "/api/bid-requests",
+    "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer {{steps.auth.login.output.accessToken}}"
+    },
+    "body": {
+      "opportunityId": "{{steps.opportunity.list.output.firstOpportunityId}}",
+      "serviceLevel": "STANDARD"
+    }
+  },
+  "assert": [
+    { "field": "$.statusCode", "operator": "!=", "value": 200 },
+    { "field": "$.body.success", "operator": "==", "value": false }
+  ],
+  "failMode": "hard"
+}

@@ -1,0 +1,14 @@
+{
+  "type": "ACTION",
+  "name": "마감 임박 공고 조회",
+  "connector": "bidding-api",
+  "action": {
+    "method": "GET",
+    "endpoint": "/api/opportunities/near-deadline"
+  },
+  "assert": [
+    { "field": "$.statusCode", "operator": "==", "value": 200 },
+    { "field": "$.body.success", "operator": "==", "value": true }
+  ],
+  "failMode": "soft"
+}

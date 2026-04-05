@@ -12,32 +12,27 @@ public enum DocumentStatus {
     DRAFT,
 
     /**
-     * Document is ready for review
-     */
-    READY,
-
-    /**
-     * Document is approved by reviewer
-     */
-    APPROVED,
-
-    /**
      * Document is locked (immutable after submission)
      * Cannot be edited - must create amendment instead
      */
-    LOCKED;
+    LOCKED,
+
+    /**
+     * Document is archived (after submission)
+     */
+    ARCHIVED;
 
     /**
      * Check if document can be edited
      */
     public boolean canEdit() {
-        return this == DRAFT || this == READY || this == APPROVED;
+        return this == DRAFT;
     }
 
     /**
      * Check if document is final/immutable
      */
     public boolean isImmutable() {
-        return this == LOCKED;
+        return this == LOCKED || this == ARCHIVED;
     }
 }

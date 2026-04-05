@@ -1,0 +1,49 @@
+# manifest.yaml — FlowGuard 솔루션 계약 선언
+version: "1"
+solution:
+  key: bidding-agency
+  name: 입찰 대행 플랫폼
+  description: SAM.gov 미군(USFK) 정부 조달 입찰 AI 대행 서비스. 공고 수집, 입찰 신청, FSM 상태 관리, 문서 생성을 수행한다.
+
+inputs:
+  - key: memberId
+    type: string
+    description: 회원 UUID
+    required: true
+  - key: opportunityId
+    type: string
+    description: 공고 UUID
+    required: true
+  - key: keyword
+    type: string
+    description: SAM.gov 검색 키워드
+    required: false
+
+outputs:
+  - key: bidRequestId
+    type: string
+    description: 생성된 입찰 신청 ID
+  - key: bidRequestState
+    type: string
+    description: 입찰 신청 상태 (CREATED/DOCS_PENDING/ANALYZING/GENERATING/REVIEW/CONFIRMED/SUBMITTED/CLOSED)
+  - key: opportunityId
+    type: string
+    description: 공고 ID
+  - key: documentId
+    type: string
+    description: 생성된 문서 ID
+
+dependsOn: []
+
+tags:
+  - 입찰
+  - 조달
+  - SAM.gov
+  - MCP
+
+health:
+  path: /health
+  expectedStatus: 200
+
+validation:
+  basePath: /validation

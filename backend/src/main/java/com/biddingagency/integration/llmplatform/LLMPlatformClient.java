@@ -45,6 +45,9 @@ public class LLMPlatformClient {
     @Value("${app.aimbase.workflows.document-generation:bid-document-generation}")
     private String documentGenerationWorkflowId;
 
+    @Value("${app.aimbase.workflows.opportunity-analysis:opportunity-analysis}")
+    private String opportunityAnalysisWorkflowId;
+
     @Value("${app.aimbase.polling.interval-ms:3000}")
     private long pollingIntervalMs;
 
@@ -105,6 +108,15 @@ public class LLMPlatformClient {
     }
 
     /**
+     * 공고 사전 분석 — opportunity-analysis 워크플로우 실행 (CR-003).
+     * Aimbase가 MCP save_opportunity_analysis 도구를 콜백하여 결과를 직접 저장.
+     */
+    public WorkflowRunResponse analyzeOpportunity(Map<String, Object> input) {
+        log.info("Aimbase: 공고 사전 분석 시작 opportunityId={}", input.get("opportunityId"));
+        return runWorkflowAndWait(opportunityAnalysisWorkflowId, input);
+    }
+
+    /**
      * Aimbase 헬스체크
      */
     public boolean isHealthy() {
@@ -126,14 +138,12 @@ public class LLMPlatformClient {
         String pollUrlTemplate = baseUrl + "/api/v1/workflows/" + workflowId + "/runs/";
 
         // 1단계: 워크플로우 실행 시작
+        // Aimbase WorkflowController.run()은 Map<String,Object>를 직접 받음 (래핑 없음)
         WorkflowRunResponse runResponse;
         try {
-            Map<String, Object> requestBody = new HashMap<>();
-            requestBody.put("inputData", input);
-
             ResponseEntity<AimbaseApiResponse<WorkflowRunResponse>> responseEntity =
                 llmPlatformRestTemplate.exchange(runUrl, HttpMethod.POST,
-                    new HttpEntity<>(requestBody), WORKFLOW_RESPONSE_TYPE);
+                    new HttpEntity<>(input), WORKFLOW_RESPONSE_TYPE);
 
             AimbaseApiResponse<WorkflowRunResponse> apiResponse = responseEntity.getBody();
             if (apiResponse == null || !apiResponse.isSuccess() || apiResponse.getData() == null) {

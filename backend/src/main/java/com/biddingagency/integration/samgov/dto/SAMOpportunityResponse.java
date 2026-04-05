@@ -66,7 +66,7 @@ public class SAMOpportunityResponse {
         private String uiLink;
 
         @JsonProperty("description")
-        private List<Map<String, String>> description;
+        private Object description;
 
         @JsonProperty("resourceLinks")
         private List<String> resourceLinks;

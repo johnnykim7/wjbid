@@ -1,0 +1,20 @@
+{
+  "type": "ACTION",
+  "name": "MCP 미지원 메서드 에러 반환",
+  "connector": "bidding-api",
+  "action": {
+    "method": "POST",
+    "endpoint": "/api/mcp",
+    "headers": { "Content-Type": "application/json" },
+    "body": {
+      "jsonrpc": "2.0",
+      "id": 8,
+      "method": "unknown/method"
+    }
+  },
+  "assert": [
+    { "field": "$.statusCode", "operator": "==", "value": 200 },
+    { "field": "$.body.error.code", "operator": "==", "value": -32601 }
+  ],
+  "failMode": "hard"
+}

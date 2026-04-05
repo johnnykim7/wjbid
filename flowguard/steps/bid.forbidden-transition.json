@@ -1,0 +1,21 @@
+{
+  "type": "ACTION",
+  "name": "BIZ-001 FSM 금지 전이 거부 (CREATED → SUBMITTED 직접 불가)",
+  "connector": "bidding-api",
+  "action": {
+    "method": "POST",
+    "endpoint": "/api/admin/bid-requests/{{steps.bid.create-request.output.bidRequestId}}/transition",
+    "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer {{vars.adminToken}}"
+    },
+    "body": {
+      "toState": "SUBMITTED",
+      "notes": "FlowGuard: 금지 전이 테스트"
+    }
+  },
+  "assert": [
+    { "field": "$.statusCode", "operator": "!=", "value": 200 }
+  ],
+  "failMode": "hard"
+}

@@ -1,0 +1,14 @@
+{
+  "type": "UI_SMOKE",
+  "name": "[Portal] 메인 페이지 렌더링",
+  "connector": "customer-portal",
+  "action": {
+    "url": "http://localhost:5173/",
+    "waitForSelector": "nav"
+  },
+  "assert": [
+    { "field": "$.statusCode", "operator": "==", "value": 200 },
+    { "field": "$.title", "operator": "!=", "value": null }
+  ],
+  "failMode": "hard"
+}

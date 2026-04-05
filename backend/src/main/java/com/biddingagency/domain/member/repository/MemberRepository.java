@@ -4,6 +4,7 @@ import com.biddingagency.domain.member.entity.Member;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -22,5 +23,10 @@ public interface MemberRepository extends JpaRepository<Member, UUID> {
      * Check if email exists
      */
     boolean existsByEmail(String email);
+
+    /**
+     * Find members by role
+     */
+    List<Member> findByRole(Member.Role role);
 
 }

@@ -61,6 +61,11 @@ public interface BidRequestRepository extends JpaRepository<BidRequest, UUID> {
     long countByState(BidRequestState state);
 
     /**
+     * CR-003: Past submissions by member (for LLM 3-pipeline input)
+     */
+    List<BidRequest> findByMemberIdAndState(UUID memberId, BidRequestState state);
+
+    /**
      * Find all with member and opportunity eagerly loaded
      */
     @Query("SELECT br FROM BidRequest br " +

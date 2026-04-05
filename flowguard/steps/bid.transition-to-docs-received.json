@@ -1,0 +1,22 @@
+{
+  "type": "ACTION",
+  "name": "FSM: DOCS_PENDING → DOCS_RECEIVED",
+  "connector": "bidding-api",
+  "action": {
+    "method": "POST",
+    "endpoint": "/api/admin/bid-requests/{{steps.bid.create-request.output.bidRequestId}}/transition",
+    "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer {{vars.adminToken}}"
+    },
+    "body": {
+      "toState": "DOCS_RECEIVED",
+      "notes": "FlowGuard: 문서 접수 완료"
+    }
+  },
+  "assert": [
+    { "field": "$.statusCode", "operator": "==", "value": 200 },
+    { "field": "$.body.data.state", "operator": "==", "value": "DOCS_RECEIVED" }
+  ],
+  "failMode": "hard"
+}

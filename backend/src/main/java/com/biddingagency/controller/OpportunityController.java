@@ -1,6 +1,10 @@
 package com.biddingagency.controller;
 
 import com.biddingagency.domain.opportunity.dto.OpportunityDto;
+import com.biddingagency.domain.opportunity.entity.OpportunityAttachment;
+import com.biddingagency.domain.opportunity.entity.OpportunityRequirementItem;
+import com.biddingagency.domain.opportunity.repository.OpportunityAttachmentRepository;
+import com.biddingagency.domain.opportunity.repository.OpportunityRequirementItemRepository;
 import com.biddingagency.domain.opportunity.service.OpportunityService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -28,6 +32,8 @@ import java.util.UUID;
 public class OpportunityController {
 
     private final OpportunityService opportunityService;
+    private final OpportunityRequirementItemRepository requirementItemRepository;
+    private final OpportunityAttachmentRepository attachmentRepository;
 
     /**
      * Get all active opportunities
@@ -37,7 +43,8 @@ public class OpportunityController {
     public ResponseEntity<Page<OpportunityDto>> listOpportunities(
             @PageableDefault(size = 20) Pageable pageable) {
         log.debug("Fetching opportunities, page: {}", pageable.getPageNumber());
-        Page<OpportunityDto> opportunities = opportunityService.findAllActive(pageable)
+        // CR-003: 사용자에게는 VISIBLE 공고만 노출
+        Page<OpportunityDto> opportunities = opportunityService.findAllActiveVisible(pageable)
                 .map(OpportunityDto::from);
         return ResponseEntity.ok(opportunities);
     }
@@ -62,7 +69,8 @@ public class OpportunityController {
             @RequestParam String keyword,
             @PageableDefault(size = 20) Pageable pageable) {
         log.debug("Searching opportunities with keyword: {}", keyword);
-        Page<OpportunityDto> opportunities = opportunityService.searchByKeyword(keyword, pageable)
+        // CR-003: VISIBLE 필터
+        Page<OpportunityDto> opportunities = opportunityService.searchByKeywordVisible(keyword, pageable)
                 .map(OpportunityDto::from);
         return ResponseEntity.ok(opportunities);
     }
@@ -76,7 +84,8 @@ public class OpportunityController {
             @RequestParam String organization,
             @PageableDefault(size = 20) Pageable pageable) {
         log.debug("Searching opportunities for organization: {}", organization);
-        Page<OpportunityDto> opportunities = opportunityService.searchByOrganization(organization, pageable)
+        // CR-003: VISIBLE 필터
+        Page<OpportunityDto> opportunities = opportunityService.searchByOrganizationVisible(organization, pageable)
                 .map(OpportunityDto::from);
         return ResponseEntity.ok(opportunities);
     }
@@ -92,6 +101,41 @@ public class OpportunityController {
         List<OpportunityDto> opportunities = opportunityService.findNearDeadline(days)
                 .stream().map(OpportunityDto::from).toList();
         return ResponseEntity.ok(opportunities);
+    }
+
+    /**
+     * Get opportunity requirements
+     */
+    @GetMapping("/{id}/requirements")
+    @Operation(summary = "공고 요구사항 목록")
+    public ResponseEntity<List<OpportunityRequirementItem>> getRequirements(@PathVariable UUID id) {
+        opportunityService.findById(id); // existence check
+        return ResponseEntity.ok(requirementItemRepository.findByOpportunityId(id));
+    }
+
+    /**
+     * Get opportunity attachments
+     */
+    @GetMapping("/{id}/attachments")
+    @Operation(summary = "공고 첨부파일 목록")
+    public ResponseEntity<List<OpportunityAttachment>> getAttachments(@PathVariable UUID id) {
+        opportunityService.findById(id); // existence check
+        return ResponseEntity.ok(attachmentRepository.findByOpportunityId(id));
+    }
+
+    /**
+     * Qualification check (async via Aimbase)
+     */
+    @PostMapping("/{id}/qualification-check")
+    @Operation(summary = "AI 자격 진단 요청")
+    public ResponseEntity<java.util.Map<String, String>> qualificationCheck(@PathVariable UUID id) {
+        opportunityService.findById(id); // existence check
+        // TODO: Aimbase 연동 후 실제 AI 자격 진단 구현
+        return ResponseEntity.accepted().body(java.util.Map.of(
+                "status", "ACCEPTED",
+                "message", "Qualification check requested. Results will be available shortly.",
+                "opportunityId", id.toString()
+        ));
     }
 
     /**

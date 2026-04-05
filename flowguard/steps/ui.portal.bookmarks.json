@@ -1,0 +1,18 @@
+{
+  "type": "UI_SMOKE",
+  "name": "[Portal] 즐겨찾기 페이지 렌더링 (로그인 필요)",
+  "connector": "customer-portal",
+  "action": {
+    "url": "http://localhost:5173/bookmarks",
+    "waitForSelector": "main",
+    "auth": {
+      "type": "localStorage",
+      "key": "accessToken",
+      "value": "{{vars.portalToken}}"
+    }
+  },
+  "assert": [
+    { "field": "$.statusCode", "operator": "==", "value": 200 }
+  ],
+  "failMode": "soft"
+}

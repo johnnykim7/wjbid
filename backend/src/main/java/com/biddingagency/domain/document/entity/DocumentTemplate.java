@@ -40,6 +40,9 @@ public class DocumentTemplate extends BaseEntity {
     @Column(name = "content_json", columnDefinition = "JSON", nullable = false)
     private Map<String, Object> contentJson;
 
+    @Column(name = "description", columnDefinition = "TEXT")
+    private String description;
+
     @Column(name = "active", nullable = false)
     @Builder.Default
     private Boolean active = true;

@@ -1,0 +1,17 @@
+{
+  "type": "ACTION",
+  "name": "문서 잠금 해제 (LOCKED → DRAFT)",
+  "connector": "bidding-api",
+  "action": {
+    "method": "POST",
+    "endpoint": "/api/bid-documents/{{steps.doc.bid-documents-list.output.documentId}}/unlock",
+    "headers": {
+      "Authorization": "Bearer {{vars.adminToken}}"
+    }
+  },
+  "assert": [
+    { "field": "$.statusCode", "operator": "==", "value": 200 },
+    { "field": "$.body.data.status", "operator": "==", "value": "DRAFT" }
+  ],
+  "failMode": "hard"
+}

@@ -1,0 +1,22 @@
+{
+  "type": "ACTION",
+  "name": "입찰 신청 생성",
+  "connector": "bidding-api",
+  "action": {
+    "method": "POST",
+    "endpoint": "/api/bid-requests",
+    "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer {{vars.accessToken}}"
+    },
+    "body": {
+      "opportunityId": "{{vars.opportunityId}}",
+      "serviceLevel": "STANDARD"
+    }
+  },
+  "extract": {
+    "bidRequestId": "$.body.data.id",
+    "bidRequestState": "$.body.data.state"
+  },
+  "failMode": "hard"
+}

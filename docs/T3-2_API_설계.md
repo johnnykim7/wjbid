@@ -1,6 +1,6 @@
 # SAM.gov Bidding Agency Platform API 설계
 
-> 설계 버전: 1.2 | 최종 수정: 2026-03-28 | 관련 CR: CR-001, CR-002
+> 설계 버전: 1.3 | 최종 수정: 2026-03-28 | 관련 CR: CR-001, CR-002, CR-003
 
 > 단계: 3. Detail Design | 실행스펙 섹션 3에 포함
 >
@@ -59,11 +59,29 @@
 
 ---
 
+## B-2. 공고 관리 — Admin (Opportunity Admin) — CR-003
+
+| 메서드 | 경로 | 설명 | 인증 | 기능 ID |
+|--------|------|------|------|---------|
+| GET | /admin/opportunities | 공고 목록 (첨부파일 수, 분석 상태, 노출 상태 포함) | 🔒 ADMIN | BID-ADMIN-004 |
+| GET | /admin/opportunities/{id} | 공고 상세 + 사전 분석 결과 | 🔒 ADMIN | BID-ADMIN-004 |
+| GET | /admin/opportunities/{id}/analysis | 사전 분석 결과 상세 | 🔒 ADMIN | BID-OPP-006 |
+| POST | /admin/opportunities/{id}/attachments | 첨부파일 수동 업로드 (multipart) | 🔒 ADMIN | BID-OPP-007 |
+| POST | /admin/opportunities/{id}/analyze | 사전 분석 트리거 (수동) | 🔒 ADMIN | BID-OPP-006 |
+| POST | /admin/opportunities/{id}/approve | 노출 승인 (HIDDEN → VISIBLE) | 🔒 ADMIN | BID-OPP-008 |
+| POST | /admin/opportunities/{id}/hide | 노출 해제 (VISIBLE → HIDDEN) | 🔒 ADMIN | BID-OPP-008 |
+| PATCH | /admin/opportunities/{id}/analysis | 사전 분석 결과 보정 (관리자 수정) | 🔒 ADMIN | BID-OPP-006 |
+
+> 사전 분석은 첨부파일 다운로드 완료 시 자동 트리거됨. 수동 트리거는 재분석 또는 수동 업로드 후 사용.
+> 승인(approve)은 OpportunityAnalysis 상태가 COMPLETED일 때만 가능.
+
+---
+
 ## C. 공고 열람 (Opportunity Browse) — Sprint 3
 
 | 메서드 | 경로 | 설명 | 인증 | 기능 ID |
 |--------|------|------|------|---------|
-| GET | /opportunities | 공고 목록 조회 (필터/검색/페이징) | | BID-BROWSE-001 |
+| GET | /opportunities | 공고 목록 조회 (필터/검색/페이징). **사용자: visibility=VISIBLE만** (CR-003) | | BID-BROWSE-001 |
 | GET | /opportunities/{id} | 공고 상세 조회 | | BID-BROWSE-002 |
 | GET | /opportunities/{id}/requirements | 공고 요구사항 목록 (카테고리별) | | BID-BROWSE-003 |
 | GET | /opportunities/{id}/attachments | 공고 첨부문서 목록 | | BID-OPP-003 |
@@ -208,6 +226,9 @@
 | save_document_version | AI 생성 문서 저장 | bidRequestId, documentType, contentJson | BID-MCP-003 |
 | get_document_template | 문서 템플릿 조회 | documentType | BID-MCP-003 |
 | transition_bid_state | 입찰 상태 전이 | bidRequestId, targetState | BID-MCP-004 |
+| get_opportunity_analysis | 공고 사전 분석 결과 조회 (CR-003) | opportunityId | BID-MCP-002 |
+| save_opportunity_analysis | 공고 사전 분석 결과 저장 (CR-003) | opportunityId, summary, documentFormats, requiredDocuments, llmPromptPreset | BID-MCP-002 |
+| get_past_submissions | 과거 제출 이력 조회 (CR-003) | memberId, limit | BID-MCP-002 |
 
 > 모든 MCP Tool은 무상태(BIZ-013). 각 호출은 독립적으로 처리.
 > requestId를 멱등 키로 사용.
@@ -269,7 +290,8 @@ app.aimbase:
 | K. 회원 관리 (Admin) | 1 | — |
 | L. 요금 안내 | 1 | 7 |
 | M. FlowGuard 연동 | 5 | — (CR-001) |
-| MCP Tools | 8 | 5 |
+| B-2. 공고 관리 (Admin) | 8 | CR-003 |
+| MCP Tools | 11 | 5, CR-003 |
 | MCP SSE 엔드포인트 | 2 | CR-002 |
 | Aimbase 워크플로우 호출 | 2 | CR-002 |
-| **합계** | **REST 56 + MCP 8 + SSE 2 + Aimbase 2** | |
+| **합계** | **REST 64 + MCP 11 + SSE 2 + Aimbase 2** | |

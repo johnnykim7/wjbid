@@ -1,0 +1,25 @@
+{
+  "type": "ACTION",
+  "name": "MCP get_opportunity Tool 호출",
+  "connector": "bidding-api",
+  "action": {
+    "method": "POST",
+    "endpoint": "/api/mcp",
+    "headers": { "Content-Type": "application/json" },
+    "body": {
+      "jsonrpc": "2.0",
+      "id": 4,
+      "method": "tools/call",
+      "params": {
+        "name": "get_opportunity",
+        "arguments": { "opportunityId": "{{steps.opportunity.list.output.firstOpportunityId}}" }
+      }
+    }
+  },
+  "assert": [
+    { "field": "$.statusCode", "operator": "==", "value": 200 },
+    { "field": "$.body.result.content", "operator": "!=", "value": null },
+    { "field": "$.body.result.isError", "operator": "!=", "value": true }
+  ],
+  "failMode": "hard"
+}

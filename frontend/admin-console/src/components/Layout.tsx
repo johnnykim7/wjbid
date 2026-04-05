@@ -4,6 +4,7 @@ const NAV = [
   { to: '/', icon: 'fa-solid fa-chart-line', label: '대시보드', exact: true },
   { to: '/members', icon: 'fa-solid fa-users', label: '회원 관리' },
   { to: '/bid-requests', icon: 'fa-solid fa-file-contract', label: '입찰 요청 관리' },
+  { to: '/opportunities', icon: 'fa-solid fa-bullhorn', label: '공고 관리' },
   { to: '/collection', icon: 'fa-solid fa-satellite-dish', label: 'SAM.gov 수집' },
   { to: '/templates', icon: 'fa-solid fa-file-lines', label: '문서 템플릿' },
 ]

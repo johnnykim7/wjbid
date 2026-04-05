@@ -1,0 +1,22 @@
+{
+  "type": "ACTION",
+  "name": "FSM: GENERATING → REVIEW",
+  "connector": "bidding-api",
+  "action": {
+    "method": "POST",
+    "endpoint": "/api/admin/bid-requests/{{steps.bid.create-request.output.bidRequestId}}/transition",
+    "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer {{vars.adminToken}}"
+    },
+    "body": {
+      "toState": "REVIEW",
+      "notes": "FlowGuard: 검토 시작"
+    }
+  },
+  "assert": [
+    { "field": "$.statusCode", "operator": "==", "value": 200 },
+    { "field": "$.body.data.state", "operator": "==", "value": "REVIEW" }
+  ],
+  "failMode": "hard"
+}

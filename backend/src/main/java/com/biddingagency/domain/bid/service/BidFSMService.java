@@ -3,8 +3,9 @@ package com.biddingagency.domain.bid.service;
 import com.biddingagency.domain.bid.entity.BidRequest;
 import com.biddingagency.domain.bid.entity.BidRequestState;
 import com.biddingagency.domain.bid.repository.BidRequestRepository;
-import lombok.RequiredArgsConstructor;
+import com.biddingagency.domain.event.BidRequestStateChangedEvent;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,11 +26,14 @@ public class BidFSMService {
 
     private final BidRequestRepository bidRequestRepository;
     private final AIWorkflowService aiWorkflowService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public BidFSMService(BidRequestRepository bidRequestRepository,
-                         @Lazy AIWorkflowService aiWorkflowService) {
+                         @Lazy AIWorkflowService aiWorkflowService,
+                         ApplicationEventPublisher eventPublisher) {
         this.bidRequestRepository = bidRequestRepository;
         this.aiWorkflowService = aiWorkflowService;
+        this.eventPublisher = eventPublisher;
     }
 
     // Valid state transitions map
@@ -121,6 +125,9 @@ public class BidFSMService {
         BidRequest saved = bidRequestRepository.save(bidRequest);
 
         log.info("Transition completed successfully");
+
+        eventPublisher.publishEvent(new BidRequestStateChangedEvent(
+                bidRequestId, currentState, toState, userId));
 
         // LLM 워크플로우 비동기 트리거 (상태별)
         triggerAIWorkflow(saved, toState);

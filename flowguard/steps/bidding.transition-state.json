@@ -1,0 +1,30 @@
+{
+  "type": "ACTION",
+  "name": "FSM 상태 전이 (MCP tools/call)",
+  "connector": "bidding-api",
+  "action": {
+    "method": "POST",
+    "endpoint": "/api/mcp",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "method": "tools/call",
+      "params": {
+        "name": "transition_bid_state",
+        "arguments": {
+          "bidRequestId": "{{steps.create-bid-request.output.bidRequestId}}",
+          "toState": "{{vars.targetState}}",
+          "notes": "FlowGuard 자동 검증"
+        }
+      }
+    }
+  },
+  "assert": [
+    { "field": "$.statusCode", "operator": "==", "value": 200 },
+    { "field": "$.body.result.isError", "operator": "!=", "value": true }
+  ],
+  "failMode": "hard"
+}

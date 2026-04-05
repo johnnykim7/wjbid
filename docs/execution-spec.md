@@ -1,6 +1,6 @@
 # 실행 지시서: SAM.gov Bidding Agency Platform
 
-> 설계 버전: 1.0 | 최종 수정: 2026-03-19 | 관련 CR: -
+> 설계 버전: 1.1 | 최종 수정: 2026-03-28 | 관련 CR: CR-003
 
 > **프로젝트:** bidding-agency-platform (미군 조달 입찰 AI 대행 서비스)
 > **프로젝트 유형:** 풀스택 (BE: Java 17 + Spring Boot 3.2 / FE: React 19 × 2)
@@ -97,7 +97,7 @@ SAM.gov에 올라오는 미군(USFK) 조달 입찰 공고를 자동 수집하고
 | 모듈 | 기능 수 | 책임 | 외부 연동 |
 |------|---------|------|----------|
 | A. 인증 | 4 | 회원가입, 로그인, JWT 관리 | — |
-| B. 공고 수집 | 5 | SAM.gov 자동/수동 수집 | SAM.gov API |
+| B. 공고 수집 | 8 | SAM.gov 수집 + **사전 분석 + 노출 관리** (CR-003) | SAM.gov API, **Aimbase** |
 | C. 공고 열람 | 4 | 검색, 상세, 필요 문서, 북마크 | — |
 | D. 입찰 접수 | 4 | 신청, 문서 업로드, 현황 조회 | MinIO |
 | E. 문서 생성 (AI) | 3 | AI 제안서 생성, 버전 관리 | Aimbase |
@@ -108,7 +108,7 @@ SAM.gov에 올라오는 미군(USFK) 조달 입찰 공고를 자동 수집하고
 | J. MCP 서버 | 4 | Aimbase 연동 Tool | Aimbase |
 | K. 자격 진단 | 2 | AI 사전 진단 | Aimbase |
 | L. 요금 | 2 | 요금 안내 | — |
-| M. 관리자 | 3 | 회원/입찰/수집 관리 | — |
+| M. 관리자 | 4 | 회원/입찰/수집/**공고** 관리 (CR-003) | — |
 | N. 인증 가이드 | 1 | 정적 가이드 페이지 | — |
 
 ---
@@ -117,8 +117,8 @@ SAM.gov에 올라오는 미군(USFK) 조달 입찰 공고를 자동 수집하고
 
 > 상세: `docs/T3-1_데이터_모델.md`
 
-- **엔티티 15개**: Member, Opportunity, OpportunityAttachment, OpportunityRequirementItem, BidRequest, ClientDocument, BidDocument, BidDocumentVersion, DocumentTemplate, RequirementFulfillmentMap, Bookmark, NotificationLog, CollectorRun, KeywordGroup, EventLog
-- **FSM 관리 엔티티**: BidRequest (9상태), BidDocument (3상태)
+- **엔티티 16개**: Member, Opportunity, OpportunityAttachment, **OpportunityAnalysis** (CR-003), OpportunityRequirementItem, BidRequest, ClientDocument, BidDocument, BidDocumentVersion, DocumentTemplate, RequirementFulfillmentMap, Bookmark, NotificationLog, CollectorRun, KeywordGroup, EventLog
+- **FSM 관리 엔티티**: BidRequest (9상태), BidDocument (3상태), **Opportunity (2상태: HIDDEN/VISIBLE)**, **OpportunityAnalysis (4상태)** (CR-003)
 - **핵심 원칙**: UUID PK, JSON 컬럼(stateHistory, rawJson, contentJson), 문서 버전 불변성, 콘텐츠 해시 중복 검출
 
 ---
@@ -160,18 +160,18 @@ SAM.gov에 올라오는 미군(USFK) 조달 입찰 공고를 자동 수집하고
 
 ---
 
-### Sprint 2: 공고 수집 + 알림
+### Sprint 2: 공고 수집 + 알림 + 사전 분석 (CR-003 확장)
 
 **전제:** Sprint 1 완료
-**기능:** 5개 (BID-OPP-001~004, BID-NOTIFY-001)
+**기능:** 8개 (BID-OPP-001~008, BID-NOTIFY-001) — CR-003으로 BID-OPP-006~008 추가
 
 #### BE 참조
 
 | 순서 | 읽을 파일 | 참조 범위 |
 |------|----------|----------|
 | 1 | `CLAUDE.md` | BE 규칙 |
-| 2 | `docs/T3-1_데이터_모델.md` | Opportunity, OpportunityAttachment, CollectorRun, KeywordGroup, NotificationLog |
-| 3 | `docs/T1-1_기능요구사항_명세서.md` | BID-OPP-001~005, BID-NOTIFY-001 |
+| 2 | `docs/T3-1_데이터_모델.md` | Opportunity, OpportunityAttachment, **OpportunityAnalysis (CR-003)**, CollectorRun, KeywordGroup, NotificationLog |
+| 3 | `docs/T1-1_기능요구사항_명세서.md` | BID-OPP-001~005, **BID-OPP-006~008 (CR-003)**, BID-NOTIFY-001 |
 | 4 | `docs/T1-3_비즈니스_규칙.md` | BIZ-004 (원본 보존), BIZ-005 (중복 검출), BIZ-012 (알림 멱등) |
 | 5 | `docs/T1-4_정책_정의.md` | POL-001 (수집 주기), POL-002 (알림 대상) |
 | 6 | `docs/T1-6_이벤트_계약.md` | OpportunitiesCollected, AttachmentDownloaded |
@@ -184,8 +184,11 @@ SAM.gov에 올라오는 미군(USFK) 조달 입찰 공고를 자동 수집하고
 - 원본 JSON은 rawJson 필드에 보존 (BIZ-004)
 - 이메일 발송은 Thymeleaf HTML 템플릿 사용
 - 알림 중복 방지: idempotencyKey 기반
+- **(CR-003)** 첨부파일 다운로드 완료 → 자동 사전 분석 트리거 (Aimbase 워크플로우)
+- **(CR-003)** 관리자 수동 첨부파일 업로드 → 사전 분석 트리거
+- **(CR-003)** Opportunity.visibility: HIDDEN(기본) → 관리자 승인 → VISIBLE (사용자 노출)
 
-**핵심 검증:** cron 수집 → DB 저장 → 중복 검출 → 첨부 다운로드 → 관리자 이메일 수신
+**핵심 검증:** cron 수집 → DB 저장 → 중복 검출 → 첨부 다운로드 → **사전 분석 자동 트리거** → 관리자 이메일 수신 → **관리자 승인 → 사용자 노출**
 
 ---
 
@@ -269,7 +272,7 @@ SAM.gov에 올라오는 미군(USFK) 조달 입찰 공고를 자동 수집하고
 
 **핵심 설계 결정 (CR-002):**
 - MCP 전송: HTTP POST (`POST /mcp`) + **SSE** (`GET /mcp/sse` + `POST /mcp/message`) 이중 지원
-- 8개 Tool 유지 (기존 구현 활용)
+- 11개 Tool (기존 8개 + CR-003 신규 3개: get_opportunity_analysis, save_opportunity_analysis, get_past_submissions)
 - McpDispatcher 추출 → HTTP/SSE 공유
 - LLMPlatformClient: `localhost:9000` → Aimbase `14.63.25.49:8280`, `X-API-Key` 인증 추가
 - AIWorkflowService: 후처리 저장 로직 제거 (Aimbase MCP 콜백으로 대체)
@@ -277,7 +280,7 @@ SAM.gov에 올라오는 미군(USFK) 조달 입찰 공고를 자동 수집하고
 
 **핵심 검증:**
 1. Aimbase 연결 확인 (LLMPlatformClient.isHealthy())
-2. Aimbase에서 SSE로 MCP 서버 등록 → discover → 8개 Tool 목록 확인
+2. Aimbase에서 SSE로 MCP 서버 등록 → discover → 11개 Tool 목록 확인
 3. 워크플로우 실행 → MCP 콜백 → 데이터 저장 확인
 4. Aimbase 셋업 스크립트 실행 (Connection, MCP Server, Workflow 생성)
 
@@ -306,7 +309,12 @@ SAM.gov에 올라오는 미군(USFK) 조달 입찰 공고를 자동 수집하고
 | 1 | `docs/T3-3_화면_구조.md` | 문서 양식 관리 |
 | 2 | `docs/T3-2_API_설계.md` | I. 템플릿 API |
 
-**핵심 검증:** 템플릿 등록 → Aimbase Workflow 실행 → 문서 생성 → DB 저장 → 관리자 이메일
+**핵심 설계 결정 (CR-003):**
+- BID-DOC-001 LLM 입력 3파이프라인: ①OpportunityAnalysis(캐시) + ②ClientDocument[] + ③과거 BidDocument[]
+- 과거 이력은 조회해서 넘기면 끝. 빈 배열이어도 동일 구조. 조건 분기 없음
+- 사전 분석이 COMPLETED 상태여야 문서 생성 가능
+
+**핵심 검증:** 템플릿 등록 → **사전 분석 캐시 확인** → Aimbase Workflow 실행 (3파이프라인 입력) → 문서 생성 → DB 저장 → 관리자 이메일
 
 ---
 
@@ -452,10 +460,19 @@ sequenceDiagram
     participant MCP as MCP 서버
 
     Note over API: 스케줄 수집
-    API->>DB: 공고 저장
+    API->>DB: 공고 저장 (visibility=HIDDEN)
     API->>관리자: 수집 완료 이메일
 
-    고객->>Portal: 공고 검색
+    Note over API,Aimbase: CR-003 사전 분석 파이프라인
+    API->>Aimbase: 첨부파일 분석 워크플로우
+    Aimbase->>MCP: tools/call (save_opportunity_analysis)
+    MCP->>DB: OpportunityAnalysis 저장
+    API->>관리자: 분석 완료 알림
+
+    관리자->>API: 분석 결과 검수 + 승인
+    API->>DB: Opportunity.visibility → VISIBLE
+
+    고객->>Portal: 공고 검색 (VISIBLE만)
     Portal->>API: GET /opportunities
     API-->>Portal: 공고 목록
 
@@ -466,10 +483,12 @@ sequenceDiagram
     고객->>Portal: 문서 업로드
     Portal->>API: POST /client-documents
 
-    관리자->>API: 상태 전이 → ANALYZING
-    Aimbase->>MCP: tools/call (get_opportunity)
-    MCP-->>Aimbase: 공고 정보
-    Aimbase->>MCP: tools/call (save_document_version)
+    관리자->>API: 상태 전이 → ANALYZING → GENERATING
+    Note over Aimbase: 3파이프라인 입력
+    Aimbase->>MCP: get_opportunity_analysis (①캐시)
+    Aimbase->>MCP: get_bid_request (②사용자 서류)
+    Aimbase->>MCP: get_past_submissions (③과거 이력)
+    Aimbase->>MCP: save_document_version
     MCP->>DB: BidDocument 생성
     API->>관리자: 문서 완성 이메일
 
@@ -492,6 +511,7 @@ sequenceDiagram
 | Admin 입찰 관리 | `GET/POST /admin/bid-requests/*` | FSM 전이 |
 | Admin 문서 편집 | `GET/POST /bid-documents/{id}/*` | TipTap + 잠금 |
 | Admin 수집 관리 | `POST /admin/collection/trigger` | |
+| **Admin 공고 관리** | `GET/POST /admin/opportunities/*` | **CR-003**: 첨부 업로드, 분석, 승인 |
 | Admin 양식 관리 | `GET/POST/DELETE /admin/document-templates` | |
 
 ### 8-4. 리뷰 체크리스트

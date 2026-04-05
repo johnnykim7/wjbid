@@ -68,3 +68,73 @@ export const createDocumentTemplate = (data: {
 
 export const deactivateDocumentTemplate = (id: string) =>
   api.delete(`/admin/document-templates/${id}`)
+
+// Bid Documents (editing)
+export const getBidDocument = (id: string) =>
+  api.get(`/bid-documents/${id}`)
+
+export const getBidDocumentVersions = (id: string) =>
+  api.get(`/bid-documents/${id}/versions`)
+
+export const getBidDocumentVersion = (id: string, versionNo: number) =>
+  api.get(`/bid-documents/${id}/versions/${versionNo}`)
+
+export const saveDocumentVersion = (id: string, data: {
+  contentJson: Record<string, unknown>
+  changeSummary?: string
+}) => api.post(`/bid-documents/${id}/versions`, data)
+
+export const lockDocument = (id: string) =>
+  api.post(`/bid-documents/${id}/lock`)
+
+export const unlockDocument = (id: string) =>
+  api.post(`/bid-documents/${id}/unlock`)
+
+export const exportDocumentPdf = (id: string) =>
+  api.get(`/bid-documents/${id}/export/pdf`, { responseType: 'blob' })
+
+// Bid Request Detail (admin)
+export const getAdminBidRequestDetail = (id: string) =>
+  api.get(`/admin/bid-requests/${id}`)
+
+// Bid Documents for a bid request
+export const getBidDocumentsByBidRequest = (bidRequestId: string) =>
+  api.get(`/bid-documents`, { params: { bidRequestId } })
+
+// Client Documents
+export const getClientDocuments = (bidRequestId: string) =>
+  api.get(`/client-documents/${bidRequestId}`)
+
+// Collection Runs
+export const getCollectionRuns = (page = 0) =>
+  api.get('/admin/collection/runs', { params: { page, size: 20 } })
+
+// Opportunity Admin (CR-003)
+export const getAdminOpportunities = (page = 0) =>
+  api.get('/admin/opportunities', { params: { page, size: 20 } })
+
+export const getAdminOpportunityDetail = (id: string) =>
+  api.get(`/admin/opportunities/${id}`)
+
+export const getOpportunityAnalysis = (id: string) =>
+  api.get(`/admin/opportunities/${id}/analysis`)
+
+export const triggerOpportunityAnalysis = (id: string) =>
+  api.post(`/admin/opportunities/${id}/analyze`)
+
+export const approveOpportunity = (id: string) =>
+  api.post(`/admin/opportunities/${id}/approve`)
+
+export const hideOpportunity = (id: string) =>
+  api.post(`/admin/opportunities/${id}/hide`)
+
+export const updateOpportunityAnalysis = (id: string, data: Record<string, unknown>) =>
+  api.patch(`/admin/opportunities/${id}/analysis`, data)
+
+export const uploadOpportunityAttachment = (id: string, file: File) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  return api.post(`/admin/opportunities/${id}/attachments`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+}

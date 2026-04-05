@@ -1,0 +1,14 @@
+{
+  "type": "ACTION",
+  "name": "공고 키워드 검색",
+  "connector": "bidding-api",
+  "action": {
+    "method": "GET",
+    "endpoint": "/api/opportunities/search?keyword=military&page=0&size=10"
+  },
+  "assert": [
+    { "field": "$.statusCode", "operator": "==", "value": 200 },
+    { "field": "$.body.success", "operator": "==", "value": true }
+  ],
+  "failMode": "soft"
+}

@@ -1,7 +1,33 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 # 프로젝트 개요
 
 SAM.gov Bidding Agency Platform - 미군(USFK) 정부 조달 입찰 AI 대행 서비스
 프로젝트 유형: 풀스택 (BE + FE × 2)
+
+## 빌드/실행 명령어
+
+### 백엔드
+```bash
+cd backend
+./gradlew compileJava          # 컴파일
+./gradlew test                  # 전체 테스트
+./gradlew test --tests "*.BidFSMServiceTest"  # 단일 테스트 클래스
+SERVER_PORT=8088 ./gradlew bootRun             # 앱 기동 (기본 8080, context-path /api)
+```
+
+### 프론트엔드
+```bash
+cd frontend/customer-portal && npm install && npm run dev   # 고객 포털 (:5173)
+cd frontend/admin-console && npm install && npm run dev     # 관리자 콘솔 (:5174)
+```
+
+### 인프라 의존성
+- MariaDB: `14.63.25.49:3306` (DB: bidding_agency) — 별도 Docker 불필요
+- Redis: `14.63.25.49:6379`
+- Aimbase: `14.63.25.49:8280` (테넌트: bidding_system)
 
 ## 기술 스택
 
@@ -18,11 +44,16 @@ SAM.gov Bidding Agency Platform - 미군(USFK) 정부 조달 입찰 AI 대행 �
 - API 문서: SpringDoc OpenAPI
 - DB 마이그레이션: Flyway
 
-### AI 연동 (Aimbase)
-- **이 프로젝트는 MCP 서버로 동작** — Aimbase가 이 플랫폼의 Tool을 호출
-- MCP 프로토콜: JSON-RPC 2.0 over HTTP
-- MCP Java SDK 사용
-- 기존 LLMPlatformClient / OpenAIAdapter 제거 → Aimbase 경유
+### AI 연동 (Aimbase) — CR-002
+
+**아키텍처**: 이 플랫폼은 MCP 서버 + Aimbase 워크플로우 클라이언트 이중 역할
+- **MCP 서버**: Aimbase가 이 플랫폼의 8개 Tool을 SSE로 호출 (HTTP POST도 지원)
+- **워크플로우 클라이언트**: `LLMPlatformClient`가 Aimbase Workflow API 호출 + 폴링
+- **인증**: `X-API-Key: plat-20cf57fbc623424584eeda2e355cbb43`
+- **MCP 전송**: HTTP POST (`/mcp`) + SSE (`/mcp/sse` + `/mcp/message`)
+- **핵심 흐름**: FSM 상태 전이 → AIWorkflowService → LLMPlatformClient → Aimbase 워크플로우 → Aimbase가 MCP 콜백으로 데이터 저장
+- **문서 출력(Word/PDF)**: Aimbase에서 처리. 이 플랫폼은 검수용 PDF export만 보유
+- **RAG**: MVP 미사용. 향후 Aimbase Knowledge Source로 확장 가능
 
 ### 프론트엔드 (customer-portal + admin-console)
 - 프레임워크: React 19 + TypeScript 5
@@ -174,10 +205,11 @@ feat/SPR-01-auth → develop (PR) → main (릴리스 PR) + tag v1.0
 
 ## 현재 진행 상태
 
-(Sprint 완료 시 갱신)
-- Sprint 1: 미착수
-- Sprint 2: 미착수
-- Sprint 3: 미착수
+- Sprint 1~7: 코드 구현 완료 (초기 커밋에 포함)
+- Sprint 8 (통합 테스트): 진행중
+- CR-001: FlowGuard 연동 완료
+- CR-002: Aimbase 연동 코드 완료. E2E 검증 대기 (네트워크: 로컬↔외부서버)
+- CR-003: 공고 사전 분석 파이프라인 + LLM 입력 3파이프라인 — **설계 완료**, 구현 대기
 
 ## 참조 문서
 
@@ -241,3 +273,7 @@ feat/SPR-01-auth → develop (PR) → main (릴리스 PR) + tag v1.0
 - JWT HS256 키는 application.yml의 jwt.secret — 운영 시 환경변수로 교체
 - MinIO 접속 정보는 Docker Compose 환경 기준
 - Aimbase MCP 연동 시 JSON-RPC 2.0 스펙 엄수 — requestId 멱등 키로 활용
+- 포트 8080이 사용 중이면 `SERVER_PORT=8088`로 기동
+- Flyway 마이그레이션: V7에서 `SET FOREIGN_KEY_CHECKS = 0` 사용 (FK 제약 우회)
+- Aimbase Connection 생성 시 필드명: `adapter` (not `provider`), `type: "llm"` (소문자)
+- Aimbase → 로컬 MCP SSE 접근: 사설 IP 불가. 배포 환경에서 테스트 필요

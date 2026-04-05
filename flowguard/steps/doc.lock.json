@@ -1,0 +1,17 @@
+{
+  "type": "ACTION",
+  "name": "BIZ-003 문서 잠금 (DRAFT → LOCKED)",
+  "connector": "bidding-api",
+  "action": {
+    "method": "POST",
+    "endpoint": "/api/bid-documents/{{steps.doc.bid-documents-list.output.documentId}}/lock",
+    "headers": {
+      "Authorization": "Bearer {{vars.adminToken}}"
+    }
+  },
+  "assert": [
+    { "field": "$.statusCode", "operator": "==", "value": 200 },
+    { "field": "$.body.data.status", "operator": "==", "value": "LOCKED" }
+  ],
+  "failMode": "hard"
+}

@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext'
 const PUBLIC_NAV = [
   { label: '서비스 소개', anchor: 'about' },
   { label: '입찰 프로세스', anchor: 'process' },
+  { label: '가이드', path: '/guide' },
   { label: '요금제', path: '/pricing' },
   { label: '고객센터', anchor: 'contact' },
 ]

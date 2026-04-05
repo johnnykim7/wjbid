@@ -187,6 +187,22 @@ public class DocumentVersionService {
     }
 
     /**
+     * Unlock document (LOCKED → DRAFT)
+     */
+    @Transactional
+    public void unlockDocument(UUID documentId) {
+        log.info("Unlocking document {}", documentId);
+
+        BidDocument document = documentRepository.findById(documentId)
+                .orElseThrow(() -> new IllegalArgumentException("Document not found: " + documentId));
+
+        document.unlock();
+        documentRepository.save(document);
+
+        log.info("Document {} is now DRAFT (editable)", documentId);
+    }
+
+    /**
      * Create amendment (for post-submission corrections)
      * Copies LOCKED document to new DRAFT document
      */

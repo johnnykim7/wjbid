@@ -1,8 +1,10 @@
 package com.biddingagency.integration.samgov.scheduler;
 
+import com.biddingagency.domain.event.OpportunitiesCollectedEvent;
 import com.biddingagency.integration.samgov.client.OpportunityCollectorService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -20,6 +22,7 @@ import java.util.List;
 public class OpportunityCollectionScheduler {
 
     private final OpportunityCollectorService collectorService;
+    private final ApplicationEventPublisher eventPublisher;
 
     // Keyword groups as defined in the plan
     private static final List<String> MAIN_KEYWORDS = List.of("411th csb");
@@ -75,10 +78,13 @@ public class OpportunityCollectionScheduler {
             totalErrors += result.errors();
         }
 
+        int totalFetched = totalCollected + totalDuplicates;
         log.info("====== Collection completed: {} new, {} duplicates, {} errors ======",
                 totalCollected, totalDuplicates, totalErrors);
 
-        // TODO: Send Slack notification if errors > 0
+        eventPublisher.publishEvent(new OpportunitiesCollectedEvent(
+                null, totalCollected, totalDuplicates, totalFetched));
+
         if (totalErrors > 0) {
             log.error("Collection completed with {} errors - manual review needed", totalErrors);
         }

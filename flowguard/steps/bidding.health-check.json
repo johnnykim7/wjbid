@@ -1,0 +1,14 @@
+{
+  "type": "ACTION",
+  "name": "헬스체크 확인",
+  "connector": "bidding-api",
+  "action": {
+    "method": "GET",
+    "endpoint": "/health"
+  },
+  "assert": [
+    { "field": "$.statusCode", "operator": "==", "value": 200 },
+    { "field": "$.body.status", "operator": "==", "value": "ok" }
+  ],
+  "failMode": "hard"
+}

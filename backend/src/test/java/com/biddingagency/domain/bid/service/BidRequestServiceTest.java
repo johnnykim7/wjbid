@@ -7,12 +7,14 @@ import com.biddingagency.domain.member.entity.Member;
 import com.biddingagency.domain.member.repository.MemberRepository;
 import com.biddingagency.domain.opportunity.entity.Opportunity;
 import com.biddingagency.domain.opportunity.repository.OpportunityRepository;
+import com.biddingagency.domain.event.BidRequestCreatedEvent;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -40,6 +42,8 @@ class BidRequestServiceTest {
     private OpportunityRepository opportunityRepository;
     @Mock
     private BidFSMService fsmService;
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private BidRequestService bidRequestService;
@@ -76,6 +80,7 @@ class BidRequestServiceTest {
         assertThat(result.getMember()).isEqualTo(member);
         assertThat(result.getOpportunity()).isEqualTo(opportunity);
         then(bidRequestRepository).should().save(any(BidRequest.class));
+        then(eventPublisher).should().publishEvent(any(BidRequestCreatedEvent.class));
     }
 
     // TC-BID-002: 동일 공고 중복 신청 (BIZ-006)

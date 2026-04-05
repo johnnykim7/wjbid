@@ -1,0 +1,18 @@
+{
+  "type": "ACTION",
+  "name": "내 정보 조회",
+  "connector": "bidding-api",
+  "action": {
+    "method": "GET",
+    "endpoint": "/api/members/me",
+    "headers": {
+      "Authorization": "Bearer {{steps.auth.login.output.accessToken}}"
+    }
+  },
+  "assert": [
+    { "field": "$.statusCode", "operator": "==", "value": 200 },
+    { "field": "$.body.data.email", "operator": "==", "value": "{{steps.auth.register.output.email}}" },
+    { "field": "$.body.data.role", "operator": "==", "value": "CUSTOMER" }
+  ],
+  "failMode": "hard"
+}

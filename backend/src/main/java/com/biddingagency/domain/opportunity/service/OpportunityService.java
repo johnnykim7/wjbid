@@ -1,9 +1,12 @@
 package com.biddingagency.domain.opportunity.service;
 
+import com.biddingagency.domain.event.OpportunityApprovedEvent;
 import com.biddingagency.domain.opportunity.entity.Opportunity;
+import com.biddingagency.domain.opportunity.entity.OpportunityVisibility;
 import com.biddingagency.domain.opportunity.repository.OpportunityRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -25,6 +28,7 @@ import java.util.UUID;
 public class OpportunityService {
 
     private final OpportunityRepository opportunityRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * Find opportunity by ID
@@ -146,5 +150,53 @@ public class OpportunityService {
         Opportunity opportunity = findById(id);
         opportunity.markAsInactive();
         log.info("Opportunity marked as inactive: {}", opportunity.getNoticeId());
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // CR-003: Visibility 관리
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Find active + visible opportunities (customer-facing)
+     */
+    public Page<Opportunity> findAllActiveVisible(Pageable pageable) {
+        return opportunityRepository.findByActiveTrueAndVisibility(OpportunityVisibility.VISIBLE, pageable);
+    }
+
+    /**
+     * Search by keyword with visibility filter
+     */
+    public Page<Opportunity> searchByKeywordVisible(String keyword, Pageable pageable) {
+        return opportunityRepository.searchByTitleAndVisibility(keyword, OpportunityVisibility.VISIBLE, pageable);
+    }
+
+    /**
+     * Search by organization with visibility filter
+     */
+    public Page<Opportunity> searchByOrganizationVisible(String organization, Pageable pageable) {
+        return opportunityRepository.searchByOrganizationAndVisibility(organization, OpportunityVisibility.VISIBLE, pageable);
+    }
+
+    /**
+     * Approve opportunity (HIDDEN → VISIBLE)
+     */
+    @Transactional
+    public Opportunity approve(UUID id, UUID actorId) {
+        Opportunity opportunity = findById(id);
+        opportunity.approve();
+        log.info("Opportunity approved (VISIBLE): {}", opportunity.getNoticeId());
+        eventPublisher.publishEvent(new OpportunityApprovedEvent(id, actorId));
+        return opportunity;
+    }
+
+    /**
+     * Hide opportunity (VISIBLE → HIDDEN)
+     */
+    @Transactional
+    public Opportunity hide(UUID id) {
+        Opportunity opportunity = findById(id);
+        opportunity.hide();
+        log.info("Opportunity hidden: {}", opportunity.getNoticeId());
+        return opportunity;
     }
 }

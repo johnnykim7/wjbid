@@ -1,5 +1,6 @@
 package com.biddingagency.integration.samgov.client;
 
+import com.biddingagency.common.EvidenceLogger;
 import com.biddingagency.integration.samgov.dto.SAMOpportunityResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +18,8 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * SAM.gov API Client
@@ -61,6 +64,9 @@ public class SAMGovApiClient {
             request.addHeader("X-Api-Key", apiKey);
             request.addHeader("Accept", "application/json");
 
+            String reqId = UUID.randomUUID().toString();
+            Map<String, Object> reqSummary = Map.of("keyword", keyword != null ? keyword : "", "limit", limit);
+
             return httpClient.execute(request, response -> {
                 int statusCode = response.getCode();
                 String responseBody = EntityUtils.toString(response.getEntity());
@@ -70,20 +76,31 @@ public class SAMGovApiClient {
                     // SAM.gov sometimes returns 200 with a quota-exceeded JSON body
                     if (result.getOpportunitiesData() == null && responseBody.contains("throttled")) {
                         log.warn("SAM.gov quota exceeded (200 throttled): {}", responseBody);
+                        EvidenceLogger.logFailure("sam-gov", "GET /opportunities/v2/search", reqId,
+                                reqSummary, Map.of("statusCode", 200, "throttled", true), "THROTTLED");
                         throw new RuntimeException("SAM.gov API quota exceeded (throttled)");
                     }
+                    int count = result.getOpportunitiesData() != null ? result.getOpportunitiesData().size() : 0;
+                    EvidenceLogger.logSuccess("sam-gov", "GET /opportunities/v2/search", reqId,
+                            reqSummary, Map.of("statusCode", 200, "resultCount", count));
                     return result;
                 } else if (statusCode == 429) {
                     log.warn("SAM.gov API rate limited (429). Body: {}", responseBody);
+                    EvidenceLogger.logFailure("sam-gov", "GET /opportunities/v2/search", reqId,
+                            reqSummary, Map.of("statusCode", 429), "RATE_LIMITED");
                     throw new RuntimeException("SAM.gov API quota exceeded (429)");
                 } else {
                     log.error("SAM.gov API error. Status: {}, Body: {}", statusCode, responseBody);
+                    EvidenceLogger.logFailure("sam-gov", "GET /opportunities/v2/search", reqId,
+                            reqSummary, Map.of("statusCode", statusCode), String.valueOf(statusCode));
                     throw new RuntimeException("SAM.gov API returned status: " + statusCode);
                 }
             });
 
         } catch (IOException e) {
             log.error("Error calling SAM.gov API", e);
+            EvidenceLogger.logTimeout("sam-gov", "GET /opportunities/v2/search",
+                    UUID.randomUUID().toString(), Map.of("keyword", keyword != null ? keyword : ""));
             throw new RuntimeException("Failed to call SAM.gov API", e);
         }
     }

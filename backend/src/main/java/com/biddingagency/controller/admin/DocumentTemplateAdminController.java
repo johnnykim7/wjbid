@@ -51,6 +51,16 @@ public class DocumentTemplateAdminController {
         return ResponseEntity.ok(saved);
     }
 
+    /** 템플릿 수정 (새 버전 생성) */
+    @PatchMapping("/{id}")
+    public ResponseEntity<DocumentTemplate> update(
+            @PathVariable UUID id,
+            @RequestBody UpdateTemplateRequest request) {
+        DocumentTemplate updated = documentTemplateService.update(
+            id, request.templateName(), request.contentJson(), request.description());
+        return ResponseEntity.ok(updated);
+    }
+
     /** 템플릿 비활성화 */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deactivate(@PathVariable UUID id) {
@@ -62,5 +72,11 @@ public class DocumentTemplateAdminController {
         String templateName,
         String documentType,
         Map<String, Object> contentJson
+    ) {}
+
+    record UpdateTemplateRequest(
+        String templateName,
+        Map<String, Object> contentJson,
+        String description
     ) {}
 }

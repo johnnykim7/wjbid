@@ -1,0 +1,21 @@
+{
+  "type": "ACTION",
+  "name": "토큰 갱신",
+  "connector": "bidding-api",
+  "action": {
+    "method": "POST",
+    "endpoint": "/api/auth/refresh",
+    "headers": { "Content-Type": "application/json" },
+    "body": {
+      "refreshToken": "{{steps.auth.login.output.refreshToken}}"
+    }
+  },
+  "extract": {
+    "newAccessToken": "$.body.data.accessToken"
+  },
+  "assert": [
+    { "field": "$.statusCode", "operator": "==", "value": 200 },
+    { "field": "$.body.data.accessToken", "operator": "!=", "value": null }
+  ],
+  "failMode": "hard"
+}

@@ -1,0 +1,24 @@
+{
+  "type": "ACTION",
+  "name": "MCP search_opportunities Tool 호출",
+  "connector": "bidding-api",
+  "action": {
+    "method": "POST",
+    "endpoint": "/api/mcp",
+    "headers": { "Content-Type": "application/json" },
+    "body": {
+      "jsonrpc": "2.0",
+      "id": 3,
+      "method": "tools/call",
+      "params": {
+        "name": "search_opportunities",
+        "arguments": { "keyword": "military", "limit": 5 }
+      }
+    }
+  },
+  "assert": [
+    { "field": "$.statusCode", "operator": "==", "value": 200 },
+    { "field": "$.body.result.content", "operator": "!=", "value": null }
+  ],
+  "failMode": "soft"
+}

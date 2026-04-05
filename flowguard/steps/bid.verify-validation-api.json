@@ -1,0 +1,15 @@
+{
+  "type": "ACTION",
+  "name": "Validation API로 입찰 상태 검증",
+  "connector": "bidding-api",
+  "action": {
+    "method": "GET",
+    "endpoint": "/api/validation/bid-requests/{{steps.bid.create-request.output.bidRequestId}}"
+  },
+  "assert": [
+    { "field": "$.statusCode", "operator": "==", "value": 200 },
+    { "field": "$.body.bidRequests[0].bidRequestId", "operator": "!=", "value": null },
+    { "field": "$.body.bidRequests[0].state", "operator": "!=", "value": null }
+  ],
+  "failMode": "soft"
+}

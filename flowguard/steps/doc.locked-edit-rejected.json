@@ -1,0 +1,20 @@
+{
+  "type": "ACTION",
+  "name": "BIZ-003 LOCKED 문서 편집 거부",
+  "connector": "bidding-api",
+  "action": {
+    "method": "POST",
+    "endpoint": "/api/bid-documents/{{steps.doc.bid-documents-list.output.documentId}}/versions",
+    "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer {{vars.adminToken}}"
+    },
+    "body": {
+      "contentJson": "{\"type\":\"doc\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"locked edit attempt\"}]}]}"
+    }
+  },
+  "assert": [
+    { "field": "$.statusCode", "operator": "!=", "value": 200 }
+  ],
+  "failMode": "hard"
+}

@@ -1,0 +1,21 @@
+{
+  "type": "ACTION",
+  "name": "MCP initialize 호출",
+  "connector": "bidding-api",
+  "action": {
+    "method": "POST",
+    "endpoint": "/api/mcp",
+    "headers": { "Content-Type": "application/json" },
+    "body": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "method": "initialize"
+    }
+  },
+  "assert": [
+    { "field": "$.statusCode", "operator": "==", "value": 200 },
+    { "field": "$.body.result.serverInfo.name", "operator": "==", "value": "bidding-agency-mcp" },
+    { "field": "$.body.result.protocolVersion", "operator": "!=", "value": null }
+  ],
+  "failMode": "hard"
+}

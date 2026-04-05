@@ -1,0 +1,22 @@
+{
+  "type": "ACTION",
+  "name": "FSM: CONFIRMED → SUBMITTED (제출 완료)",
+  "connector": "bidding-api",
+  "action": {
+    "method": "POST",
+    "endpoint": "/api/admin/bid-requests/{{steps.bid.create-request.output.bidRequestId}}/transition",
+    "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer {{vars.adminToken}}"
+    },
+    "body": {
+      "toState": "SUBMITTED",
+      "notes": "FlowGuard: 제출 완료"
+    }
+  },
+  "assert": [
+    { "field": "$.statusCode", "operator": "==", "value": 200 },
+    { "field": "$.body.data.state", "operator": "==", "value": "SUBMITTED" }
+  ],
+  "failMode": "hard"
+}

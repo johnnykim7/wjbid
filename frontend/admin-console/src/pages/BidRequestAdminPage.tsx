@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { getAdminBidRequests, transitionBidRequest } from '../api/client'
 
 const ALL_STATES = [
@@ -68,6 +69,7 @@ export default function BidRequestAdminPage() {
   const [notes, setNotes] = useState('')
   const [transitioning, setTransitioning] = useState(false)
   const [error, setError] = useState('')
+  const navigate = useNavigate()
 
   const load = async (state: string, p: number) => {
     setLoading(true)
@@ -169,7 +171,10 @@ export default function BidRequestAdminPage() {
                   return (
                     <tr key={br.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3 font-medium text-gray-900 max-w-xs">
-                        <div className="truncate">{br.opportunity?.title ?? '-'}</div>
+                        <div className="truncate cursor-pointer text-secondary hover:underline"
+                          onClick={() => navigate(`/bid-requests/${br.id}`)}>
+                          {br.opportunity?.title ?? '-'}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-gray-500 text-xs">
                         {br.opportunity?.organizationName ?? '-'}

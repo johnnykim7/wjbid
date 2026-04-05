@@ -1,0 +1,17 @@
+{
+  "type": "ACTION",
+  "name": "BIZ-002 문서 버전 목록 조회 (불변성 검증 전제)",
+  "connector": "bidding-api",
+  "action": {
+    "method": "GET",
+    "endpoint": "/api/bid-documents/{{steps.doc.bid-documents-list.output.documentId}}/versions",
+    "headers": {
+      "Authorization": "Bearer {{vars.adminToken}}"
+    }
+  },
+  "assert": [
+    { "field": "$.statusCode", "operator": "==", "value": 200 },
+    { "field": "$.body.success", "operator": "==", "value": true }
+  ],
+  "failMode": "soft"
+}

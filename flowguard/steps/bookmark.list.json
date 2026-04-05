@@ -1,0 +1,17 @@
+{
+  "type": "ACTION",
+  "name": "즐겨찾기 목록 조회",
+  "connector": "bidding-api",
+  "action": {
+    "method": "GET",
+    "endpoint": "/api/bookmarks?page=0&size=10",
+    "headers": {
+      "Authorization": "Bearer {{steps.auth.login.output.accessToken}}"
+    }
+  },
+  "assert": [
+    { "field": "$.statusCode", "operator": "==", "value": 200 },
+    { "field": "$.body.success", "operator": "==", "value": true }
+  ],
+  "failMode": "soft"
+}

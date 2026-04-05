@@ -40,6 +40,9 @@ public class BidDocument extends BaseEntity {
     @Builder.Default
     private Integer currentVersionNo = 1;
 
+    @Column(name = "template_id", columnDefinition = "BINARY(16)")
+    private java.util.UUID templateId;
+
     // Business methods
 
     /**
@@ -50,6 +53,16 @@ public class BidDocument extends BaseEntity {
             throw new IllegalStateException("Document is already locked");
         }
         this.status = DocumentStatus.LOCKED;
+    }
+
+    /**
+     * Unlock document (LOCKED → DRAFT)
+     */
+    public void unlock() {
+        if (this.status != DocumentStatus.LOCKED) {
+            throw new IllegalStateException("Document is not locked");
+        }
+        this.status = DocumentStatus.DRAFT;
     }
 
     /**

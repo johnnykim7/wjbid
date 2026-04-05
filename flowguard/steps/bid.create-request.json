@@ -1,0 +1,26 @@
+{
+  "type": "ACTION",
+  "name": "입찰 참여 신청 (CREATED 상태)",
+  "connector": "bidding-api",
+  "action": {
+    "method": "POST",
+    "endpoint": "/api/bid-requests",
+    "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer {{steps.auth.login.output.accessToken}}"
+    },
+    "body": {
+      "opportunityId": "{{steps.opportunity.list.output.firstOpportunityId}}",
+      "serviceLevel": "STANDARD"
+    }
+  },
+  "extract": {
+    "bidRequestId": "$.body.data.id",
+    "state": "$.body.data.state"
+  },
+  "assert": [
+    { "field": "$.statusCode", "operator": "==", "value": 200 },
+    { "field": "$.body.data.state", "operator": "==", "value": "CREATED" }
+  ],
+  "failMode": "hard"
+}

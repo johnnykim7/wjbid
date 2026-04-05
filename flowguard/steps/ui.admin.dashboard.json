@@ -1,0 +1,18 @@
+{
+  "type": "UI_SMOKE",
+  "name": "[Admin] 대시보드 렌더링",
+  "connector": "admin-console",
+  "action": {
+    "url": "http://localhost:5174/",
+    "waitForSelector": "main, [data-testid=dashboard]",
+    "auth": {
+      "type": "localStorage",
+      "key": "accessToken",
+      "value": "{{vars.adminPortalToken}}"
+    }
+  },
+  "assert": [
+    { "field": "$.statusCode", "operator": "==", "value": 200 }
+  ],
+  "failMode": "hard"
+}

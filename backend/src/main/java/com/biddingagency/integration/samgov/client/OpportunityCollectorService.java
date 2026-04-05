@@ -195,16 +195,28 @@ public class OpportunityCollectorService {
     }
 
     /**
-     * Extract plain text description from SAM.gov description list
-     * API returns: [{"body": "...", "label": "..."}]
+     * Extract plain text description from SAM.gov description field.
+     * API returns either:
+     * - List of maps: [{"body": "...", "label": "..."}]
+     * - Plain String: "description text"
      */
-    private String extractDescription(List<Map<String, String>> descriptionList) {
-        if (descriptionList == null || descriptionList.isEmpty()) return null;
-        return descriptionList.stream()
-                .map(m -> m.getOrDefault("body", ""))
-                .filter(s -> !s.isBlank())
-                .findFirst()
-                .orElse(null);
+    @SuppressWarnings("unchecked")
+    private String extractDescription(Object description) {
+        if (description == null) return null;
+        if (description instanceof String s) {
+            return s.isBlank() ? null : s;
+        }
+        if (description instanceof List<?> list) {
+            for (Object item : list) {
+                if (item instanceof Map<?, ?> map) {
+                    Object body = map.get("body");
+                    if (body instanceof String s && !s.isBlank()) {
+                        return s;
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     /**

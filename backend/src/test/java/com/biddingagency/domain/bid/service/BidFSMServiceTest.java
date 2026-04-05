@@ -3,6 +3,7 @@ package com.biddingagency.domain.bid.service;
 import com.biddingagency.domain.bid.entity.BidRequest;
 import com.biddingagency.domain.bid.entity.BidRequestState;
 import com.biddingagency.domain.bid.repository.BidRequestRepository;
+import com.biddingagency.domain.event.BidRequestStateChangedEvent;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,6 +12,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.ArrayList;
 import java.util.Optional;
@@ -31,6 +33,8 @@ class BidFSMServiceTest {
 
     @Mock
     private AIWorkflowService aiWorkflowService;
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private BidFSMService fsmService;
@@ -94,6 +98,7 @@ class BidFSMServiceTest {
         // then
         assertThat(result.getState()).isEqualTo(BidRequestState.DOCS_PENDING);
         assertThat(result.getStateHistory()).isNotEmpty();
+        then(eventPublisher).should().publishEvent(any(BidRequestStateChangedEvent.class));
     }
 
     // TC-FSM-007: CONFIRMED → SUBMITTED 전이 → submittedAt 기록

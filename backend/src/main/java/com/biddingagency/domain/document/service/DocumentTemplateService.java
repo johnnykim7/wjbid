@@ -62,6 +62,30 @@ public class DocumentTemplateService {
         return saved;
     }
 
+    /** 템플릿 수정 */
+    @Transactional
+    public DocumentTemplate update(UUID id, String templateName, Map<String, Object> contentJson, String description) {
+        DocumentTemplate template = templateRepository.findById(id)
+            .orElseThrow(() -> new NoSuchElementException("템플릿을 찾을 수 없습니다: " + id));
+
+        // 새 버전으로 저장 (불변성 — 기존 버전 유지, 새 버전 생성)
+        int nextVersion = template.getTemplateVersion() + 1;
+        template.deactivate(); // 기존 비활성화
+
+        DocumentTemplate updated = DocumentTemplate.builder()
+            .templateName(templateName != null ? templateName : template.getTemplateName())
+            .documentType(template.getDocumentType())
+            .templateVersion(nextVersion)
+            .contentJson(contentJson != null ? contentJson : template.getContentJson())
+            .description(description != null ? description : template.getDescription())
+            .active(true)
+            .build();
+
+        DocumentTemplate saved = templateRepository.save(updated);
+        log.info("DocumentTemplate 수정: id={}, newVersion={}", saved.getId(), nextVersion);
+        return saved;
+    }
+
     /** 템플릿 비활성화 */
     @Transactional
     public void deactivate(UUID id) {

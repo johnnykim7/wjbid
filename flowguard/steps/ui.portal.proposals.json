@@ -1,0 +1,18 @@
+{
+  "type": "UI_SMOKE",
+  "name": "[Portal] 내 입찰 목록 페이지 렌더링 (로그인 필요)",
+  "connector": "customer-portal",
+  "action": {
+    "url": "http://localhost:5173/proposals",
+    "waitForSelector": "table, [data-testid=proposal-list], main",
+    "auth": {
+      "type": "localStorage",
+      "key": "accessToken",
+      "value": "{{vars.portalToken}}"
+    }
+  },
+  "assert": [
+    { "field": "$.statusCode", "operator": "==", "value": 200 }
+  ],
+  "failMode": "soft"
+}

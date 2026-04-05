@@ -1,6 +1,6 @@
 # SAM.gov Bidding Agency Platform FSM 상태 정의
 
-> 설계 버전: 1.0 | 최종 수정: 2026-03-19 | 관련 CR: -
+> 설계 버전: 1.1 | 최종 수정: 2026-03-28 | 관련 CR: CR-003
 
 > 단계: 1. Requirements | 설계
 >
@@ -10,8 +10,74 @@
 
 | 엔티티 | 상태 코드 목록 |
 |--------|--------------|
+| Opportunity (공고 노출) | HIDDEN → VISIBLE (CR-003) |
+| OpportunityAnalysis (공고 분석) | PENDING → ANALYZING → COMPLETED / FAILED (CR-003) |
 | BidRequest (입찰 요청) | CREATED → DOCS_PENDING → DOCS_RECEIVED → ANALYZING → GENERATING → REVIEW → CONFIRMED → SUBMITTED / CLOSED |
 | BidDocument (입찰 문서) | DRAFT → LOCKED → ARCHIVED |
+
+---
+
+## Opportunity 노출 상태 (CR-003)
+
+```mermaid
+stateDiagram-v2
+    [*] --> HIDDEN : 공고 수집
+    HIDDEN --> VISIBLE : 관리자 승인 (사전 분석 COMPLETED 필수)
+    VISIBLE --> HIDDEN : 관리자 비노출 처리
+```
+
+### HIDDEN | 비노출
+- **설명**: 수집된 공고가 아직 사용자에게 노출되지 않은 상태. 사전 분석 미완료 또는 관리자 미승인
+- **진입 조건**: 공고 수집 시 기본값
+- **허용 다음 상태**: VISIBLE
+- **관련 기능 ID**: BID-OPP-008
+
+### VISIBLE | 노출
+- **설명**: 관리자가 사전 분석 결과를 검수 후 승인하여 사용자에게 노출되는 상태
+- **진입 조건**: OpportunityAnalysis가 COMPLETED 상태 + 관리자 승인
+- **허용 다음 상태**: HIDDEN (비노출 복귀 가능)
+- **관련 기능 ID**: BID-OPP-008, BID-BROWSE-001
+
+---
+
+## OpportunityAnalysis 분석 상태 (CR-003)
+
+```mermaid
+stateDiagram-v2
+    [*] --> PENDING : 첨부파일 다운로드 완료 또는 관리자 수동 업로드
+    PENDING --> ANALYZING : LLM 분석 시작
+    ANALYZING --> COMPLETED : 분석 성공
+    ANALYZING --> FAILED : 분석 실패
+    FAILED --> PENDING : 재시도
+    COMPLETED --> PENDING : 재분석 요청
+```
+
+### PENDING | 분석 대기
+- **설명**: 첨부파일이 준비되었으나 아직 LLM 분석이 시작되지 않은 상태
+- **진입 조건**: AttachmentDownloaded 이벤트 수신 또는 관리자 수동 업로드 완료
+- **허용 다음 상태**: ANALYZING
+- **관련 기능 ID**: BID-OPP-006
+
+### ANALYZING | 분석 중
+- **설명**: Aimbase 워크플로우가 첨부파일을 분석하고 있는 상태
+- **진입 조건**: 분석 워크플로우 트리거
+- **허용 다음 상태**: COMPLETED, FAILED
+- **관련 기능 ID**: BID-OPP-006
+- **비고**: Aimbase Workflow 비동기 실행. 결과는 MCP 콜백으로 저장
+
+### COMPLETED | 분석 완료
+- **설명**: LLM 분석이 성공적으로 완료되어 요약/양식/필요서류/프롬프트 프리셋이 저장된 상태
+- **진입 조건**: Aimbase 워크플로우 성공 완료
+- **허용 다음 상태**: PENDING (재분석 필요시)
+- **관련 기능 ID**: BID-OPP-006, BID-OPP-008
+- **비고**: 관리자가 분석 결과를 검수하고 승인하면 Opportunity가 VISIBLE로 전이
+
+### FAILED | 분석 실패
+- **설명**: LLM 분석이 실패한 상태
+- **진입 조건**: Aimbase 워크플로우 실패
+- **허용 다음 상태**: PENDING (재시도)
+- **관련 기능 ID**: BID-OPP-006
+- **비고**: 관리자에게 실패 알림. 수동 재시도 가능
 
 ---
 

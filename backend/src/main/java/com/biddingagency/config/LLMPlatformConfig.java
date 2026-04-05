@@ -24,6 +24,9 @@ public class LLMPlatformConfig {
     @Value("${app.aimbase.api-key:}")
     private String apiKey;
 
+    @Value("${app.aimbase.tenant-id:bidding_system}")
+    private String tenantId;
+
     @Bean
     public RestTemplate llmPlatformRestTemplate() {
         log.info("Initializing Aimbase RestTemplate with connectTimeout={}ms, readTimeout={}ms",
@@ -35,18 +38,19 @@ public class LLMPlatformConfig {
 
         RestTemplate restTemplate = new RestTemplate(factory);
 
-        // Aimbase X-API-Key 인증 인터셉터
-        if (apiKey != null && !apiKey.isEmpty()) {
-            restTemplate.getInterceptors().add((request, body, execution) -> {
+        // Aimbase 인증 인터셉터: X-API-Key + X-Tenant-Id
+        restTemplate.getInterceptors().add((request, body, execution) -> {
+            if (apiKey != null && !apiKey.isEmpty()) {
                 request.getHeaders().set("X-API-Key", apiKey);
-                request.getHeaders().set("Content-Type", "application/json");
-                return execution.execute(request, body);
-            });
-            log.info("Aimbase API Key interceptor registered (key prefix: {}...)",
-                apiKey.length() > 10 ? apiKey.substring(0, 10) : apiKey);
-        } else {
-            log.warn("Aimbase API Key is not configured");
-        }
+            }
+            if (tenantId != null && !tenantId.isEmpty()) {
+                request.getHeaders().set("X-Tenant-Id", tenantId);
+            }
+            request.getHeaders().set("Content-Type", "application/json");
+            return execution.execute(request, body);
+        });
+        log.info("Aimbase interceptor registered (tenant={}, key prefix={}...)",
+            tenantId, apiKey != null && apiKey.length() > 10 ? apiKey.substring(0, 10) : "none");
 
         return restTemplate;
     }

@@ -160,14 +160,16 @@ app:
   aimbase:
     base-url: ${AIMBASE_URL:http://14.63.25.49:8280}
     api-key: ${AIMBASE_API_KEY:plat-20cf57fbc623424584eeda2e355cbb43}
+    tenant-id: ${AIMBASE_TENANT_ID:bidding_system}
     connect-timeout: 5000     # 5 seconds
     read-timeout: 300000      # 5 minutes (워크플로우 실행 포함)
     polling:
       interval-ms: 3000       # 폴링 간격 (3초, Aimbase 권장)
       max-attempts: 60        # 최대 폴링 횟수 (60 * 3초 = 3분)
     workflows:
-      requirement-extraction: ${AIMBASE_WF_REQ_EXTRACTION:requirement-extraction}
-      document-generation: ${AIMBASE_WF_DOC_GENERATION:bid-document-generation}
+      requirement-extraction: ${AIMBASE_WF_REQ_EXTRACTION:e96e63d1-7bf3-493c-9473-1bd87723073c}
+      document-generation: ${AIMBASE_WF_DOC_GENERATION:014e7de2-251e-432d-95dd-16bddb28f18e}
+      opportunity-analysis: ${AIMBASE_WF_OPP_ANALYSIS:placeholder-opp-analysis-workflow-id}
 
   # AI 설정 (자동화 + Multi-Provider)
   ai:

@@ -10,6 +10,8 @@ import ProposalsPage from './pages/ProposalsPage'
 import BookmarksPage from './pages/BookmarksPage'
 import PricingPage from './pages/PricingPage'
 import ProfilePage from './pages/ProfilePage'
+import ProposalDetailPage from './pages/ProposalDetailPage'
+import GuidePage from './pages/GuidePage'
 
 function ProtectedRoute() {
   const { isAuthenticated } = useAuth()
@@ -24,6 +26,7 @@ function AppRoutes() {
       <Route element={<AppLayout />}>
         <Route index element={<HomePage />} />
         <Route path="/pricing" element={<PricingPage />} />
+        <Route path="/guide" element={<GuidePage />} />
       </Route>
 
       {/* 로그인 / 회원가입 (GNB 없음) */}
@@ -35,6 +38,7 @@ function AppRoutes() {
         <Route path="/search" element={<SearchPage />} />
         <Route path="/search/:id" element={<BidDetailPage />} />
         <Route path="/proposals" element={<ProposalsPage />} />
+        <Route path="/proposals/:id" element={<ProposalDetailPage />} />
         <Route path="/bookmarks" element={<BookmarksPage />} />
         <Route path="/profile" element={<ProfilePage />} />
       </Route>

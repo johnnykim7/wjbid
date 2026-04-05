@@ -1,0 +1,17 @@
+{
+  "type": "ACTION",
+  "name": "즐겨찾기 추가",
+  "connector": "bidding-api",
+  "action": {
+    "method": "POST",
+    "endpoint": "/api/bookmarks/{{steps.opportunity.list.output.firstOpportunityId}}",
+    "headers": {
+      "Authorization": "Bearer {{steps.auth.login.output.accessToken}}"
+    }
+  },
+  "assert": [
+    { "field": "$.statusCode", "operator": "==", "value": 200 },
+    { "field": "$.body.success", "operator": "==", "value": true }
+  ],
+  "failMode": "soft"
+}

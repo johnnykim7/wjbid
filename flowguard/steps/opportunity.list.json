@@ -1,0 +1,17 @@
+{
+  "type": "ACTION",
+  "name": "공고 목록 조회",
+  "connector": "bidding-api",
+  "action": {
+    "method": "GET",
+    "endpoint": "/api/opportunities?page=0&size=10"
+  },
+  "extract": {
+    "firstOpportunityId": "$.body.data.content[0].id"
+  },
+  "assert": [
+    { "field": "$.statusCode", "operator": "==", "value": 200 },
+    { "field": "$.body.success", "operator": "==", "value": true }
+  ],
+  "failMode": "hard"
+}

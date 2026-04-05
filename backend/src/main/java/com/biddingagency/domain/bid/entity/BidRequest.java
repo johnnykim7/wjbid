@@ -25,6 +25,10 @@ import java.util.UUID;
                 @Index(name = "idx_bid_requests_state", columnList = "state"),
                 @Index(name = "idx_bid_requests_member", columnList = "member_id"),
                 @Index(name = "idx_bid_requests_opportunity", columnList = "opportunity_id")
+        },
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uniq_bid_requests_member_opportunity",
+                        columnNames = {"member_id", "opportunity_id"})
         })
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -50,11 +54,21 @@ public class BidRequest extends BaseEntity {
     @Builder.Default
     private List<StateTransition> stateHistory = new ArrayList<>();
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "service_level", length = 30)
+    private ServiceLevel serviceLevel;
+
     @Column(name = "assigned_to", columnDefinition = "BINARY(16)")
     private UUID assignedTo;
 
     @Column(name = "submitted_at")
     private LocalDateTime submittedAt;
+
+    @Column(name = "closed_at")
+    private LocalDateTime closedAt;
+
+    @Column(name = "close_reason", length = 500)
+    private String closeReason;
 
     // Business methods
 
@@ -88,6 +102,10 @@ public class BidRequest extends BaseEntity {
         // Set submitted_at if transitioning to SUBMITTED
         if (newState == BidRequestState.SUBMITTED) {
             this.submittedAt = LocalDateTime.now();
+        }
+        // Set closed_at if transitioning to CLOSED
+        if (newState == BidRequestState.CLOSED) {
+            this.closedAt = LocalDateTime.now();
         }
     }
 

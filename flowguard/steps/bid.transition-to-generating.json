@@ -1,0 +1,22 @@
+{
+  "type": "ACTION",
+  "name": "FSM: ANALYZING → GENERATING",
+  "connector": "bidding-api",
+  "action": {
+    "method": "POST",
+    "endpoint": "/api/admin/bid-requests/{{steps.bid.create-request.output.bidRequestId}}/transition",
+    "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer {{vars.adminToken}}"
+    },
+    "body": {
+      "toState": "GENERATING",
+      "notes": "FlowGuard: 문서 생성 시작"
+    }
+  },
+  "assert": [
+    { "field": "$.statusCode", "operator": "==", "value": 200 },
+    { "field": "$.body.data.state", "operator": "==", "value": "GENERATING" }
+  ],
+  "failMode": "hard"
+}

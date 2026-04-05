@@ -1,6 +1,7 @@
 package com.biddingagency.domain.opportunity.repository;
 
 import com.biddingagency.domain.opportunity.entity.Opportunity;
+import com.biddingagency.domain.opportunity.entity.OpportunityVisibility;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -76,4 +77,29 @@ public interface OpportunityRepository extends JpaRepository<Opportunity, UUID> 
      */
     @Query("SELECT MAX(o.postedDate) FROM Opportunity o")
     Optional<LocalDateTime> findLatestPostedDate();
+
+    /**
+     * Find active + visible opportunities (CR-003: customer-facing)
+     */
+    Page<Opportunity> findByActiveTrueAndVisibility(OpportunityVisibility visibility, Pageable pageable);
+
+    /**
+     * Search by title with visibility filter (CR-003)
+     */
+    @Query("SELECT o FROM Opportunity o WHERE o.active = true " +
+            "AND o.visibility = :visibility " +
+            "AND LOWER(o.title) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+    Page<Opportunity> searchByTitleAndVisibility(@Param("keyword") String keyword,
+                                                 @Param("visibility") OpportunityVisibility visibility,
+                                                 Pageable pageable);
+
+    /**
+     * Search by organization with visibility filter (CR-003)
+     */
+    @Query("SELECT o FROM Opportunity o WHERE o.active = true " +
+            "AND o.visibility = :visibility " +
+            "AND LOWER(o.organizationName) LIKE LOWER(CONCAT('%', :organization, '%'))")
+    Page<Opportunity> searchByOrganizationAndVisibility(@Param("organization") String organization,
+                                                        @Param("visibility") OpportunityVisibility visibility,
+                                                        Pageable pageable);
 }

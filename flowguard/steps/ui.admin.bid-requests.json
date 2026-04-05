@@ -1,0 +1,18 @@
+{
+  "type": "UI_SMOKE",
+  "name": "[Admin] 입찰 관리 목록 렌더링",
+  "connector": "admin-console",
+  "action": {
+    "url": "http://localhost:5174/bid-requests",
+    "waitForSelector": "table, main",
+    "auth": {
+      "type": "localStorage",
+      "key": "accessToken",
+      "value": "{{vars.adminPortalToken}}"
+    }
+  },
+  "assert": [
+    { "field": "$.statusCode", "operator": "==", "value": 200 }
+  ],
+  "failMode": "hard"
+}

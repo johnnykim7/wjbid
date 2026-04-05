@@ -1,0 +1,14 @@
+{
+  "type": "UI_SMOKE",
+  "name": "[Portal] 공고 검색 페이지 렌더링",
+  "connector": "customer-portal",
+  "action": {
+    "url": "http://localhost:5173/search",
+    "waitForSelector": "input"
+  },
+  "assert": [
+    { "field": "$.statusCode", "operator": "==", "value": 200 },
+    { "field": "$.elementsFound.input", "operator": ">", "value": 0 }
+  ],
+  "failMode": "hard"
+}

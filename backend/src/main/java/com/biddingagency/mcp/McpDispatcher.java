@@ -22,6 +22,7 @@ public class McpDispatcher {
     private final DocumentMcpTool documentMcpTool;
     private final DocumentTemplateMcpTool documentTemplateMcpTool;
     private final StateMcpTool stateMcpTool;
+    private final OpportunityAnalysisMcpTool opportunityAnalysisMcpTool;
 
     /** 전체 도구 정의 목록 */
     private static final List<Map<String, Object>> ALL_TOOLS = Stream.of(
@@ -29,7 +30,8 @@ public class McpDispatcher {
         RequirementMcpTool.TOOL_DEFINITIONS,
         DocumentMcpTool.TOOL_DEFINITIONS,
         DocumentTemplateMcpTool.TOOL_DEFINITIONS,
-        StateMcpTool.TOOL_DEFINITIONS
+        StateMcpTool.TOOL_DEFINITIONS,
+        OpportunityAnalysisMcpTool.TOOL_DEFINITIONS
     ).flatMap(Collection::stream).toList();
 
     /**
@@ -102,9 +104,10 @@ public class McpDispatcher {
             case "save_document_version"        -> documentMcpTool.saveDocumentVersion(args);
             case "get_document_template"        -> documentTemplateMcpTool.getDocumentTemplate(args);
             case "transition_bid_state"         -> stateMcpTool.transitionBidState(args);
-            default -> throw new IllegalArgumentException("알 수 없는 도구: " + toolName
-                + ". 사용 가능: get_opportunity, search_opportunities, get_opportunity_requirements, "
-                + "save_requirements, get_bid_request, save_document_version, get_document_template, transition_bid_state");
+            case "get_opportunity_analysis"    -> opportunityAnalysisMcpTool.getOpportunityAnalysis(args);
+            case "save_opportunity_analysis"   -> opportunityAnalysisMcpTool.saveOpportunityAnalysis(args);
+            case "get_past_submissions"        -> opportunityAnalysisMcpTool.getPastSubmissions(args);
+            default -> throw new IllegalArgumentException("알 수 없는 도구: " + toolName);
         };
     }
 

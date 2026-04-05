@@ -7,8 +7,10 @@ import com.biddingagency.domain.member.entity.Member;
 import com.biddingagency.domain.member.repository.MemberRepository;
 import com.biddingagency.domain.opportunity.entity.Opportunity;
 import com.biddingagency.domain.opportunity.repository.OpportunityRepository;
+import com.biddingagency.domain.event.BidRequestCreatedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -33,6 +35,7 @@ public class BidRequestService {
     private final MemberRepository memberRepository;
     private final OpportunityRepository opportunityRepository;
     private final BidFSMService fsmService;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * Create new bid request
@@ -76,6 +79,8 @@ public class BidRequestService {
         BidRequest saved = bidRequestRepository.save(bidRequest);
 
         log.info("Bid request created: {}", saved.getId());
+
+        eventPublisher.publishEvent(new BidRequestCreatedEvent(saved.getId(), memberId, opportunityId, createdBy));
 
         return saved;
     }

@@ -6,6 +6,10 @@ import MemberAdminPage from './pages/MemberAdminPage'
 import BidRequestAdminPage from './pages/BidRequestAdminPage'
 import CollectionPage from './pages/CollectionPage'
 import DocumentTemplatePage from './pages/DocumentTemplatePage'
+import DocumentEditPage from './pages/DocumentEditPage'
+import BidRequestDetailPage from './pages/BidRequestDetailPage'
+import OpportunityAdminPage from './pages/OpportunityAdminPage'
+import OpportunityAdminDetailPage from './pages/OpportunityAdminDetailPage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('adminToken')
@@ -30,8 +34,12 @@ export default function App() {
           <Route index element={<DashboardPage />} />
           <Route path="members" element={<MemberAdminPage />} />
           <Route path="bid-requests" element={<BidRequestAdminPage />} />
+          <Route path="bid-requests/:id" element={<BidRequestDetailPage />} />
+          <Route path="opportunities" element={<OpportunityAdminPage />} />
+          <Route path="opportunities/:id" element={<OpportunityAdminDetailPage />} />
           <Route path="collection" element={<CollectionPage />} />
           <Route path="templates" element={<DocumentTemplatePage />} />
+          <Route path="documents/:id/edit" element={<DocumentEditPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

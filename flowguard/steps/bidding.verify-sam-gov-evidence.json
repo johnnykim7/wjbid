@@ -1,0 +1,17 @@
+{
+  "type": "PROBE_LOG",
+  "name": "SAM.gov API 호출 Evidence 검증",
+  "connector": "bidding-service",
+  "probe": {
+    "service": "bidding-agency",
+    "filter": {
+      "logType": "EXTERNAL_INTEGRATION",
+      "partner": "sam-gov",
+      "flowId": "{{flowId}}"
+    }
+  },
+  "assert": [
+    { "field": "result", "operator": "==", "value": "SUCCESS" }
+  ],
+  "failMode": "soft"
+}
