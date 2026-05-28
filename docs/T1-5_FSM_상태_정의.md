@@ -111,11 +111,12 @@ stateDiagram-v2
 - **설명**: 고객에게 필요 문서 안내가 전달되어 문서 제출을 기다리는 상태
 - **진입 조건**: 관리자가 필요 문서 체크리스트를 확인/보완 후 고객에게 안내
 - **허용 다음 상태**: DOCS_RECEIVED, CLOSED
+- **DOCS_RECEIVED 전이 가드 (CR-010, BIZ-015)**: `ComplianceService.validateClientDocumentSlots(bidRequestId)` 호출 → 공고의 모든 BLOCKER 요구사항 슬롯이 `RequirementFulfillmentMap` 으로 충족(`ClientDocument` 또는 `DocumentSection`/`Attachment`)된 경우에만 전이 허용. 미충족 시 전이 차단 + 미충족 슬롯 목록 응답
 - **관련 기능 ID**: BID-REQ-002, BID-BROWSE-003
 
 ### DOCS_RECEIVED | 문서 접수 완료
 - **설명**: 고객이 필요 문서를 모두 제출한 상태
-- **진입 조건**: 필수 문서 체크리스트 전부 충족
+- **진입 조건**: 모든 BLOCKER 요구사항 슬롯 충족 (CR-010 게이트 통과)
 - **허용 다음 상태**: ANALYZING, CLOSED
 - **관련 기능 ID**: BID-REQ-002
 

@@ -1,6 +1,6 @@
 # SAM.gov Bidding Agency Platform API 설계
 
-> 설계 버전: 1.3 | 최종 수정: 2026-03-28 | 관련 CR: CR-001, CR-002, CR-003
+> 설계 버전: 1.4 | 최종 수정: 2026-04-05 | 관련 CR: CR-001, CR-002, CR-003, CR-003a
 
 > 단계: 3. Detail Design | 실행스펙 섹션 3에 포함
 >
@@ -82,7 +82,7 @@
 | 메서드 | 경로 | 설명 | 인증 | 기능 ID |
 |--------|------|------|------|---------|
 | GET | /opportunities | 공고 목록 조회 (필터/검색/페이징). **사용자: visibility=VISIBLE만** (CR-003) | | BID-BROWSE-001 |
-| GET | /opportunities/{id} | 공고 상세 조회 | | BID-BROWSE-002 |
+| GET | /opportunities/{id} | 공고 상세 조회 (사전 분석 결과 포함 — CR-003) | | BID-BROWSE-002 |
 | GET | /opportunities/{id}/requirements | 공고 요구사항 목록 (카테고리별) | | BID-BROWSE-003 |
 | GET | /opportunities/{id}/attachments | 공고 첨부문서 목록 | | BID-OPP-003 |
 | GET | /opportunities/search | 키워드 검색 | | BID-BROWSE-001 |
@@ -134,6 +134,39 @@
 | POST | /bid-requests/{id}/client-documents | 문서 업로드 (multipart) | 🔒 | BID-REQ-002 |
 | GET | /bid-requests/{id}/client-documents | 제출 문서 목록 | 🔒 | BID-REQ-002 |
 | DELETE | /bid-requests/{id}/client-documents/{docId} | 제출 문서 삭제 | 🔒 | BID-REQ-002 |
+
+### G-1. 요구사항 슬롯 (CR-010)
+
+공고 분석으로 도출된 BLOCKER 요구사항을 슬롯으로 펼쳐서 1:1 업로드 매핑. DOCS_PENDING → DOCS_RECEIVED 전이의 사전 조건(BIZ-015).
+
+| 메서드 | 경로 | 설명 | 인증 | 기능 ID |
+|--------|------|------|------|---------|
+| GET | /bid-requests/{id}/required-document-slots | 의뢰의 요구사항 슬롯 목록 (각 슬롯: requirementItemId, title, description, isBlocker, status, mappedClientDocument 요약) | 🔒 | BID-REQ-002 |
+| POST | /bid-requests/{id}/required-document-slots/{requirementItemId}/upload | 슬롯에 직접 업로드 (multipart). 한 트랜잭션에서 ClientDocument 생성 + RequirementFulfillmentMap(`CLIENT_DOCUMENT`, `FULFILLED`) 생성/업데이트 | 🔒 | BID-REQ-002 |
+| DELETE | /bid-requests/{id}/required-document-slots/{requirementItemId} | 슬롯 매핑 해제. FulfillmentMap 삭제 (ClientDocument는 보존, 별도 DELETE 호출 시 제거) | 🔒 | BID-REQ-002 |
+
+**응답 스키마 (GET 슬롯 목록)**:
+```json
+{
+  "data": [
+    {
+      "requirementItemId": "uuid",
+      "title": "Business License",
+      "description": "Valid US business license issued within 12 months",
+      "isBlocker": true,
+      "category": "REGISTRATION",
+      "status": "FULFILLED|PENDING|MISSING",
+      "fulfillmentType": "CLIENT_DOCUMENT|DOCUMENT_SECTION|ATTACHMENT|null",
+      "mappedClientDocument": { "id": "uuid", "fileName": "...", "fileSize": 12345, "uploadedAt": "..." } | null
+    }
+  ],
+  "summary": { "totalBlocker": 5, "fulfilledBlocker": 3, "canTransitionToDocsReceived": false }
+}
+```
+
+**전이 차단 응답 (PATCH /bid-requests/{id}/state to DOCS_RECEIVED 미충족 시)**:
+- HTTP 409 Conflict
+- body: `{ "error": "REQUIREMENT_SLOTS_NOT_FULFILLED", "unfulfilledSlots": [{ "requirementItemId": "uuid", "title": "..." }] }`
 
 ---
 
