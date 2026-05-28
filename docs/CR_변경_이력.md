@@ -22,6 +22,7 @@
 | CR-010 | 2026-05-28 | 공고 요구서류 ↔ 고객 업로드 슬롯 매칭 | BE (domain/bid, domain/compliance, controller, MinIO) + FE (customer-portal) | 중규모 | 간이 설계 진행 중, 코드 구현 대기 |
 | CR-011 | 2026-05-27 | SAM.gov 수집 키 운영 주입 정상화 + 신규 0건 메일 발송 스킵 | 운영(docker-compose.prod.yml) + BE (domain/notification) | 소규모 | 완료 |
 | CR-013 | 2026-05-28 | 성공 제안서 패턴 가이드 (관리자 등록 + 슬롯 패턴 추출) | BE (domain/rfp 신설, integration/storage, common, mcp, integration/llmplatform, controller/admin, 마이그레이션 V10) + FE (admin-console) | 대규모 | 간이 설계 + 코드 병행 |
+| CR-013-R | 2026-05-29 | CR-013 슬롯 폐기 → 원본 통째 보관 + 공고유형별 가이드 + 작성 시 도구 발췌 | BE (domain/rfp 슬롯 제거, PatternGuide 유형단위, mcp, llmplatform, controller/admin, 마이그레이션 V11) + FE (admin-console) | 대규모 | 코드 먼저 + 설계 일괄 |
 
 > CR-004~008 원본: `docs/origins/원본_운영플로우_추가요구_20260516.md`
 > 위 5건은 계획 등재만 — 각 CR 상세 설계는 해당 CR 착수 세션에서 진행. 본질 검토 결과 이미 충족된 항목(Draft+승인 / Aimbase 정제 / cron 스케줄링 / 가입형 고객 / 작성의뢰 / 맞춤 제안서 생성)은 CR 불필요.
@@ -268,4 +269,34 @@
 - **영향 설계 문서**: T1-1, T1-3, T3-1, T3-2, T3-3
 - **리스크**: Aimbase 워크플로우 미생성 → 로컬 E2E 불가(markFailed graceful 경로만 검증, 실제 가이드 생성은 배포환경). 브로슈어형 PDF 텍스트 추출 깨짐(extraction_status=FAILED 허용 + section_text 수동 fallback). 단건 슬롯(LAUNDRY/HVAC/WASTE/PIPELINE 각 1건) 패턴 빈약 → 1차엔 industryType NULL=공통 묶음.
 - **참조 산출물**: `docs/rfp_sample_index_draft.md`(rfp_sample 컬럼 근거), `docs/rfp_pattern_guide_draft_prior_experience.md`(guide_json 8블록/체크리스트/금기 구조 = save_pattern_guide 입력 계약)
-- **상태**: 간이 설계 캐스케이드 + 코드 병행 (설계 commit과 코드 commit 분리)
+- **상태**: 간이 설계 캐스케이드 + 코드 병행 (설계 commit과 코드 commit 분리). **→ CR-013-R로 슬롯 부분 폐기됨(아래 참조).**
+
+---
+
+### CR-013-R: CR-013 슬롯 폐기 → 원본 통째 보관 + 공고유형별 가이드 (2026-05-29)
+
+- **배경**: CR-013 슬롯 도입 배경을 재검토. 슬롯(7축 사전 분류)은 *가이드 추출 품질*을 위해 실물을 정규화하려는 추출-측 논리였으나, 핵심 가치는 "실물 참조"임. 사용자 지적: 100페이지를 통째로 LLM에 넣을 수 없으니 작성 시 **도구(grep/parse_document)로 필요한 부분만 발췌**하면 되고, 그렇다면 7슬롯 사전 분류는 과잉. (사용자가 Claude Code에 "이 파일들 참조해서 이 가이드대로 써줘"를 주는 것과 동일 원리를 플랫폼이 재현.)
+- **실물(rfp/) 분석으로 입증**: 15폴더 149파일. 제출본이 **이미 FACTOR/Subfactor별 파일로 나뉘어 제출**됨(`FACTOR 3.PAST PERFORMANCE.pdf` 등 — 파일명=섹션 태그) → 플랫폼 슬롯 재분류는 중복 노동. PDF 텍스트 추출률 거의 100%(128 중 스캔의심 1, 그것도 공고문) → grep/parse 발췌로 충분, OCR·벡터 불요. 유형이 폴더명에 명시(GM/청소/HVAC/Laundry/폐기물) → 메타 매칭 키 자연 존재.
+- **사용자 확정 결정**:
+  1. **슬롯 폐기** — 원본을 7축으로 쪼개는 구조 제거. 원본은 통째 보관(폴더=1건, 파일 그대로).
+  2. **가이드 단위 = 공고유형별 1개** — AI 추출 + 누적 + **사람 직접 편집**(살아있는 가이드, BIZ-017 출처보호 유지).
+  3. **첨부 자동 선택** — 신규 공고 유형 ↔ RfpSample.industryType 매칭으로 참조 원본 자동 선택.
+  4. **작성 시 도구 발췌** — Aimbase 워크플로우가 parse_document(url)로 폴더 내 파일(파일명=섹션) 발췌해 few-shot 참조.
+  5. 진행 = **코드 먼저 + 설계 일괄**.
+- **변경 사항**:
+  1. **데이터 모델 (T3-1)**: 마이그레이션 V11. `slot_definition`/`slot_assignment` 드롭. `pattern_guide`를 슬롯FK 제거 → `industry_type` UNIQUE 단위로 재생성. `rfp_sample`/`rfp_sample_file` 유지.
+  2. **기능 요구 (T1-1)**: BID-RFP-002(7슬롯 배치) 폐기. 003 추출단위 슬롯→공고유형. 004(가이드 조회·편집) 유지(유형 단위 + 사람 편집 UI).
+  3. **비즈니스 규칙 (T1-3)**: BIZ-016 슬롯 가드 폐기 → "해당 유형 성공 제안서 1건 이상". BIZ-017 출처보호 유지.
+  4. **API (T3-2)**: `/admin/rfp-samples` 슬롯 배치 엔드포인트(getSlots/assign/unassign) 제거. `/admin/pattern-guides/{industryType}` 유형 단위로 전환.
+  5. **화면 (T3-3)**: RfpSampleDetailPage 7슬롯 배치 UI 제거(파일 업로드/목록만). RfpSamplePage 가이드 유형별 표시 + 사람 편집 모달 추가.
+  6. **AI 연동**: `extractSlotPattern`→`extractTypePattern`, MCP `get_slot_samples`→`get_reference_samples`(유형 매칭 원본+다운로드URL). 워크플로우 키 `slot-pattern-extraction`→`type-pattern-extraction`.
+- **영향 범위**:
+  - BE: `domain/rfp`(SlotDefinition/SlotAssignment/SlotEstimator/SlotAssignmentService + repo 2 + DTO 3 삭제, PatternGuide/Repository/DTO 유형단위, RfpSampleService/PatternExtractionService 재구성), `controller/admin`(슬롯 엔드포인트 제거), `mcp/tool/PatternGuideMcpTool`+`McpDispatcher`, `integration/llmplatform/LLMPlatformClient`, `application.yml`
+  - FE: `api/client.ts`, `pages/RfpSamplePage.tsx`·`RfpSampleDetailPage.tsx`
+  - 마이그레이션: `V11__rfp_remove_slots_type_guide.sql`
+- **영향 설계 문서**: T1-1, T1-3, T3-1, T3-2, T3-3
+- **검증**: BE 전체 테스트 BUILD SUCCESSFUL, FE tsc 통과. **런타임 실측** — 앱 기동 + V11 적용(`now at version v11`) + MCP tool 13개(get_reference_samples 노출, get_slot_samples 제거) + DB 스키마(slot_* 삭제, pattern_guide industry_type 단위, rfp_sample/file 유지) 확인.
+- **남은 작업(B작업, 다음)**: 작성 워크플로우 — 메타 자동선택 + 도구 원본발췌 + 유형 가이드 주입. Aimbase `type-pattern-extraction` 워크플로우 생성(현재 placeholder).
+- **운영 메모**: 적용 중 DB 호스트 차단(max_connect_errors)으로 기동 실패 → SSH로 FLUSH HOSTS. V11 최초안 FK 드롭 순서 오류(pattern_guide가 slot_definition 참조) → pattern_guide 먼저 드롭하도록 수정 + 실패 레코드 정리 후 재적용.
+- **코드 commit**: 7d81c9f (27 files, +291/-723)
+- **상태**: 코드 구현·런타임 검증 완료. 설계 캐스케이드 일괄 반영 중.
