@@ -236,8 +236,7 @@
 | GET | /admin/rfp-samples | 등록 목록 (페이징, 메타 + 파일수 + 배치현황) | 🔒 ADMIN | BID-RFP-001 |
 | POST | /admin/rfp-samples | 성공 제안서 메타 등록 | 🔒 ADMIN | BID-RFP-001 |
 | GET | /admin/rfp-samples/{id} | 상세 (파일 + 슬롯 배치 + 빈슬롯) | 🔒 ADMIN | BID-RFP-001 |
-| POST | /admin/rfp-samples/{id}/files | 원본 파일 업로드 (multipart, 텍스트 추출 + 슬롯 자동추정) | 🔒 ADMIN | BID-RFP-001 |
-| POST | /admin/rfp-samples/{id}/pws | (선택) PWS 공고문 업로드 → pws_text | 🔒 ADMIN | BID-RFP-001 |
+| POST | /admin/rfp-samples/{id}/files | 원본 파일 업로드 (multipart, 로컬 저장 + 슬롯 자동추정). isPws 쿼리로 PWS 구분 | 🔒 ADMIN | BID-RFP-001 |
 | DELETE | /admin/rfp-samples/{id} | 등록 삭제 (파일 CASCADE) | 🔒 ADMIN | BID-RFP-001 |
 | DELETE | /admin/rfp-samples/{id}/files/{fileId} | 파일 삭제 | 🔒 ADMIN | BID-RFP-001 |
 
@@ -380,8 +379,8 @@ app.aimbase:
 | L. 요금 안내 | 1 | 7 |
 | M. FlowGuard 연동 | 5 | — (CR-001) |
 | B-2. 공고 관리 (Admin) | 8 | CR-003 |
-| P. 성공 제안서 패턴 (Admin) | 14 | CR-013 |
+| P. 성공 제안서 패턴 (Admin) | 13 | CR-013 |
 | MCP Tools | 13 | 5, CR-003, CR-013 |
 | MCP SSE 엔드포인트 | 2 | CR-002 |
 | Aimbase 워크플로우 호출 | 2 | CR-002 |
-| **합계** | **REST 78 + MCP 13 + SSE 2 + Aimbase 2** | |
+| **합계** | **REST 77 + MCP 13 + SSE 2 + Aimbase 2** | |

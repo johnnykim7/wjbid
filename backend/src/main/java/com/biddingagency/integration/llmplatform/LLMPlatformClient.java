@@ -48,6 +48,9 @@ public class LLMPlatformClient {
     @Value("${app.aimbase.workflows.opportunity-analysis:opportunity-analysis}")
     private String opportunityAnalysisWorkflowId;
 
+    @Value("${app.aimbase.workflows.slot-pattern-extraction:slot-pattern-extraction}")
+    private String slotPatternExtractionWorkflowId;
+
     @Value("${app.aimbase.polling.interval-ms:3000}")
     private long pollingIntervalMs;
 
@@ -114,6 +117,15 @@ public class LLMPlatformClient {
     public WorkflowRunResponse analyzeOpportunity(Map<String, Object> input) {
         log.info("Aimbase: 공고 사전 분석 시작 opportunityId={}", input.get("opportunityId"));
         return runWorkflowAndWait(opportunityAnalysisWorkflowId, input);
+    }
+
+    /**
+     * 성공 제안서 슬롯 패턴 추출 — slot-pattern-extraction 워크플로우 실행 (CR-013).
+     * Aimbase가 MCP get_slot_samples로 원본 파일을 직접 파싱하고, save_pattern_guide로 결과를 콜백 저장.
+     */
+    public WorkflowRunResponse extractSlotPattern(Map<String, Object> input) {
+        log.info("Aimbase: 슬롯 패턴 추출 시작 slotCode={}", input.get("slotCode"));
+        return runWorkflowAndWait(slotPatternExtractionWorkflowId, input);
     }
 
     /**

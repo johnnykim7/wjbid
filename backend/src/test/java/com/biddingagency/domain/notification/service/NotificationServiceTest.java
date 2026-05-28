@@ -3,6 +3,7 @@ package com.biddingagency.domain.notification.service;
 import com.biddingagency.domain.notification.entity.NotificationLog;
 import com.biddingagency.domain.notification.entity.NotificationType;
 import com.biddingagency.domain.notification.repository.NotificationLogRepository;
+import com.biddingagency.integration.notification.BpNotificationClient;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -10,8 +11,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 
 import java.util.UUID;
 
@@ -20,7 +19,8 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.*;
 
 /**
- * NotificationService 테스트 — BIZ-012 멱등성 검증 포함
+ * NotificationService 테스트 — BIZ-012 멱등성 검증 포함.
+ * 이메일 발송은 bp-notification(BpNotificationClient) 연동 (CR-005/006).
  */
 @ExtendWith(MockitoExtension.class)
 class NotificationServiceTest {
@@ -28,7 +28,7 @@ class NotificationServiceTest {
     @Mock
     private NotificationLogRepository notificationLogRepository;
     @Mock
-    private JavaMailSender mailSender;
+    private BpNotificationClient bpNotificationClient;
 
     @InjectMocks
     private NotificationService notificationService;
@@ -39,6 +39,8 @@ class NotificationServiceTest {
         // given
         String idempotencyKey = "TEST_KEY_" + UUID.randomUUID();
         given(notificationLogRepository.existsByIdempotencyKey(idempotencyKey)).willReturn(false);
+        given(bpNotificationClient.sendEmail(any(), any(), any()))
+                .willReturn(new BpNotificationClient.SendResult(true, "req-1", null));
         given(notificationLogRepository.save(any(NotificationLog.class))).willAnswer(inv -> inv.getArgument(0));
 
         // when
@@ -50,7 +52,7 @@ class NotificationServiceTest {
         );
 
         // then
-        then(mailSender).should().send(any(SimpleMailMessage.class));
+        then(bpNotificationClient).should().sendEmail(eq("test@test.com"), any(), any());
         ArgumentCaptor<NotificationLog> logCaptor = ArgumentCaptor.forClass(NotificationLog.class);
         then(notificationLogRepository).should().save(logCaptor.capture());
         NotificationLog saved = logCaptor.getValue();
@@ -75,7 +77,7 @@ class NotificationServiceTest {
         );
 
         // then — 이메일 발송 안 함, 로그 저장 안 함
-        then(mailSender).shouldHaveNoInteractions();
+        then(bpNotificationClient).shouldHaveNoInteractions();
         then(notificationLogRepository).should(never()).save(any());
     }
 
@@ -85,7 +87,8 @@ class NotificationServiceTest {
         // given
         String idempotencyKey = "FAIL_KEY_" + UUID.randomUUID();
         given(notificationLogRepository.existsByIdempotencyKey(idempotencyKey)).willReturn(false);
-        willThrow(new RuntimeException("SMTP error")).given(mailSender).send(any(SimpleMailMessage.class));
+        given(bpNotificationClient.sendEmail(any(), any(), any()))
+                .willReturn(new BpNotificationClient.SendResult(false, null, "SMTP error"));
         given(notificationLogRepository.save(any(NotificationLog.class))).willAnswer(inv -> inv.getArgument(0));
 
         // when

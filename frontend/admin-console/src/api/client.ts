@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const BASE_URL = 'http://14.63.25.49:8088/api'
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
 export const api = axios.create({
   baseURL: BASE_URL,
@@ -138,3 +138,66 @@ export const uploadOpportunityAttachment = (id: string, file: File) => {
     headers: { 'Content-Type': 'multipart/form-data' },
   })
 }
+
+// 성공 제안서 패턴 (CR-013)
+export const getRfpSamples = (page = 0) =>
+  api.get('/admin/rfp-samples', { params: { page, size: 20 } })
+
+export const createRfpSample = (data: {
+  opportunityNo: string
+  industryType: string
+  outcome: string
+  company?: string
+  agency?: string
+  awardAmount?: number
+  fiscalYear?: number
+  note?: string
+}) => api.post('/admin/rfp-samples', data)
+
+export const getRfpSampleDetail = (id: string) =>
+  api.get(`/admin/rfp-samples/${id}`)
+
+export const uploadRfpSampleFile = (id: string, file: File, isPws = false) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  return api.post(`/admin/rfp-samples/${id}/files`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    params: { isPws },
+  })
+}
+
+export const deleteRfpSample = (id: string) =>
+  api.delete(`/admin/rfp-samples/${id}`)
+
+export const deleteRfpSampleFile = (id: string, fileId: string) =>
+  api.delete(`/admin/rfp-samples/${id}/files/${fileId}`)
+
+export const getRfpSlots = (id: string) =>
+  api.get(`/admin/rfp-samples/${id}/slots`)
+
+export const assignSlot = (id: string, slotCode: string, data: {
+  sampleFileId?: string
+  sectionText?: string
+  otherLabel?: string
+  confirmed?: boolean
+}) => api.put(`/admin/rfp-samples/${id}/slots/${slotCode}`, data)
+
+export const unassignSlot = (id: string, assignmentId: string) =>
+  api.delete(`/admin/rfp-samples/${id}/slots/${assignmentId}`)
+
+// 패턴 가이드 (CR-013)
+export const getPatternGuides = () =>
+  api.get('/admin/pattern-guides')
+
+export const getPatternGuide = (slotCode: string) =>
+  api.get(`/admin/pattern-guides/${slotCode}`)
+
+export const extractPatternGuide = (slotCode: string, industryType?: string) =>
+  api.post(`/admin/pattern-guides/${slotCode}/extract`, null, {
+    params: industryType ? { industryType } : {},
+  })
+
+export const updatePatternGuide = (slotCode: string, data: {
+  guideJson?: Record<string, unknown>
+  guideMarkdown?: string
+}) => api.put(`/admin/pattern-guides/${slotCode}`, data)

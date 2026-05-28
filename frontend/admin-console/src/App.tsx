@@ -10,6 +10,8 @@ import DocumentEditPage from './pages/DocumentEditPage'
 import BidRequestDetailPage from './pages/BidRequestDetailPage'
 import OpportunityAdminPage from './pages/OpportunityAdminPage'
 import OpportunityAdminDetailPage from './pages/OpportunityAdminDetailPage'
+import RfpSamplePage from './pages/RfpSamplePage'
+import RfpSampleDetailPage from './pages/RfpSampleDetailPage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('adminToken')
@@ -19,7 +21,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
 
@@ -39,6 +41,8 @@ export default function App() {
           <Route path="opportunities/:id" element={<OpportunityAdminDetailPage />} />
           <Route path="collection" element={<CollectionPage />} />
           <Route path="templates" element={<DocumentTemplatePage />} />
+          <Route path="rfp-samples" element={<RfpSamplePage />} />
+          <Route path="rfp-samples/:id" element={<RfpSampleDetailPage />} />
           <Route path="documents/:id/edit" element={<DocumentEditPage />} />
         </Route>
 

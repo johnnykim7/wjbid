@@ -7,6 +7,7 @@ const NAV = [
   { to: '/opportunities', icon: 'fa-solid fa-bullhorn', label: '공고 관리' },
   { to: '/collection', icon: 'fa-solid fa-satellite-dish', label: 'SAM.gov 수집' },
   { to: '/templates', icon: 'fa-solid fa-file-lines', label: '문서 템플릿' },
+  { to: '/rfp-samples', icon: 'fa-solid fa-trophy', label: '성공 제안서 패턴' },
 ]
 
 export default function Layout() {

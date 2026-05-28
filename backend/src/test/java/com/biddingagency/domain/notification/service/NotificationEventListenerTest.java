@@ -1,11 +1,13 @@
 package com.biddingagency.domain.notification.service;
 
+import com.biddingagency.domain.bid.repository.BidRequestRepository;
 import com.biddingagency.domain.event.BidRequestCreatedEvent;
 import com.biddingagency.domain.event.DeadlineApproachingEvent;
 import com.biddingagency.domain.event.OpportunitiesCollectedEvent;
 import com.biddingagency.domain.member.entity.Member;
 import com.biddingagency.domain.member.repository.MemberRepository;
 import com.biddingagency.domain.notification.entity.NotificationType;
+import com.biddingagency.domain.opportunity.repository.OpportunityRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,6 +29,10 @@ class NotificationEventListenerTest {
     private NotificationService notificationService;
     @Mock
     private MemberRepository memberRepository;
+    @Mock
+    private OpportunityRepository opportunityRepository;
+    @Mock
+    private BidRequestRepository bidRequestRepository;
 
     @InjectMocks
     private NotificationEventListener listener;

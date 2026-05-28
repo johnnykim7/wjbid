@@ -4,6 +4,7 @@ import com.biddingagency.mcp.tool.DocumentMcpTool;
 import com.biddingagency.mcp.tool.DocumentTemplateMcpTool;
 import com.biddingagency.mcp.tool.OpportunityAnalysisMcpTool;
 import com.biddingagency.mcp.tool.OpportunityMcpTool;
+import com.biddingagency.mcp.tool.PatternGuideMcpTool;
 import com.biddingagency.mcp.tool.RequirementMcpTool;
 import com.biddingagency.mcp.tool.StateMcpTool;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,6 +38,8 @@ class McpServerControllerTest {
     private StateMcpTool stateMcpTool;
     @Mock
     private OpportunityAnalysisMcpTool opportunityAnalysisMcpTool;
+    @Mock
+    private PatternGuideMcpTool patternGuideMcpTool;
 
     private McpServerController mcpServerController;
 
@@ -44,7 +47,8 @@ class McpServerControllerTest {
     void setUp() {
         McpDispatcher dispatcher = new McpDispatcher(
             opportunityMcpTool, requirementMcpTool, documentMcpTool,
-            documentTemplateMcpTool, stateMcpTool, opportunityAnalysisMcpTool);
+            documentTemplateMcpTool, stateMcpTool, opportunityAnalysisMcpTool,
+            patternGuideMcpTool);
         mcpServerController = new McpServerController(dispatcher);
     }
 
@@ -94,7 +98,7 @@ class McpServerControllerTest {
         assertThat(result).containsKey("tools");
         java.util.List<?> tools = (java.util.List<?>) result.get("tools");
         assertThat(tools).isNotEmpty();
-        assertThat(tools).hasSize(11);
+        assertThat(tools).hasSize(13);
     }
 
     // TC-MCP-003: tools/call 유효 도구 (get_opportunity)
