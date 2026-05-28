@@ -109,7 +109,7 @@ public class McpDispatcher {
             case "get_opportunity_analysis"    -> opportunityAnalysisMcpTool.getOpportunityAnalysis(args);
             case "save_opportunity_analysis"   -> opportunityAnalysisMcpTool.saveOpportunityAnalysis(args);
             case "get_past_submissions"        -> opportunityAnalysisMcpTool.getPastSubmissions(args);
-            case "get_slot_samples"            -> patternGuideMcpTool.getSlotSamples(args);
+            case "get_reference_samples"       -> patternGuideMcpTool.getReferenceSamples(args);
             case "save_pattern_guide"          -> patternGuideMcpTool.savePatternGuide(args);
             default -> throw new IllegalArgumentException("알 수 없는 도구: " + toolName);
         };

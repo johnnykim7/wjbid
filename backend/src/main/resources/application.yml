@@ -177,7 +177,7 @@ app:
       requirement-extraction: ${AIMBASE_WF_REQ_EXTRACTION:e96e63d1-7bf3-493c-9473-1bd87723073c}
       document-generation: ${AIMBASE_WF_DOC_GENERATION:014e7de2-251e-432d-95dd-16bddb28f18e}
       opportunity-analysis: ${AIMBASE_WF_OPP_ANALYSIS:placeholder-opp-analysis-workflow-id}
-      slot-pattern-extraction: ${AIMBASE_WF_SLOT_PATTERN:placeholder-slot-pattern-workflow-id}  # CR-013
+      type-pattern-extraction: ${AIMBASE_WF_TYPE_PATTERN:placeholder-type-pattern-workflow-id}  # CR-013 재설계 (공고유형 단위)
 
   # AI 설정 (자동화 + Multi-Provider)
   ai:

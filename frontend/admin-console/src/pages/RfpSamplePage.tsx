@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  getRfpSamples, createRfpSample, getPatternGuides, extractPatternGuide,
+  getRfpSamples, createRfpSample, getPatternGuides, extractPatternGuide, updatePatternGuide,
 } from '../api/client'
 
 interface RfpSample {
@@ -13,15 +13,15 @@ interface RfpSample {
   agency?: string
   awardAmount?: number
   fileCount: number
-  assignedSlotCount: number
   createdAt?: string
 }
 
 interface PatternGuide {
-  slotCode: string
-  slotLabel: string
+  id: string
+  industryType: string
   status: string
   source: string
+  guideMarkdown?: string
   sampleCount?: number
 }
 
@@ -64,6 +64,8 @@ export default function RfpSamplePage() {
   const [form, setForm] = useState({ ...EMPTY_FORM })
   const [saving, setSaving] = useState(false)
   const [extracting, setExtracting] = useState<string | null>(null)
+  const [editGuide, setEditGuide] = useState<{ industryType: string; markdown: string } | null>(null)
+  const [savingGuide, setSavingGuide] = useState(false)
 
   const fetchData = async () => {
     setLoading(true)
@@ -103,25 +105,42 @@ export default function RfpSamplePage() {
     }
   }
 
-  const handleExtract = async (slotCode: string) => {
-    setExtracting(slotCode)
+  const handleExtract = async (industryType: string) => {
+    setExtracting(industryType)
     try {
-      await extractPatternGuide(slotCode)
+      await extractPatternGuide(industryType)
       fetchData()
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
-      alert(msg || '패턴 추출 실패 (동일 슬롯 2건 이상 필요)')
+      alert(msg || '패턴 추출 실패 (해당 유형 성공 제안서 1건 이상 필요)')
     } finally {
       setExtracting(null)
     }
   }
+
+  const handleSaveGuide = async () => {
+    if (!editGuide) return
+    setSavingGuide(true)
+    try {
+      await updatePatternGuide(editGuide.industryType, { guideMarkdown: editGuide.markdown })
+      setEditGuide(null)
+      fetchData()
+    } catch (err) {
+      console.error('가이드 저장 실패:', err)
+    } finally {
+      setSavingGuide(false)
+    }
+  }
+
+  // 유형별 가이드 맵 (없으면 미생성)
+  const guideByType = new Map(guides.map((g) => [g.industryType, g]))
 
   return (
     <div className="p-6 space-y-5">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900">성공 제안서 패턴</h1>
-          <p className="text-sm text-gray-500 mt-1">과거 성공/낙찰 제안서 등록 → 7슬롯 배치 → 슬롯별 낙찰 패턴 추출</p>
+          <p className="text-sm text-gray-500 mt-1">과거 성공/낙찰 제안서 등록(원본 통째) → 공고유형별 패턴 가이드 추출·편집</p>
         </div>
         <button
           onClick={() => setShowModal(true)}
@@ -131,40 +150,54 @@ export default function RfpSamplePage() {
         </button>
       </div>
 
-      {/* 슬롯별 가이드 상태 */}
+      {/* 공고유형별 가이드 */}
       <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <h2 className="text-sm font-bold text-gray-900 mb-3">슬롯별 패턴 가이드</h2>
-        {guides.length === 0 ? (
-          <p className="text-sm text-gray-400">아직 추출된 가이드가 없습니다. 제안서를 슬롯에 배치한 뒤 추출하세요.</p>
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {guides.map((g) => (
-              <div key={g.slotCode + (g.source || '')} className="border border-gray-200 rounded-lg p-3">
+        <h2 className="text-sm font-bold text-gray-900 mb-3">공고유형별 패턴 가이드</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {INDUSTRY_TYPES.map((type) => {
+            const g = guideByType.get(type)
+            return (
+              <div key={type} className="border border-gray-200 rounded-lg p-3">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-gray-800">{g.slotLabel}</span>
-                  <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium ${STATUS_COLORS[g.status] || ''}`}>
-                    {g.status}
-                  </span>
+                  <span className="text-sm font-medium text-gray-800">{type}</span>
+                  {g && (
+                    <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium ${STATUS_COLORS[g.status] || ''}`}>
+                      {g.status}
+                    </span>
+                  )}
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-medium ${SOURCE_COLORS[g.source] || ''}`}>
-                    {g.source === 'AI_EXTRACTED' ? 'AI' : '사람편집'}
-                  </span>
-                  <button
-                    onClick={() => handleExtract(g.slotCode)}
-                    disabled={extracting === g.slotCode}
-                    className="px-2 py-0.5 text-[10px] rounded bg-purple-50 text-purple-700 hover:bg-purple-100 disabled:opacity-40"
-                  >
-                    {extracting === g.slotCode ? '추출중...' : '재추출'}
-                  </button>
+                <div className="flex items-center justify-between gap-1">
+                  {g ? (
+                    <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-medium ${SOURCE_COLORS[g.source] || ''}`}>
+                      {g.source === 'AI_EXTRACTED' ? 'AI' : '사람편집'}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-gray-400">미생성</span>
+                  )}
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setEditGuide({ industryType: type, markdown: g?.guideMarkdown || '' })}
+                      className="px-2 py-0.5 text-[10px] rounded bg-gray-50 text-gray-600 hover:bg-gray-100"
+                      title="사람이 직접 편집"
+                    >
+                      편집
+                    </button>
+                    <button
+                      onClick={() => handleExtract(type)}
+                      disabled={extracting === type}
+                      className="px-2 py-0.5 text-[10px] rounded bg-purple-50 text-purple-700 hover:bg-purple-100 disabled:opacity-40"
+                    >
+                      {extracting === type ? '추출중...' : (g ? '재추출' : '추출')}
+                    </button>
+                  </div>
                 </div>
-                {g.sampleCount != null && (
+                {g?.sampleCount != null && (
                   <div className="text-[10px] text-gray-400 mt-1">{g.sampleCount}건 기반</div>
                 )}
               </div>
-            ))}
-          </div>
-        )}
+            )
+          })}
+        </div>
       </div>
 
       {/* 등록 목록 */}
@@ -184,7 +217,6 @@ export default function RfpSamplePage() {
                 <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase">결과</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">업체</th>
                 <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase">파일</th>
-                <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase">배치 슬롯</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -199,7 +231,6 @@ export default function RfpSamplePage() {
                   </td>
                   <td className="px-4 py-3 text-gray-600">{s.company || '-'}</td>
                   <td className="px-4 py-3 text-center text-gray-600">{s.fileCount}</td>
-                  <td className="px-4 py-3 text-center text-gray-600">{s.assignedSlotCount} / 8</td>
                 </tr>
               ))}
             </tbody>
@@ -277,6 +308,38 @@ export default function RfpSamplePage() {
               <button onClick={handleSave} disabled={saving || !form.opportunityNo.trim()}
                 className="px-5 py-2 bg-secondary text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition disabled:opacity-50">
                 {saving ? <><i className="fa-solid fa-circle-notch fa-spin mr-2" />저장 중...</> : '등록'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 가이드 편집 모달 (사람이 직접 인사이트 반영) */}
+      {editGuide && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <div>
+                <h2 className="text-base font-bold text-gray-900">가이드 편집 — {editGuide.industryType}</h2>
+                <p className="text-xs text-gray-400 mt-0.5">저장 시 출처가 '사람편집'으로 바뀌어 이후 AI 자동추출이 덮어쓰지 않습니다.</p>
+              </div>
+              <button onClick={() => setEditGuide(null)} className="text-gray-400 hover:text-gray-600">
+                <i className="fa-solid fa-xmark text-lg" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-6 py-5">
+              <textarea
+                value={editGuide.markdown}
+                onChange={(e) => setEditGuide({ ...editGuide, markdown: e.target.value })}
+                placeholder="이 공고유형 제안서를 잘 쓰는 법(전략·구조·금기 등)을 자유롭게 작성하세요."
+                className="w-full h-80 px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-secondary resize-none"
+              />
+            </div>
+            <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-200">
+              <button onClick={() => setEditGuide(null)} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition">취소</button>
+              <button onClick={handleSaveGuide} disabled={savingGuide}
+                className="px-5 py-2 bg-secondary text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition disabled:opacity-50">
+                {savingGuide ? <><i className="fa-solid fa-circle-notch fa-spin mr-2" />저장 중...</> : '저장'}
               </button>
             </div>
           </div>

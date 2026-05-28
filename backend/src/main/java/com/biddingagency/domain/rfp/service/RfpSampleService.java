@@ -14,7 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.*;
 
-/** 성공 제안서 등록/파일/상세 (CR-013) */
+/** 성공 제안서 등록/파일/상세 (CR-013 재설계) — 원본 통째 보관, 슬롯 분류 없음 */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -25,19 +25,13 @@ public class RfpSampleService {
 
     private final RfpSampleRepository rfpSampleRepository;
     private final RfpSampleFileRepository fileRepository;
-    private final SlotDefinitionRepository slotDefinitionRepository;
-    private final SlotAssignmentRepository slotAssignmentRepository;
     private final StorageService storageService;
-    private final SlotEstimator slotEstimator;
 
     public Page<RfpSampleDto> list(Pageable pageable) {
         return rfpSampleRepository.findAllByOrderByCreatedAtDesc(pageable)
                 .map(s -> {
                     int fileCount = fileRepository.findByRfpSampleId(s.getId()).size();
-                    int assignedSlots = (int) slotAssignmentRepository.findByRfpSampleId(s.getId()).stream()
-                            .map(a -> a.getSlotDefinition().getId())
-                            .distinct().count();
-                    return RfpSampleDto.from(s, fileCount, assignedSlots);
+                    return RfpSampleDto.from(s, fileCount);
                 });
     }
 
@@ -55,15 +49,14 @@ public class RfpSampleService {
                 .build();
         RfpSample saved = rfpSampleRepository.save(sample);
         log.info("[RFP] 성공 제안서 등록: id={}, opportunityNo={}", saved.getId(), saved.getOpportunityNo());
-        return RfpSampleDto.from(saved, 0, 0);
+        return RfpSampleDto.from(saved, 0);
     }
 
     public RfpSampleDetailDto getDetail(UUID id) {
         RfpSample sample = findSample(id);
         List<RfpSampleFileDto> files = fileRepository.findByRfpSampleId(id).stream()
                 .map(RfpSampleFileDto::from).toList();
-        List<SlotStatusDto> slots = buildSlotStatus(id);
-        return RfpSampleDetailDto.of(sample, files, slots);
+        return RfpSampleDetailDto.of(sample, files);
     }
 
     @Transactional
@@ -81,22 +74,7 @@ public class RfpSampleService {
                 .storageUrl(storageUrl)
                 .isPws(isPws)
                 .build());
-
-        // 슬롯 자동추정 (PWS는 슬롯 배치 대상 아님)
-        if (!isPws) {
-            String slotCode = slotEstimator.estimate(file.getOriginalFilename());
-            if (slotCode != null) {
-                slotDefinitionRepository.findBySlotCode(slotCode).ifPresent(slot ->
-                        slotAssignmentRepository.save(SlotAssignment.builder()
-                                .rfpSample(sample)
-                                .slotDefinition(slot)
-                                .sampleFile(saved)
-                                .autoEstimated(true)
-                                .confirmed(false)
-                                .build()));
-                log.info("[RFP] 슬롯 자동추정: file={}, slot={}", file.getOriginalFilename(), slotCode);
-            }
-        }
+        log.info("[RFP] 파일 업로드: sample={}, file={}", id, file.getOriginalFilename());
         return RfpSampleFileDto.from(saved);
     }
 
@@ -105,7 +83,7 @@ public class RfpSampleService {
         RfpSample sample = findSample(id);
         // 원본 파일 디스크 정리
         fileRepository.findByRfpSampleId(id).forEach(f -> storageService.delete(f.getStorageUrl()));
-        rfpSampleRepository.delete(sample); // FK CASCADE로 파일/배치 row 제거
+        rfpSampleRepository.delete(sample); // FK CASCADE로 파일 row 제거
         log.info("[RFP] 성공 제안서 삭제: id={}", id);
     }
 
@@ -115,19 +93,6 @@ public class RfpSampleService {
                 .orElseThrow(() -> new IllegalArgumentException("파일을 찾을 수 없습니다: " + fileId));
         storageService.delete(file.getStorageUrl());
         fileRepository.delete(file);
-    }
-
-    /** 7슬롯(+기타) 전체 + 각 슬롯의 배치 현황. 빈 슬롯도 포함(역요구용). */
-    public List<SlotStatusDto> buildSlotStatus(UUID sampleId) {
-        List<SlotAssignment> assignments = slotAssignmentRepository.findByRfpSampleId(sampleId);
-        Map<UUID, List<SlotAssignmentDto>> bySlot = new HashMap<>();
-        for (SlotAssignment a : assignments) {
-            bySlot.computeIfAbsent(a.getSlotDefinition().getId(), k -> new ArrayList<>())
-                    .add(SlotAssignmentDto.from(a));
-        }
-        return slotDefinitionRepository.findAllByOrderByDisplayOrderAsc().stream()
-                .map(slot -> SlotStatusDto.of(slot, bySlot.getOrDefault(slot.getId(), List.of())))
-                .toList();
     }
 
     private RfpSample findSample(UUID id) {

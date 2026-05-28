@@ -18,12 +18,11 @@ public record RfpSampleDto(
         Integer fiscalYear,
         boolean useForPattern,
         int fileCount,
-        int assignedSlotCount,
         String createdAt
 ) {
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
-    public static RfpSampleDto from(RfpSample s, int fileCount, int assignedSlotCount) {
+    public static RfpSampleDto from(RfpSample s, int fileCount) {
         return new RfpSampleDto(
                 s.getId().toString(),
                 s.getOpportunityNo(),
@@ -35,7 +34,6 @@ public record RfpSampleDto(
                 s.getFiscalYear(),
                 s.isUseForPattern(),
                 fileCount,
-                assignedSlotCount,
                 s.getCreatedAt() != null ? s.getCreatedAt().format(FMT) : null
         );
     }

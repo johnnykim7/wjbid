@@ -172,32 +172,17 @@ export const deleteRfpSample = (id: string) =>
 export const deleteRfpSampleFile = (id: string, fileId: string) =>
   api.delete(`/admin/rfp-samples/${id}/files/${fileId}`)
 
-export const getRfpSlots = (id: string) =>
-  api.get(`/admin/rfp-samples/${id}/slots`)
-
-export const assignSlot = (id: string, slotCode: string, data: {
-  sampleFileId?: string
-  sectionText?: string
-  otherLabel?: string
-  confirmed?: boolean
-}) => api.put(`/admin/rfp-samples/${id}/slots/${slotCode}`, data)
-
-export const unassignSlot = (id: string, assignmentId: string) =>
-  api.delete(`/admin/rfp-samples/${id}/slots/${assignmentId}`)
-
-// 패턴 가이드 (CR-013)
+// 패턴 가이드 (CR-013 재설계) — 공고유형 단위
 export const getPatternGuides = () =>
   api.get('/admin/pattern-guides')
 
-export const getPatternGuide = (slotCode: string) =>
-  api.get(`/admin/pattern-guides/${slotCode}`)
+export const getPatternGuide = (industryType: string) =>
+  api.get(`/admin/pattern-guides/${industryType}`)
 
-export const extractPatternGuide = (slotCode: string, industryType?: string) =>
-  api.post(`/admin/pattern-guides/${slotCode}/extract`, null, {
-    params: industryType ? { industryType } : {},
-  })
+export const extractPatternGuide = (industryType: string) =>
+  api.post(`/admin/pattern-guides/${industryType}/extract`)
 
-export const updatePatternGuide = (slotCode: string, data: {
+export const updatePatternGuide = (industryType: string, data: {
   guideJson?: Record<string, unknown>
   guideMarkdown?: string
-}) => api.put(`/admin/pattern-guides/${slotCode}`, data)
+}) => api.put(`/admin/pattern-guides/${industryType}`, data)

@@ -7,7 +7,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 
-/** 성공 제안서 상세 DTO (CR-013) — 메타 + 파일 + 슬롯 배치 현황(빈슬롯 포함) */
+/** 성공 제안서 상세 DTO (CR-013 재설계) — 메타 + 원본 파일들 (슬롯 분류 없음) */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record RfpSampleDetailDto(
         String id,
@@ -22,12 +22,11 @@ public record RfpSampleDetailDto(
         Map<String, Object> factorsJson,
         String note,
         String createdAt,
-        List<RfpSampleFileDto> files,
-        List<SlotStatusDto> slots
+        List<RfpSampleFileDto> files
 ) {
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
-    public static RfpSampleDetailDto of(RfpSample s, List<RfpSampleFileDto> files, List<SlotStatusDto> slots) {
+    public static RfpSampleDetailDto of(RfpSample s, List<RfpSampleFileDto> files) {
         return new RfpSampleDetailDto(
                 s.getId().toString(),
                 s.getOpportunityNo(),
@@ -41,8 +40,7 @@ public record RfpSampleDetailDto(
                 s.getFactorsJson(),
                 s.getNote(),
                 s.getCreatedAt() != null ? s.getCreatedAt().format(FMT) : null,
-                files,
-                slots
+                files
         );
     }
 }

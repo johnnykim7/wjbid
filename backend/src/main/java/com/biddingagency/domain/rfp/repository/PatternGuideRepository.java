@@ -12,10 +12,8 @@ import java.util.UUID;
 @Repository
 public interface PatternGuideRepository extends JpaRepository<PatternGuide, UUID> {
 
-    List<PatternGuide> findBySlotDefinitionId(UUID slotDefinitionId);
+    /** 공고유형별 가이드 1개 (UNIQUE) */
+    Optional<PatternGuide> findByIndustryType(IndustryType industryType);
 
-    Optional<PatternGuide> findBySlotDefinitionIdAndIndustryType(UUID slotDefinitionId, IndustryType industryType);
-
-    /** 공통 가이드 (industryType=NULL). DB UNIQUE는 NULL을 중복으로 안 보므로 앱단에서 유일성 보장 */
-    Optional<PatternGuide> findBySlotDefinitionIdAndIndustryTypeIsNull(UUID slotDefinitionId);
+    List<PatternGuide> findAllByOrderByIndustryTypeAsc();
 }

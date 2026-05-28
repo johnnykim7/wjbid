@@ -11,8 +11,9 @@ import java.time.LocalDateTime;
 import java.util.Map;
 
 /**
- * 슬롯별 패턴 가이드 (CR-013).
- * 추출 단위 = 슬롯(BIZ-016). 출처 보호 = source가 HUMAN_*이면 자동추출 보호(BIZ-017).
+ * 공고유형별 패턴 가이드 (CR-013 재설계).
+ * 추출 단위 = 공고유형(industryType). 유형마다 "이 유형 잘 쓰는 법" 1개를 AI추출+누적+사람편집.
+ * 출처 보호 = source가 HUMAN_*이면 자동추출 보호(BIZ-017).
  */
 @Entity
 @Table(name = "pattern_guide",
@@ -27,13 +28,9 @@ public class PatternGuide extends BaseEntity {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "slot_definition_id", nullable = false, columnDefinition = "BINARY(16)")
-    private SlotDefinition slotDefinition;
-
-    /** 사업유형 — 1차엔 NULL(공통) 허용 */
+    /** 공고유형 — 유형별 가이드 1개 (UNIQUE) */
     @Enumerated(EnumType.STRING)
-    @Column(name = "industry_type", length = 30)
+    @Column(name = "industry_type", nullable = false, length = 30, unique = true)
     private IndustryType industryType;
 
     @Enumerated(EnumType.STRING)
@@ -46,7 +43,7 @@ public class PatternGuide extends BaseEntity {
     @Builder.Default
     private GuideSource source = GuideSource.AI_EXTRACTED;
 
-    /** 구조화 가이드 (8블록 골격/체크리스트/금기 — LLM 입력용) */
+    /** 구조화 가이드 (골격/체크리스트/금기 — LLM 입력용) */
     @Column(name = "guide_json", columnDefinition = "longtext")
     private String guideJsonRaw;
 
