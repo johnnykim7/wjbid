@@ -23,6 +23,7 @@
 | CR-011 | 2026-05-27 | SAM.gov 수집 키 운영 주입 정상화 + 신규 0건 메일 발송 스킵 | 운영(docker-compose.prod.yml) + BE (domain/notification) | 소규모 | 완료 |
 | CR-013 | 2026-05-28 | 성공 제안서 패턴 가이드 (관리자 등록 + 슬롯 패턴 추출) | BE (domain/rfp 신설, integration/storage, common, mcp, integration/llmplatform, controller/admin, 마이그레이션 V10) + FE (admin-console) | 대규모 | 간이 설계 + 코드 병행 |
 | CR-013-R | 2026-05-29 | CR-013 슬롯 폐기 → 원본 통째 보관 + 공고유형별 가이드 + 작성 시 도구 발췌 | BE (domain/rfp 슬롯 제거, PatternGuide 유형단위, mcp, llmplatform, controller/admin, 마이그레이션 V11) + FE (admin-console) | 대규모 | 코드 먼저 + 설계 일괄 |
+| CR-014 | 2026-05-29 | 성공 제안서 자산 작성 활용 (B작업) — 공고 IndustryType 자동분류 + 작성 P3를 성공 가이드+원본으로 대체 | BE (domain/opportunity IndustryClassifier 신설, Opportunity 엔티티, integration/samgov, domain/rfp ReferenceSampleService, domain/bid AIWorkflowService, mcp, 마이그레이션 V12) | 중규모 | 설계 먼저 + 코드 |
 
 > CR-004~008 원본: `docs/origins/원본_운영플로우_추가요구_20260516.md`
 > 위 5건은 계획 등재만 — 각 CR 상세 설계는 해당 CR 착수 세션에서 진행. 본질 검토 결과 이미 충족된 항목(Draft+승인 / Aimbase 정제 / cron 스케줄링 / 가입형 고객 / 작성의뢰 / 맞춤 제안서 생성)은 CR 불필요.
@@ -300,3 +301,26 @@
 - **운영 메모**: 적용 중 DB 호스트 차단(max_connect_errors)으로 기동 실패 → SSH로 FLUSH HOSTS. V11 최초안 FK 드롭 순서 오류(pattern_guide가 slot_definition 참조) → pattern_guide 먼저 드롭하도록 수정 + 실패 레코드 정리 후 재적용.
 - **코드 commit**: 7d81c9f (27 files, +291/-723)
 - **상태**: 코드 구현·런타임 검증 완료. 설계 캐스케이드 일괄 반영 중.
+
+---
+
+### CR-014: 성공 제안서 자산 작성 활용 (B작업) (2026-05-29)
+
+- **배경**: CR-013-R A작업(성공 자산 등록·공고유형 가이드·MCP `get_reference_samples`, commit 7d81c9f)이 완료됐으나, 이를 **소비**하는 작성 워크플로우가 미연결. 이 플랫폼은 "제안서를 실제로 써주는" 서비스로, 작성 입력 파이프라인③(P3)이 핵심 연결점. 실측 결과 P3([AIWorkflowService.java:209-225])가 여전히 `findByMemberIdAndState(member.getId(), SUBMITTED)` = **사용자 본인 과거 이력만** 참조. 봐야 할 것은 플랫폼에 쌓인 성공(낙찰) 제안서의 가이드 + 원본. 전제로, 신규 공고를 성공 자산(IndustryType으로 묶임)과 매칭하려면 공고에 IndustryType 분류가 필요하나 현재 `Opportunity`엔 자유문자열 `type`만 있음.
+- **사용자 확정 결정**:
+  1. **유형 분류** = NAICS/PSC 룰표 우선 + title 키워드 폴백 (LLM 없음, 결정적). 입력(naicsCode/classificationCode/title)은 수집 rawJson에 이미 보존됨.
+  2. **P3 주입** = 해당 유형 PatternGuide(가이드) + `get_reference_samples` 원본 메타/다운로드 URL **둘 다**.
+  3. **분류 컬럼** = Opportunity 엔티티에 industry_type 신설. 미매칭 시 NULL(UNKNOWN enum 추가 안 함 — RfpSample/PatternGuide와 enum 집합 공유, 오염 방지).
+  4. 진행 = **설계 캐스케이드 먼저 + 코드** (중규모, 데이터모델 변경 포함).
+- **변경 사항**:
+  1. **데이터 모델 (T3-1)**: 마이그레이션 V12. `opportunities.industry_type`(IndustryType, NULL 허용) 컬럼 + 인덱스 추가.
+  2. **기능 요구 (T1-1)**: BID-OPP-010(공고 사업유형 자동 분류) / BID-RFP-005(성공 자산 작성 활용 — P3 대체) 신설. BID-DOC-001 파이프라인③ 정의 개정.
+  3. **비즈니스 규칙 (T1-3)**: BIZ-018(공고 유형 자동 분류, NAICS>PSC>title, 미매칭 NULL) / BIZ-019(작성 시 원본 교차오염 방지 — 형식·전략 참고용, 사실 복붙 금지) 신설.
+  4. **신규 컴포넌트**: `IndustryClassifier`(NAICS/PSC 룰표 + 키워드 폴백, 코드 상수), `ReferenceSampleService`(`PatternGuideMcpTool.getReferenceSamples` 로직 추출, BE 직접 재사용).
+  5. **작성 입력**: `build3PipelineContext` P3(pastSubmissions) 제거 → successGuide + referenceSamples + referenceUsagePolicy.
+- **영향 범위**:
+  - BE: `domain/opportunity`(IndustryClassifier 신설, Opportunity 엔티티, OpportunityService.createOrUpdate 시그니처), `integration/samgov`(OpportunityCollectorService 분류 호출), `domain/rfp`(ReferenceSampleService 신설), `domain/bid/AIWorkflowService`(P3 교체), `mcp/tool/PatternGuideMcpTool`(서비스 위임)
+  - 마이그레이션: `V12__add_opportunity_industry_type.sql`
+- **영향 설계 문서**: T1-1, T1-3, T3-1, execution-spec
+- **범위 밖(별도)**: Aimbase `type-pattern-extraction` 워크플로우 생성(application.yml placeholder) + rfp/ 실파일 등록→추출 E2E. Aimbase document-generation 워크플로우가 successGuide/referenceUsagePolicy를 실제로 읽도록 하는 것은 Aimbase 레포 밖 — BE는 데이터 전달까지만 책임.
+- **상태**: 설계 캐스케이드 진행 중 (코드 구현 대기).

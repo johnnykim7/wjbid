@@ -309,9 +309,10 @@ SAM.gov에 올라오는 미군(USFK) 조달 입찰 공고를 자동 수집하고
 | 1 | `docs/T3-3_화면_구조.md` | 문서 양식 관리 |
 | 2 | `docs/T3-2_API_설계.md` | I. 템플릿 API |
 
-**핵심 설계 결정 (CR-003):**
-- BID-DOC-001 LLM 입력 3파이프라인: ①OpportunityAnalysis(캐시) + ②ClientDocument[] + ③과거 BidDocument[]
-- 과거 이력은 조회해서 넘기면 끝. 빈 배열이어도 동일 구조. 조건 분기 없음
+**핵심 설계 결정 (CR-003 / CR-014):**
+- BID-DOC-001 LLM 입력 3파이프라인: ①OpportunityAnalysis(캐시) + ②ClientDocument[](사실 출처) + ③**성공 제안서 자산**(CR-014 개정 — 기존 "사용자 과거 BidDocument[]"에서 대체)
+- ③ = 신규 공고 industry_type(BIZ-018) 매칭 → successGuide(PatternGuide.guideJson) + referenceSamples[](성공 제안서 원본 메타+다운로드 URL, Aimbase가 parse_document로 발췌) + referenceUsagePolicy(사실 복붙 금지, BIZ-019)
+- 조회해서 넘기면 끝. industry_type=NULL(미분류)이면 빈 처리. 조건 분기 없음
 - 사전 분석이 COMPLETED 상태여야 문서 생성 가능
 
 **핵심 검증:** 템플릿 등록 → **사전 분석 캐시 확인** → Aimbase Workflow 실행 (3파이프라인 입력) → 문서 생성 → DB 저장 → 관리자 이메일
