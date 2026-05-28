@@ -38,7 +38,7 @@ public class PatternGuideMcpTool {
         Map.of(
             "name", "get_slot_samples",
             "description", "특정 슬롯(정규화 축)에 배치된 성공 제안서들의 파일 메타와 다운로드 URL을 조회합니다. " +
-                    "Aimbase는 downloadUrl로 원본 파일을 받아 직접 파싱한 뒤 공통 패턴을 추출합니다.",
+                    "각 sample의 downloadUrl을 parse_document(url=...)로 파싱한 뒤 슬롯 공통 패턴을 추출하세요.",
             "inputSchema", Map.of(
                 "type", "object",
                 "properties", Map.of(
