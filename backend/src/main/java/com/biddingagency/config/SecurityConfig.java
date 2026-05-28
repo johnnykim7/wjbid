@@ -22,6 +22,10 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import org.springframework.beans.factory.annotation.Value;
+
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -37,6 +41,9 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final UserDetailsService userDetailsService;
+
+    @Value("${APP_CORS_ALLOWED_ORIGINS:}")
+    private String extraCorsOrigins;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -106,13 +113,19 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of(
+        List<String> origins = new ArrayList<>(List.of(
                 "http://localhost:3000",
+                "http://localhost:3183",
+                "http://localhost:3184",
                 "http://localhost:5173",
                 "http://localhost:5174",
-                "http://14.63.25.49:5173",
-                "http://14.63.25.49:5174"
+                "http://59.8.160.12:3183",
+                "http://59.8.160.12:3184"
         ));
+        if (extraCorsOrigins != null && !extraCorsOrigins.isBlank()) {
+            origins.addAll(Arrays.asList(extraCorsOrigins.split(",")));
+        }
+        configuration.setAllowedOrigins(origins);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);

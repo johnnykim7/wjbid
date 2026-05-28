@@ -274,7 +274,7 @@ SAM.gov에 올라오는 미군(USFK) 조달 입찰 공고를 자동 수집하고
 - MCP 전송: HTTP POST (`POST /mcp`) + **SSE** (`GET /mcp/sse` + `POST /mcp/message`) 이중 지원
 - 11개 Tool (기존 8개 + CR-003 신규 3개: get_opportunity_analysis, save_opportunity_analysis, get_past_submissions)
 - McpDispatcher 추출 → HTTP/SSE 공유
-- LLMPlatformClient: `localhost:9000` → Aimbase `14.63.25.49:8280`, `X-API-Key` 인증 추가
+- LLMPlatformClient: `localhost:9000` → Aimbase `59.8.160.12:8280`, `X-API-Key` 인증 추가
 - AIWorkflowService: 후처리 저장 로직 제거 (Aimbase MCP 콜백으로 대체)
 - 순환 트리거 방지 가드 추가
 

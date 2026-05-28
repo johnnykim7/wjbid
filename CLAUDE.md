@@ -25,9 +25,10 @@ cd frontend/admin-console && npm install && npm run dev     # 관리자 콘솔 (
 ```
 
 ### 인프라 의존성
-- MariaDB: `14.63.25.49:3306` (DB: bidding_agency) — 별도 Docker 불필요
-- Redis: `14.63.25.49:6379`
-- Aimbase: `59.8.160.12:8280` (테넌트: bidding_system) — 서버 이전: 14.63.25.49 → 59.8.160.12 (2026-05-28)
+- MariaDB: `59.8.160.12:3306` (DB: bidding_agency) — 별도 Docker 불필요
+- Redis: `59.8.160.12:6379`
+- Aimbase: `59.8.160.12:8280` (테넌트: bidding_system)
+- 서버 전체 이전: 14.63.25.49 → 59.8.160.12 (2026-05-28)
 
 ## 기술 스택
 

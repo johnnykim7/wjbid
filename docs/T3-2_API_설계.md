@@ -333,7 +333,7 @@
 **설정 프로퍼티**:
 ```yaml
 app.aimbase:
-  base-url: ${AIMBASE_URL:http://14.63.25.49:8280}
+  base-url: ${AIMBASE_URL:http://59.8.160.12:8280}
   api-key: ${AIMBASE_API_KEY:plat-...}
   polling.interval-ms: 3000
   polling.max-attempts: 60
