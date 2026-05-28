@@ -227,6 +227,58 @@
 
 ---
 
+## P. 성공 제안서 패턴 — Admin (RFP Pattern) — CR-013
+
+### P-1. 성공 제안서 등록/조회
+
+| 메서드 | 경로 | 설명 | 인증 | 기능 ID |
+|--------|------|------|------|---------|
+| GET | /admin/rfp-samples | 등록 목록 (페이징, 메타 + 파일수 + 배치현황) | 🔒 ADMIN | BID-RFP-001 |
+| POST | /admin/rfp-samples | 성공 제안서 메타 등록 | 🔒 ADMIN | BID-RFP-001 |
+| GET | /admin/rfp-samples/{id} | 상세 (파일 + 슬롯 배치 + 빈슬롯) | 🔒 ADMIN | BID-RFP-001 |
+| POST | /admin/rfp-samples/{id}/files | 원본 파일 업로드 (multipart, 텍스트 추출 + 슬롯 자동추정) | 🔒 ADMIN | BID-RFP-001 |
+| POST | /admin/rfp-samples/{id}/pws | (선택) PWS 공고문 업로드 → pws_text | 🔒 ADMIN | BID-RFP-001 |
+| DELETE | /admin/rfp-samples/{id} | 등록 삭제 (파일 CASCADE) | 🔒 ADMIN | BID-RFP-001 |
+| DELETE | /admin/rfp-samples/{id}/files/{fileId} | 파일 삭제 | 🔒 ADMIN | BID-RFP-001 |
+
+**POST /admin/rfp-samples 요청 본문**:
+```json
+{
+  "opportunityNo": "W90VN725RA012",
+  "industryType": "GROUND_MAINTENANCE",
+  "outcome": "WON",
+  "company": "녹화창조", "agency": "군산 AB",
+  "awardAmount": 3800000000, "fiscalYear": 2025
+}
+```
+
+### P-2. 슬롯 배치
+
+| 메서드 | 경로 | 설명 | 인증 | 기능 ID |
+|--------|------|------|------|---------|
+| GET | /admin/rfp-samples/{id}/slots | 7슬롯 + 배치현황 + 빈슬롯("데이터 넣어줘") | 🔒 ADMIN | BID-RFP-002 |
+| PUT | /admin/rfp-samples/{id}/slots/{slotCode} | 파일/섹션을 슬롯에 배치 (confirmed 토글) | 🔒 ADMIN | BID-RFP-002 |
+| DELETE | /admin/rfp-samples/{id}/slots/{assignmentId} | 배치 해제 | 🔒 ADMIN | BID-RFP-002 |
+
+**PUT 요청 본문** (sampleFileId 또는 sectionText 중 하나):
+```json
+{ "sampleFileId": "uuid", "otherLabel": null, "confirmed": true }
+```
+
+### P-3. 패턴 추출/가이드
+
+| 메서드 | 경로 | 설명 | 인증 | 기능 ID |
+|--------|------|------|------|---------|
+| POST | /admin/pattern-guides/{slotCode}/extract | 슬롯 단위 패턴 추출 트리거 (industryType 쿼리 옵션) | 🔒 ADMIN | BID-RFP-003 |
+| GET | /admin/pattern-guides | 전체 슬롯 가이드 목록 (status/source/sampleCount) | 🔒 ADMIN | BID-RFP-004 |
+| GET | /admin/pattern-guides/{slotCode} | 가이드 상세 (guideJson + markdown) | 🔒 ADMIN | BID-RFP-004 |
+| PUT | /admin/pattern-guides/{slotCode} | 수동 편집 → source=HUMAN_EDITED (자동추출 보호) | 🔒 ADMIN | BID-RFP-004 |
+
+> `POST .../extract`: 동일 슬롯 배치 2건 미만이면 400 (BIZ-016). 비동기 시작 → status=EXTRACTING 반환.
+> Aimbase가 `save_pattern_guide` MCP 콜백으로 결과 저장.
+
+---
+
 ## MCP 서버 (Aimbase 연동) — Sprint 5, CR-002 갱신
 
 ### 엔드포인트
@@ -262,6 +314,8 @@
 | get_opportunity_analysis | 공고 사전 분석 결과 조회 (CR-003) | opportunityId | BID-MCP-002 |
 | save_opportunity_analysis | 공고 사전 분석 결과 저장 (CR-003) | opportunityId, summary, documentFormats, requiredDocuments, llmPromptPreset | BID-MCP-002 |
 | get_past_submissions | 과거 제출 이력 조회 (CR-003) | memberId, limit | BID-MCP-002 |
+| get_slot_samples | 슬롯에 모인 텍스트 묶음 조회 (CR-013) | slotCode, industryType | BID-RFP-003 |
+| save_pattern_guide | 슬롯별 패턴 가이드 저장 — Aimbase 콜백 (CR-013) | slotCode, industryType, guide{골격/체크리스트/금기} | BID-RFP-003 |
 
 > 모든 MCP Tool은 무상태(BIZ-013). 각 호출은 독립적으로 처리.
 > requestId를 멱등 키로 사용.
@@ -287,6 +341,8 @@ app.aimbase:
   workflows:
     requirement-extraction: requirement-extraction
     document-generation: bid-document-generation
+    opportunity-analysis: ${AIMBASE_WF_OPP_ANALYSIS:...}
+    slot-pattern-extraction: ${AIMBASE_WF_SLOT_PATTERN:placeholder-slot-pattern-workflow-id}  # CR-013
 ```
 
 ---
@@ -324,7 +380,8 @@ app.aimbase:
 | L. 요금 안내 | 1 | 7 |
 | M. FlowGuard 연동 | 5 | — (CR-001) |
 | B-2. 공고 관리 (Admin) | 8 | CR-003 |
-| MCP Tools | 11 | 5, CR-003 |
+| P. 성공 제안서 패턴 (Admin) | 14 | CR-013 |
+| MCP Tools | 13 | 5, CR-003, CR-013 |
 | MCP SSE 엔드포인트 | 2 | CR-002 |
 | Aimbase 워크플로우 호출 | 2 | CR-002 |
-| **합계** | **REST 64 + MCP 11 + SSE 2 + Aimbase 2** | |
+| **합계** | **REST 78 + MCP 13 + SSE 2 + Aimbase 2** | |

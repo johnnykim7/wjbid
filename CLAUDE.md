@@ -15,19 +15,19 @@ cd backend
 ./gradlew compileJava          # 컴파일
 ./gradlew test                  # 전체 테스트
 ./gradlew test --tests "*.BidFSMServiceTest"  # 단일 테스트 클래스
-SERVER_PORT=8088 ./gradlew bootRun             # 앱 기동 (기본 8080, context-path /api)
+SERVER_PORT=8183 ./gradlew bootRun             # 앱 기동 (포트 8183, context-path /api)
 ```
 
 ### 프론트엔드
 ```bash
-cd frontend/customer-portal && npm install && npm run dev   # 고객 포털 (:5173)
-cd frontend/admin-console && npm install && npm run dev     # 관리자 콘솔 (:5174)
+cd frontend/customer-portal && npm install && npm run dev   # 고객 포털 (:3183)
+cd frontend/admin-console && npm install && npm run dev     # 관리자 콘솔 (:3184)
 ```
 
 ### 인프라 의존성
 - MariaDB: `14.63.25.49:3306` (DB: bidding_agency) — 별도 Docker 불필요
 - Redis: `14.63.25.49:6379`
-- Aimbase: `14.63.25.49:8280` (테넌트: bidding_system)
+- Aimbase: `59.8.160.12:8280` (테넌트: bidding_system) — 서버 이전: 14.63.25.49 → 59.8.160.12 (2026-05-28)
 
 ## 기술 스택
 

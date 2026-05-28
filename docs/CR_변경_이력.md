@@ -21,6 +21,7 @@
 | CR-009 | 2026-05-28 | 수집 카운트 의미 정확화 + 관리자 공고목록 정렬 보정 | BE (integration/samgov, domain/opportunity, controller/admin) | 소~중규모 | 진단 완료, 구현 대기 |
 | CR-010 | 2026-05-28 | 공고 요구서류 ↔ 고객 업로드 슬롯 매칭 | BE (domain/bid, domain/compliance, controller, MinIO) + FE (customer-portal) | 중규모 | 간이 설계 진행 중, 코드 구현 대기 |
 | CR-011 | 2026-05-27 | SAM.gov 수집 키 운영 주입 정상화 + 신규 0건 메일 발송 스킵 | 운영(docker-compose.prod.yml) + BE (domain/notification) | 소규모 | 완료 |
+| CR-013 | 2026-05-28 | 성공 제안서 패턴 가이드 (관리자 등록 + 슬롯 패턴 추출) | BE (domain/rfp 신설, integration/storage, common, mcp, integration/llmplatform, controller/admin, 마이그레이션 V10) + FE (admin-console) | 대규모 | 간이 설계 + 코드 병행 |
 
 > CR-004~008 원본: `docs/origins/원본_운영플로우_추가요구_20260516.md`
 > 위 5건은 계획 등재만 — 각 CR 상세 설계는 해당 CR 착수 세션에서 진행. 본질 검토 결과 이미 충족된 항목(Draft+승인 / Aimbase 정제 / cron 스케줄링 / 가입형 고객 / 작성의뢰 / 맞춤 제안서 생성)은 CR 불필요.
@@ -235,3 +236,36 @@
   - 외부에서 `woojinusbid.com/api/actuator/health` 미접근 (서버 내부에서만 200) — 리버스 프록시/방화벽 점검
   - NotificationEventListenerTest의 기존 4개 케이스가 `findByIdWithDetails` mock 누락으로 NPE — 본 CR에서 컴파일 통과만 시키고 검증 강도 일부 다운그레이드(`contains` → `any`). 단위 테스트 보강 별도 CR 필요
 - **참여 도구/시간**: 사용자가 SAM.gov 신규 키 발급(`SAM-cc4923d9-...`) → Claude가 `.env` + `docker-compose.prod.yml` 갱신 → `./deploy.sh be` 2회 (1차: 키 주입, 2차: 0건 가드) → health check + 컨테이너 env 확인까지 완료
+
+---
+
+### CR-013: 성공 제안서 패턴 가이드 — 관리자 등록 + 슬롯 패턴 추출 (2026-05-28)
+
+- **배경**: 이 플랫폼은 미군(USFK) 정부조달 입찰 제안서를 AI로 대신 써주는 서비스. 사용자가 `rfp/`에 과거 성공/낙찰 제안서 8건을 보유하고 "이걸 학습시켜 신규 제안서 작성에 참고"하길 원함. 2026-05-28 설계 토론에서 "학습"의 실체를 **파인튜닝/벡터화가 아니라, 성공 제안서에서 "이기는 패턴"을 슬롯별로 추출해 가이드/프롬프트화하는 것**(B경로)으로 결론. (파인튜닝 ❌: 8건뿐, A가 Q의 함수가 아니라 업체 사실의 함수 → 환각. 본문 벡터화 ❌: 제안서는 조각 검색이 아니라 통째 참고.)
+- **1차 범위**: 관리자 등록 인터페이스 + 도메인/테이블/API/화면 + 패턴 추출 프롬프트 + Aimbase 연동 코드까지. **범위 밖(B작업, 다음 세션)**: 추출된 가이드를 소비하는 실제 제안서 작성 워크플로우(50~100p 쪼개 쓰기).
+- **사용자 확정 결정**:
+  1. 파일 저장 = **로컬 디스크 구현**(`StorageService` 인터페이스로 S3 교체 가능하게 추상화). 실측: 이 플랫폼은 MinIO/S3 전혀 미구현 — 공고 첨부도 ClientDocument도 placeholder/markLinkOnly 임시
+  2. 패턴 추출 = **Aimbase 워크플로우 실연동 코드까지** 플랫폼측 전부 구현. 워크플로우 ID는 application.yml 환경변수(placeholder). Aimbase측 워크플로우 생성·E2E는 배포환경(로컬→14.63.25.49:8280 접근 불가)에서 별도
+  3. 7슬롯 = **DB 시드 테이블(`slot_definition`)로 정의** + 빈슬롯 허용 + "기타" 슬롯(라벨 입력). 코드 하드코딩 금지
+  4. 설계 = **간이 캐스케이드 + 코드 병행**(CR-010 방식)
+- **도메인 개념**:
+  - **RfpSample** = 등록 단위(성공 제안서 1건): 메타(공고번호/사업유형/결과 WON·SUBMITTED·OTHER, 선택: 업체/발주처/낙찰액/회계연도) + 원본 파일들 + (선택)PWS
+  - **SlotAssignment** = 제안서의 파일/섹션을 표준 7슬롯 중 하나에 배치. 자동추정 + 관리자 확인. 빈슬롯은 시스템이 "이 데이터 넣어줘" 역요구
+  - **PatternGuide** = 슬롯별 가이드. **추출 단위 = 슬롯**(같은 슬롯에 모인 여러 건 비교 → 공통 패턴). 여러 건 모아서 추출(1건마다 X). 부분 재추출 가능(슬롯 단위). 출처 구분(`source`): AI_EXTRACTED(자동갱신) vs HUMAN_EDITED/HUMAN_ADDED(보호)
+  - 표준 7슬롯: 사업자자격/등록 · 과거 수행 경험 · 핵심인력(CM/QCM) · 인력 배치 계획 · 장비 계획 · 과거 실적 · 가격 (+ 기타)
+- **변경 사항**:
+  1. **데이터 모델 (T3-1)**: 마이그레이션 V10. 5테이블 신설 — `slot_definition`(시드 8행), `rfp_sample`, `rfp_sample_file`, `slot_assignment`, `pattern_guide`
+  2. **기능 요구 (T1-1)**: BID-RFP-001(등록) / 002(7슬롯 배치) / 003(슬롯 패턴추출) / 004(가이드 조회·편집)
+  3. **비즈니스 규칙 (T1-3)**: BIZ-016(패턴 추출은 슬롯 단위, 동일 슬롯 2건 이상일 때만) / BIZ-017(가이드 출처 보호 — AI 자동추출은 source=AI_EXTRACTED만 갱신, HUMAN_* 보존)
+  4. **API (T3-2)**: `/admin/rfp-samples`(등록·파일업로드·슬롯배치) + `/admin/pattern-guides`(추출 트리거·조회·수동편집)
+  5. **화면 (T3-3)**: admin-console "성공 제안서 패턴" 메뉴 — 목록 + 등록/상세(7슬롯 배치 UI + 패턴추출 버튼 + 가이드 편집)
+  6. **신규 추상화**: `StorageService`(interface) + `LocalFileStorageService`, `TextExtractionUtil`(iText/POI 재사용)
+  7. **AI 연동**: `LLMPlatformClient.extractSlotPattern()`(기존 폴링 재사용) + MCP `PatternGuideMcpTool`(`get_slot_samples`/`save_pattern_guide` 콜백)
+- **영향 범위**:
+  - BE: `domain/rfp`(entity/repository/service/dto 신설), `controller/admin/RfpSampleAdminController`·`PatternGuideAdminController`, `integration/storage`(StorageService/LocalFileStorageService), `common/TextExtractionUtil`, `mcp/tool/PatternGuideMcpTool`+`McpDispatcher`, `integration/llmplatform/LLMPlatformClient`, `application.yml`(app.storage.*, app.aimbase.workflows.slot-pattern-extraction)
+  - FE: `App.tsx`(라우트), `components/Layout.tsx`(NAV), `api/client.ts`, `pages/RfpSamplePage.tsx`·`RfpSampleDetailPage.tsx` 신설
+  - 마이그레이션: `V10__add_rfp_sample_pattern_guide.sql`
+- **영향 설계 문서**: T1-1, T1-3, T3-1, T3-2, T3-3
+- **리스크**: Aimbase 워크플로우 미생성 → 로컬 E2E 불가(markFailed graceful 경로만 검증, 실제 가이드 생성은 배포환경). 브로슈어형 PDF 텍스트 추출 깨짐(extraction_status=FAILED 허용 + section_text 수동 fallback). 단건 슬롯(LAUNDRY/HVAC/WASTE/PIPELINE 각 1건) 패턴 빈약 → 1차엔 industryType NULL=공통 묶음.
+- **참조 산출물**: `docs/rfp_sample_index_draft.md`(rfp_sample 컬럼 근거), `docs/rfp_pattern_guide_draft_prior_experience.md`(guide_json 8블록/체크리스트/금기 구조 = save_pattern_guide 입력 계약)
+- **상태**: 간이 설계 캐스케이드 + 코드 병행 (설계 commit과 코드 commit 분리)
