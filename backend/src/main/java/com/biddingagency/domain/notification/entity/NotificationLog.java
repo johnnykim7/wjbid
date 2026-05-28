@@ -12,7 +12,8 @@ import java.util.UUID;
         indexes = {
                 @Index(name = "idx_notification_type", columnList = "notification_type"),
                 @Index(name = "idx_notification_reference", columnList = "reference_type, reference_id"),
-                @Index(name = "idx_notification_sent_at", columnList = "sent_at")
+                @Index(name = "idx_notification_sent_at", columnList = "sent_at"),
+                @Index(name = "idx_notification_recipient", columnList = "recipient_id, sent_at")
         },
         uniqueConstraints = {
                 @UniqueConstraint(name = "uniq_notification_idempotency", columnNames = "idempotency_key")
@@ -53,4 +54,15 @@ public class NotificationLog extends BaseEntity {
 
     @Column(name = "idempotency_key", nullable = false, length = 255)
     private String idempotencyKey;
+
+    /** CR-006: 인앱 알림 읽음 시각 (NULL = 미읽음) */
+    @Column(name = "read_at")
+    private LocalDateTime readAt;
+
+    /** 읽음 처리 (멱등 — 이미 읽었으면 시각 유지) */
+    public void markAsRead() {
+        if (this.readAt == null) {
+            this.readAt = LocalDateTime.now();
+        }
+    }
 }

@@ -12,6 +12,7 @@ import PricingPage from './pages/PricingPage'
 import ProfilePage from './pages/ProfilePage'
 import ProposalDetailPage from './pages/ProposalDetailPage'
 import GuidePage from './pages/GuidePage'
+import NotificationsPage from './pages/NotificationsPage'
 
 function ProtectedRoute() {
   const { isAuthenticated } = useAuth()
@@ -40,6 +41,7 @@ function AppRoutes() {
         <Route path="/proposals" element={<ProposalsPage />} />
         <Route path="/proposals/:id" element={<ProposalDetailPage />} />
         <Route path="/bookmarks" element={<BookmarksPage />} />
+        <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/profile" element={<ProfilePage />} />
       </Route>
 

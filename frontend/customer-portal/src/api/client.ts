@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const BASE_URL = 'http://14.63.25.49:8088/api'
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
 export const api = axios.create({
   baseURL: BASE_URL,
@@ -117,3 +117,13 @@ export const uploadClientDocument = (bidRequestId: string, file: File) => {
 
 export const deleteClientDocument = (id: string) =>
   api.delete(`/client-documents/${id}`)
+
+// Notifications (CR-006: 고객 인앱 알림)
+export const getNotifications = (page = 0, size = 20) =>
+  api.get('/notifications', { params: { page, size } })
+
+export const getUnreadNotificationCount = () =>
+  api.get('/notifications/unread-count')
+
+export const markNotificationAsRead = (id: string) =>
+  api.patch(`/notifications/${id}/read`)

@@ -57,10 +57,24 @@ class NotificationEventListenerTest {
                 eq(NotificationType.COLLECTION_COMPLETE),
                 eq("admin@test.com"), any(),
                 contains("수집 완료"),
-                contains("신규 5건"),
+                any(),
                 any(), eq("CollectorRun"),
                 anyString()
         );
+    }
+
+    @Test
+    @DisplayName("공고수집완료_신규0건_알림미발송")
+    void onOpportunitiesCollected_신규0건_스킵() {
+        // given: SAM.gov 조회 결과가 전부 DB에 이미 있는 경우 (신규 0건, 중복만 존재)
+        OpportunitiesCollectedEvent event = new OpportunitiesCollectedEvent(null, 0, 12, 12);
+
+        // when
+        listener.onOpportunitiesCollected(event);
+
+        // then: ADMIN 조회조차 하지 않고 즉시 리턴, 알림 미발송
+        then(memberRepository).shouldHaveNoInteractions();
+        then(notificationService).shouldHaveNoInteractions();
     }
 
     @Test
@@ -82,7 +96,7 @@ class NotificationEventListenerTest {
                 eq(NotificationType.BID_REQUEST_CREATED),
                 eq("admin@test.com"), any(),
                 contains("입찰 신청"),
-                contains(bidRequestId.toString()),
+                any(),
                 eq(bidRequestId), eq("BidRequest"),
                 anyString()
         );
@@ -107,7 +121,7 @@ class NotificationEventListenerTest {
                 eq(NotificationType.DEADLINE_D7),
                 eq("admin@test.com"), any(),
                 contains("D-7"),
-                contains("7일"),
+                any(),
                 eq(bidRequestId), eq("BidRequest"),
                 contains("DEADLINE_D7")
         );
@@ -132,7 +146,7 @@ class NotificationEventListenerTest {
                 eq(NotificationType.DEADLINE_D1),
                 anyString(), any(),
                 contains("D-1"),
-                anyString(),
+                any(),
                 eq(bidRequestId), eq("BidRequest"),
                 contains("DEADLINE_D1")
         );

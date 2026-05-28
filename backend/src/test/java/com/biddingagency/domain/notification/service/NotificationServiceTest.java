@@ -45,7 +45,7 @@ class NotificationServiceTest {
         notificationService.sendNotification(
                 NotificationType.BID_REQUEST_CREATED,
                 "test@test.com", UUID.randomUUID(),
-                "테스트 제목", "테스트 본문",
+                "테스트 제목", java.util.Map.of(),
                 UUID.randomUUID(), "BidRequest", idempotencyKey
         );
 
@@ -70,7 +70,7 @@ class NotificationServiceTest {
         notificationService.sendNotification(
                 NotificationType.DEADLINE_D7,
                 "test@test.com", UUID.randomUUID(),
-                "제목", "본문",
+                "제목", java.util.Map.of(),
                 UUID.randomUUID(), "BidRequest", idempotencyKey
         );
 
@@ -92,7 +92,7 @@ class NotificationServiceTest {
         notificationService.sendNotification(
                 NotificationType.DOCUMENT_GENERATED,
                 "test@test.com", UUID.randomUUID(),
-                "제목", "본문",
+                "제목", java.util.Map.of(),
                 UUID.randomUUID(), "BidDocument", idempotencyKey
         );
 

@@ -206,6 +206,16 @@ app:
         max-tokens: 4000
         timeout: 300
 
+  # 고객 포털 URL (CR-006: 알림 메일 내 공고 상세 링크 생성)
+  customer-portal-url: ${CUSTOMER_PORTAL_URL:http://localhost:3183}
+
+  # bp-notification 연동 (CR-005/006: 알림 발송 인프라 — Gmail SMTP 대체)
+  bp-notification:
+    base-url: ${BP_NOTIFICATION_URL:http://59.8.160.12:8185/api/v1}
+    api-key: ${BP_NOTIFICATION_API_KEY:b8c793a1-ba98-44bb-b05a-264882428645}
+    connect-timeout: 5000
+    read-timeout: 10000
+
   # CORS Configuration
   cors:
     allowed-origins:

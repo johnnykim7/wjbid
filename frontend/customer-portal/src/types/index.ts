@@ -13,6 +13,49 @@ export interface Opportunity {
   type?: string
   uiLink?: string
   resourceLinks?: string[]
+  analysis?: AnalysisResult
+}
+
+export interface AnalysisResult {
+  analysisStatus: 'PENDING' | 'ANALYZING' | 'COMPLETED' | 'FAILED'
+  analyzedAt?: string
+  summary?: AnalysisSummary
+  requiredDocuments?: AnalysisRequiredDocuments
+  documentFormats?: AnalysisDocumentFormats
+}
+
+export interface AnalysisSummary {
+  overview?: string
+  scope?: string
+  eligibility?: string
+  evaluationCriteria?: string
+  keyDates?: { label: string; date: string; note?: string }[]
+  budgetInfo?: string
+  specialNotes?: string[]
+}
+
+export interface AnalysisRequiredDocuments {
+  documents?: {
+    name: string
+    description?: string
+    mandatory: boolean
+    format?: string
+    pageLimit?: string
+    notes?: string
+  }[]
+}
+
+export interface AnalysisDocumentFormats {
+  generalInstructions?: string
+  formats?: {
+    section: string
+    description?: string
+    pageLimit?: string
+    fileFormat?: string
+    fontRequirements?: string
+    otherRequirements?: string[]
+  }[]
+  submissionMethod?: string
 }
 
 export interface BidRequest {
@@ -59,6 +102,17 @@ export interface MemberProfile {
   phone?: string
   address?: string
   role: string
+}
+
+export interface Notification {
+  id: string
+  type: string
+  subject: string
+  referenceId?: string
+  referenceType?: string
+  sentAt: string
+  read: boolean
+  readAt?: string
 }
 
 export type AiStatus = 'idle' | 'generating' | 'completed'

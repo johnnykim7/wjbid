@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import { useNotifications } from '../../hooks/useNotifications'
+import { NotificationPanel } from '../NotificationPanel'
 
 const PUBLIC_NAV = [
   { label: '서비스 소개', anchor: 'about' },
@@ -20,7 +22,10 @@ export function GlobalNav() {
   const { isAuthenticated, userEmail, logout } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [notifOpen, setNotifOpen] = useState(false)
   const navigate = useNavigate()
+  const { items, unreadCount, loading, loadList, markRead } =
+    useNotifications(isAuthenticated)
 
   const handlePublicLink = (item: (typeof PUBLIC_NAV)[number]) => {
     if (item.anchor) {
@@ -85,6 +90,32 @@ export function GlobalNav() {
 
         {/* Right actions */}
         <div className="flex items-center gap-2 flex-shrink-0">
+          {isAuthenticated && (
+            <div className="relative">
+              <button
+                onClick={() => setNotifOpen(!notifOpen)}
+                className="relative p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                aria-label="알림"
+              >
+                <i className="fa-regular fa-bell text-xl" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-0.5 right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </button>
+              {notifOpen && (
+                <NotificationPanel
+                  items={items}
+                  loading={loading}
+                  onClose={() => setNotifOpen(false)}
+                  onLoad={loadList}
+                  onMarkRead={markRead}
+                />
+              )}
+            </div>
+          )}
+
           {isAuthenticated ? (
             <div className="relative">
               <button
