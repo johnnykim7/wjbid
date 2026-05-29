@@ -25,6 +25,7 @@
 | CR-013-R | 2026-05-29 | CR-013 슬롯 폐기 → 원본 통째 보관 + 공고유형별 가이드 + 작성 시 도구 발췌 | BE (domain/rfp 슬롯 제거, PatternGuide 유형단위, mcp, llmplatform, controller/admin, 마이그레이션 V11) + FE (admin-console) | 대규모 | 코드 먼저 + 설계 일괄 |
 | CR-014 | 2026-05-29 | 성공 제안서 자산 작성 활용 (B작업) — 공고 IndustryType 자동분류 + 작성 P3를 성공 가이드+원본으로 대체 | BE (domain/opportunity IndustryClassifier 신설, Opportunity 엔티티, integration/samgov, domain/rfp ReferenceSampleService, domain/bid AIWorkflowService, mcp, 마이그레이션 V12) | 중규모 | 설계 먼저 + 코드 |
 | CR-019 | 2026-05-29 | 원본 공고 첨부 보강 — 수집 시 첨부 적재 + "가져와야 함" 표식 + 관리자 업로드 실제 저장 + 한글화 입력에 첨부 포함 | BE (integration/samgov, domain/opportunity OpportunityAttachment·status enum·repository, controller/admin, domain/notice, integration/llmplatform·mcp, 마이그레이션 V14) + FE (admin-console) | 중규모 | 설계 먼저 + 코드 |
+| CR-017 ① | 2026-05-29 | 제안서 생성 완료 알림 발행 연결 — MCP 문서저장 콜백에서 DocumentGeneratedEvent 발행(기존 배선만 있고 발행 0건이던 것) + 멱등키에 버전 포함 | BE (mcp/DocumentMcpTool, domain/event, domain/notification) | 소규모 | 완료 (코드+테스트, 실발송 E2E 미수행) |
 
 > CR-004~008 원본: `docs/origins/원본_운영플로우_추가요구_20260516.md`
 > 위 5건은 계획 등재만 — 각 CR 상세 설계는 해당 CR 착수 세션에서 진행. 본질 검토 결과 이미 충족된 항목(Draft+승인 / Aimbase 정제 / cron 스케줄링 / 가입형 고객 / 작성의뢰 / 맞춤 제안서 생성)은 CR 불필요.
@@ -359,3 +360,22 @@
 - **영향 설계 문서**: T1-3, T3-1, T3-2, execution-spec
 - **범위 밖(별도)**: Aimbase analyze/document-generation 워크플로우가 `attachmentFiles[]`를 실제로 parse_document 발췌하도록 하는 것은 Aimbase 레포 밖 — BE는 데이터 전달까지만. SAM resourceLinks 자동 다운로드 성공/실패 판정 로직의 실제 HTTP 다운로드 시도는 후속(현재는 외부 링크면 MANUAL_FETCH_REQUIRED로 보수 적재).
 - **상태**: 설계 캐스케이드 완료 + 코드 구현 진행.
+
+---
+
+### CR-017 ①: 제안서 생성 완료 알림 발행 연결 (2026-05-29)
+
+- **배경**: 2026-05-29 운영 점검(점검7)에서 진단한 3축(① 완료 알림 발행 / ② 부분·섹션 재생성 / ③ 전이 권한) 중 ① 착수. 사용자 기대 = 관리자가 제안서 생성 → 완료 시 알림. 실측 결과 `DocumentGeneratedEvent` 클래스 + 리스너 `NotificationEventListener.onDocumentGenerated`(관리자 전원 이메일)는 있으나 `new DocumentGeneratedEvent` 발행처가 전수조사 0건 — 문서는 Aimbase MCP 콜백(`DocumentMcpTool.saveDocumentVersion`)으로 저장되지만 거기서 이벤트를 쏘지 않아 완료 알림이 실제로는 0건 발송.
+- **사용자 확정 결정**:
+  1. **착수 범위** = ①완료알림만 (②부분재생성은 cr013 B작업·생성단위 재정의와 직결돼 중~대규모 → 별도 설계).
+  2. **발송 단위** = 타입별 N건 (`saveDocumentVersion`이 DocumentType마다 MCP 콜백되므로 현 구조 최소수정).
+  3. **멱등키** = 버전 포함 → 같은 문서 재생성(v2+) 시에도 알림 발송 가능(향후 ②부분재생성 대비).
+- **변경 사항**:
+  1. `domain/event/DocumentGeneratedEvent` — `versionNo` 필드 추가(생성자 시그니처 변경).
+  2. `mcp/tool/DocumentMcpTool.saveDocumentVersion` — 문서 저장 성공 후 `eventPublisher.publishEvent(new DocumentGeneratedEvent(documentId, bidRequestId, documentType, versionNo))` 발행(`ApplicationEventPublisher` 주입).
+  3. `domain/notification/NotificationEventListener.onDocumentGenerated` — 멱등키 `DOC_GEN_{documentId}` → `DOC_GEN_{documentId}_v{versionNo}`. (BIZ-012 멱등성: documentId만이면 v2+ 재생성 시 중복 차단으로 알림 막힘.)
+- **영향 범위**: BE (mcp/DocumentMcpTool, domain/event/DocumentGeneratedEvent, domain/notification/NotificationEventListener) + 테스트(DocumentMcpToolTest — 이벤트 발행/페이로드 검증 v1·v2).
+- **규모**: 소규모(설계 캐스케이드 불요 — 기존 배선 연결 + 알림 도메인 내 변경).
+- **참고**: 현 리스너는 관리자(ADMIN) 대상. 고객 대상 생성완료 알림은 CR-018 소관(별도).
+- **검증**: 컴파일 + 전체 테스트 BUILD SUCCESSFUL. **실발송 E2E(Aimbase MCP 콜백→이벤트→bp-notification)는 미수행** — 운영 DB에 BidRequest 0건이고 정상 신청 경로가 CR-016 공고문 흐름 선행을 요구해 런타임 검증은 갈음(코드/테스트 레벨).
+- **상태**: ① 완료 (코드+테스트). ②부분재생성·③전이권한은 미착수.

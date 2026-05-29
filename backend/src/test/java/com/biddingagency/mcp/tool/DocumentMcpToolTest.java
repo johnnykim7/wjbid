@@ -9,6 +9,7 @@ import com.biddingagency.domain.document.entity.DocumentStatus;
 import com.biddingagency.domain.document.entity.DocumentType;
 import com.biddingagency.domain.document.service.BidDocumentService;
 import com.biddingagency.domain.document.service.DocumentVersionService;
+import com.biddingagency.domain.event.DocumentGeneratedEvent;
 import com.biddingagency.domain.member.entity.Member;
 import com.biddingagency.domain.opportunity.entity.Opportunity;
 import com.biddingagency.TestHelper;
@@ -16,10 +17,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -42,6 +45,8 @@ class DocumentMcpToolTest {
     private DocumentVersionService documentVersionService;
     @Spy
     private ObjectMapper objectMapper = new ObjectMapper();
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private DocumentMcpTool documentMcpTool;
@@ -86,6 +91,14 @@ class DocumentMcpToolTest {
         // then
         assertThat(result).contains("COVER_LETTER");
         assertThat(result).contains("v1");
+
+        // CR-017: 문서 생성 완료 이벤트 발행 검증
+        ArgumentCaptor<DocumentGeneratedEvent> captor = ArgumentCaptor.forClass(DocumentGeneratedEvent.class);
+        then(eventPublisher).should().publishEvent(captor.capture());
+        DocumentGeneratedEvent event = captor.getValue();
+        assertThat(event.getBidRequestId()).isEqualTo(bidRequestId);
+        assertThat(event.getDocumentType()).isEqualTo("COVER_LETTER");
+        assertThat(event.getVersionNo()).isEqualTo(1);
     }
 
     // TC-MCP-DOC-002: save_document_version 추가 버전
@@ -126,6 +139,13 @@ class DocumentMcpToolTest {
         // then
         assertThat(result).contains("TECHNICAL_PROPOSAL");
         assertThat(result).contains("v2");
+
+        // CR-017: 새 버전 저장 시에도 이벤트 발행 (멱등키에 버전 포함되어 재생성 알림 가능)
+        ArgumentCaptor<DocumentGeneratedEvent> captor = ArgumentCaptor.forClass(DocumentGeneratedEvent.class);
+        then(eventPublisher).should().publishEvent(captor.capture());
+        DocumentGeneratedEvent event = captor.getValue();
+        assertThat(event.getDocumentType()).isEqualTo("TECHNICAL_PROPOSAL");
+        assertThat(event.getVersionNo()).isEqualTo(2);
     }
 
     // TC-MCP-DOC-003: get_bid_request

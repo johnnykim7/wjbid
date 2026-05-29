@@ -116,7 +116,7 @@ public class NotificationEventListener {
                     admin.getEmail(), admin.getId(),
                     "[Bidding Agency] 문서 생성 완료 - " + event.getDocumentType(), vars,
                     event.getBidRequestId(), "BidDocument",
-                    "DOC_GEN_" + event.getEntityId());
+                    "DOC_GEN_" + event.getEntityId() + "_v" + event.getVersionNo());
         }
     }
 

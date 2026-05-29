@@ -7,9 +7,11 @@ import com.biddingagency.domain.document.entity.BidDocumentVersion;
 import com.biddingagency.domain.document.entity.DocumentType;
 import com.biddingagency.domain.document.service.BidDocumentService;
 import com.biddingagency.domain.document.service.DocumentVersionService;
+import com.biddingagency.domain.event.DocumentGeneratedEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +32,7 @@ public class DocumentMcpTool {
     private final BidDocumentService bidDocumentService;
     private final DocumentVersionService documentVersionService;
     private final ObjectMapper objectMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     // ─── 도구 정의 ────────────────────────────────────────────────────────
 
@@ -125,6 +128,10 @@ public class DocumentMcpTool {
             version = documentVersionService.getLatestVersion(newDoc.getId());
             log.info("MCP save_document_version: 신규 문서 생성 documentId={}", newDoc.getId());
         }
+
+        // CR-017: 문서 생성 완료 알림 발행 (관리자 대상, 멱등키에 버전 포함)
+        eventPublisher.publishEvent(new DocumentGeneratedEvent(
+            version.getDocument().getId(), bidRequestId, documentType.name(), version.getVersionNo()));
 
         Map<String, Object> result = Map.of(
             "bidRequestId", bidRequestId.toString(),
