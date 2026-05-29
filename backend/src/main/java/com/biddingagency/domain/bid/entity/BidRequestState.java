@@ -3,7 +3,8 @@ package com.biddingagency.domain.bid.entity;
 /**
  * Bid Request State (FSM States)
  *
- * 9-state lifecycle: CREATED → DOCS_PENDING → DOCS_RECEIVED → ANALYZING → GENERATING → REVIEW → CONFIRMED → SUBMITTED / CLOSED
+ * 11-state lifecycle: CREATED → DOCS_PENDING → DOCS_RECEIVED → ANALYZING → GENERATING → REVIEW → CONFIRMED → SUBMITTED → AWARDED / NOT_AWARDED, (각 단계) → CLOSED
+ * CR-018: SUBMITTED 이후 입찰 결과(AWARDED 합격 / NOT_AWARDED 불합격) 상태 추가.
  */
 public enum BidRequestState {
     /** 신청 접수 */
@@ -20,13 +21,17 @@ public enum BidRequestState {
     REVIEW,
     /** 확정 (문서 잠금) */
     CONFIRMED,
-    /** 제출 완료 */
+    /** 제출 완료 (입찰 결과 대기) */
     SUBMITTED,
+    /** 입찰 합격 (CR-018) */
+    AWARDED,
+    /** 입찰 불합격 (CR-018) */
+    NOT_AWARDED,
     /** 종료/취소 */
     CLOSED;
 
     public boolean isTerminal() {
-        return this == SUBMITTED || this == CLOSED;
+        return this == AWARDED || this == NOT_AWARDED || this == CLOSED;
     }
 
     public boolean canEditDocuments() {

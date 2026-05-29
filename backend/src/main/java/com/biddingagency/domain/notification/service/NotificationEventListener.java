@@ -1,8 +1,10 @@
 package com.biddingagency.domain.notification.service;
 
 import com.biddingagency.domain.bid.entity.BidRequest;
+import com.biddingagency.domain.bid.entity.BidRequestState;
 import com.biddingagency.domain.bid.repository.BidRequestRepository;
 import com.biddingagency.domain.event.BidRequestCreatedEvent;
+import com.biddingagency.domain.event.BidRequestStateChangedEvent;
 import com.biddingagency.domain.event.DeadlineApproachingEvent;
 import com.biddingagency.domain.event.DocumentGeneratedEvent;
 import com.biddingagency.domain.event.OpportunitiesCollectedEvent;
@@ -98,6 +100,67 @@ public class NotificationEventListener {
                     event.getEntityId(), "BidRequest",
                     "BID_CREATED_" + event.getEntityId());
         }
+    }
+
+    /**
+     * CR-018: BidRequest 상태 전이 → 고객 대상 진행 알림 3종.
+     * - REVIEW   : 제안서 생성 완료 (GENERATING→REVIEW = AI 생성 완료)
+     * - SUBMITTED: 입찰 접수(제출) 완료
+     * - AWARDED  : 입찰 합격
+     * 그 외 전이(NOT_AWARDED 포함)는 고객 알림 미발송(MVP).
+     */
+    @Async
+    @EventListener
+    public void onBidRequestStateChanged(BidRequestStateChangedEvent event) {
+        BidRequestState toState = event.getToState();
+        NotificationType type;
+        String subject;
+        switch (toState) {
+            case REVIEW -> {
+                type = NotificationType.PROPOSAL_READY_CUSTOMER;
+                subject = "[Bidding Agency] 제안서 생성이 완료되었습니다";
+            }
+            case SUBMITTED -> {
+                type = NotificationType.BID_SUBMITTED_CUSTOMER;
+                subject = "[Bidding Agency] 입찰 제출이 접수되었습니다";
+            }
+            case AWARDED -> {
+                type = NotificationType.BID_AWARDED_CUSTOMER;
+                subject = "[Bidding Agency] 입찰 결과 — 합격";
+            }
+            default -> { return; }  // 그 외 상태는 고객 알림 없음
+        }
+
+        BidRequest br = bidRequestRepository.findByIdWithDetails(event.getEntityId()).orElse(null);
+        if (br == null) {
+            log.warn("BidRequestStateChanged: bid request not found, id={}", event.getEntityId());
+            return;
+        }
+        Member customer = br.getMember();
+        String customerName = displayName(customer);
+        String oppTitle = br.getOpportunity() != null ? br.getOpportunity().getTitle() : "(공고)";
+        String noticeId = br.getOpportunity() != null && br.getOpportunity().getNoticeId() != null
+                ? br.getOpportunity().getNoticeId() : "-";
+        String deadline = br.getOpportunity() != null && br.getOpportunity().getResponseDeadline() != null
+                ? br.getOpportunity().getResponseDeadline().format(DATE_FMT) : "미정";
+        String serviceLevel = br.getServiceLevel() != null ? br.getServiceLevel().name() : "-";
+        String detailUrl = customerPortalUrl + "/proposals/" + br.getId();
+
+        // 재사용 템플릿이 요구하는 변수를 모두 채운다(과잉이어도 무해).
+        Map<String, Object> vars = Map.of(
+                "customerName", customerName,
+                "opportunityTitle", oppTitle,
+                "noticeId", noticeId,
+                "deadline", deadline,
+                "serviceLevel", serviceLevel,
+                "detailUrl", detailUrl);
+
+        notificationService.sendNotification(
+                type, customer.getEmail(), customer.getId(),
+                subject, vars,
+                br.getId(), "BidRequest",
+                "BR_STATE_" + br.getId() + "_" + toState);
+        log.info("CR-018 고객 알림 발송: bidRequest={}, toState={}, 수신={}", br.getId(), toState, customer.getEmail());
     }
 
     @Async

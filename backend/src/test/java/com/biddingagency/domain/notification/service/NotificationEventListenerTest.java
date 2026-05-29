@@ -1,12 +1,16 @@
 package com.biddingagency.domain.notification.service;
 
+import com.biddingagency.domain.bid.entity.BidRequest;
+import com.biddingagency.domain.bid.entity.BidRequestState;
 import com.biddingagency.domain.bid.repository.BidRequestRepository;
 import com.biddingagency.domain.event.BidRequestCreatedEvent;
+import com.biddingagency.domain.event.BidRequestStateChangedEvent;
 import com.biddingagency.domain.event.DeadlineApproachingEvent;
 import com.biddingagency.domain.event.OpportunitiesCollectedEvent;
 import com.biddingagency.domain.member.entity.Member;
 import com.biddingagency.domain.member.repository.MemberRepository;
 import com.biddingagency.domain.notification.entity.NotificationType;
+import com.biddingagency.domain.opportunity.entity.Opportunity;
 import com.biddingagency.domain.opportunity.repository.OpportunityRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -17,6 +21,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.*;
@@ -171,6 +176,135 @@ class NotificationEventListenerTest {
         listener.onBidRequestCreated(event);
 
         // then
+        then(notificationService).shouldHaveNoInteractions();
+    }
+
+    // CR-018: BidRequest 상태 전이 → 고객 알림
+
+    private Member createCustomer() {
+        return Member.builder()
+                .email("customer@test.com")
+                .passwordHash("hash")
+                .companyName("ClientCo")
+                .contactPerson("김고객")
+                .role(Member.Role.CUSTOMER)
+                .build();
+    }
+
+    private BidRequest createBidRequestWithCustomer(UUID id, BidRequestState state) {
+        Opportunity opp = Opportunity.builder()
+                .title("USFK Facility Maintenance")
+                .noticeId("W912-26-R-0001")
+                .responseDeadline(LocalDateTime.now().plusDays(10))
+                .build();
+        BidRequest br = BidRequest.builder()
+                .member(createCustomer())
+                .opportunity(opp)
+                .state(state)
+                .build();
+        org.springframework.test.util.ReflectionTestUtils.setField(br, "id", id);
+        return br;
+    }
+
+    @Test
+    @DisplayName("상태전이REVIEW_고객에게생성완료알림_CR018")
+    void onBidRequestStateChanged_REVIEW_생성완료알림() {
+        // given
+        UUID bidRequestId = UUID.randomUUID();
+        given(bidRequestRepository.findByIdWithDetails(bidRequestId))
+                .willReturn(Optional.of(createBidRequestWithCustomer(bidRequestId, BidRequestState.REVIEW)));
+        BidRequestStateChangedEvent event = new BidRequestStateChangedEvent(
+                bidRequestId, BidRequestState.GENERATING, BidRequestState.REVIEW, UUID.randomUUID());
+
+        // when
+        listener.onBidRequestStateChanged(event);
+
+        // then
+        then(notificationService).should().sendNotification(
+                eq(NotificationType.PROPOSAL_READY_CUSTOMER),
+                eq("customer@test.com"), any(),
+                contains("제안서 생성"),
+                any(),
+                eq(bidRequestId), eq("BidRequest"),
+                eq("BR_STATE_" + bidRequestId + "_REVIEW")
+        );
+    }
+
+    @Test
+    @DisplayName("상태전이SUBMITTED_고객에게접수알림_CR018")
+    void onBidRequestStateChanged_SUBMITTED_접수알림() {
+        // given
+        UUID bidRequestId = UUID.randomUUID();
+        given(bidRequestRepository.findByIdWithDetails(bidRequestId))
+                .willReturn(Optional.of(createBidRequestWithCustomer(bidRequestId, BidRequestState.SUBMITTED)));
+        BidRequestStateChangedEvent event = new BidRequestStateChangedEvent(
+                bidRequestId, BidRequestState.CONFIRMED, BidRequestState.SUBMITTED, UUID.randomUUID());
+
+        // when
+        listener.onBidRequestStateChanged(event);
+
+        // then
+        then(notificationService).should().sendNotification(
+                eq(NotificationType.BID_SUBMITTED_CUSTOMER),
+                eq("customer@test.com"), any(),
+                contains("접수"),
+                any(),
+                eq(bidRequestId), eq("BidRequest"),
+                eq("BR_STATE_" + bidRequestId + "_SUBMITTED")
+        );
+    }
+
+    @Test
+    @DisplayName("상태전이AWARDED_고객에게합격알림_CR018")
+    void onBidRequestStateChanged_AWARDED_합격알림() {
+        // given
+        UUID bidRequestId = UUID.randomUUID();
+        given(bidRequestRepository.findByIdWithDetails(bidRequestId))
+                .willReturn(Optional.of(createBidRequestWithCustomer(bidRequestId, BidRequestState.AWARDED)));
+        BidRequestStateChangedEvent event = new BidRequestStateChangedEvent(
+                bidRequestId, BidRequestState.SUBMITTED, BidRequestState.AWARDED, UUID.randomUUID());
+
+        // when
+        listener.onBidRequestStateChanged(event);
+
+        // then
+        then(notificationService).should().sendNotification(
+                eq(NotificationType.BID_AWARDED_CUSTOMER),
+                eq("customer@test.com"), any(),
+                contains("합격"),
+                any(),
+                eq(bidRequestId), eq("BidRequest"),
+                eq("BR_STATE_" + bidRequestId + "_AWARDED")
+        );
+    }
+
+    @Test
+    @DisplayName("상태전이NOT_AWARDED_고객알림미발송_MVP_CR018")
+    void onBidRequestStateChanged_NOT_AWARDED_미발송() {
+        // given
+        BidRequestStateChangedEvent event = new BidRequestStateChangedEvent(
+                UUID.randomUUID(), BidRequestState.SUBMITTED, BidRequestState.NOT_AWARDED, UUID.randomUUID());
+
+        // when
+        listener.onBidRequestStateChanged(event);
+
+        // then: 미대상 상태는 BidRequest 조회조차 안 하고 즉시 리턴
+        then(bidRequestRepository).shouldHaveNoInteractions();
+        then(notificationService).shouldHaveNoInteractions();
+    }
+
+    @Test
+    @DisplayName("상태전이DOCS_RECEIVED_고객알림미발송_CR018")
+    void onBidRequestStateChanged_DOCS_RECEIVED_미발송() {
+        // given — 알림 대상이 아닌 중간 상태
+        BidRequestStateChangedEvent event = new BidRequestStateChangedEvent(
+                UUID.randomUUID(), BidRequestState.DOCS_PENDING, BidRequestState.DOCS_RECEIVED, UUID.randomUUID());
+
+        // when
+        listener.onBidRequestStateChanged(event);
+
+        // then
+        then(bidRequestRepository).shouldHaveNoInteractions();
         then(notificationService).shouldHaveNoInteractions();
     }
 }

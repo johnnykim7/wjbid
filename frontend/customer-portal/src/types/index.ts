@@ -71,7 +71,7 @@ export interface BidRequest {
   submittedAt?: string
 }
 
-// 백엔드 BidRequestState FSM과 동기화 (9-state)
+// 백엔드 BidRequestState FSM과 동기화 (11-state, CR-018)
 export type BidRequestState =
   | 'CREATED'
   | 'DOCS_PENDING'
@@ -81,6 +81,8 @@ export type BidRequestState =
   | 'REVIEW'
   | 'CONFIRMED'
   | 'SUBMITTED'
+  | 'AWARDED'
+  | 'NOT_AWARDED'
   | 'CLOSED'
 
 export interface StateTransition {
@@ -126,10 +128,12 @@ export const STATE_LABEL: Record<string, string> = {
   REVIEW: '관리자 검토',
   CONFIRMED: '확정',
   SUBMITTED: '제출 완료',
+  AWARDED: '합격',
+  NOT_AWARDED: '불합격',
   CLOSED: '종료',
 }
 
-export const STATE_BADGE: Record<string, 'draft' | 'review' | 'active' | 'final' | 'closing'> = {
+export const STATE_BADGE: Record<string, 'draft' | 'review' | 'active' | 'final' | 'closing' | 'closed'> = {
   CREATED: 'draft',
   DOCS_PENDING: 'review',
   DOCS_RECEIVED: 'review',
@@ -138,5 +142,7 @@ export const STATE_BADGE: Record<string, 'draft' | 'review' | 'active' | 'final'
   REVIEW: 'review',
   CONFIRMED: 'active',
   SUBMITTED: 'final',
+  AWARDED: 'active',
+  NOT_AWARDED: 'closed',
   CLOSED: 'closing',
 }

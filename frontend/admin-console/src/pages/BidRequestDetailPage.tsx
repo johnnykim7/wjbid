@@ -17,6 +17,8 @@ const STATE_LABELS: Record<string, string> = {
   REVIEW: '관리자 검토',
   CONFIRMED: '확정',
   SUBMITTED: '제출 완료',
+  AWARDED: '합격',
+  NOT_AWARDED: '불합격',
   CLOSED: '종료',
 }
 
@@ -29,6 +31,8 @@ const STATE_COLORS: Record<string, string> = {
   REVIEW: 'bg-orange-100 text-orange-700',
   CONFIRMED: 'bg-teal-100 text-teal-700',
   SUBMITTED: 'bg-emerald-100 text-emerald-700',
+  AWARDED: 'bg-green-100 text-green-700',
+  NOT_AWARDED: 'bg-rose-100 text-rose-700',
   CLOSED: 'bg-gray-100 text-gray-400',
 }
 
@@ -40,6 +44,7 @@ const NEXT_STATES: Record<string, string[]> = {
   GENERATING: ['REVIEW'],
   REVIEW: ['CONFIRMED', 'GENERATING'],
   CONFIRMED: ['SUBMITTED', 'REVIEW'],
+  SUBMITTED: ['AWARDED', 'NOT_AWARDED'],
 }
 
 const DOC_STATUS_LABELS: Record<string, string> = {

@@ -64,6 +64,10 @@ public class BidRequest extends BaseEntity {
     @Column(name = "submitted_at")
     private LocalDateTime submittedAt;
 
+    /** CR-018: 입찰 결과(합격/불합격)가 확정된 시각 */
+    @Column(name = "outcome_decided_at")
+    private LocalDateTime outcomeDecidedAt;
+
     @Column(name = "closed_at")
     private LocalDateTime closedAt;
 
@@ -102,6 +106,10 @@ public class BidRequest extends BaseEntity {
         // Set submitted_at if transitioning to SUBMITTED
         if (newState == BidRequestState.SUBMITTED) {
             this.submittedAt = LocalDateTime.now();
+        }
+        // CR-018: Set outcome_decided_at if transitioning to a result state
+        if (newState == BidRequestState.AWARDED || newState == BidRequestState.NOT_AWARDED) {
+            this.outcomeDecidedAt = LocalDateTime.now();
         }
         // Set closed_at if transitioning to CLOSED
         if (newState == BidRequestState.CLOSED) {
@@ -150,6 +158,8 @@ public class BidRequest extends BaseEntity {
             case REVIEW -> "관리자 검토";
             case CONFIRMED -> "확정";
             case SUBMITTED -> "제출 완료";
+            case AWARDED -> "합격";
+            case NOT_AWARDED -> "불합격";
             case CLOSED -> "종료";
         };
     }

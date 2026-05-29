@@ -1,6 +1,6 @@
 # SAM.gov Bidding Agency Platform FSM 상태 정의
 
-> 설계 버전: 1.1 | 최종 수정: 2026-03-28 | 관련 CR: CR-003
+> 설계 버전: 1.2 | 최종 수정: 2026-05-29 | 관련 CR: CR-003, CR-018
 
 > 단계: 1. Requirements | 설계
 >
@@ -12,7 +12,7 @@
 |--------|--------------|
 | Opportunity (공고 노출) | HIDDEN → VISIBLE (CR-003) |
 | OpportunityAnalysis (공고 분석) | PENDING → ANALYZING → COMPLETED / FAILED (CR-003) |
-| BidRequest (입찰 요청) | CREATED → DOCS_PENDING → DOCS_RECEIVED → ANALYZING → GENERATING → REVIEW → CONFIRMED → SUBMITTED / CLOSED |
+| BidRequest (입찰 요청) | CREATED → DOCS_PENDING → DOCS_RECEIVED → ANALYZING → GENERATING → REVIEW → CONFIRMED → SUBMITTED → AWARDED / NOT_AWARDED, (각 단계) → CLOSED (CR-018) |
 | BidDocument (입찰 문서) | DRAFT → LOCKED → ARCHIVED |
 
 ---
@@ -93,6 +93,8 @@ stateDiagram-v2
     GENERATING --> REVIEW : AI 문서 생성 완료
     REVIEW --> CONFIRMED : 관리자 검토/편집 완료
     CONFIRMED --> SUBMITTED : 제출 완료
+    SUBMITTED --> AWARDED : 입찰 결과 합격 (CR-018)
+    SUBMITTED --> NOT_AWARDED : 입찰 결과 불합격 (CR-018)
 
     CREATED --> CLOSED : 취소
     DOCS_PENDING --> CLOSED : 취소
@@ -149,10 +151,25 @@ stateDiagram-v2
 - **비고**: 수정이 필요하면 REVIEW로 복귀 가능 (문서 잠금 해제 필요)
 
 ### SUBMITTED | 제출 완료
-- **설명**: 입찰 서류가 SAM.gov에 제출된 최종 상태
+- **설명**: 입찰 서류가 SAM.gov에 제출되고 입찰 결과를 기다리는 상태
 - **진입 조건**: 관리자가 제출 실행
+- **허용 다음 상태**: AWARDED, NOT_AWARDED (CR-018)
+- **관련 기능 ID**: BID-FSM-001
+- **비고**: 제출 시 고객에게 "접수 완료" 알림 발송 (CR-018, BID-NOTIFY-003)
+
+### AWARDED | 합격 (CR-018)
+- **설명**: 입찰에 합격(낙찰)한 최종 상태
+- **진입 조건**: 관리자가 입찰 결과를 합격으로 수동 업데이트 (SUBMITTED에서만)
+- **허용 다음 상태**: (최종 상태)
+- **관련 기능 ID**: BID-FSM-001, BID-NOTIFY-004
+- **비고**: 합격 시 고객에게 "합격" 알림 발송. 결과는 관리자가 외부(SAM.gov)에서 확인 후 수동 입력
+
+### NOT_AWARDED | 불합격 (CR-018)
+- **설명**: 입찰에 불합격(탈락)한 최종 상태
+- **진입 조건**: 관리자가 입찰 결과를 불합격으로 수동 업데이트 (SUBMITTED에서만)
 - **허용 다음 상태**: (최종 상태)
 - **관련 기능 ID**: BID-FSM-001
+- **비고**: 불합격은 고객 알림 미발송(MVP). 사용자 결정 시 추가 가능
 
 ### CLOSED | 종료
 - **설명**: 입찰이 취소/만료/기타 사유로 종료된 상태

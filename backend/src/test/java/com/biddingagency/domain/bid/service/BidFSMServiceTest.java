@@ -62,7 +62,9 @@ class BidFSMServiceTest {
             "CONFIRMED, REVIEW",
             "CREATED, CLOSED",
             "DOCS_PENDING, CLOSED",
-            "DOCS_RECEIVED, CLOSED"
+            "DOCS_RECEIVED, CLOSED",
+            "SUBMITTED, AWARDED",
+            "SUBMITTED, NOT_AWARDED"
     })
     @DisplayName("허용전이_canTransition_true_BIZ001")
     void 허용전이_canTransition_true(BidRequestState from, BidRequestState to) {
@@ -80,7 +82,11 @@ class BidFSMServiceTest {
             "CLOSED, DOCS_PENDING",
             "DOCS_PENDING, ANALYZING",
             "CREATED, REVIEW",
-            "CREATED, SUBMITTED"
+            "CREATED, SUBMITTED",
+            "AWARDED, SUBMITTED",
+            "AWARDED, CLOSED",
+            "NOT_AWARDED, AWARDED",
+            "NOT_AWARDED, CLOSED"
     })
     @DisplayName("금지전이_canTransition_false_BIZ001")
     void 금지전이_canTransition_false(BidRequestState from, BidRequestState to) {
@@ -215,15 +221,87 @@ class BidFSMServiceTest {
 
     // 터미널 상태 검증
     @Test
-    @DisplayName("SUBMITTED_터미널상태_다음전이없음")
-    void SUBMITTED_getValidNextStates_빈목록() {
-        assertThat(fsmService.getValidNextStates(BidRequestState.SUBMITTED)).isEmpty();
+    @DisplayName("SUBMITTED_결과전이가능_AWARDED와NOT_AWARDED_CR018")
+    void SUBMITTED_getValidNextStates_결과전이() {
+        assertThat(fsmService.getValidNextStates(BidRequestState.SUBMITTED))
+                .containsExactlyInAnyOrder(BidRequestState.AWARDED, BidRequestState.NOT_AWARDED);
+    }
+
+    @Test
+    @DisplayName("AWARDED_터미널상태_다음전이없음_CR018")
+    void AWARDED_getValidNextStates_빈목록() {
+        assertThat(fsmService.getValidNextStates(BidRequestState.AWARDED)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("NOT_AWARDED_터미널상태_다음전이없음_CR018")
+    void NOT_AWARDED_getValidNextStates_빈목록() {
+        assertThat(fsmService.getValidNextStates(BidRequestState.NOT_AWARDED)).isEmpty();
     }
 
     @Test
     @DisplayName("CLOSED_터미널상태_다음전이없음")
     void CLOSED_getValidNextStates_빈목록() {
         assertThat(fsmService.getValidNextStates(BidRequestState.CLOSED)).isEmpty();
+    }
+
+    // CR-018: SUBMITTED → AWARDED 전이 → outcomeDecidedAt 기록 + 이벤트 발행
+    @Test
+    @DisplayName("SUBMITTED에서AWARDED_전이_outcomeDecidedAt기록_이벤트발행_CR018")
+    void SUBMITTED_AWARDED_전이_결과시각기록() {
+        // given
+        UUID bidRequestId = UUID.randomUUID();
+        BidRequest bidRequest = BidRequest.builder()
+                .state(BidRequestState.SUBMITTED)
+                .stateHistory(new ArrayList<>())
+                .build();
+        given(bidRequestRepository.findById(bidRequestId)).willReturn(Optional.of(bidRequest));
+        given(bidRequestRepository.save(any(BidRequest.class))).willAnswer(inv -> inv.getArgument(0));
+
+        // when
+        BidRequest result = fsmService.transition(
+                bidRequestId, BidRequestState.AWARDED, UUID.randomUUID(), "admin", "합격");
+
+        // then
+        assertThat(result.getState()).isEqualTo(BidRequestState.AWARDED);
+        assertThat(result.getOutcomeDecidedAt()).isNotNull();
+        then(eventPublisher).should().publishEvent(any(BidRequestStateChangedEvent.class));
+    }
+
+    @Test
+    @DisplayName("SUBMITTED에서NOT_AWARDED_전이_outcomeDecidedAt기록_CR018")
+    void SUBMITTED_NOT_AWARDED_전이_결과시각기록() {
+        // given
+        UUID bidRequestId = UUID.randomUUID();
+        BidRequest bidRequest = BidRequest.builder()
+                .state(BidRequestState.SUBMITTED)
+                .stateHistory(new ArrayList<>())
+                .build();
+        given(bidRequestRepository.findById(bidRequestId)).willReturn(Optional.of(bidRequest));
+        given(bidRequestRepository.save(any(BidRequest.class))).willAnswer(inv -> inv.getArgument(0));
+
+        // when
+        BidRequest result = fsmService.transition(
+                bidRequestId, BidRequestState.NOT_AWARDED, UUID.randomUUID(), "admin", "불합격");
+
+        // then
+        assertThat(result.getState()).isEqualTo(BidRequestState.NOT_AWARDED);
+        assertThat(result.getOutcomeDecidedAt()).isNotNull();
+    }
+
+    // CR-018: 고객은 결과 전이 불가 (관리자 전용)
+    @Test
+    @DisplayName("고객_AWARDED_customerTransition_거부_CR018")
+    void 고객_AWARDED_customerTransition_거부() {
+        // given — AWARDED는 고객 화이트리스트에 없어 상태 조회 전 거부
+        UUID bidRequestId = UUID.randomUUID();
+
+        // when & then
+        assertThatThrownBy(() -> fsmService.customerTransition(
+                bidRequestId, BidRequestState.AWARDED, UUID.randomUUID(), "customer", ""))
+                .isInstanceOf(com.biddingagency.domain.bid.CustomerTransitionNotAllowedException.class)
+                .hasMessageContaining("AWARDED");
+        then(bidRequestRepository).should(never()).save(any());
     }
 
     // CR-017 ②: 개별 문서 재생성

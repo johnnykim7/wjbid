@@ -26,6 +26,7 @@
 | CR-014 | 2026-05-29 | 성공 제안서 자산 작성 활용 (B작업) — 공고 IndustryType 자동분류 + 작성 P3를 성공 가이드+원본으로 대체 | BE (domain/opportunity IndustryClassifier 신설, Opportunity 엔티티, integration/samgov, domain/rfp ReferenceSampleService, domain/bid AIWorkflowService, mcp, 마이그레이션 V12) | 중규모 | 설계 먼저 + 코드 |
 | CR-019 | 2026-05-29 | 원본 공고 첨부 보강 — 수집 시 첨부 적재 + "가져와야 함" 표식 + 관리자 업로드 실제 저장 + 한글화 입력에 첨부 포함 | BE (integration/samgov, domain/opportunity OpportunityAttachment·status enum·repository, controller/admin, domain/notice, integration/llmplatform·mcp, 마이그레이션 V14) + FE (admin-console) | 중규모 | 설계 먼저 + 코드 |
 | CR-017 ① | 2026-05-29 | 제안서 생성 완료 알림 발행 연결 — MCP 문서저장 콜백에서 DocumentGeneratedEvent 발행(기존 배선만 있고 발행 0건이던 것) + 멱등키에 버전 포함 | BE (mcp/DocumentMcpTool, domain/event, domain/notification) | 소규모 | 완료 (코드+테스트, 실발송 E2E 미수행) |
+| CR-018 | 2026-05-29 | 고객 대상 진행 알림 3종(생성완료/접수/합격) + 입찰 결과 상태(AWARDED/NOT_AWARDED) 신설 | BE (domain/bid BidRequestState·BidFSMService·BidRequest, domain/notification NotificationType·NotificationEventListener, controller/admin, 마이그레이션 V16) + FE (admin-console, customer-portal) | 중규모 | 설계 먼저 + 코드 |
 
 > CR-004~008 원본: `docs/origins/원본_운영플로우_추가요구_20260516.md`
 > 위 5건은 계획 등재만 — 각 CR 상세 설계는 해당 CR 착수 세션에서 진행. 본질 검토 결과 이미 충족된 항목(Draft+승인 / Aimbase 정제 / cron 스케줄링 / 가입형 고객 / 작성의뢰 / 맞춤 제안서 생성)은 CR 불필요.
@@ -425,3 +426,29 @@
 - **규모**: 소규모(서버측 권한 가드 추가, 화면·모델 변경 없음).
 - **검증**: BE 전체 테스트 + tsc 통과.
 - **상태**: CR-017 ①②③ 모두 완료.
+
+---
+
+### CR-018: 고객 대상 진행 알림 3종 + 입찰 결과 상태 신설 (2026-05-29)
+
+- **배경**: 점검8. 사용자 기대 = 제안서 생성 완료 시 고객에 "완료" 알림, 제출(접수) 시 "접수" 알림, 합격 시 "합격" 알림(자동 아니라 관리자 수동 업데이트 전제). 실측 결과 고객 대상 알림은 OPPORTUNITY_APPROVED(신규 공고) 1종뿐이고, ①생성완료 알림은 ADMIN 대상(DocumentGenerated), ②접수 알림은 타입/리스너 없음(BidRequestStateChanged 발행되나 알림 리스너 無), ③합격은 **FSM 상태 모델 자체에 없음**(SUBMITTED가 종착).
+- **사용자 확정 결정**:
+  - 합격 상태모델 = **FSM에 AWARDED/NOT_AWARDED 추가**(별도 결과 필드 분리 안 함). 전이 = **SUBMITTED → AWARDED / NOT_AWARDED**(둘 다 종착, 재도전 전이 없음). 관리자만 전이 가능(기존 CR-017 ③ 화이트리스트로 고객 차단 유지).
+  - 알림 3종 발송 시점 = `BidRequestStateChangedEvent` 소비 — `toState=REVIEW`(생성완료), `SUBMITTED`(접수), `AWARDED`(합격). NOT_AWARDED는 MVP 무알림. (생성완료를 REVIEW 전이로 잡은 이유: GENERATING→REVIEW가 AI 문서 생성 완료를 의미하고 이미 StateChanged 이벤트로 발행됨 → DocumentGenerated의 DocumentType별 N건 발행을 고객에게 중복 전송하지 않음.)
+  - bp-notification 템플릿 = **기존 템플릿 재사용**(신규 등록 운영작업 없이 즉시 발송). 생성완료=BID_DOC_GENERATED, 접수=BID_REQUEST_ADMIN, 합격=BID_OPPORTUNITY_APPROVED 재사용(문구 부적절 가능성은 감수, 후속 전용 템플릿 등록 가능).
+  - 구현 범위 = **BE + FE 전체**.
+- **변경 사항**:
+  1. `domain/bid/entity/BidRequestState` — `AWARDED`, `NOT_AWARDED` 추가. `isTerminal()`에 둘 다 포함, `getStateDisplay()` 한글 라벨 추가.
+  2. `domain/bid/service/BidFSMService.VALID_TRANSITIONS` — `SUBMITTED → [AWARDED, NOT_AWARDED]`. `CUSTOMER_ALLOWED_TARGET_STATES`는 불변(고객은 결과 전이 불가).
+  3. `domain/bid/entity/BidRequest` — `transitionTo`에 AWARDED/NOT_AWARDED 시 `outcomeDecidedAt` 기록.
+  4. `db/migration/V16` — `bid_requests`에 `outcome_decided_at` 컬럼 추가.
+  5. `domain/notification/entity/NotificationType` — 고객 대상 `PROPOSAL_READY_CUSTOMER`/`BID_SUBMITTED_CUSTOMER`/`BID_AWARDED_CUSTOMER` 3종(기존 templateCode 재사용).
+  6. `domain/notification/service/NotificationEventListener.onBidRequestStateChanged` — toState 분기로 고객 알림 발송(member 1명). 멱등키 `BR_STATE_{id}_{toState}`.
+  7. `controller/admin/BidRequestAdminController` — 기존 `POST /{id}/transition` 으로 AWARDED/NOT_AWARDED 전이 처리(전용 API 신설 안 함, FSM 화이트리스트 재사용).
+  8. FE admin `BidRequestDetailPage` — NEXT_STATES/STATE_LABELS/STATE_COLORS에 AWARDED/NOT_AWARDED 추가 → 기존 상태 전환 모달에서 합격/불합격 선택 가능.
+  9. FE customer `types`(STATE_LABEL/STATE_BADGE) — AWARDED/NOT_AWARDED 라벨/배지 추가 → 제안서 상세·목록에 결과 표시.
+- **영향 범위**: BE (domain/bid, domain/notification, controller/admin, 마이그레이션 V16) + FE (admin-console, customer-portal) + 테스트(BidFSMServiceTest, NotificationEventListener 검증).
+- **규모**: 중규모(FSM 상태·데이터 모델·화면·알림 동시 변경 → 설계 캐스케이드 선행).
+- **설계 캐스케이드**: T1-5 FSM(BidRequest 상태 + 다이어그램 + AWARDED/NOT_AWARDED 정의), T1-6 이벤트 계약(BidRequestStateChanged 고객 소비 확장) 갱신 완료.
+- **검증**: (구현 후 기재) BE 컴파일+전체 테스트, admin/customer tsc. 실발송 E2E는 운영 BidRequest 0건이라 코드/테스트 레벨로 갈음.
+- **상태**: 설계 캐스케이드 완료, 코드 구현 진행.
