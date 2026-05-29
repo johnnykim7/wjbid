@@ -4,6 +4,7 @@ import com.biddingagency.domain.event.OpportunityApprovedEvent;
 import com.biddingagency.domain.opportunity.entity.Opportunity;
 import com.biddingagency.domain.opportunity.entity.OpportunityVisibility;
 import com.biddingagency.domain.opportunity.repository.OpportunityRepository;
+import com.biddingagency.domain.rfp.entity.IndustryType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -106,7 +107,8 @@ public class OpportunityService {
                                       String title, String type, String organizationName,
                                       LocalDateTime postedDate, LocalDateTime responseDeadline,
                                       String uiLink, String descriptionLink,
-                                      Map<String, Object> rawJson, String contentHash) {
+                                      Map<String, Object> rawJson, String contentHash,
+                                      IndustryType industryType) {
         // Check if exists
         return opportunityRepository.findByNoticeId(noticeId)
                 .map(existing -> {
@@ -114,6 +116,7 @@ public class OpportunityService {
                     if (!contentHash.equals(existing.getContentHash())) {
                         existing.updateContent(title, type, organizationName, postedDate,
                                 responseDeadline, uiLink, descriptionLink, rawJson, contentHash);
+                        existing.assignIndustryType(industryType); // CR-014: 재수집 시 재분류
                         log.info("Opportunity updated: {}", noticeId);
                     }
                     return existing;
@@ -126,6 +129,7 @@ public class OpportunityService {
                             .title(title)
                             .type(type)
                             .organizationName(organizationName)
+                            .industryType(industryType) // CR-014: 수집 시 자동분류 결과
                             .postedDate(postedDate)
                             .responseDeadline(responseDeadline)
                             .active(true)

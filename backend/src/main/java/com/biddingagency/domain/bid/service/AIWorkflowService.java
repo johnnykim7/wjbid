@@ -1,19 +1,18 @@
 package com.biddingagency.domain.bid.service;
 
 import com.biddingagency.domain.bid.entity.BidRequest;
-import com.biddingagency.domain.bid.entity.BidRequestState;
 import com.biddingagency.domain.bid.entity.ClientDocument;
-import com.biddingagency.domain.bid.repository.BidRequestRepository;
 import com.biddingagency.domain.bid.repository.ClientDocumentRepository;
-import com.biddingagency.domain.document.entity.BidDocument;
 import com.biddingagency.domain.document.entity.DocumentType;
-import com.biddingagency.domain.document.repository.BidDocumentRepository;
 import com.biddingagency.domain.opportunity.entity.AnalysisStatus;
 import com.biddingagency.domain.opportunity.entity.Opportunity;
 import com.biddingagency.domain.opportunity.entity.OpportunityRequirementItem;
 import com.biddingagency.domain.opportunity.entity.RequirementCategory;
 import com.biddingagency.domain.opportunity.repository.OpportunityAnalysisRepository;
 import com.biddingagency.domain.opportunity.repository.OpportunityRequirementItemRepository;
+import com.biddingagency.domain.rfp.entity.IndustryType;
+import com.biddingagency.domain.rfp.repository.PatternGuideRepository;
+import com.biddingagency.domain.rfp.service.ReferenceSampleService;
 import com.biddingagency.integration.ai.client.dto.*;
 import com.biddingagency.integration.llmplatform.LLMPlatformClient;
 import com.biddingagency.integration.llmplatform.LLMPlatformException;
@@ -43,8 +42,8 @@ public class AIWorkflowService {
     private final OpportunityRequirementItemRepository requirementItemRepository;
     private final OpportunityAnalysisRepository opportunityAnalysisRepository;
     private final ClientDocumentRepository clientDocumentRepository;
-    private final BidRequestRepository bidRequestRepository;
-    private final BidDocumentRepository bidDocumentRepository;
+    private final PatternGuideRepository patternGuideRepository;
+    private final ReferenceSampleService referenceSampleService;
 
     /** DOCUMENT_DRAFTING 진입 시 자동 생성할 문서 타입 목록 */
     @Value("${app.ai.auto-generate-document-types:COVER_LETTER,TECHNICAL_PROPOSAL}")
@@ -206,23 +205,19 @@ public class AIWorkflowService {
             "storageUrl", cd.getStorageUrl() != null ? cd.getStorageUrl() : ""
         )).toList());
 
-        // Pipeline 3: 과거 제출 이력 (같은 사용자의 SUBMITTED 건)
-        List<BidRequest> pastSubmissions = bidRequestRepository.findByMemberIdAndState(
-                bidRequest.getMember().getId(), BidRequestState.SUBMITTED);
-        List<Map<String, Object>> pastDocs = new ArrayList<>();
-        for (BidRequest past : pastSubmissions) {
-            if (past.getId().equals(bidRequest.getId())) continue;
-            List<BidDocument> docs = bidDocumentRepository.findByBidRequestId(past.getId());
-            for (BidDocument doc : docs) {
-                pastDocs.add(Map.of(
-                    "bidRequestId", past.getId().toString(),
-                    "opportunityTitle", past.getOpportunity().getTitle(),
-                    "documentType", doc.getDocumentType().name(),
-                    "documentId", doc.getId().toString()
-                ));
-            }
-        }
-        context.put("pastSubmissions", pastDocs);
+        // Pipeline 3 (CR-014): 성공 제안서 자산 — 신규 공고 유형으로 매칭.
+        // 기존 "사용자 본인 과거 이력"을 대체. ⓐ공고유형 가이드(어떻게 쓸지) + ⓑ성공 원본 메타(이렇게 썼다).
+        // industry_type=null(미분류)이면 빈 처리. 원본은 형식·전략 참고용, 사실 복붙 금지(BIZ-019).
+        IndustryType industryType = opp.getIndustryType();
+        Map<String, Object> successGuide = (industryType == null) ? null
+                : patternGuideRepository.findByIndustryType(industryType)
+                    .map(guide -> guide.getGuideJson())
+                    .orElse(null);
+        context.put("successGuide", successGuide);
+        context.put("referenceSamples", referenceSampleService.collect(industryType));
+        context.put("referenceUsagePolicy",
+                "성공 제안서 원본은 형식·구성·전략 참고용입니다. 회사명·실적·수치 등 사실(fact)은 "
+                + "사용자 제출 정보(clientDocuments)에서만 가져오세요. 원본의 사실을 그대로 복사하지 마세요(교차오염 방지).");
 
         return context;
     }

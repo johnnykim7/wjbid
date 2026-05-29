@@ -161,7 +161,8 @@ class OpportunityServiceTest {
         Opportunity result = opportunityService.createOrUpdate(
                 "N-DUP", "SOL-001", "Updated Title", "type", "org",
                 LocalDateTime.now(), LocalDateTime.now().plusDays(30),
-                "http://link", "http://desc", Map.of("key", "value"), "hash123" // 동일 해시
+                "http://link", "http://desc", Map.of("key", "value"), "hash123", // 동일 해시
+                null
         );
 
         // then - 제목이 변경되지 않음 (동일 해시)
@@ -187,7 +188,8 @@ class OpportunityServiceTest {
         Opportunity result = opportunityService.createOrUpdate(
                 "N-DUP2", "SOL-002", "Updated Title", "type", "org",
                 LocalDateTime.now(), LocalDateTime.now().plusDays(30),
-                "http://link", "http://desc", Map.of("key", "value"), "new_hash"
+                "http://link", "http://desc", Map.of("key", "value"), "new_hash",
+                null
         );
 
         // then - 제목이 갱신됨
@@ -208,7 +210,8 @@ class OpportunityServiceTest {
         Opportunity result = opportunityService.createOrUpdate(
                 "N-RAW", "SOL-003", "Title", "type", "org",
                 LocalDateTime.now(), LocalDateTime.now().plusDays(30),
-                "http://link", "http://desc", rawJson, "hash_raw"
+                "http://link", "http://desc", rawJson, "hash_raw",
+                null
         );
 
         // then

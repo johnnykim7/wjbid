@@ -1,6 +1,7 @@
 package com.biddingagency.domain.opportunity.entity;
 
 import com.biddingagency.common.BaseEntity;
+import com.biddingagency.domain.rfp.entity.IndustryType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -21,7 +22,8 @@ import java.util.Map;
                 @Index(name = "idx_opportunities_posted_date", columnList = "posted_date"),
                 @Index(name = "idx_opportunities_deadline", columnList = "response_deadline"),
                 @Index(name = "idx_opportunities_active", columnList = "active"),
-                @Index(name = "idx_opportunities_visibility", columnList = "visibility")
+                @Index(name = "idx_opportunities_visibility", columnList = "visibility"),
+                @Index(name = "idx_opportunities_industry_type", columnList = "industry_type")
         })
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -43,6 +45,11 @@ public class Opportunity extends BaseEntity {
 
     @Column(name = "organization_name")
     private String organizationName;
+
+    /** 사업유형 자동분류 (CR-014, BIZ-018). null = 미분류. 성공 자산 매칭 키 */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "industry_type", length = 30)
+    private IndustryType industryType;
 
     @Column(name = "posted_date")
     private LocalDateTime postedDate;
@@ -99,6 +106,11 @@ public class Opportunity extends BaseEntity {
     public void markAsInactive() {
         this.active = false;
         this.lastModifiedAt = LocalDateTime.now();
+    }
+
+    /** 자동분류 결과 반영 (CR-014). null이면 미분류로 둔다 */
+    public void assignIndustryType(IndustryType industryType) {
+        this.industryType = industryType;
     }
 
     public void approve() {

@@ -1,15 +1,11 @@
 package com.biddingagency.mcp.tool;
 
 import com.biddingagency.domain.rfp.entity.IndustryType;
-import com.biddingagency.domain.rfp.entity.RfpSample;
-import com.biddingagency.domain.rfp.entity.RfpSampleFile;
-import com.biddingagency.domain.rfp.repository.RfpSampleFileRepository;
-import com.biddingagency.domain.rfp.repository.RfpSampleRepository;
 import com.biddingagency.domain.rfp.service.PatternExtractionService;
+import com.biddingagency.domain.rfp.service.ReferenceSampleService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -25,13 +21,9 @@ import java.util.*;
 @RequiredArgsConstructor
 public class PatternGuideMcpTool {
 
-    private final RfpSampleRepository rfpSampleRepository;
-    private final RfpSampleFileRepository fileRepository;
     private final PatternExtractionService patternExtractionService;
+    private final ReferenceSampleService referenceSampleService;
     private final ObjectMapper objectMapper;
-
-    @Value("${app.self-base-url:http://59.8.160.12:8183/api}")
-    private String selfBaseUrl;
 
     // ─── 도구 정의 ────────────────────────────────────────────────────────
 
@@ -82,27 +74,7 @@ public class PatternGuideMcpTool {
             throw new IllegalArgumentException("industryType은 필수입니다");
         }
 
-        List<Map<String, Object>> samples = new ArrayList<>();
-        for (RfpSample sample : rfpSampleRepository.findByIndustryTypeAndUseForPatternTrue(industryType)) {
-            Map<String, Object> s = new LinkedHashMap<>();
-            s.put("rfpSampleId", sample.getId().toString());
-            s.put("opportunityNo", sample.getOpportunityNo());
-            s.put("outcome", sample.getOutcome().name());
-            if (sample.getCompany() != null) s.put("company", sample.getCompany());
-
-            List<Map<String, Object>> files = new ArrayList<>();
-            for (RfpSampleFile f : fileRepository.findByRfpSampleId(sample.getId())) {
-                if (f.isPws()) continue; // 공고문(PWS)은 제안서 참조 대상 아님
-                Map<String, Object> fm = new LinkedHashMap<>();
-                fm.put("fileId", f.getId().toString());
-                fm.put("fileName", f.getFileName());
-                fm.put("contentType", f.getContentType());
-                fm.put("downloadUrl", selfBaseUrl + "/mcp/rfp-files/" + f.getId() + "/download");
-                files.add(fm);
-            }
-            s.put("files", files);
-            samples.add(s);
-        }
+        List<Map<String, Object>> samples = referenceSampleService.collect(industryType);
 
         return toJson(Map.of(
             "industryType", industryType.name(),

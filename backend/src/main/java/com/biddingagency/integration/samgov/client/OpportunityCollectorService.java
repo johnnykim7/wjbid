@@ -1,6 +1,8 @@
 package com.biddingagency.integration.samgov.client;
 
+import com.biddingagency.domain.opportunity.service.IndustryClassifier;
 import com.biddingagency.domain.opportunity.service.OpportunityService;
+import com.biddingagency.domain.rfp.entity.IndustryType;
 import com.biddingagency.integration.samgov.dto.SAMOpportunityResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +35,7 @@ public class OpportunityCollectorService {
 
     private final SAMGovApiClient samGovApiClient;
     private final OpportunityService opportunityService;
+    private final IndustryClassifier industryClassifier;
 
     /**
      * Determine start date for incremental sync:
@@ -148,6 +151,10 @@ public class OpportunityCollectorService {
         // Calculate content hash for change detection
         String contentHash = calculateHash(data);
 
+        // CR-014: 사업유형 자동분류 (BIZ-018). naics/PSC/title 기반, 미매칭 시 null
+        IndustryType industryType = industryClassifier.classify(
+                data.getNaicsCode(), data.getClassificationCode(), data.getTitle());
+
         // Create or update
         opportunityService.createOrUpdate(
                 noticeId,
@@ -160,7 +167,8 @@ public class OpportunityCollectorService {
                 data.getUiLink(),
                 null, // description link
                 rawJson,
-                contentHash
+                contentHash,
+                industryType
         );
 
         return !exists; // Return true if new
