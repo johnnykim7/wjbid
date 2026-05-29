@@ -379,3 +379,35 @@
 - **참고**: 현 리스너는 관리자(ADMIN) 대상. 고객 대상 생성완료 알림은 CR-018 소관(별도).
 - **검증**: 컴파일 + 전체 테스트 BUILD SUCCESSFUL. **실발송 E2E(Aimbase MCP 콜백→이벤트→bp-notification)는 미수행** — 운영 DB에 BidRequest 0건이고 정상 신청 경로가 CR-016 공고문 흐름 선행을 요구해 런타임 검증은 갈음(코드/테스트 레벨).
 - **상태**: ① 완료 (코드+테스트). ②부분재생성·③전이권한은 미착수.
+
+---
+
+### CR-017 ②: 개별 문서 재생성 (2026-05-29)
+
+- **배경**: 점검7 ②부분/섹션 재생성. 사용자 기대 = 관리자가 생성된 제안서 검토 중 일부만 재생성("전부 재생성은 X"). 실측 결과 생성 단위 = `DocumentType` 7종 루프(`AIWorkflowService.generateDocumentsAsync`), 재생성은 `REVIEW→GENERATING` 전이로 전 문서 통째 재생성만 가능. 개별 재생성 API 없음.
+- **실측으로 좁힌 그림**: "섹션 단위 생성"은 cr013 B작업(Aimbase 섹션 WF 미생성)에 막혀 있으나, **개별 DocumentType 재생성은 기존 단위·기존 Aimbase 문서생성 WF(`014e7de2-...`, 실제 ID 연결됨)·기존 버전 구조(saveVersion/rollback/lock 완비)를 그대로 재사용**하므로 신규 엔드포인트만 추가하면 됨. `LLMPlatformClient.generateDocument`는 단일 documentType 입력 → 개별 생성이 이미 가능한 단위.
+- **사용자 확정 결정**: 재생성 단위 = **개별 DocumentType**(섹션까지 안 내려감). 허용 상태 = **REVIEW**(FSM 상태는 REVIEW 유지, 전체 GENERATING으로 안 되돌림). 결과 = **새 버전 추가**(BIZ-002 불변성 유지).
+- **변경 사항**:
+  1. `AIWorkflowService.regenerateSingleDocumentAsync(bidRequest, documentType)` — 단건 비동기 생성(기존 generateSingleDocument 재사용).
+  2. `BidFSMService.regenerateDocument(id, documentType)` — REVIEW 상태 + 미LOCKED 검증 후 트리거. FSM 상태 불변.
+  3. `BidRequestAdminController` — `POST /admin/bid-requests/{id}/documents/{documentType}/regenerate`(ADMIN).
+  4. FE admin BidRequestDetailPage — 문서 목록 각 항목 "재생성" 버튼(REVIEW + 미LOCKED일 때만 노출).
+- **CR-017 ①과의 시너지**: 재생성 결과는 Aimbase MCP save_document_version 콜백 → 새 버전 누적 → CR-017 ①의 멱등키(버전 포함) 덕분에 재생성 완료 알림도 발송됨.
+- **영향 범위**: BE (domain/bid AIWorkflowService·BidFSMService, controller/admin) + FE (admin-console client.ts·BidRequestDetailPage) + 테스트(BidFSMServiceTest 3종).
+- **규모**: 소~중규모(기존 단위/WF/버전 재사용, 신규 화면·테이블·이벤트 계약 없음).
+- **검증**: BE 전체 테스트 + admin/customer tsc 통과. 런타임 E2E는 미수행(운영 BidRequest 0건).
+- **범위 밖(별도)**: 섹션 단위 재생성(cr013 B작업, Aimbase 섹션 생성 WF 선행 필요).
+
+### CR-017 ③: 전이 권한 경계 정리 — 고객 화이트리스트 (2026-05-29)
+
+- **배경**: 점검6/7. 사용자 그림 = 관리자 검토 후 생성. 실측 결과 `/bid-requests/**`=hasAnyRole(CUSTOMER,ADMIN)(SecurityConfig:82)이고 고객 `PATCH /bid-requests/{id}/state`에 개별 권한 제약이 없어, **고객이 API 직접 호출로 GENERATING(AI 생성 트리거) 등 관리자 전용 전이를 임의로 밀 수 있는 구멍**. 고객 FE는 실제로 DOCS_RECEIVED(서류 제출 완료) 하나만 호출(ProposalDetailPage:154) — 즉 정당한 고객 전이는 그것뿐인데 BE가 다 열려 있었음.
+- **사용자 확정 결정**: 고객 직접 전이 = **DOCS_RECEIVED만**(고객 취소 CLOSED 기능은 FE에 없어 미포함, YAGNI). 그 외 전이(ANALYZING/GENERATING/REVIEW/CONFIRMED/SUBMITTED/CLOSED)는 관리자 전용 → 관리자 검토 게이트를 코드로 강제.
+- **변경 사항**:
+  1. `BidFSMService.CUSTOMER_ALLOWED_TARGET_STATES`(=DOCS_RECEIVED) 화이트리스트 + `customerTransition()` — 화이트리스트 검증 후 transition 위임. 위반 시 `CustomerTransitionNotAllowedException`.
+  2. `BidRequestController.transitionState` — `transition` → `customerTransition` 호출로 변경.
+  3. `CustomerTransitionNotAllowedException` + `CustomerTransitionExceptionHandler`(403 매핑, 특정 예외만 처리해 기존 동작 불변 — RequirementSlotsExceptionHandler 패턴 동일).
+- **FE 변경 없음**: 고객 FE는 이미 DOCS_RECEIVED만 호출 → 정상 동작. 이번 변경은 API 직접 호출 우회를 막는 서버측 방어.
+- **영향 범위**: BE (domain/bid BidFSMService·신규 예외·핸들러, controller/BidRequestController) + 테스트(BidFSMServiceTest 2종).
+- **규모**: 소규모(서버측 권한 가드 추가, 화면·모델 변경 없음).
+- **검증**: BE 전체 테스트 + tsc 통과.
+- **상태**: CR-017 ①②③ 모두 완료.

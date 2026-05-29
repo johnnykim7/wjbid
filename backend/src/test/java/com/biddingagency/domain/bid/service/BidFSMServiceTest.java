@@ -42,6 +42,8 @@ class BidFSMServiceTest {
     private ApplicationEventPublisher eventPublisher;
     @Mock
     private ComplianceService complianceService;
+    @Mock
+    private com.biddingagency.domain.document.service.BidDocumentService bidDocumentService;
 
     @InjectMocks
     private BidFSMService fsmService;
@@ -222,5 +224,117 @@ class BidFSMServiceTest {
     @DisplayName("CLOSED_터미널상태_다음전이없음")
     void CLOSED_getValidNextStates_빈목록() {
         assertThat(fsmService.getValidNextStates(BidRequestState.CLOSED)).isEmpty();
+    }
+
+    // CR-017 ②: 개별 문서 재생성
+    @Test
+    @DisplayName("REVIEW상태_미LOCKED_regenerateDocument_재생성트리거_상태유지")
+    void REVIEW_미LOCKED_regenerateDocument_트리거() {
+        // given
+        UUID bidRequestId = UUID.randomUUID();
+        BidRequest bidRequest = BidRequest.builder()
+                .state(BidRequestState.REVIEW)
+                .stateHistory(new ArrayList<>())
+                .build();
+        com.biddingagency.domain.document.entity.BidDocument doc =
+                com.biddingagency.domain.document.entity.BidDocument.builder()
+                        .documentType(com.biddingagency.domain.document.entity.DocumentType.TECHNICAL_PROPOSAL)
+                        .status(com.biddingagency.domain.document.entity.DocumentStatus.DRAFT)
+                        .build();
+        given(bidRequestRepository.findById(bidRequestId)).willReturn(Optional.of(bidRequest));
+        given(bidDocumentService.findByBidRequestAndType(
+                bidRequestId, com.biddingagency.domain.document.entity.DocumentType.TECHNICAL_PROPOSAL))
+                .willReturn(doc);
+
+        // when
+        fsmService.regenerateDocument(
+                bidRequestId, com.biddingagency.domain.document.entity.DocumentType.TECHNICAL_PROPOSAL);
+
+        // then
+        then(aiWorkflowService).should().regenerateSingleDocumentAsync(
+                bidRequest, com.biddingagency.domain.document.entity.DocumentType.TECHNICAL_PROPOSAL);
+        assertThat(bidRequest.getState()).isEqualTo(BidRequestState.REVIEW);
+    }
+
+    @Test
+    @DisplayName("REVIEW아님_regenerateDocument_IllegalStateException")
+    void REVIEW아님_regenerateDocument_예외() {
+        // given
+        UUID bidRequestId = UUID.randomUUID();
+        BidRequest bidRequest = BidRequest.builder()
+                .state(BidRequestState.GENERATING)
+                .stateHistory(new ArrayList<>())
+                .build();
+        given(bidRequestRepository.findById(bidRequestId)).willReturn(Optional.of(bidRequest));
+
+        // when & then
+        assertThatThrownBy(() -> fsmService.regenerateDocument(
+                bidRequestId, com.biddingagency.domain.document.entity.DocumentType.COVER_LETTER))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("REVIEW");
+        then(aiWorkflowService).shouldHaveNoInteractions();
+    }
+
+    @Test
+    @DisplayName("REVIEW상태_LOCKED문서_regenerateDocument_IllegalStateException")
+    void REVIEW_LOCKED_regenerateDocument_예외() {
+        // given
+        UUID bidRequestId = UUID.randomUUID();
+        BidRequest bidRequest = BidRequest.builder()
+                .state(BidRequestState.REVIEW)
+                .stateHistory(new ArrayList<>())
+                .build();
+        com.biddingagency.domain.document.entity.BidDocument lockedDoc =
+                com.biddingagency.domain.document.entity.BidDocument.builder()
+                        .documentType(com.biddingagency.domain.document.entity.DocumentType.COVER_LETTER)
+                        .status(com.biddingagency.domain.document.entity.DocumentStatus.LOCKED)
+                        .build();
+        given(bidRequestRepository.findById(bidRequestId)).willReturn(Optional.of(bidRequest));
+        given(bidDocumentService.findByBidRequestAndType(
+                bidRequestId, com.biddingagency.domain.document.entity.DocumentType.COVER_LETTER))
+                .willReturn(lockedDoc);
+
+        // when & then
+        assertThatThrownBy(() -> fsmService.regenerateDocument(
+                bidRequestId, com.biddingagency.domain.document.entity.DocumentType.COVER_LETTER))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("LOCKED");
+        then(aiWorkflowService).shouldHaveNoInteractions();
+    }
+
+    // CR-017 ③: 고객 전이 화이트리스트
+    @Test
+    @DisplayName("고객_DOCS_RECEIVED_customerTransition_허용_transition위임")
+    void 고객_DOCS_RECEIVED_customerTransition_허용() {
+        // given
+        UUID bidRequestId = UUID.randomUUID();
+        BidRequest bidRequest = BidRequest.builder()
+                .state(BidRequestState.DOCS_PENDING)
+                .stateHistory(new ArrayList<>())
+                .build();
+        given(bidRequestRepository.findById(bidRequestId)).willReturn(Optional.of(bidRequest));
+        given(bidRequestRepository.save(any(BidRequest.class))).willAnswer(inv -> inv.getArgument(0));
+        given(complianceService.getUnfulfilledBlockerSlots(bidRequestId)).willReturn(List.of());
+
+        // when
+        BidRequest result = fsmService.customerTransition(
+                bidRequestId, BidRequestState.DOCS_RECEIVED, UUID.randomUUID(), "customer", "서류 제출");
+
+        // then
+        assertThat(result.getState()).isEqualTo(BidRequestState.DOCS_RECEIVED);
+    }
+
+    @Test
+    @DisplayName("고객_GENERATING_customerTransition_거부_CustomerTransitionNotAllowed")
+    void 고객_GENERATING_customerTransition_거부() {
+        // given — 관리자 전용 전이는 화이트리스트에 없어 상태 조회 전에 거부
+        UUID bidRequestId = UUID.randomUUID();
+
+        // when & then
+        assertThatThrownBy(() -> fsmService.customerTransition(
+                bidRequestId, BidRequestState.GENERATING, UUID.randomUUID(), "customer", ""))
+                .isInstanceOf(com.biddingagency.domain.bid.CustomerTransitionNotAllowedException.class)
+                .hasMessageContaining("GENERATING");
+        then(bidRequestRepository).should(never()).save(any());
     }
 }

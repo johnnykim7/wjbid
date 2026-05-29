@@ -107,6 +107,22 @@ public class AIWorkflowService {
         log.info("[AI] 문서 생성 완료: bidRequestId={}, 생성={}종", bidRequestId, documentTypes.size());
     }
 
+    /**
+     * CR-017 ②: 개별 문서 타입 1건만 재생성 (전체 재생성과 분리).
+     * REVIEW 상태에서 관리자가 특정 문서만 다시 생성. 결과는 새 버전으로 누적(Aimbase MCP save_document_version 콜백).
+     * 상태/LOCKED 검증은 호출부(컨트롤러)에서 선행.
+     */
+    @Async("llmTaskExecutor")
+    public void regenerateSingleDocumentAsync(BidRequest bidRequest, DocumentType documentType) {
+        Opportunity opp = bidRequest.getOpportunity();
+        log.info("[AI] 개별 문서 재생성 시작: bidRequestId={}, documentType={}", bidRequest.getId(), documentType);
+
+        List<RequirementDTO> requirements = loadRequirementsAsDto(opp.getId());
+        generateSingleDocument(bidRequest, opp, documentType, requirements);
+
+        log.info("[AI] 개별 문서 재생성 완료(요청 발행): bidRequestId={}, documentType={}", bidRequest.getId(), documentType);
+    }
+
     @Transactional
     protected void generateSingleDocument(BidRequest bidRequest, Opportunity opp,
                                           DocumentType documentType, List<RequirementDTO> requirements) {

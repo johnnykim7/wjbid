@@ -46,6 +46,10 @@ export const getAdminBidRequests = (state?: string, page = 0) =>
 export const transitionBidRequest = (id: string, toState: string, notes?: string) =>
   api.post(`/admin/bid-requests/${id}/transition`, { toState, notes })
 
+// CR-017 ②: 개별 문서 재생성 (REVIEW 상태)
+export const regenerateBidDocument = (id: string, documentType: string) =>
+  api.post(`/admin/bid-requests/${id}/documents/${documentType}/regenerate`)
+
 // Collection
 export const triggerCollection = (daysBack = 30) =>
   api.post('/admin/collection/trigger', null, { params: { daysBack } })

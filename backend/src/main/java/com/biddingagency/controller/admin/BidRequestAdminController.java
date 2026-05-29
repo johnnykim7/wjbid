@@ -4,6 +4,7 @@ import com.biddingagency.domain.bid.entity.BidRequest;
 import com.biddingagency.domain.bid.entity.BidRequestState;
 import com.biddingagency.domain.bid.service.BidFSMService;
 import com.biddingagency.domain.bid.service.BidRequestService;
+import com.biddingagency.domain.document.entity.DocumentType;
 import com.biddingagency.dto.StateTransitionRequest;
 import com.biddingagency.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
@@ -105,6 +106,29 @@ public class BidRequestAdminController {
         );
 
         return ResponseEntity.ok(bidRequest);
+    }
+
+    /**
+     * CR-017 ②: 개별 문서 재생성 — REVIEW 상태에서 특정 문서 타입만 다시 생성.
+     * 전체 재생성(REVIEW→GENERATING 전이)과 달리 FSM 상태는 REVIEW 유지, 결과는 새 버전으로 누적.
+     */
+    @PostMapping("/{id}/documents/{documentType}/regenerate")
+    @Operation(summary = "Regenerate single document",
+            description = "Regenerate one document type (REVIEW state only); keeps state, adds a new version")
+    public ResponseEntity<Map<String, Object>> regenerateDocument(
+            @PathVariable UUID id,
+            @PathVariable DocumentType documentType,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        log.info("Regenerating document {} for bid request {} by {}",
+                documentType, id, userDetails.getUsername());
+
+        fsmService.regenerateDocument(id, documentType);
+
+        return ResponseEntity.accepted().body(Map.of(
+                "bidRequestId", id.toString(),
+                "documentType", documentType.name(),
+                "message", documentType.name() + " 문서 재생성을 시작했습니다. 완료 시 알림이 발송됩니다."
+        ));
     }
 
     /**

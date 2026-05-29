@@ -79,7 +79,8 @@ public class BidRequestController {
             @PathVariable UUID id,
             @Valid @RequestBody StateTransitionRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
-        BidRequest bidRequest = fsmService.transition(
+        // CR-017 ③: 고객은 허용 화이트리스트(DOCS_RECEIVED) 전이만 가능. 관리자 전용 전이는 거부.
+        BidRequest bidRequest = fsmService.customerTransition(
                 id, request.getToState(),
                 userDetails.getMember().getId(),
                 userDetails.getUsername(),

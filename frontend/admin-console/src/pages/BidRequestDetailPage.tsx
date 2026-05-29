@@ -5,6 +5,7 @@ import {
   getBidDocumentsByBidRequest,
   getClientDocuments,
   transitionBidRequest,
+  regenerateBidDocument,
 } from '../api/client'
 
 const STATE_LABELS: Record<string, string> = {
@@ -103,6 +104,7 @@ export default function BidRequestDetailPage() {
   const [selectedState, setSelectedState] = useState('')
   const [notes, setNotes] = useState('')
   const [transitioning, setTransitioning] = useState(false)
+  const [regeneratingType, setRegeneratingType] = useState<string | null>(null)
 
   const loadData = async () => {
     if (!id) return
@@ -141,6 +143,21 @@ export default function BidRequestDetailPage() {
       setError('상태 전환에 실패했습니다.')
     } finally {
       setTransitioning(false)
+    }
+  }
+
+  const handleRegenerate = async (documentType: string) => {
+    if (!id) return
+    if (!window.confirm(`${documentType} 문서를 재생성하시겠습니까? 새 버전으로 추가되며 완료 시 알림이 발송됩니다.`)) return
+    setRegeneratingType(documentType)
+    setError('')
+    try {
+      await regenerateBidDocument(id, documentType)
+      alert(`${documentType} 문서 재생성을 시작했습니다. 완료까지 잠시 걸립니다.`)
+    } catch {
+      setError('문서 재생성에 실패했습니다. REVIEW 상태에서만 가능하며, 잠긴 문서는 재생성할 수 없습니다.')
+    } finally {
+      setRegeneratingType(null)
     }
   }
 
@@ -284,12 +301,27 @@ export default function BidRequestDetailPage() {
                     <p className="text-xs text-gray-400">v{doc.currentVersionNo} | {DOC_STATUS_LABELS[doc.status] ?? doc.status}</p>
                   </div>
                 </div>
-                <Link
-                  to={`/documents/${doc.id}/edit`}
-                  className="text-xs text-secondary hover:underline font-medium"
-                >
-                  편집 <i className="fa-solid fa-pen-to-square ml-1" />
-                </Link>
+                <div className="flex items-center gap-3">
+                  {bidRequest?.state === 'REVIEW' && doc.status !== 'LOCKED' && (
+                    <button
+                      onClick={() => handleRegenerate(doc.documentType)}
+                      disabled={regeneratingType !== null}
+                      className="text-xs text-amber-600 hover:underline font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {regeneratingType === doc.documentType ? (
+                        <><i className="fa-solid fa-circle-notch fa-spin mr-1" /> 재생성 중</>
+                      ) : (
+                        <>재생성 <i className="fa-solid fa-rotate ml-1" /></>
+                      )}
+                    </button>
+                  )}
+                  <Link
+                    to={`/documents/${doc.id}/edit`}
+                    className="text-xs text-secondary hover:underline font-medium"
+                  >
+                    편집 <i className="fa-solid fa-pen-to-square ml-1" />
+                  </Link>
+                </div>
               </div>
             ))}
           </div>
