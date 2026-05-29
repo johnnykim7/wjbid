@@ -1,5 +1,6 @@
 package com.biddingagency.controller;
 
+import com.biddingagency.domain.notice.service.NoticeService;
 import com.biddingagency.domain.opportunity.dto.OpportunityDto;
 import com.biddingagency.domain.opportunity.entity.OpportunityAttachment;
 import com.biddingagency.domain.opportunity.entity.OpportunityRequirementItem;
@@ -12,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,74 +22,60 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Opportunity Controller
+ * Opportunity Controller (고객) — CR-016.
  *
- * Handles contract opportunity queries
+ * 고객 노출 단위 = 공고문(Notice, 노출된 것만). id = noticeId.
+ * 원본(Opportunity)은 관리자 선별 풀이라 고객에 직접 노출하지 않음.
  */
 @Slf4j
 @RestController
 @RequestMapping("/opportunities")
 @RequiredArgsConstructor
-@Tag(name = "Opportunities", description = "Contract opportunity management")
+@Tag(name = "Opportunities", description = "고객 공고문 조회")
 public class OpportunityController {
 
     private final OpportunityService opportunityService;
+    private final NoticeService noticeService;
     private final OpportunityRequirementItemRepository requirementItemRepository;
     private final OpportunityAttachmentRepository attachmentRepository;
 
     /**
-     * Get all active opportunities
+     * 노출 공고문 목록 (CR-016)
      */
     @GetMapping
-    @Operation(summary = "List opportunities", description = "Get all active opportunities with pagination")
+    @Operation(summary = "공고문 목록", description = "노출(VISIBLE) 공고문, 한글화 제목 포함. CR-009: 최신순 + 마감 공고 기본 제외")
     public ResponseEntity<Page<OpportunityDto>> listOpportunities(
-            @PageableDefault(size = 20) Pageable pageable) {
-        log.debug("Fetching opportunities, page: {}", pageable.getPageNumber());
-        // CR-003: 사용자에게는 VISIBLE 공고만 노출
-        Page<OpportunityDto> opportunities = opportunityService.findAllActiveVisible(pageable)
-                .map(OpportunityDto::from);
-        return ResponseEntity.ok(opportunities);
+            @RequestParam(defaultValue = "false") boolean includeExpired,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        Page<OpportunityDto> notices = noticeService.findVisible(includeExpired, pageable)
+                .map(OpportunityDto::fromNotice);
+        return ResponseEntity.ok(notices);
     }
 
     /**
-     * Get opportunity by ID
+     * 공고문 상세 (id = noticeId)
      */
     @GetMapping("/{id}")
-    @Operation(summary = "Get opportunity", description = "Get opportunity details by ID")
+    @Operation(summary = "공고문 상세", description = "노출 공고문 상세 + 한글화 결과")
     public ResponseEntity<OpportunityDto> getOpportunity(@PathVariable UUID id) {
-        log.debug("Fetching opportunity: {}", id);
-        OpportunityDto dto = OpportunityDto.from(opportunityService.findById(id));
-        return ResponseEntity.ok(dto);
+        return noticeService.findVisibleById(id)
+                .map(OpportunityDto::fromNotice)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     /**
-     * Search opportunities by keyword
+     * 공고문 검색 (한글/원문 제목)
      */
     @GetMapping("/search")
-    @Operation(summary = "Search opportunities", description = "Search opportunities by keyword in title")
+    @Operation(summary = "공고문 검색", description = "노출 공고문 제목 검색. CR-009: 최신순 + 마감 공고 기본 제외")
     public ResponseEntity<Page<OpportunityDto>> searchOpportunities(
             @RequestParam String keyword,
-            @PageableDefault(size = 20) Pageable pageable) {
-        log.debug("Searching opportunities with keyword: {}", keyword);
-        // CR-003: VISIBLE 필터
-        Page<OpportunityDto> opportunities = opportunityService.searchByKeywordVisible(keyword, pageable)
-                .map(OpportunityDto::from);
-        return ResponseEntity.ok(opportunities);
-    }
-
-    /**
-     * Search by organization
-     */
-    @GetMapping("/search/organization")
-    @Operation(summary = "Search by organization", description = "Search opportunities by organization name")
-    public ResponseEntity<Page<OpportunityDto>> searchByOrganization(
-            @RequestParam String organization,
-            @PageableDefault(size = 20) Pageable pageable) {
-        log.debug("Searching opportunities for organization: {}", organization);
-        // CR-003: VISIBLE 필터
-        Page<OpportunityDto> opportunities = opportunityService.searchByOrganizationVisible(organization, pageable)
-                .map(OpportunityDto::from);
-        return ResponseEntity.ok(opportunities);
+            @RequestParam(defaultValue = "false") boolean includeExpired,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        Page<OpportunityDto> notices = noticeService.searchVisible(keyword, includeExpired, pageable)
+                .map(OpportunityDto::fromNotice);
+        return ResponseEntity.ok(notices);
     }
 
     /**
@@ -98,8 +86,8 @@ public class OpportunityController {
     public ResponseEntity<List<OpportunityDto>> nearDeadline(
             @RequestParam(defaultValue = "7") int days) {
         log.debug("Fetching opportunities near deadline (within {} days)", days);
-        List<OpportunityDto> opportunities = opportunityService.findNearDeadline(days)
-                .stream().map(OpportunityDto::from).toList();
+        List<OpportunityDto> opportunities = noticeService.findVisibleNearDeadline(days)
+                .stream().map(OpportunityDto::fromNotice).toList();
         return ResponseEntity.ok(opportunities);
     }
 
@@ -146,8 +134,8 @@ public class OpportunityController {
     public ResponseEntity<List<OpportunityDto>> recentlyPosted(
             @RequestParam(defaultValue = "30") int days) {
         log.debug("Fetching opportunities posted in last {} days", days);
-        List<OpportunityDto> opportunities = opportunityService.findRecentlyPosted(days)
-                .stream().map(OpportunityDto::from).toList();
+        List<OpportunityDto> opportunities = noticeService.findVisibleRecentlyPosted(days)
+                .stream().map(OpportunityDto::fromNotice).toList();
         return ResponseEntity.ok(opportunities);
     }
 }

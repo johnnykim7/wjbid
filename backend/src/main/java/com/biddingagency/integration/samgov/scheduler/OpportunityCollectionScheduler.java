@@ -27,10 +27,6 @@ public class OpportunityCollectionScheduler {
     // Keyword groups as defined in the plan
     private static final List<String> MAIN_KEYWORDS = List.of("411th csb");
     private static final List<String> KOREA_KEYWORDS = List.of("korea");
-    private static final List<String> USFK_LOCATION_KEYWORDS = List.of(
-            "Camp Casey", "Osan Air Base", "Kunsan Air Base",
-            "Camp Humphreys", "Camp Henry", "USAG Daegu"
-    );
 
     /**
      * Scheduled collection - runs at 06:00, 12:00, 18:00, 23:00 KST
@@ -42,7 +38,9 @@ public class OpportunityCollectionScheduler {
                 LocalDateTime.now());
 
         int totalCollected = 0;
-        int totalDuplicates = 0;
+        int totalTargetNew = 0;
+        int totalChanged = 0;
+        int totalUnchanged = 0;
         int totalErrors = 0;
 
         // Collect last 30 days
@@ -54,7 +52,9 @@ public class OpportunityCollectionScheduler {
             OpportunityCollectorService.CollectionResult result =
                     collectorService.collectByKeyword(keyword, daysBack);
             totalCollected += result.collected();
-            totalDuplicates += result.duplicates();
+            totalTargetNew += result.targetNew();
+            totalChanged += result.changed();
+            totalUnchanged += result.unchanged();
             totalErrors += result.errors();
         }
 
@@ -64,26 +64,19 @@ public class OpportunityCollectionScheduler {
             OpportunityCollectorService.CollectionResult result =
                     collectorService.collectByKeyword(keyword, daysBack);
             totalCollected += result.collected();
-            totalDuplicates += result.duplicates();
+            totalTargetNew += result.targetNew();
+            totalChanged += result.changed();
+            totalUnchanged += result.unchanged();
             totalErrors += result.errors();
         }
 
-        // USFK Location Keywords
-        log.info("Collecting USFK_LOCATION keywords...");
-        for (String keyword : USFK_LOCATION_KEYWORDS) {
-            OpportunityCollectorService.CollectionResult result =
-                    collectorService.collectByKeyword(keyword, daysBack);
-            totalCollected += result.collected();
-            totalDuplicates += result.duplicates();
-            totalErrors += result.errors();
-        }
-
-        int totalFetched = totalCollected + totalDuplicates;
-        log.info("====== Collection completed: {} new, {} duplicates, {} errors ======",
-                totalCollected, totalDuplicates, totalErrors);
+        // CR-009: totalFetched = 신규 + 변경 + 무변경, updatedCount = 실제 변경(CHANGED)만
+        int totalFetched = totalCollected + totalChanged + totalUnchanged;
+        log.info("====== Collection completed: {} new ({} target), {} changed, {} unchanged, {} errors ======",
+                totalCollected, totalTargetNew, totalChanged, totalUnchanged, totalErrors);
 
         eventPublisher.publishEvent(new OpportunitiesCollectedEvent(
-                null, totalCollected, totalDuplicates, totalFetched));
+                null, totalCollected, totalTargetNew, totalChanged, totalFetched));
 
         if (totalErrors > 0) {
             log.error("Collection completed with {} errors - manual review needed", totalErrors);
@@ -97,14 +90,16 @@ public class OpportunityCollectionScheduler {
         log.info("Manual collection triggered for last {} days", daysBack);
 
         int totalCollected = 0;
-        int totalDuplicates = 0;
+        int totalChanged = 0;
+        int totalUnchanged = 0;
         int totalErrors = 0;
 
         for (String keyword : MAIN_KEYWORDS) {
             OpportunityCollectorService.CollectionResult result =
                     collectorService.collectByKeyword(keyword, daysBack);
             totalCollected += result.collected();
-            totalDuplicates += result.duplicates();
+            totalChanged += result.changed();
+            totalUnchanged += result.unchanged();
             totalErrors += result.errors();
         }
 
@@ -112,19 +107,12 @@ public class OpportunityCollectionScheduler {
             OpportunityCollectorService.CollectionResult result =
                     collectorService.collectByKeyword(keyword, daysBack);
             totalCollected += result.collected();
-            totalDuplicates += result.duplicates();
+            totalChanged += result.changed();
+            totalUnchanged += result.unchanged();
             totalErrors += result.errors();
         }
 
-        for (String keyword : USFK_LOCATION_KEYWORDS) {
-            OpportunityCollectorService.CollectionResult result =
-                    collectorService.collectByKeyword(keyword, daysBack);
-            totalCollected += result.collected();
-            totalDuplicates += result.duplicates();
-            totalErrors += result.errors();
-        }
-
-        log.info("Manual collection completed: {} new, {} duplicates, {} errors",
-                totalCollected, totalDuplicates, totalErrors);
+        log.info("Manual collection completed: {} new, {} changed, {} unchanged, {} errors",
+                totalCollected, totalChanged, totalUnchanged, totalErrors);
     }
 }

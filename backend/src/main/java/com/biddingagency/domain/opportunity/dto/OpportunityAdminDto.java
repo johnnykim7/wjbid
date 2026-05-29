@@ -1,16 +1,16 @@
 package com.biddingagency.domain.opportunity.dto;
 
-import com.biddingagency.domain.opportunity.entity.AnalysisStatus;
 import com.biddingagency.domain.opportunity.entity.Opportunity;
-import com.biddingagency.domain.opportunity.entity.OpportunityAnalysis;
-import com.biddingagency.domain.opportunity.entity.OpportunityVisibility;
 import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDateTime;
-import java.util.Map;
 import java.util.UUID;
 
+/**
+ * 관리자 원본 공고(Opportunity) DTO — CR-016.
+ * 원본은 선별 풀. 노출/분석은 공고문(Notice)으로 이동 → noticeCount(딸린 공고문 수)만 표시.
+ */
 @Data
 @Builder
 public class OpportunityAdminDto {
@@ -23,19 +23,13 @@ public class OpportunityAdminDto {
     private LocalDateTime postedDate;
     private LocalDateTime responseDeadline;
     private Boolean active;
-    private OpportunityVisibility visibility;
     private String uiLink;
     private long attachmentCount;
-    private AnalysisStatus analysisStatus;
-    private LocalDateTime analyzedAt;
+    /** 이 원본에서 생성된 공고문 수 (0이면 아직 미선별) */
+    private int noticeCount;
 
-    // 분석 결과 (상세 조회 시만)
-    private Map<String, Object> summaryJson;
-    private Map<String, Object> documentFormatsJson;
-    private Map<String, Object> requiredDocumentsJson;
-
-    public static OpportunityAdminDto from(Opportunity opp, long attachmentCount, OpportunityAnalysis analysis) {
-        OpportunityAdminDtoBuilder builder = OpportunityAdminDto.builder()
+    public static OpportunityAdminDto from(Opportunity opp, long attachmentCount, int noticeCount) {
+        return OpportunityAdminDto.builder()
                 .id(opp.getId())
                 .noticeId(opp.getNoticeId())
                 .solicitationNumber(opp.getSolicitationNumber())
@@ -45,36 +39,22 @@ public class OpportunityAdminDto {
                 .postedDate(opp.getPostedDate())
                 .responseDeadline(opp.getResponseDeadline())
                 .active(opp.getActive())
-                .visibility(opp.getVisibility())
                 .uiLink(opp.getUiLink())
-                .attachmentCount(attachmentCount);
-
-        if (analysis != null) {
-            builder.analysisStatus(analysis.getStatus())
-                    .analyzedAt(analysis.getAnalyzedAt())
-                    .summaryJson(analysis.getSummaryJson())
-                    .documentFormatsJson(analysis.getDocumentFormatsJson())
-                    .requiredDocumentsJson(analysis.getRequiredDocumentsJson());
-        }
-
-        return builder.build();
+                .attachmentCount(attachmentCount)
+                .noticeCount(noticeCount)
+                .build();
     }
 
-    public static OpportunityAdminDto fromList(Opportunity opp, long attachmentCount, OpportunityAnalysis analysis) {
-        OpportunityAdminDtoBuilder builder = OpportunityAdminDto.builder()
+    public static OpportunityAdminDto fromList(Opportunity opp, long attachmentCount, int noticeCount) {
+        return OpportunityAdminDto.builder()
                 .id(opp.getId())
                 .noticeId(opp.getNoticeId())
                 .solicitationNumber(opp.getSolicitationNumber())
                 .title(opp.getTitle())
                 .organizationName(opp.getOrganizationName())
                 .responseDeadline(opp.getResponseDeadline())
-                .visibility(opp.getVisibility())
-                .attachmentCount(attachmentCount);
-
-        if (analysis != null) {
-            builder.analysisStatus(analysis.getStatus());
-        }
-
-        return builder.build();
+                .attachmentCount(attachmentCount)
+                .noticeCount(noticeCount)
+                .build();
     }
 }

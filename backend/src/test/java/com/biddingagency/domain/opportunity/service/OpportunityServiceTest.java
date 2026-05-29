@@ -158,15 +158,16 @@ class OpportunityServiceTest {
         given(opportunityRepository.findByNoticeId("N-DUP")).willReturn(Optional.of(existing));
 
         // when
-        Opportunity result = opportunityService.createOrUpdate(
+        OpportunityService.UpsertOutcome outcome = opportunityService.createOrUpdate(
                 "N-DUP", "SOL-001", "Updated Title", "type", "org",
                 LocalDateTime.now(), LocalDateTime.now().plusDays(30),
                 "http://link", "http://desc", Map.of("key", "value"), "hash123", // 동일 해시
                 null
         );
 
-        // then - 제목이 변경되지 않음 (동일 해시)
-        assertThat(result.getTitle()).isEqualTo("Original Title");
+        // then - 제목이 변경되지 않음 (동일 해시) + CR-009: UNCHANGED 분류
+        assertThat(outcome.opportunity().getTitle()).isEqualTo("Original Title");
+        assertThat(outcome.result()).isEqualTo(OpportunityService.UpsertResult.UNCHANGED);
     }
 
     // TC-OPP-002 변형: contentHash 다르면 갱신
@@ -185,16 +186,17 @@ class OpportunityServiceTest {
         given(opportunityRepository.findByNoticeId("N-DUP2")).willReturn(Optional.of(existing));
 
         // when
-        Opportunity result = opportunityService.createOrUpdate(
+        OpportunityService.UpsertOutcome outcome = opportunityService.createOrUpdate(
                 "N-DUP2", "SOL-002", "Updated Title", "type", "org",
                 LocalDateTime.now(), LocalDateTime.now().plusDays(30),
                 "http://link", "http://desc", Map.of("key", "value"), "new_hash",
                 null
         );
 
-        // then - 제목이 갱신됨
-        assertThat(result.getTitle()).isEqualTo("Updated Title");
-        assertThat(result.getContentHash()).isEqualTo("new_hash");
+        // then - 제목이 갱신됨 + CR-009: CHANGED 분류
+        assertThat(outcome.opportunity().getTitle()).isEqualTo("Updated Title");
+        assertThat(outcome.opportunity().getContentHash()).isEqualTo("new_hash");
+        assertThat(outcome.result()).isEqualTo(OpportunityService.UpsertResult.CHANGED);
     }
 
     // TC-OPP-003: 원본 JSON 보존
@@ -207,15 +209,16 @@ class OpportunityServiceTest {
         given(opportunityRepository.save(any(Opportunity.class))).willAnswer(inv -> inv.getArgument(0));
 
         // when
-        Opportunity result = opportunityService.createOrUpdate(
+        OpportunityService.UpsertOutcome outcome = opportunityService.createOrUpdate(
                 "N-RAW", "SOL-003", "Title", "type", "org",
                 LocalDateTime.now(), LocalDateTime.now().plusDays(30),
                 "http://link", "http://desc", rawJson, "hash_raw",
                 null
         );
 
-        // then
-        assertThat(result.getRawJson()).isEqualTo(rawJson);
-        assertThat(result.getRawJson().get("notice_id")).isEqualTo("N-RAW");
+        // then - rawJson 보존(BIZ-004) + CR-009: NEW 분류
+        assertThat(outcome.opportunity().getRawJson()).isEqualTo(rawJson);
+        assertThat(outcome.opportunity().getRawJson().get("notice_id")).isEqualTo("N-RAW");
+        assertThat(outcome.result()).isEqualTo(OpportunityService.UpsertResult.NEW);
     }
 }

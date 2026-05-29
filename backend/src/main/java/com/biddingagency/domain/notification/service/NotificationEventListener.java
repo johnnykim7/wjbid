@@ -55,13 +55,17 @@ public class NotificationEventListener {
     @Async
     @EventListener
     public void onOpportunitiesCollected(OpportunitiesCollectedEvent event) {
-        if (event.getNewCount() == 0) {
-            log.info("Skipping COLLECTION_COMPLETE notification: 0 new opportunities (duplicates={})",
-                    event.getUpdatedCount());
+        // CR-015: 시설관리 타깃(IndustryClassifier 매칭) 신규가 0이면 메일 스킵.
+        // q=korea 전문검색이 끌어오는 무관 부품조달만 신규일 때 노이즈 메일을 막는다.
+        if (event.getTargetNewCount() == 0) {
+            log.info("Skipping COLLECTION_COMPLETE notification: 0 target new opportunities "
+                            + "(totalNew={}, changed={})",
+                    event.getNewCount(), event.getUpdatedCount());
             return;
         }
         Map<String, Object> vars = Map.of(
-                "newCount", String.valueOf(event.getNewCount()),
+                "newCount", String.valueOf(event.getTargetNewCount()),
+                "totalNewCount", String.valueOf(event.getNewCount()),
                 "updateCount", String.valueOf(event.getUpdatedCount()));
         for (Member admin : memberRepository.findByRole(Member.Role.ADMIN)) {
             notificationService.sendNotification(

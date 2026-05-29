@@ -2,8 +2,9 @@ package com.biddingagency.domain.bid.service;
 
 import com.biddingagency.domain.bid.entity.BidRequest;
 import com.biddingagency.domain.bid.repository.ClientDocumentRepository;
+import com.biddingagency.domain.notice.repository.NoticeRepository;
 import com.biddingagency.domain.opportunity.entity.Opportunity;
-import com.biddingagency.domain.opportunity.repository.OpportunityAnalysisRepository;
+import com.biddingagency.domain.opportunity.entity.OpportunityVisibility;
 import com.biddingagency.domain.opportunity.repository.OpportunityRequirementItemRepository;
 import com.biddingagency.domain.rfp.entity.IndustryType;
 import com.biddingagency.domain.rfp.entity.PatternGuide;
@@ -36,7 +37,7 @@ class AIWorkflowServiceTest {
 
     @Mock private LLMPlatformClient llmPlatformClient;
     @Mock private OpportunityRequirementItemRepository requirementItemRepository;
-    @Mock private OpportunityAnalysisRepository opportunityAnalysisRepository;
+    @Mock private NoticeRepository noticeRepository;
     @Mock private ClientDocumentRepository clientDocumentRepository;
     @Mock private PatternGuideRepository patternGuideRepository;
     @Mock private ReferenceSampleService referenceSampleService;
@@ -61,8 +62,9 @@ class AIWorkflowServiceTest {
 
     @SuppressWarnings("unchecked")
     private Map<String, Object> invokeContext(BidRequest br, Opportunity opp) {
-        // P1/P2 공통 stub (조건분기 없음 — 항상 조회)
-        lenient().when(opportunityAnalysisRepository.findByOpportunityId(opp.getId()))
+        // P1/P2 공통 stub (조건분기 없음 — 항상 조회). CR-016: 노출 공고문 없음 가정
+        lenient().when(noticeRepository.findFirstByOpportunityIdAndVisibilityOrderByAnalyzedAtDesc(
+                        opp.getId(), OpportunityVisibility.VISIBLE))
                 .thenReturn(Optional.empty());
         lenient().when(clientDocumentRepository.findByBidRequestId(br.getId()))
                 .thenReturn(List.of());

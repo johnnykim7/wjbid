@@ -5,6 +5,8 @@ import com.biddingagency.domain.bid.entity.BidRequest;
 import com.biddingagency.domain.bid.service.BidFSMService;
 import com.biddingagency.domain.bid.service.BidRequestService;
 import com.biddingagency.domain.document.service.DocumentVersionService;
+import com.biddingagency.domain.notice.entity.Notice;
+import com.biddingagency.domain.notice.service.NoticeService;
 import com.biddingagency.dto.BidRequestCreateRequest;
 import com.biddingagency.dto.StateTransitionRequest;
 import com.biddingagency.security.CustomUserDetails;
@@ -34,15 +36,19 @@ public class BidRequestController {
     private final BidRequestService bidRequestService;
     private final BidFSMService fsmService;
     private final DocumentVersionService documentVersionService;
+    private final NoticeService noticeService;
 
     @PostMapping
-    @Operation(summary = "입찰 요청 생성")
+    @Operation(summary = "입찰 요청 생성", description = "고객은 공고문(noticeId)으로 신청 → 원본 opportunity 기준 BidRequest 생성")
     public ResponseEntity<BidRequestDto> createBidRequest(
             @Valid @RequestBody BidRequestCreateRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
+        // CR-016: 고객이 보유한 id는 noticeId. 신청은 원본 opportunity 단위 → 변환.
+        Notice notice = noticeService.findById(request.getOpportunityId());
+        UUID opportunityId = notice.getOpportunity().getId();
         BidRequest bidRequest = bidRequestService.createBidRequest(
                 userDetails.getMember().getId(),
-                request.getOpportunityId(),
+                opportunityId,
                 userDetails.getMember().getId(),
                 userDetails.getUsername()
         );

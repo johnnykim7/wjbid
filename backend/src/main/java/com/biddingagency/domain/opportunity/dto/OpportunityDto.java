@@ -1,5 +1,6 @@
 package com.biddingagency.domain.opportunity.dto;
 
+import com.biddingagency.domain.notice.entity.Notice;
 import com.biddingagency.domain.opportunity.entity.Opportunity;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
@@ -28,13 +29,14 @@ public record OpportunityDto(
         String status,              // "active" or "closed"
         String type,
         String uiLink,
-        List<String> resourceLinks  // attachment URLs from SAM.gov
+        List<String> resourceLinks, // attachment URLs from SAM.gov
+        AnalysisResultDto analysis  // AI 사전 분석 결과 (상세 조회 시만)
 ) {
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
+    /** 원본 기준 (near-deadline/recent 등 — 노출 단위가 원본일 때). id=opportunityId. */
     public static OpportunityDto from(Opportunity opp) {
         Map<String, Object> raw = opp.getRawJson();
-
         return new OpportunityDto(
                 opp.getId() != null ? opp.getId().toString() : null,
                 opp.getSolicitationNumber(),
@@ -49,7 +51,37 @@ public record OpportunityDto(
                 Boolean.TRUE.equals(opp.getActive()) ? "active" : "closed",
                 opp.getType(),
                 opp.getUiLink(),
-                getStringList(raw, "resourceLinks")
+                getStringList(raw, "resourceLinks"),
+                null
+        );
+    }
+
+    /**
+     * CR-016: 고객 노출 단위 = 공고문(Notice). id=noticeId, title=한글화 제목(없으면 원문),
+     * analysis=Notice 한글화 결과, 나머지 메타는 원본(Opportunity)에서.
+     */
+    public static OpportunityDto fromNotice(Notice notice) {
+        Opportunity opp = notice.getOpportunity();
+        Map<String, Object> raw = opp.getRawJson();
+        String displayTitle = notice.getKoreanTitle() != null && !notice.getKoreanTitle().isBlank()
+                ? notice.getKoreanTitle() : opp.getTitle();
+
+        return new OpportunityDto(
+                notice.getId().toString(),
+                opp.getSolicitationNumber(),
+                displayTitle,
+                opp.getOrganizationName(),
+                getString(raw, "naicsCode"),
+                getString(raw, "setAside"),
+                formatDate(opp.getResponseDeadline()),
+                formatDate(opp.getPostedDate()),
+                getString(raw, "placeOfPerformance"),
+                getString(raw, "description"),
+                Boolean.TRUE.equals(opp.getActive()) ? "active" : "closed",
+                opp.getType(),
+                opp.getUiLink(),
+                getStringList(raw, "resourceLinks"),
+                AnalysisResultDto.fromNotice(notice)
         );
     }
 

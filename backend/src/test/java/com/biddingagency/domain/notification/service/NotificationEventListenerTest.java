@@ -53,7 +53,7 @@ class NotificationEventListenerTest {
         Member admin = createAdmin();
         given(memberRepository.findByRole(Member.Role.ADMIN)).willReturn(List.of(admin));
 
-        OpportunitiesCollectedEvent event = new OpportunitiesCollectedEvent(null, 5, 2, 7);
+        OpportunitiesCollectedEvent event = new OpportunitiesCollectedEvent(null, 5, 5, 2, 7);
 
         // when
         listener.onOpportunitiesCollected(event);
@@ -70,10 +70,10 @@ class NotificationEventListenerTest {
     }
 
     @Test
-    @DisplayName("공고수집완료_신규0건_알림미발송")
-    void onOpportunitiesCollected_신규0건_스킵() {
-        // given: SAM.gov 조회 결과가 전부 DB에 이미 있는 경우 (신규 0건, 중복만 존재)
-        OpportunitiesCollectedEvent event = new OpportunitiesCollectedEvent(null, 0, 12, 12);
+    @DisplayName("공고수집완료_타깃신규0건_알림미발송")
+    void onOpportunitiesCollected_타깃신규0건_스킵() {
+        // given (CR-015): 전체 신규는 12건이지만 전부 시설관리 무관 부품조달(타깃 신규 0)인 경우 — 노이즈 메일 차단
+        OpportunitiesCollectedEvent event = new OpportunitiesCollectedEvent(null, 12, 0, 5, 17);
 
         // when
         listener.onOpportunitiesCollected(event);

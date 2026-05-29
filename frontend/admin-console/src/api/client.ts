@@ -109,27 +109,16 @@ export const getClientDocuments = (bidRequestId: string) =>
 export const getCollectionRuns = (page = 0) =>
   api.get('/admin/collection/runs', { params: { page, size: 20 } })
 
-// Opportunity Admin (CR-003)
+// 원본 공고 Admin — 선별 풀 (CR-016)
 export const getAdminOpportunities = (page = 0) =>
   api.get('/admin/opportunities', { params: { page, size: 20 } })
 
 export const getAdminOpportunityDetail = (id: string) =>
   api.get(`/admin/opportunities/${id}`)
 
-export const getOpportunityAnalysis = (id: string) =>
-  api.get(`/admin/opportunities/${id}/analysis`)
-
-export const triggerOpportunityAnalysis = (id: string) =>
-  api.post(`/admin/opportunities/${id}/analyze`)
-
-export const approveOpportunity = (id: string) =>
-  api.post(`/admin/opportunities/${id}/approve`)
-
-export const hideOpportunity = (id: string) =>
-  api.post(`/admin/opportunities/${id}/hide`)
-
-export const updateOpportunityAnalysis = (id: string, data: Record<string, unknown>) =>
-  api.patch(`/admin/opportunities/${id}/analysis`, data)
+// 게이트①: 공고문 만들기 (원본 선별 → 한글화 트리거)
+export const createNotice = (opportunityId: string) =>
+  api.post(`/admin/opportunities/${opportunityId}/create-notice`)
 
 export const uploadOpportunityAttachment = (id: string, file: File) => {
   const formData = new FormData()
@@ -138,6 +127,26 @@ export const uploadOpportunityAttachment = (id: string, file: File) => {
     headers: { 'Content-Type': 'multipart/form-data' },
   })
 }
+
+// 공고문(Notice) Admin (CR-016)
+export const getAdminNotices = (page = 0) =>
+  api.get('/admin/notices', { params: { page, size: 20 } })
+
+export const getAdminNoticeDetail = (id: string) =>
+  api.get(`/admin/notices/${id}`)
+
+// 게이트②: 검수 후 노출/비노출
+export const publishNotice = (id: string) =>
+  api.post(`/admin/notices/${id}/publish`)
+
+export const hideNotice = (id: string) =>
+  api.post(`/admin/notices/${id}/hide`)
+
+export const regenerateNotice = (id: string) =>
+  api.post(`/admin/notices/${id}/regenerate`)
+
+export const updateNoticeResult = (id: string, data: Record<string, unknown>) =>
+  api.patch(`/admin/notices/${id}`, data)
 
 // 성공 제안서 패턴 (CR-013)
 export const getRfpSamples = (page = 0) =>

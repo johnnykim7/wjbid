@@ -10,6 +10,8 @@ import DocumentEditPage from './pages/DocumentEditPage'
 import BidRequestDetailPage from './pages/BidRequestDetailPage'
 import OpportunityAdminPage from './pages/OpportunityAdminPage'
 import OpportunityAdminDetailPage from './pages/OpportunityAdminDetailPage'
+import NoticeAdminPage from './pages/NoticeAdminPage'
+import NoticeAdminDetailPage from './pages/NoticeAdminDetailPage'
 import RfpSamplePage from './pages/RfpSamplePage'
 import RfpSampleDetailPage from './pages/RfpSampleDetailPage'
 
@@ -39,6 +41,8 @@ export default function App() {
           <Route path="bid-requests/:id" element={<BidRequestDetailPage />} />
           <Route path="opportunities" element={<OpportunityAdminPage />} />
           <Route path="opportunities/:id" element={<OpportunityAdminDetailPage />} />
+          <Route path="notices" element={<NoticeAdminPage />} />
+          <Route path="notices/:id" element={<NoticeAdminDetailPage />} />
           <Route path="collection" element={<CollectionPage />} />
           <Route path="templates" element={<DocumentTemplatePage />} />
           <Route path="rfp-samples" element={<RfpSamplePage />} />

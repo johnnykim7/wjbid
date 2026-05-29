@@ -5,8 +5,8 @@ import com.biddingagency.domain.bid.entity.BidRequestState;
 import com.biddingagency.domain.bid.repository.BidRequestRepository;
 import com.biddingagency.domain.document.entity.BidDocument;
 import com.biddingagency.domain.document.repository.BidDocumentRepository;
-import com.biddingagency.domain.opportunity.entity.OpportunityAnalysis;
-import com.biddingagency.domain.opportunity.service.OpportunityAnalysisService;
+import com.biddingagency.domain.notice.entity.Notice;
+import com.biddingagency.domain.notice.service.NoticeService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,14 +16,15 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 
 /**
- * MCP 도구: 공고 사전 분석 + 과거 제출 이력 (CR-003)
+ * MCP 도구: 공고문(Notice) 한글화/요약 결과 저장·조회 + 과거 제출 이력 (CR-003, CR-016).
+ * 한글화 결과는 noticeId 기준으로 저장 (원본 1:N 공고문).
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class OpportunityAnalysisMcpTool {
 
-    private final OpportunityAnalysisService analysisService;
+    private final NoticeService noticeService;
     private final BidRequestRepository bidRequestRepository;
     private final BidDocumentRepository bidDocumentRepository;
     private final ObjectMapper objectMapper;
@@ -33,28 +34,55 @@ public class OpportunityAnalysisMcpTool {
     public static final List<Map<String, Object>> TOOL_DEFINITIONS = List.of(
         Map.of(
             "name", "get_opportunity_analysis",
-            "description", "공고 사전 분석 결과를 조회합니다 (요약, 문서양식, 필요서류, LLM 프롬프트 프리셋).",
+            "description", "공고문(Notice) 한글화/요약 결과를 조회합니다 (요약, 문서양식, 필요서류, LLM 프롬프트 프리셋).",
             "inputSchema", Map.of(
                 "type", "object",
                 "properties", Map.of(
-                    "opportunityId", Map.of("type", "string", "description", "공고 UUID")
+                    "noticeId", Map.of("type", "string", "description", "공고문 UUID")
                 ),
-                "required", List.of("opportunityId")
+                "required", List.of("noticeId")
             )
         ),
         Map.of(
             "name", "save_opportunity_analysis",
-            "description", "공고 사전 분석 결과를 저장합니다 (Aimbase 워크플로우 콜백용).",
+            "description", "공고문(Notice) 한글화/요약 결과를 저장합니다 (Aimbase 워크플로우 콜백용).",
             "inputSchema", Map.of(
                 "type", "object",
                 "properties", Map.of(
-                    "opportunityId", Map.of("type", "string", "description", "공고 UUID"),
-                    "summary", Map.of("type", "object", "description", "공고 요약본"),
-                    "documentFormats", Map.of("type", "object", "description", "문서 양식 정보"),
-                    "requiredDocuments", Map.of("type", "object", "description", "필요 서류 목록"),
-                    "llmPromptPreset", Map.of("type", "object", "description", "LLM 프롬프트 프리셋")
+                    "noticeId", Map.of("type", "string", "description", "공고문 UUID"),
+                    "koreanTitle", Map.of("type", "string", "description", "한글화된 공고 제목"),
+                    "summary", Map.ofEntries(
+                        Map.entry("type", "object"),
+                        Map.entry("description", "공고 요약본"),
+                        Map.entry("properties", Map.of(
+                            "overview", Map.of("type", "string", "description", "공고 핵심 요약 (2-3문장)"),
+                            "scope", Map.of("type", "string", "description", "작업 범위 (Scope of Work)"),
+                            "eligibility", Map.of("type", "string", "description", "참여 자격 요건"),
+                            "evaluationCriteria", Map.of("type", "string", "description", "평가 기준"),
+                            "keyDates", Map.of("type", "array", "description", "주요 일정 [{label, date, note}]"),
+                            "budgetInfo", Map.of("type", "string", "description", "예산 정보"),
+                            "specialNotes", Map.of("type", "array", "description", "특이사항 목록")
+                        ))
+                    ),
+                    "documentFormats", Map.ofEntries(
+                        Map.entry("type", "object"),
+                        Map.entry("description", "문서 양식 정보"),
+                        Map.entry("properties", Map.of(
+                            "generalInstructions", Map.of("type", "string", "description", "전반적 양식 안내"),
+                            "formats", Map.of("type", "array", "description", "섹션별 양식 [{section, description, pageLimit, fileFormat, fontRequirements}]"),
+                            "submissionMethod", Map.of("type", "string", "description", "제출 방법")
+                        ))
+                    ),
+                    "requiredDocuments", Map.ofEntries(
+                        Map.entry("type", "object"),
+                        Map.entry("description", "필요 서류 목록"),
+                        Map.entry("properties", Map.of(
+                            "documents", Map.of("type", "array", "description", "서류 목록 [{name, description, mandatory, format, pageLimit, notes}]")
+                        ))
+                    ),
+                    "llmPromptPreset", Map.of("type", "object", "description", "LLM 프롬프트 프리셋 (내부용)")
                 ),
-                "required", List.of("opportunityId")
+                "required", List.of("noticeId")
             )
         ),
         Map.of(
@@ -74,23 +102,24 @@ public class OpportunityAnalysisMcpTool {
     // ─── 도구 실행 ────────────────────────────────────────────────────────
 
     public String getOpportunityAnalysis(Map<String, Object> args) {
-        UUID opportunityId = UUID.fromString((String) args.get("opportunityId"));
+        UUID noticeId = UUID.fromString((String) args.get("noticeId"));
 
-        OpportunityAnalysis analysis = analysisService.findByOpportunityId(opportunityId)
-                .orElse(null);
-
-        if (analysis == null) {
-            return toJson(Map.of("opportunityId", opportunityId.toString(), "status", "NOT_FOUND"));
+        Notice notice;
+        try {
+            notice = noticeService.findById(noticeId);
+        } catch (IllegalArgumentException e) {
+            return toJson(Map.of("noticeId", noticeId.toString(), "status", "NOT_FOUND"));
         }
 
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("opportunityId", opportunityId.toString());
-        result.put("status", analysis.getStatus().name());
-        result.put("summary", analysis.getSummaryJson());
-        result.put("documentFormats", analysis.getDocumentFormatsJson());
-        result.put("requiredDocuments", analysis.getRequiredDocumentsJson());
-        result.put("llmPromptPreset", analysis.getLlmPromptPresetJson());
-        result.put("analyzedAt", analysis.getAnalyzedAt() != null ? analysis.getAnalyzedAt().toString() : null);
+        result.put("noticeId", noticeId.toString());
+        result.put("status", notice.getGenerationStatus().name());
+        result.put("koreanTitle", notice.getKoreanTitle());
+        result.put("summary", notice.getSummaryJson());
+        result.put("documentFormats", notice.getDocumentFormatsJson());
+        result.put("requiredDocuments", notice.getRequiredDocumentsJson());
+        result.put("llmPromptPreset", notice.getLlmPromptPresetJson());
+        result.put("analyzedAt", notice.getAnalyzedAt() != null ? notice.getAnalyzedAt().toString() : null);
 
         return toJson(result);
     }
@@ -98,22 +127,23 @@ public class OpportunityAnalysisMcpTool {
     @SuppressWarnings("unchecked")
     @Transactional
     public String saveOpportunityAnalysis(Map<String, Object> args) {
-        UUID opportunityId = UUID.fromString((String) args.get("opportunityId"));
+        UUID noticeId = UUID.fromString((String) args.get("noticeId"));
+        String koreanTitle = (String) args.get("koreanTitle");
 
         Map<String, Object> summary = args.containsKey("summary") ? (Map<String, Object>) args.get("summary") : null;
         Map<String, Object> documentFormats = args.containsKey("documentFormats") ? (Map<String, Object>) args.get("documentFormats") : null;
         Map<String, Object> requiredDocuments = args.containsKey("requiredDocuments") ? (Map<String, Object>) args.get("requiredDocuments") : null;
         Map<String, Object> llmPromptPreset = args.containsKey("llmPromptPreset") ? (Map<String, Object>) args.get("llmPromptPreset") : null;
 
-        OpportunityAnalysis analysis = analysisService.saveAnalysisResult(
-                opportunityId, summary, documentFormats, requiredDocuments, llmPromptPreset);
+        Notice notice = noticeService.saveResult(
+                noticeId, koreanTitle, summary, documentFormats, requiredDocuments, llmPromptPreset);
 
-        log.info("MCP save_opportunity_analysis: opportunityId={}, status={}", opportunityId, analysis.getStatus());
+        log.info("MCP save_opportunity_analysis: noticeId={}, status={}", noticeId, notice.getGenerationStatus());
 
         return toJson(Map.of(
-            "opportunityId", opportunityId.toString(),
-            "status", analysis.getStatus().name(),
-            "message", "사전 분석 결과가 저장되었습니다."
+            "noticeId", noticeId.toString(),
+            "status", notice.getGenerationStatus().name(),
+            "message", "공고문 한글화 결과가 저장되었습니다."
         ));
     }
 

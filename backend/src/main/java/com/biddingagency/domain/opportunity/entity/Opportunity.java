@@ -22,7 +22,6 @@ import java.util.Map;
                 @Index(name = "idx_opportunities_posted_date", columnList = "posted_date"),
                 @Index(name = "idx_opportunities_deadline", columnList = "response_deadline"),
                 @Index(name = "idx_opportunities_active", columnList = "active"),
-                @Index(name = "idx_opportunities_visibility", columnList = "visibility"),
                 @Index(name = "idx_opportunities_industry_type", columnList = "industry_type")
         })
 @Getter
@@ -60,11 +59,6 @@ public class Opportunity extends BaseEntity {
     @Column(name = "active", nullable = false)
     @Builder.Default
     private Boolean active = true;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "visibility", nullable = false, length = 20)
-    @Builder.Default
-    private OpportunityVisibility visibility = OpportunityVisibility.HIDDEN;
 
     @Column(name = "ui_link", columnDefinition = "TEXT")
     private String uiLink;
@@ -111,18 +105,6 @@ public class Opportunity extends BaseEntity {
     /** 자동분류 결과 반영 (CR-014). null이면 미분류로 둔다 */
     public void assignIndustryType(IndustryType industryType) {
         this.industryType = industryType;
-    }
-
-    public void approve() {
-        this.visibility = OpportunityVisibility.VISIBLE;
-    }
-
-    public void hide() {
-        this.visibility = OpportunityVisibility.HIDDEN;
-    }
-
-    public boolean isVisible() {
-        return this.visibility == OpportunityVisibility.VISIBLE;
     }
 
     public boolean isDeadlinePassed() {

@@ -70,8 +70,10 @@ public class OpportunityCollectorService {
         LocalDate postedFrom = determineStartDate(fallbackDaysBack);
         LocalDate postedTo = LocalDate.now();
 
-        int collected = 0;
-        int duplicates = 0;
+        int created = 0;
+        int targetCreated = 0;
+        int changed = 0;
+        int unchanged = 0;
         int errors = 0;
         int offset = 0;
         int limit = 1000;
@@ -91,11 +93,18 @@ public class OpportunityCollectorService {
 
                 for (SAMOpportunityResponse.OpportunityData data : response.getOpportunitiesData()) {
                     try {
-                        boolean isNew = processOpportunity(data);
-                        if (isNew) {
-                            collected++;
-                        } else {
-                            duplicates++;
+                        ProcessResult result = processOpportunity(data);
+                        switch (result.result()) {
+                            case NEW -> {
+                                created++;
+                                // CR-015: IndustryClassifier 매칭(시설관리 타깃) 신규만 별도 집계.
+                                // q=korea 전문검색이 끌어오는 무관 부품조달(미분류)은 메일 카운트에서 제외.
+                                if (result.industryType() != null) {
+                                    targetCreated++;
+                                }
+                            }
+                            case CHANGED -> changed++;   // CR-009: 기존이지만 contentHash 변경
+                            case UNCHANGED -> unchanged++; // CR-009: 변동 없음
                         }
                     } catch (Exception e) {
                         log.error("Error processing opportunity: {}", data.getNoticeId(), e);
@@ -116,20 +125,18 @@ public class OpportunityCollectorService {
             errors++;
         }
 
-        log.info("Collection completed for keyword '{}': {} new, {} duplicates, {} errors",
-                keyword, collected, duplicates, errors);
+        log.info("Collection completed for keyword '{}': {} new ({} target), {} changed, {} unchanged, {} errors",
+                keyword, created, targetCreated, changed, unchanged, errors);
 
-        return new CollectionResult(collected, duplicates, errors);
+        return new CollectionResult(created, targetCreated, changed, unchanged, errors);
     }
 
     /**
-     * Process single opportunity
+     * Process single opportunity.
+     * CR-009: upsert 결과(NEW/CHANGED/UNCHANGED)와 분류 결과를 반환한다.
      */
-    private boolean processOpportunity(SAMOpportunityResponse.OpportunityData data) {
+    private ProcessResult processOpportunity(SAMOpportunityResponse.OpportunityData data) {
         String noticeId = data.getNoticeId();
-
-        // Check if already exists
-        boolean exists = opportunityService.existsByNoticeId(noticeId);
 
         // Parse dates
         LocalDateTime postedDate = parseDate(data.getPostedDate());
@@ -156,7 +163,7 @@ public class OpportunityCollectorService {
                 data.getNaicsCode(), data.getClassificationCode(), data.getTitle());
 
         // Create or update
-        opportunityService.createOrUpdate(
+        OpportunityService.UpsertOutcome outcome = opportunityService.createOrUpdate(
                 noticeId,
                 data.getSolicitationNumber(),
                 data.getTitle(),
@@ -171,7 +178,7 @@ public class OpportunityCollectorService {
                 industryType
         );
 
-        return !exists; // Return true if new
+        return new ProcessResult(outcome.result(), industryType); // upsert 결과 + 분류 결과
     }
 
     /**
@@ -255,8 +262,14 @@ public class OpportunityCollectorService {
     }
 
     /**
-     * Collection result
+     * Collection result.
+     * collected = 전체 신규(NEW), targetNew = 그중 IndustryClassifier 매칭(시설관리 타깃) 신규 (CR-015),
+     * changed = 기존이지만 contentHash 변경(CR-009 실제 갱신), unchanged = 변동 없음.
      */
-    public record CollectionResult(int collected, int duplicates, int errors) {
+    public record CollectionResult(int collected, int targetNew, int changed, int unchanged, int errors) {
+    }
+
+    /** processOpportunity 결과: upsert 결과(NEW/CHANGED/UNCHANGED) + 분류된 사업유형(미분류 시 null). */
+    private record ProcessResult(OpportunityService.UpsertResult result, IndustryType industryType) {
     }
 }

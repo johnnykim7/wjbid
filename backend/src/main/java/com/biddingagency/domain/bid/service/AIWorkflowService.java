@@ -4,11 +4,11 @@ import com.biddingagency.domain.bid.entity.BidRequest;
 import com.biddingagency.domain.bid.entity.ClientDocument;
 import com.biddingagency.domain.bid.repository.ClientDocumentRepository;
 import com.biddingagency.domain.document.entity.DocumentType;
-import com.biddingagency.domain.opportunity.entity.AnalysisStatus;
+import com.biddingagency.domain.notice.repository.NoticeRepository;
 import com.biddingagency.domain.opportunity.entity.Opportunity;
 import com.biddingagency.domain.opportunity.entity.OpportunityRequirementItem;
+import com.biddingagency.domain.opportunity.entity.OpportunityVisibility;
 import com.biddingagency.domain.opportunity.entity.RequirementCategory;
-import com.biddingagency.domain.opportunity.repository.OpportunityAnalysisRepository;
 import com.biddingagency.domain.opportunity.repository.OpportunityRequirementItemRepository;
 import com.biddingagency.domain.rfp.entity.IndustryType;
 import com.biddingagency.domain.rfp.repository.PatternGuideRepository;
@@ -40,7 +40,7 @@ public class AIWorkflowService {
 
     private final LLMPlatformClient llmPlatformClient;
     private final OpportunityRequirementItemRepository requirementItemRepository;
-    private final OpportunityAnalysisRepository opportunityAnalysisRepository;
+    private final NoticeRepository noticeRepository;
     private final ClientDocumentRepository clientDocumentRepository;
     private final PatternGuideRepository patternGuideRepository;
     private final ReferenceSampleService referenceSampleService;
@@ -187,14 +187,15 @@ public class AIWorkflowService {
         context.put("opportunityId", opp.getId().toString());
         context.put("organizationName", opp.getOrganizationName() != null ? opp.getOrganizationName() : "");
 
-        // Pipeline 1: 공고 사전 분석 결과 (캐시)
-        opportunityAnalysisRepository.findByOpportunityId(opp.getId())
-            .filter(a -> a.getStatus() == AnalysisStatus.COMPLETED)
-            .ifPresent(analysis -> context.put("opportunityAnalysis", Map.of(
-                "summary", analysis.getSummaryJson() != null ? analysis.getSummaryJson() : Map.of(),
-                "documentFormats", analysis.getDocumentFormatsJson() != null ? analysis.getDocumentFormatsJson() : Map.of(),
-                "requiredDocuments", analysis.getRequiredDocumentsJson() != null ? analysis.getRequiredDocumentsJson() : Map.of(),
-                "llmPromptPreset", analysis.getLlmPromptPresetJson() != null ? analysis.getLlmPromptPresetJson() : Map.of()
+        // Pipeline 1: 공고문(Notice) 한글화/요약 결과 — 노출 중인 공고문 중 최신 1건 (CR-016)
+        noticeRepository.findFirstByOpportunityIdAndVisibilityOrderByAnalyzedAtDesc(
+                opp.getId(), OpportunityVisibility.VISIBLE)
+            .filter(n -> n.isGenerationCompleted())
+            .ifPresent(notice -> context.put("opportunityAnalysis", Map.of(
+                "summary", notice.getSummaryJson() != null ? notice.getSummaryJson() : Map.of(),
+                "documentFormats", notice.getDocumentFormatsJson() != null ? notice.getDocumentFormatsJson() : Map.of(),
+                "requiredDocuments", notice.getRequiredDocumentsJson() != null ? notice.getRequiredDocumentsJson() : Map.of(),
+                "llmPromptPreset", notice.getLlmPromptPresetJson() != null ? notice.getLlmPromptPresetJson() : Map.of()
             )));
 
         // Pipeline 2: 사용자 제출 서류
