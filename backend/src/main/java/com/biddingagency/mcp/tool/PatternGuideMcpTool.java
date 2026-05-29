@@ -76,11 +76,30 @@ public class PatternGuideMcpTool {
 
         List<Map<String, Object>> samples = referenceSampleService.collect(industryType);
 
-        return toJson(Map.of(
-            "industryType", industryType.name(),
-            "totalSamples", samples.size(),
-            "samples", samples
-        ));
+        // FOREACH용 평탄 파일 목록 — 워크플로우가 단일 List로 순회해 parse_document(url) 발췌.
+        // samples[].files[] 2단 중첩을 평탄화. 각 항목에 출처 식별용 rfpSampleId/opportunityNo 포함.
+        List<Map<String, Object>> fileUrls = new ArrayList<>();
+        for (Map<String, Object> sample : samples) {
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> files = (List<Map<String, Object>>) sample.get("files");
+            if (files == null) continue;
+            for (Map<String, Object> f : files) {
+                Map<String, Object> entry = new LinkedHashMap<>();
+                entry.put("rfpSampleId", sample.get("rfpSampleId"));
+                entry.put("opportunityNo", sample.get("opportunityNo"));
+                entry.put("fileName", f.get("fileName"));
+                entry.put("downloadUrl", f.get("downloadUrl"));
+                fileUrls.add(entry);
+            }
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("industryType", industryType.name());
+        result.put("totalSamples", samples.size());
+        result.put("totalFiles", fileUrls.size());
+        result.put("samples", samples);
+        result.put("fileUrls", fileUrls);
+        return toJson(result);
     }
 
     @SuppressWarnings("unchecked")
