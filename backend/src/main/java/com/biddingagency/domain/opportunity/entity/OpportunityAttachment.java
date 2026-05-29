@@ -38,7 +38,7 @@ public class OpportunityAttachment extends BaseEntity {
     private String storageUrl;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "download_status", nullable = false, length = 20)
+    @Column(name = "download_status", nullable = false, length = 30)
     @Builder.Default
     private AttachmentDownloadStatus downloadStatus = AttachmentDownloadStatus.FAILED;
 
@@ -57,5 +57,18 @@ public class OpportunityAttachment extends BaseEntity {
 
     public void markLinkOnly() {
         this.downloadStatus = AttachmentDownloadStatus.LINK_ONLY;
+    }
+
+    /** CR-019: 외부 사이트 첨부 — 관리자가 외부서 직접 가져와야 함 표식 */
+    public void markManualFetchRequired() {
+        this.downloadStatus = AttachmentDownloadStatus.MANUAL_FETCH_REQUIRED;
+    }
+
+    /** CR-019: 관리자 수동 업로드로 실제 파일 정보 확정 */
+    public void applyUpload(String fileName, Long fileSize, String contentType, String storageUrl) {
+        this.fileName = fileName;
+        this.fileSize = fileSize;
+        this.contentType = contentType;
+        markDownloaded(storageUrl);
     }
 }

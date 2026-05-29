@@ -10,6 +10,7 @@ interface OpportunityAdmin {
   organizationName?: string
   responseDeadline?: string
   attachmentCount: number
+  manualFetchRequiredCount: number
   noticeCount: number
 }
 
@@ -99,6 +100,14 @@ export default function OpportunityAdminPage() {
                     }`}>
                       {opp.attachmentCount}건
                     </span>
+                    {opp.manualFetchRequiredCount > 0 && (
+                      <span
+                        className="ml-1 inline-flex px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700"
+                        title="외부 사이트 첨부 — 직접 가져와 업로드해야 함"
+                      >
+                        가져와야 함 {opp.manualFetchRequiredCount}
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-center">
                     <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${

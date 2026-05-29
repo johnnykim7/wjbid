@@ -3,10 +3,13 @@ package com.biddingagency.controller.admin;
 import com.biddingagency.domain.notice.entity.Notice;
 import com.biddingagency.domain.notice.service.NoticeService;
 import com.biddingagency.domain.opportunity.dto.OpportunityAdminDto;
+import com.biddingagency.domain.opportunity.dto.OpportunityAttachmentDto;
+import com.biddingagency.domain.opportunity.entity.AttachmentDownloadStatus;
 import com.biddingagency.domain.opportunity.entity.Opportunity;
 import com.biddingagency.domain.opportunity.entity.OpportunityAttachment;
 import com.biddingagency.domain.opportunity.repository.OpportunityAttachmentRepository;
 import com.biddingagency.domain.opportunity.service.OpportunityService;
+import com.biddingagency.integration.storage.StorageService;
 import com.biddingagency.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -43,6 +46,7 @@ public class OpportunityAdminController {
     private final OpportunityService opportunityService;
     private final NoticeService noticeService;
     private final OpportunityAttachmentRepository attachmentRepository;
+    private final StorageService storageService;
 
     @GetMapping
     @Operation(summary = "원본 공고 목록 (관리자)", description = "SAM 수집 원본 + 첨부파일 수 + 공고문 생성 여부")
@@ -51,8 +55,10 @@ public class OpportunityAdminController {
         Page<OpportunityAdminDto> page = opportunityService.findAllActive(pageable)
                 .map(opp -> {
                     long attachmentCount = attachmentRepository.countByOpportunityId(opp.getId());
+                    long manualFetchCount = attachmentRepository.countByOpportunityIdAndDownloadStatus(
+                            opp.getId(), AttachmentDownloadStatus.MANUAL_FETCH_REQUIRED);
                     int noticeCount = noticeService.findByOpportunityId(opp.getId()).size();
-                    return OpportunityAdminDto.fromList(opp, attachmentCount, noticeCount);
+                    return OpportunityAdminDto.fromList(opp, attachmentCount, manualFetchCount, noticeCount);
                 });
         return ResponseEntity.ok(page);
     }
@@ -62,8 +68,10 @@ public class OpportunityAdminController {
     public ResponseEntity<OpportunityAdminDto> getOpportunity(@PathVariable UUID id) {
         Opportunity opp = opportunityService.findById(id);
         long attachmentCount = attachmentRepository.countByOpportunityId(id);
+        long manualFetchCount = attachmentRepository.countByOpportunityIdAndDownloadStatus(
+                id, AttachmentDownloadStatus.MANUAL_FETCH_REQUIRED);
         int noticeCount = noticeService.findByOpportunityId(id).size();
-        return ResponseEntity.ok(OpportunityAdminDto.from(opp, attachmentCount, noticeCount));
+        return ResponseEntity.ok(OpportunityAdminDto.from(opp, attachmentCount, manualFetchCount, noticeCount));
     }
 
     @PostMapping("/{id}/create-notice")
@@ -82,29 +90,49 @@ public class OpportunityAdminController {
     }
 
     @PostMapping("/{id}/attachments")
-    @Operation(summary = "첨부파일 수동 업로드")
+    @Operation(summary = "첨부파일 수동 업로드 (CR-019)",
+            description = "관리자가 외부서 가져온 첨부를 실제 저장. 동일 파일명의 '가져와야 함' 행이 있으면 갱신, 없으면 신규 SUCCESS 행.")
     public ResponseEntity<Map<String, String>> uploadAttachment(
             @PathVariable UUID id,
             @RequestParam("file") MultipartFile file) {
         Opportunity opp = opportunityService.findById(id);
+        String fileName = file.getOriginalFilename();
 
-        // 첨부파일 메타데이터 저장 (실제 파일 저장은 MinIO 연동 후)
-        OpportunityAttachment attachment = OpportunityAttachment.builder()
-                .opportunity(opp)
-                .fileName(file.getOriginalFilename())
-                .fileSize(file.getSize())
-                .contentType(file.getContentType())
-                .sourceUrl("admin-upload")
-                .build();
-        attachment.markLinkOnly(); // MinIO 연동 전까지 임시
+        // CR-019: StorageService에 실제 저장
+        String storageUrl = storageService.store("opportunity-attachments/" + id, file);
+
+        // 동일 파일명의 "가져와야 함" 행이 있으면 그 행을 채워 SUCCESS 전이, 없으면 신규
+        OpportunityAttachment attachment = attachmentRepository
+                .findByOpportunityIdAndDownloadStatus(id, AttachmentDownloadStatus.MANUAL_FETCH_REQUIRED)
+                .stream()
+                .filter(a -> fileName != null && fileName.equals(a.getFileName()))
+                .findFirst()
+                .orElseGet(() -> OpportunityAttachment.builder()
+                        .opportunity(opp)
+                        .sourceUrl("admin-upload")
+                        .build());
+
+        attachment.applyUpload(fileName, file.getSize(), file.getContentType(), storageUrl);
         attachmentRepository.save(attachment);
 
-        log.info("관리자 첨부파일 업로드: opportunityId={}, fileName={}", id, file.getOriginalFilename());
+        log.info("[CR-019] 관리자 첨부 업로드(SUCCESS): opportunityId={}, fileName={}, storageUrl={}",
+                id, fileName, storageUrl);
 
         return ResponseEntity.ok(Map.of(
                 "status", "UPLOADED",
-                "fileName", file.getOriginalFilename() != null ? file.getOriginalFilename() : "",
+                "fileName", fileName != null ? fileName : "",
                 "opportunityId", id.toString()
         ));
+    }
+
+    @GetMapping("/{id}/attachments")
+    @Operation(summary = "원본 공고 첨부 목록 (관리자, CR-019)",
+            description = "각 첨부의 다운로드 상태(SUCCESS/MANUAL_FETCH_REQUIRED 등)와 외부 원본 링크 포함")
+    public ResponseEntity<List<OpportunityAttachmentDto>> listAttachments(@PathVariable UUID id) {
+        List<OpportunityAttachmentDto> attachments = attachmentRepository.findByOpportunityId(id)
+                .stream()
+                .map(OpportunityAttachmentDto::from)
+                .toList();
+        return ResponseEntity.ok(attachments);
     }
 }

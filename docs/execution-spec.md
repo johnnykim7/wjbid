@@ -187,6 +187,9 @@ SAM.gov에 올라오는 미군(USFK) 조달 입찰 공고를 자동 수집하고
 - **(CR-003)** 첨부파일 다운로드 완료 → 자동 사전 분석 트리거 (Aimbase 워크플로우)
 - **(CR-003)** 관리자 수동 첨부파일 업로드 → 사전 분석 트리거
 - **(CR-003)** Opportunity.visibility: HIDDEN(기본) → 관리자 승인 → VISIBLE (사용자 노출)
+- **(CR-019)** 수집 시 SAM `resourceLinks`를 OpportunityAttachment로 적재. 외부 사이트라 자동 다운로드 불가하면 `MANUAL_FETCH_REQUIRED` 표식 (BIZ-020)
+- **(CR-019)** 관리자 수동 업로드 → StorageService 실제 저장 + SUCCESS 전이 (`MANUAL_FETCH_REQUIRED` 행 갱신 또는 신규)
+- **(CR-019)** 공고문 한글화(NoticeService) 시 SUCCESS 첨부의 다운로드 URL을 워크플로우 입력 `attachmentFiles[]`로 전달 → Aimbase parse_document 발췌 반영
 
 **핵심 검증:** cron 수집 → DB 저장 → 중복 검출 → 첨부 다운로드 → **사전 분석 자동 트리거** → 관리자 이메일 수신 → **관리자 승인 → 사용자 노출**
 

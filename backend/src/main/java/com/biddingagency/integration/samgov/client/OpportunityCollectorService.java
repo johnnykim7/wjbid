@@ -175,7 +175,8 @@ public class OpportunityCollectorService {
                 null, // description link
                 rawJson,
                 contentHash,
-                industryType
+                industryType,
+                data.getResourceLinks() // CR-019: SAM 첨부 적재
         );
 
         return new ProcessResult(outcome.result(), industryType); // upsert 결과 + 분류 결과

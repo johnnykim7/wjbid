@@ -66,7 +66,7 @@
 | GET | /admin/opportunities | 공고 목록 (첨부파일 수, 분석 상태, 노출 상태 포함) | 🔒 ADMIN | BID-ADMIN-004 |
 | GET | /admin/opportunities/{id} | 공고 상세 + 사전 분석 결과 | 🔒 ADMIN | BID-ADMIN-004 |
 | GET | /admin/opportunities/{id}/analysis | 사전 분석 결과 상세 | 🔒 ADMIN | BID-OPP-006 |
-| POST | /admin/opportunities/{id}/attachments | 첨부파일 수동 업로드 (multipart) | 🔒 ADMIN | BID-OPP-007 |
+| POST | /admin/opportunities/{id}/attachments | 첨부파일 수동 업로드 (multipart). **CR-019**: StorageService 실제 저장 → SUCCESS. `MANUAL_FETCH_REQUIRED` 첨부 있으면 그 행 갱신, 없으면 신규 | 🔒 ADMIN | BID-OPP-007 |
 | POST | /admin/opportunities/{id}/analyze | 사전 분석 트리거 (수동) | 🔒 ADMIN | BID-OPP-006 |
 | POST | /admin/opportunities/{id}/approve | 노출 승인 (HIDDEN → VISIBLE) | 🔒 ADMIN | BID-OPP-008 |
 | POST | /admin/opportunities/{id}/hide | 노출 해제 (VISIBLE → HIDDEN) | 🔒 ADMIN | BID-OPP-008 |
@@ -74,6 +74,7 @@
 
 > 사전 분석은 첨부파일 다운로드 완료 시 자동 트리거됨. 수동 트리거는 재분석 또는 수동 업로드 후 사용.
 > 승인(approve)은 OpportunityAnalysis 상태가 COMPLETED일 때만 가능.
+> **CR-019 첨부 보강**: 관리자 원본 목록/상세 응답(OpportunityAdminDto)에 `manualFetchRequiredCount`(외부서 가져와야 할 첨부 수)를 포함해 "가져와야 함" 표식을 노출한다. 첨부 목록(`GET /admin/opportunities/{id}/attachments` 신규)은 각 첨부의 downloadStatus(SUCCESS/MANUAL_FETCH_REQUIRED 등)와 sourceUrl(외부 다운로드 링크)을 반환.
 
 ---
 

@@ -1,6 +1,8 @@
 package com.biddingagency.domain.opportunity.service;
 
 import com.biddingagency.domain.opportunity.entity.Opportunity;
+import com.biddingagency.domain.opportunity.entity.OpportunityAttachment;
+import com.biddingagency.domain.opportunity.repository.OpportunityAttachmentRepository;
 import com.biddingagency.domain.opportunity.repository.OpportunityRepository;
 import com.biddingagency.domain.rfp.entity.IndustryType;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +28,7 @@ import java.util.UUID;
 public class OpportunityService {
 
     private final OpportunityRepository opportunityRepository;
+    private final OpportunityAttachmentRepository attachmentRepository;
 
     /**
      * Find opportunity by ID
@@ -105,7 +108,7 @@ public class OpportunityService {
                                         LocalDateTime postedDate, LocalDateTime responseDeadline,
                                         String uiLink, String descriptionLink,
                                         Map<String, Object> rawJson, String contentHash,
-                                        IndustryType industryType) {
+                                        IndustryType industryType, List<String> resourceLinks) {
         // Check if exists
         return opportunityRepository.findByNoticeId(noticeId)
                 .map(existing -> {
@@ -140,8 +143,44 @@ public class OpportunityService {
                             .build();
                     Opportunity saved = opportunityRepository.save(opportunity);
                     log.info("New opportunity created: {}", noticeId);
+                    // CR-019: 신규 공고의 SAM 첨부(resourceLinks)를 적재 (외부 링크 → MANUAL_FETCH_REQUIRED)
+                    ingestResourceLinks(saved, resourceLinks);
                     return new UpsertOutcome(saved, UpsertResult.NEW);
                 });
+    }
+
+    /**
+     * CR-019: SAM resourceLinks를 OpportunityAttachment로 적재.
+     * 외부 사이트 다운로드 자동화는 후속 범위 — 현재는 보수적으로 MANUAL_FETCH_REQUIRED 표식.
+     * 신규 공고 1회만 호출(중복 적재 방지).
+     */
+    private void ingestResourceLinks(Opportunity opportunity, List<String> resourceLinks) {
+        if (resourceLinks == null || resourceLinks.isEmpty()) {
+            return;
+        }
+        for (String link : resourceLinks) {
+            if (link == null || link.isBlank()) continue;
+            OpportunityAttachment attachment = OpportunityAttachment.builder()
+                    .opportunity(opportunity)
+                    .fileName(extractFileName(link))
+                    .sourceUrl(link)
+                    .build();
+            attachment.markManualFetchRequired();
+            attachmentRepository.save(attachment);
+        }
+        log.info("[CR-019] 첨부 {}건 적재(MANUAL_FETCH_REQUIRED): noticeId={}",
+                resourceLinks.size(), opportunity.getNoticeId());
+    }
+
+    /** URL 마지막 경로 세그먼트를 파일명으로 사용. 없으면 'attachment' */
+    private String extractFileName(String url) {
+        String path = url;
+        int q = path.indexOf('?');
+        if (q >= 0) path = path.substring(0, q);
+        int slash = path.lastIndexOf('/');
+        String name = (slash >= 0 && slash < path.length() - 1) ? path.substring(slash + 1) : "";
+        if (name.isBlank()) return "attachment";
+        return name.length() > 500 ? name.substring(0, 500) : name;
     }
 
     /**

@@ -19,11 +19,12 @@
 | CR-007 | 2026-05-16 | 수집→정제 자동 트리거 | BE (event, integration/samgov, domain/opportunity) | 소규모 | 보류 |
 | CR-008 | 2026-05-16 | 과거 샘플 본문 참조 보강 | BE (mcp) + Aimbase 워크플로우 | 소규모 | 계획/논의중 |
 | CR-009 | 2026-05-28 | 수집 카운트 의미 정확화 + 관리자 공고목록 정렬 보정 | BE (integration/samgov, domain/opportunity, controller/admin) | 소~중규모 | 진단 완료, 구현 대기 |
-| CR-010 | 2026-05-28 | 공고 요구서류 ↔ 고객 업로드 슬롯 매칭 | BE (domain/bid, domain/compliance, controller, MinIO) + FE (customer-portal) | 중규모 | 간이 설계 진행 중, 코드 구현 대기 |
+| CR-010 | 2026-05-28 | 공고 요구서류 ↔ 고객 업로드 슬롯 매칭 | BE (domain/bid, domain/compliance, controller, StorageService) + FE (customer-portal) | 중규모 | 구현 완료 (BE+FE+테스트, 2026-05-29), 화면 E2E는 데이터 준비 후 |
 | CR-011 | 2026-05-27 | SAM.gov 수집 키 운영 주입 정상화 + 신규 0건 메일 발송 스킵 | 운영(docker-compose.prod.yml) + BE (domain/notification) | 소규모 | 완료 |
 | CR-013 | 2026-05-28 | 성공 제안서 패턴 가이드 (관리자 등록 + 슬롯 패턴 추출) | BE (domain/rfp 신설, integration/storage, common, mcp, integration/llmplatform, controller/admin, 마이그레이션 V10) + FE (admin-console) | 대규모 | 간이 설계 + 코드 병행 |
 | CR-013-R | 2026-05-29 | CR-013 슬롯 폐기 → 원본 통째 보관 + 공고유형별 가이드 + 작성 시 도구 발췌 | BE (domain/rfp 슬롯 제거, PatternGuide 유형단위, mcp, llmplatform, controller/admin, 마이그레이션 V11) + FE (admin-console) | 대규모 | 코드 먼저 + 설계 일괄 |
 | CR-014 | 2026-05-29 | 성공 제안서 자산 작성 활용 (B작업) — 공고 IndustryType 자동분류 + 작성 P3를 성공 가이드+원본으로 대체 | BE (domain/opportunity IndustryClassifier 신설, Opportunity 엔티티, integration/samgov, domain/rfp ReferenceSampleService, domain/bid AIWorkflowService, mcp, 마이그레이션 V12) | 중규모 | 설계 먼저 + 코드 |
+| CR-019 | 2026-05-29 | 원본 공고 첨부 보강 — 수집 시 첨부 적재 + "가져와야 함" 표식 + 관리자 업로드 실제 저장 + 한글화 입력에 첨부 포함 | BE (integration/samgov, domain/opportunity OpportunityAttachment·status enum·repository, controller/admin, domain/notice, integration/llmplatform·mcp, 마이그레이션 V14) + FE (admin-console) | 중규모 | 설계 먼저 + 코드 |
 
 > CR-004~008 원본: `docs/origins/원본_운영플로우_추가요구_20260516.md`
 > 위 5건은 계획 등재만 — 각 CR 상세 설계는 해당 CR 착수 세션에서 진행. 본질 검토 결과 이미 충족된 항목(Draft+승인 / Aimbase 정제 / cron 스케줄링 / 가입형 고객 / 작성의뢰 / 맞춤 제안서 생성)은 CR 불필요.
@@ -205,8 +206,20 @@
   - BE: `RequirementFulfillmentMap`, `FulfillmentType`, `ComplianceService`(슬롯 검증 메서드 신설), `BidFSMService`(DOCS_PENDING→DOCS_RECEIVED 가드), `ClientDocumentController`(MinIO 연동 + 슬롯 업로드 엔드포인트), 새 `RequiredDocumentSlotController`
   - FE: `ProposalDetailPage.tsx` Uploads 탭 슬롯화, `api/client.ts` 신규 엔드포인트, 신규 슬롯 카드 컴포넌트
   - 마이그레이션: Flyway V{n}__add_client_document_to_fulfillment.sql
-- **영향 설계 문서 (갱신 예정)**: T1-3, T1-5, T3-1, T3-2, T3-3
-- **상태**: 진단 완료, 간이 설계 캐스케이드 진행 중 (T1-3/T1-5/T3-1/T3-2/T3-3 갱신 후 commit, 코드 구현은 별도 승인)
+- **영향 설계 문서**: T1-3, T1-5, T3-1, T3-2, T3-3 (간이 캐스케이드 commit d128df8 완료)
+- **실제 구현 (2026-05-29)**:
+  1. **마이그레이션**: `V15__add_client_document_fulfillment.sql` — `requirement_fulfillment_maps.client_document_id BINARY(16)` + FK `fk_fulfillment_client_document`(→client_documents, ON DELETE SET NULL) + 인덱스 + UNIQUE `(bid_request_id, requirement_item_id)`. (당초 V14로 작성했으나 CR-019 `V14__add_attachment_manual_fetch_status.sql`과 버전 충돌 → V15로 변경)
+  2. **enum**: `FulfillmentType.CLIENT_DOCUMENT` 추가 + `isFulfilled()` 포함
+  3. **엔티티**: `RequirementFulfillmentMap.clientDocument` FK 필드 + `fulfillWithClientDocument()` 메서드
+  4. **서비스**: `ComplianceService`에 `getRequiredDocumentSlots` / `uploadToSlot`(StorageService 실저장 + ClientDocument 생성 + 슬롯 upsert, 단일 트랜잭션) / `unmapSlot` / `getUnfulfilledBlockerSlots`(게이트용) 추가
+  5. **컨트롤러**: 신규 `RequiredDocumentSlotController` (GET 슬롯목록 / POST 슬롯업로드 / DELETE 매핑해제)
+  6. **FSM 게이트 (BIZ-015)**: `BidFSMService.transition`에서 `DOCS_PENDING→DOCS_RECEIVED` 시 BLOCKER 슬롯 미충족이면 `RequirementSlotsNotFulfilledException`(409 `REQUIREMENT_SLOTS_NOT_FULFILLED` + unfulfilledSlots) 차단. 전용 `@RestControllerAdvice`로 매핑
+  7. **FE**: `api/client.ts` 슬롯 3함수 + `ProposalDetailPage.tsx` "제출 서류" 탭을 슬롯 카드 UI로 교체(요구사항별 업로드/변경 + 충족률 바 + 전부 충족 시 활성화되는 "문서 제출 완료" 버튼)
+  8. **저장소**: 당초 설계의 MinIO 대신 기존 `StorageService`(로컬 디스크, CR-013)에 연결. ApiResponse 래퍼는 코드베이스에 없어 기존 컨트롤러 패턴(객체 직접 반환) 사용
+  9. **테스트**: `ComplianceServiceTest` 6건 + `BidFSMServiceTest` 게이트 2건 작성·통과, 전체 스위트 회귀 없음
+- **검증 한계**: 운영 DB에 요구사항(req_items)·입찰의뢰(bid_requests) 0건 → 화면 슬롯 E2E 미실시. 로직은 단위 테스트로 검증. Flyway V15는 운영 DB 적용 확인(컬럼/FK/UNIQUE 생성)
+- **별도 발견(범위 외)**: 기존 자유 업로드 API의 FE 경로(`/client-documents/{id}`)와 BE 경로(`/bid-requests/{id}/client-documents`)가 불일치 — 본 CR과 무관해 미수정
+- **상태**: 구현 완료 (BE+FE+테스트), 화면 E2E는 요구사항 데이터 준비 후 별도 진행
 
 ---
 
@@ -324,3 +337,25 @@
 - **영향 설계 문서**: T1-1, T1-3, T3-1, execution-spec
 - **범위 밖(별도)**: Aimbase `type-pattern-extraction` 워크플로우 생성(application.yml placeholder) + rfp/ 실파일 등록→추출 E2E. Aimbase document-generation 워크플로우가 successGuide/referenceUsagePolicy를 실제로 읽도록 하는 것은 Aimbase 레포 밖 — BE는 데이터 전달까지만 책임.
 - **상태**: 설계 캐스케이드 진행 중 (코드 구현 대기).
+
+---
+
+### CR-019: 원본 공고 첨부 보강 (2026-05-29)
+
+- **배경**: 2026-05-29 운영 점검(점검9)에서 진단. 사용자 기대 = SAM 원문 첨부가 외부 사이트에 있을 때 관리자가 외부서 직접 가져와 원문에 추가 → 한글 공고문 생성 시 참고. 원문에 "이건 가져와야 함" 표식 필요(내용 수정이 아니라 첨부 보강). 실측 결과: 첨부 엔티티(`OpportunityAttachment`)·관리자 업로드 API 뼈대만 있고 핵심 미구현 — (a) 수집이 `resourceLinks`를 rawJson에만 저장하고 첨부 행으로 적재 안 함(운영 0건), (b) "가져와야 함" 표식 enum 값 없음, (c) 관리자 업로드가 `markLinkOnly()`로 메타만 저장(StorageService 미사용, 실제 파일 저장 안 됨), (d) 한글화 입력(NoticeService.buildOpportunityText)이 본문 텍스트만 — 첨부 미반영.
+- **CR-016 선반영 발견**: 메모리 진단 시점과 달리 CR-016(원본/공고문 분리, Notice 엔티티 신설, V13)이 이미 코드 반영됨. 한글화 입력 경로가 구 `OpportunityAnalysisService`가 아니라 `NoticeService.buildOpportunityText`로 이전됨 → CR-019 (c)·(d)는 NoticeService 기준으로 진행.
+- **사용자 확정 결정**:
+  1. **범위** = 4종 전부 (수집 적재+표식 / 관리자 업로드 실제 저장 / 한글화 입력 포함 / 관리자 화면 표식 UI).
+  2. **파싱** = Aimbase `parse_document`. BE 사전 파싱 없이 첨부 다운로드 URL을 워크플로우 입력으로 넘겨 Aimbase가 발췌(RfpSample fileUrls와 동일 패턴).
+  3. 진행 = 설계 캐스케이드 먼저 + 코드 (중규모).
+- **변경 사항**:
+  1. **데이터 모델 (T3-1)**: 마이그레이션 V14. `AttachmentDownloadStatus`에 `MANUAL_FETCH_REQUIRED`(외부 수동수집 필요) 값 추가. OpportunityAttachment 적재/갱신 경로 정의.
+  2. **비즈니스 규칙 (T1-3)**: BIZ-020(원본 첨부 보강) 신설 — 원본 보존(BIZ-004) 하에 첨부 행만 적재, 외부 사이트는 MANUAL_FETCH_REQUIRED, 한글화 시 SUCCESS 첨부만 입력 포함(미수집 첨부 누락·추정 섞임 방지).
+  3. **API (T3-2)**: 관리자 업로드 동작 보강(StorageService 저장+SUCCESS, MANUAL_FETCH_REQUIRED 행 갱신). 관리자 첨부 목록 조회 신규(`GET /admin/opportunities/{id}/attachments`). OpportunityAdminDto에 `manualFetchRequiredCount` 추가.
+- **영향 범위**:
+  - BE: `integration/samgov`(OpportunityCollectorService — resourceLinks 첨부 적재), `domain/opportunity`(OpportunityAttachment markManualFetchRequired, AttachmentDownloadStatus enum, repository, OpportunityAdminDto), `controller/admin/OpportunityAdminController`(업로드 StorageService 연동 + 첨부 목록 조회), `domain/notice/NoticeService`(buildOpportunityText → 첨부 fileUrls 워크플로우 입력), `integration/llmplatform`(analyzeOpportunity 입력 확장)
+  - FE: admin-console(원본 목록/상세 "가져와야 함" 표식 + 첨부 목록 표시)
+  - 마이그레이션: `V14__add_attachment_manual_fetch_status.sql`
+- **영향 설계 문서**: T1-3, T3-1, T3-2, execution-spec
+- **범위 밖(별도)**: Aimbase analyze/document-generation 워크플로우가 `attachmentFiles[]`를 실제로 parse_document 발췌하도록 하는 것은 Aimbase 레포 밖 — BE는 데이터 전달까지만. SAM resourceLinks 자동 다운로드 성공/실패 판정 로직의 실제 HTTP 다운로드 시도는 후속(현재는 외부 링크면 MANUAL_FETCH_REQUIRED로 보수 적재).
+- **상태**: 설계 캐스케이드 완료 + 코드 구현 진행.

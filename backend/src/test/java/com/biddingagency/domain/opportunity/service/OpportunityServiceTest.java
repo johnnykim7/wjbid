@@ -162,7 +162,7 @@ class OpportunityServiceTest {
                 "N-DUP", "SOL-001", "Updated Title", "type", "org",
                 LocalDateTime.now(), LocalDateTime.now().plusDays(30),
                 "http://link", "http://desc", Map.of("key", "value"), "hash123", // 동일 해시
-                null
+                null, null
         );
 
         // then - 제목이 변경되지 않음 (동일 해시) + CR-009: UNCHANGED 분류
@@ -190,7 +190,7 @@ class OpportunityServiceTest {
                 "N-DUP2", "SOL-002", "Updated Title", "type", "org",
                 LocalDateTime.now(), LocalDateTime.now().plusDays(30),
                 "http://link", "http://desc", Map.of("key", "value"), "new_hash",
-                null
+                null, null
         );
 
         // then - 제목이 갱신됨 + CR-009: CHANGED 분류
@@ -213,7 +213,7 @@ class OpportunityServiceTest {
                 "N-RAW", "SOL-003", "Title", "type", "org",
                 LocalDateTime.now(), LocalDateTime.now().plusDays(30),
                 "http://link", "http://desc", rawJson, "hash_raw",
-                null
+                null, null
         );
 
         // then - rawJson 보존(BIZ-004) + CR-009: NEW 분류

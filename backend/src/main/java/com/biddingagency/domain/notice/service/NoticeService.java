@@ -4,14 +4,18 @@ import com.biddingagency.domain.event.OpportunityAnalysisCompletedEvent;
 import com.biddingagency.domain.event.OpportunityApprovedEvent;
 import com.biddingagency.domain.notice.entity.Notice;
 import com.biddingagency.domain.notice.repository.NoticeRepository;
+import com.biddingagency.domain.opportunity.entity.AttachmentDownloadStatus;
 import com.biddingagency.domain.opportunity.entity.Opportunity;
+import com.biddingagency.domain.opportunity.entity.OpportunityAttachment;
 import com.biddingagency.domain.opportunity.entity.OpportunityVisibility;
+import com.biddingagency.domain.opportunity.repository.OpportunityAttachmentRepository;
 import com.biddingagency.domain.opportunity.repository.OpportunityRepository;
 import com.biddingagency.integration.llmplatform.LLMPlatformClient;
 import com.biddingagency.integration.llmplatform.LLMPlatformException;
 import com.biddingagency.integration.llmplatform.dto.WorkflowRunResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -19,7 +23,9 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -40,8 +46,12 @@ public class NoticeService {
 
     private final NoticeRepository noticeRepository;
     private final OpportunityRepository opportunityRepository;
+    private final OpportunityAttachmentRepository attachmentRepository;
     private final LLMPlatformClient llmPlatformClient;
     private final ApplicationEventPublisher eventPublisher;
+
+    @Value("${app.self-base-url:http://59.8.160.12:8183/api}")
+    private String selfBaseUrl;
 
     // ── 조회 ──────────────────────────────────────────────
 
@@ -133,6 +143,8 @@ public class NoticeService {
             input.put("opportunityId", opportunityId.toString());
             input.put("noticeId", noticeId.toString());
             input.put("opportunityText", buildOpportunityText(opp));
+            // CR-019: 실제 수집된(SUCCESS) 첨부의 다운로드 URL을 전달 → Aimbase가 parse_document로 발췌
+            input.put("attachmentFiles", buildAttachmentFiles(opportunityId));
 
             WorkflowRunResponse response = llmPlatformClient.analyzeOpportunity(input);
 
@@ -211,6 +223,26 @@ public class NoticeService {
         notice.hide();
         log.info("[공고문] 비노출(HIDDEN): noticeId={}", noticeId);
         return notice;
+    }
+
+    /**
+     * CR-019: SUCCESS 첨부만 다운로드 URL과 함께 평탄 목록으로 반환 (BIZ-020).
+     * MANUAL_FETCH_REQUIRED/FAILED 첨부는 제외 — 못 가져온 내용이 한글 요약에 누락·추정으로 섞이는 것 방지.
+     * 출력: [{attachmentId, fileName, contentType, downloadUrl}]
+     */
+    private List<Map<String, Object>> buildAttachmentFiles(UUID opportunityId) {
+        List<OpportunityAttachment> success = attachmentRepository
+                .findByOpportunityIdAndDownloadStatus(opportunityId, AttachmentDownloadStatus.SUCCESS);
+        List<Map<String, Object>> files = new ArrayList<>();
+        for (OpportunityAttachment a : success) {
+            Map<String, Object> f = new LinkedHashMap<>();
+            f.put("attachmentId", a.getId().toString());
+            f.put("fileName", a.getFileName());
+            f.put("contentType", a.getContentType());
+            f.put("downloadUrl", selfBaseUrl + "/mcp/opportunity-attachments/" + a.getId() + "/download");
+            files.add(f);
+        }
+        return files;
     }
 
     private String buildOpportunityText(Opportunity opp) {

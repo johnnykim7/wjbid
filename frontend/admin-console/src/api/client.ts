@@ -128,6 +128,10 @@ export const uploadOpportunityAttachment = (id: string, file: File) => {
   })
 }
 
+// CR-019: 원본 공고 첨부 목록 (상태/외부 링크 포함)
+export const getOpportunityAttachments = (id: string) =>
+  api.get(`/admin/opportunities/${id}/attachments`)
+
 // 공고문(Notice) Admin (CR-016)
 export const getAdminNotices = (page = 0) =>
   api.get('/admin/notices', { params: { page, size: 20 } })
