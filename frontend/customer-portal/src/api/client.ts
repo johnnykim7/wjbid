@@ -118,6 +118,23 @@ export const uploadClientDocument = (bidRequestId: string, file: File) => {
 export const deleteClientDocument = (id: string) =>
   api.delete(`/client-documents/${id}`)
 
+// Required Document Slots (CR-010: 공고 요구서류 슬롯 매칭)
+export const getRequiredDocumentSlots = (bidRequestId: string) =>
+  api.get(`/bid-requests/${bidRequestId}/required-document-slots`)
+
+export const uploadToSlot = (bidRequestId: string, requirementItemId: string, file: File) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  return api.post(
+    `/bid-requests/${bidRequestId}/required-document-slots/${requirementItemId}/upload`,
+    formData,
+    { headers: { 'Content-Type': 'multipart/form-data' } },
+  )
+}
+
+export const unmapSlot = (bidRequestId: string, requirementItemId: string) =>
+  api.delete(`/bid-requests/${bidRequestId}/required-document-slots/${requirementItemId}`)
+
 // Notifications (CR-006: 고객 인앱 알림)
 export const getNotifications = (page = 0, size = 20) =>
   api.get('/notifications', { params: { page, size } })

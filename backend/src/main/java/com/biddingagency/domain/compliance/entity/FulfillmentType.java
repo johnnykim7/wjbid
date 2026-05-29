@@ -17,6 +17,11 @@ public enum FulfillmentType {
     ATTACHMENT,
 
     /**
+     * Requirement is fulfilled by a client-uploaded document (CR-010)
+     */
+    CLIENT_DOCUMENT,
+
+    /**
      * Requirement is not applicable to this bid
      */
     NOT_APPLICABLE,
@@ -30,6 +35,7 @@ public enum FulfillmentType {
      * Check if fulfillment is complete
      */
     public boolean isFulfilled() {
-        return this == DOCUMENT_SECTION || this == ATTACHMENT || this == NOT_APPLICABLE;
+        return this == DOCUMENT_SECTION || this == ATTACHMENT
+                || this == CLIENT_DOCUMENT || this == NOT_APPLICABLE;
     }
 }

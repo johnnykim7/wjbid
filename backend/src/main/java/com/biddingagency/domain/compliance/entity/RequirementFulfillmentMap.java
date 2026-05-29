@@ -2,6 +2,7 @@ package com.biddingagency.domain.compliance.entity;
 
 import com.biddingagency.common.BaseEntity;
 import com.biddingagency.domain.bid.entity.BidRequest;
+import com.biddingagency.domain.bid.entity.ClientDocument;
 import com.biddingagency.domain.document.entity.BidDocument;
 import com.biddingagency.domain.opportunity.entity.OpportunityRequirementItem;
 import jakarta.persistence.*;
@@ -44,6 +45,12 @@ public class RequirementFulfillmentMap extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "document_id", columnDefinition = "BINARY(16)")
     private BidDocument document;
+
+    /** 고객 업로드 서류로 충족 시 (CR-010) */
+    @Setter
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "client_document_id", columnDefinition = "BINARY(16)")
+    private ClientDocument clientDocument;
 
     @Column(name = "document_section_path", columnDefinition = "TEXT")
     private String documentSectionPath;
@@ -104,5 +111,16 @@ public class RequirementFulfillmentMap extends BaseEntity {
         if (type != FulfillmentType.MISSING) {
             this.status = FulfillmentStatus.FULFILLED;
         }
+    }
+
+    /**
+     * Fulfill this slot with a client-uploaded document (CR-010)
+     */
+    public void fulfillWithClientDocument(ClientDocument clientDocument, UUID userId) {
+        this.fulfillmentType = FulfillmentType.CLIENT_DOCUMENT;
+        this.clientDocument = clientDocument;
+        this.status = FulfillmentStatus.FULFILLED;
+        this.mappedBy = userId;
+        this.mappedAt = LocalDateTime.now();
     }
 }

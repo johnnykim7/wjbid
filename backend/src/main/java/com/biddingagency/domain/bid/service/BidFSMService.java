@@ -3,7 +3,10 @@ package com.biddingagency.domain.bid.service;
 import com.biddingagency.domain.bid.entity.BidRequest;
 import com.biddingagency.domain.bid.entity.BidRequestState;
 import com.biddingagency.domain.bid.repository.BidRequestRepository;
+import com.biddingagency.domain.compliance.RequirementSlotsNotFulfilledException;
+import com.biddingagency.domain.compliance.service.ComplianceService;
 import com.biddingagency.domain.event.BidRequestStateChangedEvent;
+import com.biddingagency.domain.opportunity.entity.OpportunityRequirementItem;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
@@ -27,13 +30,16 @@ public class BidFSMService {
     private final BidRequestRepository bidRequestRepository;
     private final AIWorkflowService aiWorkflowService;
     private final ApplicationEventPublisher eventPublisher;
+    private final ComplianceService complianceService;
 
     public BidFSMService(BidRequestRepository bidRequestRepository,
                          @Lazy AIWorkflowService aiWorkflowService,
-                         ApplicationEventPublisher eventPublisher) {
+                         ApplicationEventPublisher eventPublisher,
+                         ComplianceService complianceService) {
         this.bidRequestRepository = bidRequestRepository;
         this.aiWorkflowService = aiWorkflowService;
         this.eventPublisher = eventPublisher;
+        this.complianceService = complianceService;
     }
 
     // Valid state transitions map
@@ -114,6 +120,17 @@ public class BidFSMService {
             );
             log.error(message);
             throw new IllegalStateException(message);
+        }
+
+        // BIZ-015 (CR-010): DOCS_PENDING → DOCS_RECEIVED 전이는 BLOCKER 슬롯이 모두 충족되어야 함
+        if (currentState == BidRequestState.DOCS_PENDING && toState == BidRequestState.DOCS_RECEIVED) {
+            List<OpportunityRequirementItem> unfulfilled =
+                    complianceService.getUnfulfilledBlockerSlots(bidRequestId);
+            if (!unfulfilled.isEmpty()) {
+                log.warn("Blocked DOCS_RECEIVED transition for {}: {} unfulfilled blocker slots",
+                        bidRequestId, unfulfilled.size());
+                throw new RequirementSlotsNotFulfilledException(unfulfilled);
+            }
         }
 
         // Execute transition

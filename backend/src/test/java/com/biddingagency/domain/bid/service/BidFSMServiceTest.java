@@ -3,7 +3,10 @@ package com.biddingagency.domain.bid.service;
 import com.biddingagency.domain.bid.entity.BidRequest;
 import com.biddingagency.domain.bid.entity.BidRequestState;
 import com.biddingagency.domain.bid.repository.BidRequestRepository;
+import com.biddingagency.domain.compliance.RequirementSlotsNotFulfilledException;
+import com.biddingagency.domain.compliance.service.ComplianceService;
 import com.biddingagency.domain.event.BidRequestStateChangedEvent;
+import com.biddingagency.domain.opportunity.entity.OpportunityRequirementItem;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -13,8 +16,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -35,6 +40,8 @@ class BidFSMServiceTest {
     private AIWorkflowService aiWorkflowService;
     @Mock
     private ApplicationEventPublisher eventPublisher;
+    @Mock
+    private ComplianceService complianceService;
 
     @InjectMocks
     private BidFSMService fsmService;
@@ -156,6 +163,52 @@ class BidFSMServiceTest {
         // when & then
         assertThatThrownBy(() -> fsmService.transition(bidRequestId, BidRequestState.CREATED, UUID.randomUUID(), "admin", ""))
                 .isInstanceOf(IllegalStateException.class);
+    }
+
+    // CR-010 BIZ-015: DOCS_PENDING → DOCS_RECEIVED 슬롯 게이트
+    @Test
+    @DisplayName("DOCS_PENDING에서DOCS_RECEIVED_BLOCKER슬롯미충족_전이차단_CR010")
+    void DOCS_PENDING_DOCS_RECEIVED_슬롯미충족_차단() {
+        // given
+        UUID bidRequestId = UUID.randomUUID();
+        BidRequest bidRequest = BidRequest.builder()
+                .state(BidRequestState.DOCS_PENDING)
+                .stateHistory(new ArrayList<>())
+                .build();
+        OpportunityRequirementItem unfulfilledReq = OpportunityRequirementItem.builder()
+                .title("Business License").build();
+        ReflectionTestUtils.setField(unfulfilledReq, "id", UUID.randomUUID());
+        given(bidRequestRepository.findById(bidRequestId)).willReturn(Optional.of(bidRequest));
+        given(complianceService.getUnfulfilledBlockerSlots(bidRequestId))
+                .willReturn(List.of(unfulfilledReq));
+
+        // when & then
+        assertThatThrownBy(() -> fsmService.transition(
+                bidRequestId, BidRequestState.DOCS_RECEIVED, UUID.randomUUID(), "user", ""))
+                .isInstanceOf(RequirementSlotsNotFulfilledException.class);
+        then(bidRequestRepository).should(never()).save(any());
+    }
+
+    @Test
+    @DisplayName("DOCS_PENDING에서DOCS_RECEIVED_BLOCKER슬롯전부충족_전이성공_CR010")
+    void DOCS_PENDING_DOCS_RECEIVED_슬롯충족_성공() {
+        // given
+        UUID bidRequestId = UUID.randomUUID();
+        BidRequest bidRequest = BidRequest.builder()
+                .state(BidRequestState.DOCS_PENDING)
+                .stateHistory(new ArrayList<>())
+                .build();
+        given(bidRequestRepository.findById(bidRequestId)).willReturn(Optional.of(bidRequest));
+        given(bidRequestRepository.save(any(BidRequest.class))).willAnswer(inv -> inv.getArgument(0));
+        given(complianceService.getUnfulfilledBlockerSlots(bidRequestId)).willReturn(List.of());
+
+        // when
+        BidRequest result = fsmService.transition(
+                bidRequestId, BidRequestState.DOCS_RECEIVED, UUID.randomUUID(), "user", "제출 완료");
+
+        // then
+        assertThat(result.getState()).isEqualTo(BidRequestState.DOCS_RECEIVED);
+        then(eventPublisher).should().publishEvent(any(BidRequestStateChangedEvent.class));
     }
 
     // 터미널 상태 검증
