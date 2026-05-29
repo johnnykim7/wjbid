@@ -14,7 +14,7 @@
 | CR-002 | 2026-03-28 | Aimbase 연동 구현 (AI 파이프라인 활성화) | BE (integration, mcp, config, domain/bid) | 대규모 | 진행중 |
 | CR-003 | 2026-03-28 | 공고 사전 분석 파이프라인 + LLM 입력 3파이프라인 | BE (domain/opportunity, domain/bid, integration) + FE (admin, portal) | 대규모 | 진행중 |
 | CR-003a | 2026-04-05 | 고객 공고 상세에 AI 분석 결과 연동 + 스키마 확정 | BE (dto, controller) + FE (customer-portal) | 중규모 | 완료 |
-| CR-004 | 2026-05-16 | 정제 출력 포맷 정형화 + 스키마 검증 강화 | BE (mcp, domain/opportunity) | 소~중규모 | 계획/논의중 |
+| CR-004 | 2026-05-16 | 정제 출력 포맷 정형화 + 스키마 검증 강화 | BE (domain/notice NoticeService) | 소규모 | 완료 (BE+테스트, 2026-05-29) |
 | CR-005+006 | 2026-05-16 | bp-notification 통합 알림 (관리자 통보 + 고객 공고 알림) | BE (domain/notification, integration/notification, controller, config) + FE (customer-portal) | 중규모 | 코드 완료, 설계 캐스케이드/FlowGuard 미수행 |
 | CR-007 | 2026-05-16 | 수집→정제 자동 트리거 | BE (event, integration/samgov, domain/opportunity) | 소규모 | 보류 |
 | CR-008 | 2026-05-16 | 과거 샘플 본문 참조 보강 | BE (mcp) + Aimbase 워크플로우 | 소규모 | 계획/논의중 |
@@ -124,6 +124,20 @@
 - **영향 설계 문서**:
   - T3-2 API 설계 v1.4 — `GET /opportunities/{id}` 응답에 사전 분석 결과 포함 명시
   - T3-3 화면 구조 v1.1 — 공고 상세 화면 영역 갱신 (AI 분석 7개 섹션 + fallback 설명)
+
+---
+
+### CR-004: 정제 출력 포맷 정형화 + 스키마 검증 강화 (2026-05-16 등재 / 2026-05-29 구현)
+
+- **배경**: Aimbase 한글화/요약 콜백(`save_opportunity_analysis`)이 summary·requiredDocuments 등 본문이 비어 있어도 그대로 `COMPLETED`로 저장되어, 빈 한글화가 고객에게 "완료"로 노출될 수 있었음. (메모리 `cr004-format-standardization` 갭 1·2)
+- **원본**: `docs/origins/원본_운영플로우_추가요구_20260516.md` 요구사항 1) "정재시 정해진 포맷에 따라 정재함"
+- **결정 (사용자 합의 2026-05-29)**: 검증 위치 = `NoticeService.saveResult` (CLAUDE.md "로직은 Service" 규칙). 누락 정책 = **FAILED 전이** (부분 저장/예외 던지기 대신).
+- **주요 변경**:
+  1. `NoticeService.saveResult`에 `validateRequiredKeys` 추가 — 필수키 누락 시 `markCompleted` 대신 `markFailed(reason)` + `OpportunityAnalysisCompletedEvent(success=false)` 발행.
+  2. 필수키: `koreanTitle`, `summary.overview`, `requiredDocuments.documents`(1건 이상). 보조 정보(`documentFormats`, `llmPromptPreset`)는 검증 제외.
+  3. 갭 2(빈 완료 노출) 자동 해소 — FAILED는 `publish()`의 `isGenerationCompleted()` 게이트(NoticeService:206)에 막혀 노출 불가.
+- **테스트**: `NoticeServiceTest` 5건 (충족→COMPLETED, koreanTitle/summary/documents 누락→FAILED, 실패 이벤트 발행).
+- **규모**: 소규모(단일 Service, 검증 정책이 FSM/노출 게이트 구조를 바꾸지 않음) → 설계 캐스케이드 불요, CR 이력만 갱신.
 
 ---
 

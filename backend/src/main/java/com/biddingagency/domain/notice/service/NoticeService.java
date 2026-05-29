@@ -183,8 +183,56 @@ public class NoticeService {
                              Map<String, Object> requiredDocumentsJson,
                              Map<String, Object> llmPromptPresetJson) {
         Notice notice = findById(noticeId);
+
+        // CR-004: 정제 출력 필수키 검증 — 누락 시 COMPLETED 대신 FAILED로 전이해 빈 한글화 노출 차단
+        List<String> missing = validateRequiredKeys(koreanTitle, summaryJson, requiredDocumentsJson);
+        if (!missing.isEmpty()) {
+            String reason = "정제 출력 필수 항목 누락: " + String.join(", ", missing);
+            log.warn("[공고문] 정제 검증 실패 → FAILED: noticeId={}, {}", noticeId, reason);
+            notice.markFailed(reason);
+            noticeRepository.save(notice);
+            eventPublisher.publishEvent(
+                    new OpportunityAnalysisCompletedEvent(noticeId, notice.getOpportunity().getId(), false, reason));
+            return notice;
+        }
+
         notice.markCompleted(koreanTitle, summaryJson, documentFormatsJson, requiredDocumentsJson, llmPromptPresetJson);
         return noticeRepository.save(notice);
+    }
+
+    /**
+     * CR-004: 정제 출력 정형 포맷의 필수키 검증.
+     * 필수: koreanTitle, summary.overview, requiredDocuments.documents(1건 이상).
+     * documentFormats/llmPromptPreset는 보조 정보라 검증 제외.
+     * 반환: 누락된 항목 라벨 목록 (비면 검증 통과).
+     */
+    private List<String> validateRequiredKeys(String koreanTitle,
+                                              Map<String, Object> summaryJson,
+                                              Map<String, Object> requiredDocumentsJson) {
+        List<String> missing = new ArrayList<>();
+
+        if (isBlank(koreanTitle)) {
+            missing.add("koreanTitle(한글 제목)");
+        }
+
+        if (summaryJson == null || isBlank(asString(summaryJson.get("overview")))) {
+            missing.add("summary.overview(요약 핵심)");
+        }
+
+        Object docs = requiredDocumentsJson == null ? null : requiredDocumentsJson.get("documents");
+        if (!(docs instanceof List<?> list) || list.isEmpty()) {
+            missing.add("requiredDocuments.documents(필요 서류 목록)");
+        }
+
+        return missing;
+    }
+
+    private boolean isBlank(String s) {
+        return s == null || s.isBlank();
+    }
+
+    private String asString(Object o) {
+        return o == null ? null : o.toString();
     }
 
     @Transactional
