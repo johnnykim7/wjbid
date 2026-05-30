@@ -27,6 +27,8 @@
 | CR-019 | 2026-05-29 | 원본 공고 첨부 보강 — 수집 시 첨부 적재 + "가져와야 함" 표식 + 관리자 업로드 실제 저장 + 한글화 입력에 첨부 포함 | BE (integration/samgov, domain/opportunity OpportunityAttachment·status enum·repository, controller/admin, domain/notice, integration/llmplatform·mcp, 마이그레이션 V14) + FE (admin-console) | 중규모 | 설계 먼저 + 코드 |
 | CR-017 ① | 2026-05-29 | 제안서 생성 완료 알림 발행 연결 — MCP 문서저장 콜백에서 DocumentGeneratedEvent 발행(기존 배선만 있고 발행 0건이던 것) + 멱등키에 버전 포함 | BE (mcp/DocumentMcpTool, domain/event, domain/notification) | 소규모 | 완료 (코드+테스트, 실발송 E2E 미수행) |
 | CR-018 | 2026-05-29 | 고객 대상 진행 알림 3종(생성완료/접수/합격) + 입찰 결과 상태(AWARDED/NOT_AWARDED) 신설 | BE (domain/bid BidRequestState·BidFSMService·BidRequest, domain/notification NotificationType·NotificationEventListener, controller/admin, 마이그레이션 V16) + FE (admin-console, customer-portal) | 중규모 | 설계 먼저 + 코드 |
+| CR-020 | 2026-05-30 | 대용량 제안서 섹션 루프 워크플로우 재설계 — 단일 LLM_CALL → plan_outline + FOREACH(섹션별 EVALUATOR_LOOP) + assemble. 50~백 페이지 안정 생성 + 품질 보강 | Aimbase 워크플로우 steps JSON 재작성 (엔진 무변경) + 소비앱 인터페이스 검토 (MCP/엔티티 무변경 전제) | 중규모 이상 | 설계 초안 (상세: CR-020_대용량_제안서_섹션루프_워크플로우_재설계.md) |
+| CR-021 | 2026-05-31 | 공고문 표시 풍부화 — TipTap JSON 본문(contentJson) 신설 + NOTICE_VIEW 양식 템플릿 + Aimbase 워크플로우에 양식 입력/contentJson 출력 추가. 첨부 PDF 수준 PDF 양식으로 admin/customer 양쪽 렌더 | BE (마이그레이션 V18/V19, domain/notice Notice·NoticeService·MCP·DTO, domain/document DocumentType·DocumentTemplate API 활성/수정/재활성, application.yml polling 200) + FE (admin-console NoticeDocumentView 신규·NoticeAdminDetailPage·DocumentTemplatePage, customer-portal NoticeDocumentView·BidDetailPage·types) + Aimbase 워크플로우 PUT(noticeViewTemplate 입력·contentJson 출력·timeout_ms 600000) + docs/templates/·docs/workflows/ 자산화 | 중규모 | 1차 완료 (실제 노티 한글화 → contentJson 7768자 생성 → admin 화면 렌더 검증, 2026-05-31). 설계 캐스케이드는 사용자 지시로 보류 (나중 일괄). |
 
 > CR-004~008 원본: `docs/origins/원본_운영플로우_추가요구_20260516.md`
 > 위 5건은 계획 등재만 — 각 CR 상세 설계는 해당 CR 착수 세션에서 진행. 본질 검토 결과 이미 충족된 항목(Draft+승인 / Aimbase 정제 / cron 스케줄링 / 가입형 고객 / 작성의뢰 / 맞춤 제안서 생성)은 CR 불필요.
@@ -452,3 +454,46 @@
 - **설계 캐스케이드**: T1-5 FSM(BidRequest 상태 + 다이어그램 + AWARDED/NOT_AWARDED 정의), T1-6 이벤트 계약(BidRequestStateChanged 고객 소비 확장) 갱신 완료.
 - **검증**: (구현 후 기재) BE 컴파일+전체 테스트, admin/customer tsc. 실발송 E2E는 운영 BidRequest 0건이라 코드/테스트 레벨로 갈음.
 - **상태**: 설계 캐스케이드 완료, 코드 구현 진행.
+
+---
+
+### CR-021: 공고문 표시 풍부화 — TipTap 본문 + NOTICE_VIEW 양식 (2026-05-31)
+
+- **배경**: 운영 화면에서 공고문 상세가 `JSON.stringify` 원시값으로 노출되어 사람이 읽기 불가. 사용자 합격선 = 첨부 PDF(W90VN926QA034) 수준의 풍부도(표·계층·강조박스·메타그리드). 정형 JSON(summary/requiredDocuments/documentFormats)은 액션용으로 유지하면서, 사람이 읽는 본문을 별도 슬롯으로 신설.
+- **사용자 확정 결정**:
+  - 데이터 모델 = **`notices.content_json` 신설**(TipTap JSON 노드 트리). 액션용 정형 키는 그대로 유지.
+  - 양식 = 기존 "문서 템플릿 관리" 메뉴에 **`NOTICE_VIEW` 타입 추가** — 별도 메뉴 분리 안 함.
+  - 양식 생성 주체 = **사람이 1회 작성**(LLM 자동변환 안 함). 첨부 PDF의 10개 섹션을 TipTap JSON 골격으로 박아 등록.
+  - LLM 출력 안정성 = **template 그대로 받아 채워서 반환**. 단순 자유 텍스트 아님.
+  - 디자인 = **네이비 마스키 정부문서 계열**. admin/customer 공통 컴포넌트.
+  - 설계 캐스케이드 = **사용자 지시로 본 CR에서는 보류**(나중 일괄 처리). 구현 우선.
+- **변경 사항**:
+  1. `db/migration/V18` — `notices.content_json LONGTEXT` 컬럼.
+  2. `db/migration/V19` — `document_templates.description` 컬럼(엔티티/스키마 갭 보정).
+  3. `domain/notice/entity/Notice` — `contentJsonRaw` 필드 + `getContentJson()` + `markCompleted`/`updateResult` 시그니처 확장.
+  4. `domain/document/entity/DocumentType` — `NOTICE_VIEW` 값 추가.
+  5. `mcp/tool/OpportunityAnalysisMcpTool` — inputSchema에 `contentJson` 슬롯 + `saveOpportunityAnalysis` 시그니처 확장.
+  6. `domain/notice/service/NoticeService` — `DocumentTemplateService` 주입 + `generateAsync`에 `noticeViewTemplate` 입력 1줄 추가(`getActiveTemplate(NOTICE_VIEW)` 미등록 시 생략). saveResult/updateResult 시그니처 확장.
+  7. `domain/opportunity/dto/AnalysisResultDto` — `contentJson` 필드 추가(TipTap JSON 통째 클라이언트 전달).
+  8. `domain/document/service/DocumentTemplateService` — `findAllIncludingInactive`/`activate` 추가. `controller/admin/DocumentTemplateAdminController` — `GET ?includeInactive=true` + `POST /{id}/activate`.
+  9. `application.yml` — `app.aimbase.polling.max-attempts: 60→200` (CR-021로 input 증가에 따른 워크플로우 시간 증가 대응).
+  10. FE admin: `components/NoticeDocumentView.tsx` 신규(6종 커스텀 노드: noticeHeader/metaGrid/kvTable/dataTable/groupedList/calloutList — 객체/문자열 다중 형태 수용). `pages/NoticeAdminDetailPage` — `<pre>{JSON.stringify}` 제거 + 필요서류 카드. `pages/DocumentTemplatePage` — 비활성 포함 토글 + 재활성화 버튼 + 수정 모달. `api/client.ts` — 활성/수정 API.
+  11. FE customer: `components/NoticeDocumentView.tsx` 신규(admin 복사). `pages/BidDetailPage` — contentJson 있으면 NoticeDocumentView 상단 표시. `types/index.ts` — `AnalysisResult.contentJson`.
+  12. Aimbase 워크플로우 `opportunity-analysis` PUT 반영:
+     - `analyze_freeform.config.prompt` — noticeViewTemplate 안내 + 담당자(POC) 추출 + contentJson 풍부도 지침
+     - `analyze_freeform.config.timeout_ms: 600000` (Aimbase 기본 120초로는 부족 — 실측 6분 41초 소요)
+     - `structure_output.config.response_schema` — `contentJson` 슬롯 + `summary.contactInfo` 추가
+     - `save.config.input` — `contentJson` 전달
+  13. 자산화: `docs/workflows/opportunity-analysis.steps.json`, `docs/templates/notice-view-tiptap-template-v1.json` + paste 본.
+- **양식 등록 (운영 DB)**: `USFK_RFQ_표준양식_v1` (NOTICE_VIEW, 10섹션 + 메타그리드).
+- **영향 범위**:
+  - BE: 마이그레이션 V18/V19, domain/notice, domain/document, mcp/tool, controller/admin, application.yml, NoticeServiceTest
+  - FE: admin-console(컴포넌트 1개 신규, 페이지 2개 수정, api), customer-portal(컴포넌트 1개 신규, 페이지 1개 수정, types)
+  - Aimbase 워크플로우: `opportunity-analysis` 운영 PUT 반영(레포에 정의 자산화)
+- **규모**: 중규모(BE 마이그레이션 + 다중 도메인 수정 + Aimbase 워크플로우 변경 + FE 컴포넌트 신설).
+- **검증**:
+  - BE compileJava/Test BUILD SUCCESSFUL, NoticeServiceTest 통과
+  - FE admin/customer tsc 통과
+  - 운영 배포 후 E2E: noticeId `9a697650-...` 한글화 재실행 → contentJson 7768자 생성 → admin 상세 PDF 양식 렌더 확인 (10섹션 모두 사람 글로 표시, 필요서류 체크리스트 카드)
+  - 발견된 별 버그(메모리 등록): `NoticeService.markFailed` self-call 누락(워크플로우 폴링 타임아웃 시 상태 잔존), customer-portal 화면 검증은 publish 단계에서 본 흐름 E2E와 함께 진행 예정.
+- **상태**: 1차 완료. 본 흐름 후속(publish→customer→제안서 생성)은 별 세션.

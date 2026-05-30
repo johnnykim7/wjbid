@@ -39,7 +39,14 @@ public enum DocumentType {
     /**
      * Other supporting documents
      */
-    OTHER("Other", "Additional supporting documents");
+    OTHER("Other", "Additional supporting documents"),
+
+    /**
+     * 공고문 표시 양식 (CR-021).
+     * 제안서 생성용이 아닌, 공고문(Notice) 상세 화면을 그릴 때 사용하는 TipTap JSON 골격.
+     * Aimbase 한글화 워크플로우에 함께 입력되어 LLM이 이 골격을 채워 반환.
+     */
+    NOTICE_VIEW("Notice View", "공고문 표시 양식 (TipTap JSON 골격)");
 
     private final String displayName;
     private final String description;

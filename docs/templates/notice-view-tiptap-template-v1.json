@@ -1,0 +1,187 @@
+{
+  "_meta": {
+    "templateName": "USFK_RFQ_표준양식_v1",
+    "documentType": "NOTICE_VIEW",
+    "description": "미군(USFK) RFQ 표준 양식 — 첨부 PDF(W90VN926QA034) 골격 기반. 10개 섹션 + 상단 메타그리드.",
+    "variableConvention": "{{path.to.value}} 형태. Aimbase는 이 슬롯을 공고 원문에서 추출한 값으로 채워야 함. 배열은 {{#each path}}...{{/each}} 사용.",
+    "slotKeys": [
+      "header.meta.solicitationNumber",
+      "header.meta.method",
+      "header.meta.deadline",
+      "header.meta.contractPeriod",
+      "header.meta.naics",
+      "header.meta.location",
+      "header.meta.annualCount",
+      "section1.table[].label",
+      "section1.table[].value",
+      "section2.overview",
+      "section2.scopeBullets[]",
+      "section2.annualVolumeTable.rows[]",
+      "section2.truckCompositionGroups[]",
+      "section2.pickupLocation",
+      "section3.periodTable.rows[]",
+      "section3.workingHours",
+      "section4.siteVisitNote",
+      "section5.contactRows[]",
+      "section6.qualificationGroups[]",
+      "section7.evaluationNarrative",
+      "section7.prsMatrix.rows[]",
+      "section8.notes[]",
+      "section9.precautions[]",
+      "section10.timelineRows[]"
+    ]
+  },
+  "type": "doc",
+  "content": [
+    {
+      "type": "noticeHeader",
+      "attrs": {
+        "title": "{{header.title}}",
+        "subtitle": "{{header.subtitle}}",
+        "organization": "{{header.organization}}",
+        "solicitationNumber": "{{header.meta.solicitationNumber}}",
+        "issuedDate": "{{header.meta.issuedDate}}"
+      }
+    },
+    {
+      "type": "metaGrid",
+      "attrs": {
+        "columns": 6
+      },
+      "content": [
+        { "type": "metaCell", "attrs": { "label": "입찰 번호", "value": "{{header.meta.solicitationNumber}}" } },
+        { "type": "metaCell", "attrs": { "label": "조달 방식", "value": "{{header.meta.method}}" } },
+        { "type": "metaCell", "attrs": { "label": "입찰 마감", "value": "{{header.meta.deadline}}" } },
+        { "type": "metaCell", "attrs": { "label": "계약 기간", "value": "{{header.meta.contractPeriod}}" } },
+        { "type": "metaCell", "attrs": { "label": "NAICS", "value": "{{header.meta.naics}}" } },
+        { "type": "metaCell", "attrs": { "label": "수행 장소", "value": "{{header.meta.location}}" } }
+      ]
+    },
+
+    { "type": "heading", "attrs": { "level": 2 }, "content": [{ "type": "text", "text": "1. 입찰 번호 (Solicitation Number)" }] },
+    {
+      "type": "kvTable",
+      "attrs": { "rows": "{{section1.table}}" }
+    },
+
+    { "type": "heading", "attrs": { "level": 2 }, "content": [{ "type": "text", "text": "2. 내용 (Scope of Work)" }] },
+    {
+      "type": "paragraph",
+      "content": [{ "type": "text", "text": "{{section2.overview}}" }]
+    },
+    {
+      "type": "heading",
+      "attrs": { "level": 3 },
+      "content": [{ "type": "text", "text": "포함 작업" }]
+    },
+    {
+      "type": "bulletList",
+      "attrs": { "items": "{{section2.scopeBullets}}" }
+    },
+    {
+      "type": "heading",
+      "attrs": { "level": 3 },
+      "content": [{ "type": "text", "text": "연간 작업량 — 이동 횟수 (Location & Quantity)" }]
+    },
+    {
+      "type": "dataTable",
+      "attrs": {
+        "headers": ["경로 (왕복 구분)", "5톤 윙바디 (작업자 3)", "2.5톤 윙바디 (작업자 3)", "1톤 윙바디 (작업자 2)", "소계"],
+        "rows": "{{section2.annualVolumeTable.rows}}",
+        "footer": "{{section2.annualVolumeTable.footer}}"
+      }
+    },
+    {
+      "type": "heading",
+      "attrs": { "level": 3 },
+      "content": [{ "type": "text", "text": "트럭 톤수별 가구 구성" }]
+    },
+    {
+      "type": "groupedList",
+      "attrs": { "groups": "{{section2.truckCompositionGroups}}" }
+    },
+    {
+      "type": "heading",
+      "attrs": { "level": 3 },
+      "content": [{ "type": "text", "text": "픽업 / 반납 위치" }]
+    },
+    {
+      "type": "paragraph",
+      "content": [{ "type": "text", "text": "{{section2.pickupLocation}}" }]
+    },
+
+    { "type": "heading", "attrs": { "level": 2 }, "content": [{ "type": "text", "text": "3. 계약 기간 (Period of Performance)" }] },
+    {
+      "type": "dataTable",
+      "attrs": {
+        "headers": ["구분", "기간"],
+        "rows": "{{section3.periodTable.rows}}"
+      }
+    },
+    {
+      "type": "paragraph",
+      "attrs": { "tone": "muted" },
+      "content": [{ "type": "text", "text": "근무 시간: {{section3.workingHours}}" }]
+    },
+
+    { "type": "heading", "attrs": { "level": 2 }, "content": [{ "type": "text", "text": "4. 현장 설명회 (Site Visit)" }] },
+    {
+      "type": "paragraph",
+      "content": [{ "type": "text", "text": "{{section4.siteVisitNote}}" }]
+    },
+
+    { "type": "heading", "attrs": { "level": 2 }, "content": [{ "type": "text", "text": "5. 담당자 (POC)" }] },
+    {
+      "type": "kvTable",
+      "attrs": { "rows": "{{section5.contactRows}}" }
+    },
+
+    { "type": "heading", "attrs": { "level": 2 }, "content": [{ "type": "text", "text": "6. 자격 요건 (Qualifications)" }] },
+    {
+      "type": "groupedList",
+      "attrs": { "groups": "{{section6.qualificationGroups}}" }
+    },
+
+    { "type": "heading", "attrs": { "level": 2 }, "content": [{ "type": "text", "text": "7. 낙찰 기준 (Award Criteria)" }] },
+    {
+      "type": "paragraph",
+      "content": [{ "type": "text", "text": "{{section7.evaluationNarrative}}" }]
+    },
+    {
+      "type": "heading",
+      "attrs": { "level": 3 },
+      "content": [{ "type": "text", "text": "성과 요건 요약 (PRS Matrix)" }]
+    },
+    {
+      "type": "dataTable",
+      "attrs": {
+        "headers": ["PRS #", "성과 목표", "PWS 참조", "성과 기준 (AQL)", "구제 조치"],
+        "rows": "{{section7.prsMatrix.rows}}"
+      }
+    },
+
+    { "type": "heading", "attrs": { "level": 2 }, "content": [{ "type": "text", "text": "8. 참고 사항 (Notes)" }] },
+    {
+      "type": "bulletList",
+      "attrs": { "items": "{{section8.notes}}" }
+    },
+
+    { "type": "heading", "attrs": { "level": 2 }, "content": [{ "type": "text", "text": "9. 특별 유의 사항 (Special Precautions)" }] },
+    {
+      "type": "calloutList",
+      "attrs": {
+        "items": "{{section9.precautions}}",
+        "tone": "danger"
+      }
+    },
+
+    { "type": "heading", "attrs": { "level": 2 }, "content": [{ "type": "text", "text": "10. 타임라인 (Timeline)" }] },
+    {
+      "type": "dataTable",
+      "attrs": {
+        "headers": ["구분", "일정"],
+        "rows": "{{section10.timelineRows}}"
+      }
+    }
+  ]
+}

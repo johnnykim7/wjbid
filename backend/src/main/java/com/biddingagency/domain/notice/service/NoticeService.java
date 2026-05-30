@@ -1,5 +1,8 @@
 package com.biddingagency.domain.notice.service;
 
+import com.biddingagency.domain.document.entity.DocumentTemplate;
+import com.biddingagency.domain.document.entity.DocumentType;
+import com.biddingagency.domain.document.service.DocumentTemplateService;
 import com.biddingagency.domain.event.OpportunityAnalysisCompletedEvent;
 import com.biddingagency.domain.event.OpportunityApprovedEvent;
 import com.biddingagency.domain.notice.entity.Notice;
@@ -49,6 +52,16 @@ public class NoticeService {
     private final OpportunityAttachmentRepository attachmentRepository;
     private final LLMPlatformClient llmPlatformClient;
     private final ApplicationEventPublisher eventPublisher;
+    private final DocumentTemplateService documentTemplateService;
+
+    /**
+     * self-injection — @Async self-call이 AOP 프록시를 통과 못 해 동기 호출되는 함정 회피.
+     * createNotice(@Transactional)에서 generateAsync 호출 시 부모 트랜잭션이 110초 워크플로우 응답까지
+     * 열려있어 Aimbase save 콜백이 노티를 못 찾는 버그(2026-05-30 실측) 해결용.
+     */
+    @org.springframework.context.annotation.Lazy
+    @org.springframework.beans.factory.annotation.Autowired
+    private NoticeService self;
 
     @Value("${app.self-base-url:http://59.8.160.12:8183/api}")
     private String selfBaseUrl;
@@ -67,6 +80,16 @@ public class NoticeService {
     /** 관리자 공고문 리스트 (전체) */
     public Page<Notice> findAll(Pageable pageable) {
         return noticeRepository.findAll(pageable);
+    }
+
+    /** 관리자 공고문 리스트 — DTO로 트랜잭션 안에서 변환해 lazy 접근 회피 */
+    public Page<com.biddingagency.domain.notice.dto.NoticeAdminDto> findAllAsDto(Pageable pageable) {
+        return noticeRepository.findAll(pageable).map(com.biddingagency.domain.notice.dto.NoticeAdminDto::fromList);
+    }
+
+    /** 관리자 공고문 상세 — DTO로 변환해 lazy 접근 회피 */
+    public com.biddingagency.domain.notice.dto.NoticeAdminDto findByIdAsDto(UUID noticeId) {
+        return com.biddingagency.domain.notice.dto.NoticeAdminDto.from(findById(noticeId));
     }
 
     /** 고객 노출 공고문 목록 (VISIBLE). CR-009: includeExpired=false(기본)면 마감 지난 공고 제외 */
@@ -101,7 +124,7 @@ public class NoticeService {
     // ── 게이트① 선별 → 공고문 생성 + 한글화 트리거 ──────────
 
     @Transactional
-    public Notice createNotice(UUID opportunityId, UUID createdBy) {
+    public UUID createNotice(UUID opportunityId, UUID createdBy) {
         Opportunity opportunity = opportunityRepository.findById(opportunityId)
                 .orElseThrow(() -> new IllegalArgumentException("Opportunity not found: " + opportunityId));
 
@@ -113,11 +136,12 @@ public class NoticeService {
         notice.markAnalyzing(null);
         noticeRepository.save(notice);
 
-        log.info("[공고문] 생성 + 한글화 트리거: opportunityId={}, noticeId={}", opportunityId, notice.getId());
+        UUID noticeId = notice.getId();
+        log.info("[공고문] 생성 + 한글화 트리거: opportunityId={}, noticeId={}", opportunityId, noticeId);
 
-        generateAsync(notice.getId(), opportunityId);
+        self.generateAsync(noticeId, opportunityId);
 
-        return notice;
+        return noticeId;
     }
 
     /** 한글화 재생성 (기존 공고문 다시 돌림) */
@@ -127,7 +151,7 @@ public class NoticeService {
         notice.markAnalyzing(null);
         noticeRepository.save(notice);
         log.info("[공고문] 한글화 재생성: noticeId={}", noticeId);
-        generateAsync(noticeId, notice.getOpportunity().getId());
+        self.generateAsync(noticeId, notice.getOpportunity().getId());
         return notice;
     }
 
@@ -145,6 +169,9 @@ public class NoticeService {
             input.put("opportunityText", buildOpportunityText(opp));
             // CR-019: 실제 수집된(SUCCESS) 첨부의 다운로드 URL을 전달 → Aimbase가 parse_document로 발췌
             input.put("attachmentFiles", buildAttachmentFiles(opportunityId));
+            // CR-021: NOTICE_VIEW 양식(TipTap JSON 골격)을 함께 입력 → LLM이 이 골격을 채워 contentJson 반환
+            //         양식 미등록 시 input에 noticeViewTemplate 키 없음 → Aimbase는 contentJson 생략 가능
+            buildNoticeViewTemplate().ifPresent(t -> input.put("noticeViewTemplate", t));
 
             WorkflowRunResponse response = llmPlatformClient.analyzeOpportunity(input);
 
@@ -181,10 +208,12 @@ public class NoticeService {
                              Map<String, Object> summaryJson,
                              Map<String, Object> documentFormatsJson,
                              Map<String, Object> requiredDocumentsJson,
-                             Map<String, Object> llmPromptPresetJson) {
+                             Map<String, Object> llmPromptPresetJson,
+                             Map<String, Object> contentJson) {
         Notice notice = findById(noticeId);
 
         // CR-004: 정제 출력 필수키 검증 — 누락 시 COMPLETED 대신 FAILED로 전이해 빈 한글화 노출 차단
+        // CR-021: contentJson은 양식이 등록된 경우에만 검증 — 양식 미등록 시 LLM이 못 만들 수 있어 옵션
         List<String> missing = validateRequiredKeys(koreanTitle, summaryJson, requiredDocumentsJson);
         if (!missing.isEmpty()) {
             String reason = "정제 출력 필수 항목 누락: " + String.join(", ", missing);
@@ -196,7 +225,7 @@ public class NoticeService {
             return notice;
         }
 
-        notice.markCompleted(koreanTitle, summaryJson, documentFormatsJson, requiredDocumentsJson, llmPromptPresetJson);
+        notice.markCompleted(koreanTitle, summaryJson, documentFormatsJson, requiredDocumentsJson, llmPromptPresetJson, contentJson);
         return noticeRepository.save(notice);
     }
 
@@ -240,9 +269,10 @@ public class NoticeService {
                                Map<String, Object> summaryJson,
                                Map<String, Object> documentFormatsJson,
                                Map<String, Object> requiredDocumentsJson,
-                               Map<String, Object> llmPromptPresetJson) {
+                               Map<String, Object> llmPromptPresetJson,
+                               Map<String, Object> contentJson) {
         Notice notice = findById(noticeId);
-        notice.updateResult(koreanTitle, summaryJson, documentFormatsJson, requiredDocumentsJson, llmPromptPresetJson);
+        notice.updateResult(koreanTitle, summaryJson, documentFormatsJson, requiredDocumentsJson, llmPromptPresetJson, contentJson);
         return noticeRepository.save(notice);
     }
 
@@ -291,6 +321,20 @@ public class NoticeService {
             files.add(f);
         }
         return files;
+    }
+
+    /**
+     * CR-021: NOTICE_VIEW 활성 템플릿(TipTap JSON 골격)을 조회해 Aimbase 입력에 실음.
+     * 양식이 등록되지 않은 경우 Optional.empty — LLM은 contentJson 없이 기존 정형 JSON만 채움.
+     */
+    private java.util.Optional<Map<String, Object>> buildNoticeViewTemplate() {
+        try {
+            DocumentTemplate template = documentTemplateService.getActiveTemplate(DocumentType.NOTICE_VIEW);
+            return java.util.Optional.ofNullable(template.getContentJson());
+        } catch (java.util.NoSuchElementException e) {
+            log.info("[공고문] NOTICE_VIEW 양식 미등록 — contentJson 생성 생략");
+            return java.util.Optional.empty();
+        }
     }
 
     private String buildOpportunityText(Opportunity opp) {

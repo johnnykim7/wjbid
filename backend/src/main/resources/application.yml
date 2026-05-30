@@ -121,7 +121,7 @@ app:
   # JWT Configuration
   jwt:
     secret: ${JWT_SECRET:your-secret-key-change-this-in-production-must-be-at-least-256-bits}
-    expiration: 900000  # 15 minutes (in milliseconds)
+    expiration: 28800000  # 8 hours — 임시 우회 (FE refresh 인터셉터 부재, 백로그 §10)
     refresh-expiration: 604800000  # 7 days (in milliseconds)
 
   # S3 Configuration (for document storage)
@@ -170,9 +170,10 @@ app:
     tenant-id: ${AIMBASE_TENANT_ID:bidding_system}
     connect-timeout: 5000     # 5 seconds
     read-timeout: 300000      # 5 minutes (워크플로우 실행 포함)
+    connection-id: ${AIMBASE_CONNECTION_ID:bb3bc8bc-d17d-4e8e-a15b-d9f077e83d18}  # CR-020: LLM 커넥션 (API↔CLI 전환은 이 값만 교체)
     polling:
       interval-ms: 3000       # 폴링 간격 (3초, Aimbase 권장)
-      max-attempts: 60        # 최대 폴링 횟수 (60 * 3초 = 3분)
+      max-attempts: 200       # 최대 폴링 횟수 (200 * 3초 = 10분). CR-021: 첨부 다건 parse + contentJson 풍부도 추가로 3분 한계 초과 사례 발생
     workflows:
       requirement-extraction: ${AIMBASE_WF_REQ_EXTRACTION:e96e63d1-7bf3-493c-9473-1bd87723073c}
       document-generation: ${AIMBASE_WF_DOC_GENERATION:014e7de2-251e-432d-95dd-16bddb28f18e}

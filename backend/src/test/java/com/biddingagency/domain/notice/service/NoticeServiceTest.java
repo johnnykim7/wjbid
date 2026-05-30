@@ -63,7 +63,7 @@ class NoticeServiceTest {
         newAnalyzingNotice(noticeId);
 
         Notice result = noticeService.saveResult(
-                noticeId, "한글 제목", validSummary(), null, validRequiredDocs(), null);
+                noticeId, "한글 제목", validSummary(), null, validRequiredDocs(), null, null);
 
         assertThat(result.getGenerationStatus()).isEqualTo(NoticeGenerationStatus.COMPLETED);
         then(eventPublisher).should(never()).publishEvent(any(OpportunityAnalysisCompletedEvent.class));
@@ -77,7 +77,7 @@ class NoticeServiceTest {
         newAnalyzingNotice(noticeId);
 
         Notice result = noticeService.saveResult(
-                noticeId, "  ", validSummary(), null, validRequiredDocs(), null);
+                noticeId, "  ", validSummary(), null, validRequiredDocs(), null, null);
 
         assertThat(result.getGenerationStatus()).isEqualTo(NoticeGenerationStatus.FAILED);
         assertThat(result.getErrorMessage()).contains("koreanTitle");
@@ -91,7 +91,7 @@ class NoticeServiceTest {
         newAnalyzingNotice(noticeId);
 
         Notice result = noticeService.saveResult(
-                noticeId, "한글 제목", Map.of("scope", "범위만 있음"), null, validRequiredDocs(), null);
+                noticeId, "한글 제목", Map.of("scope", "범위만 있음"), null, validRequiredDocs(), null, null);
 
         assertThat(result.getGenerationStatus()).isEqualTo(NoticeGenerationStatus.FAILED);
         assertThat(result.getErrorMessage()).contains("summary.overview");
@@ -105,7 +105,7 @@ class NoticeServiceTest {
         newAnalyzingNotice(noticeId);
 
         Notice result = noticeService.saveResult(
-                noticeId, "한글 제목", validSummary(), null, Map.of("documents", List.of()), null);
+                noticeId, "한글 제목", validSummary(), null, Map.of("documents", List.of()), null, null);
 
         assertThat(result.getGenerationStatus()).isEqualTo(NoticeGenerationStatus.FAILED);
         assertThat(result.getErrorMessage()).contains("requiredDocuments.documents");
@@ -118,7 +118,7 @@ class NoticeServiceTest {
         UUID noticeId = UUID.randomUUID();
         newAnalyzingNotice(noticeId);
 
-        noticeService.saveResult(noticeId, null, null, null, null, null);
+        noticeService.saveResult(noticeId, null, null, null, null, null, null);
 
         ArgumentCaptor<OpportunityAnalysisCompletedEvent> captor =
                 ArgumentCaptor.forClass(OpportunityAnalysisCompletedEvent.class);

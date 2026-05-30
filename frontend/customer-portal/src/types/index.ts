@@ -22,6 +22,8 @@ export interface AnalysisResult {
   summary?: AnalysisSummary
   requiredDocuments?: AnalysisRequiredDocuments
   documentFormats?: AnalysisDocumentFormats
+  /** CR-021: TipTap JSON 본문 (PDF 양식 풍부도). 있으면 NoticeDocumentView로 렌더. */
+  contentJson?: Record<string, unknown>
 }
 
 export interface AnalysisSummary {

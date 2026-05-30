@@ -6,6 +6,7 @@ import {
   hideNotice,
   regenerateNotice,
 } from '../api/client'
+import NoticeDocumentView from '../components/NoticeDocumentView'
 
 interface AnalysisResult {
   analysisStatus?: string
@@ -13,6 +14,7 @@ interface AnalysisResult {
   summary?: Record<string, unknown>
   requiredDocuments?: Record<string, unknown>
   documentFormats?: Record<string, unknown>
+  contentJson?: Record<string, unknown>
 }
 
 interface NoticeDetail {
@@ -151,33 +153,44 @@ export default function NoticeAdminDetailPage() {
           </div>
         )}
         {notice.generationStatus === 'COMPLETED' && (
-          <div className="space-y-4">
+          <div className="space-y-6">
             {notice.analyzedAt && (
               <div className="text-xs text-gray-400">완료: {new Date(notice.analyzedAt).toLocaleString('ko')}</div>
             )}
-            {a?.summary && (
-              <div>
-                <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">공고 요약</h4>
-                <pre className="bg-gray-50 rounded-lg p-4 text-xs text-gray-700 overflow-x-auto whitespace-pre-wrap max-h-60">
-                  {JSON.stringify(a.summary, null, 2)}
-                </pre>
-              </div>
-            )}
-            {a?.requiredDocuments && (
-              <div>
-                <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">필요 서류</h4>
-                <pre className="bg-gray-50 rounded-lg p-4 text-xs text-gray-700 overflow-x-auto whitespace-pre-wrap max-h-60">
-                  {JSON.stringify(a.requiredDocuments, null, 2)}
-                </pre>
-              </div>
-            )}
-            {a?.documentFormats && (
-              <div>
-                <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">문서 양식</h4>
-                <pre className="bg-gray-50 rounded-lg p-4 text-xs text-gray-700 overflow-x-auto whitespace-pre-wrap max-h-60">
-                  {JSON.stringify(a.documentFormats, null, 2)}
-                </pre>
-              </div>
+
+            {/* CR-021: TipTap JSON 본문 — PDF 양식 풍부도 */}
+            <NoticeDocumentView contentJson={a?.contentJson} />
+
+            {/* 필요 서류 체크리스트 — 액션 데이터(고객 슬롯 매칭/제출 차단 기준)이므로 본문과 별도 표시 */}
+            {Array.isArray(a?.requiredDocuments?.documents) && a.requiredDocuments.documents.length > 0 && (
+              <section>
+                <h3 className="text-base font-bold text-slate-900 mb-3 pb-1.5 border-b-2 border-slate-800">
+                  필요 서류 체크리스트
+                </h3>
+                <div className="space-y-2">
+                  {(a.requiredDocuments.documents as Array<Record<string, unknown>>).map((doc, i) => (
+                    <div key={i} className="flex items-start gap-3 p-3 bg-white border border-slate-200 rounded-md">
+                      <i className={`fa-regular fa-square text-lg mt-0.5 ${doc.mandatory ? 'text-red-400' : 'text-slate-300'}`} />
+                      <div className="flex-1 text-sm">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="font-semibold text-slate-900">{String(doc.name ?? '')}</span>
+                          {doc.mandatory ? (
+                            <span className="px-1.5 py-0.5 bg-red-50 text-red-600 rounded text-[10px] font-semibold uppercase">필수</span>
+                          ) : (
+                            <span className="px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded text-[10px] font-semibold uppercase">선택</span>
+                          )}
+                        </div>
+                        {doc.description != null && <p className="text-slate-600 mb-0.5">{String(doc.description)}</p>}
+                        <div className="flex gap-3 text-xs text-slate-400">
+                          {doc.format != null && <span><i className="fa-solid fa-file mr-1" />{String(doc.format)}</span>}
+                          {doc.pageLimit != null && <span><i className="fa-solid fa-ruler mr-1" />{String(doc.pageLimit)}</span>}
+                        </div>
+                        {doc.notes != null && <p className="text-xs text-slate-400 mt-1 italic">{String(doc.notes)}</p>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
             )}
           </div>
         )}

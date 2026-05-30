@@ -6,6 +6,7 @@ import { LoadingSpinner } from '../components/ui/loading-spinner'
 import { AiProposalModal } from '../components/modals/AiProposalModal'
 import { getOpportunity, checkBookmark, addBookmark, removeBookmark } from '../api/client'
 import type { Opportunity } from '../types'
+import NoticeDocumentView from '../components/NoticeDocumentView'
 
 export default function BidDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -159,6 +160,11 @@ export default function BidDetailPage() {
                     <span className="text-xs text-gray-400">{bid.analysis.analyzedAt} 분석</span>
                   )}
                 </div>
+
+                {/* CR-021: 공고문 본문 (PDF 양식 풍부도) — contentJson 있을 때만 */}
+                {bid.analysis.contentJson && (
+                  <NoticeDocumentView contentJson={bid.analysis.contentJson} />
+                )}
 
                 {/* 공고 요약 */}
                 {bid.analysis.summary && (

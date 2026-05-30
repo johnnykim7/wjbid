@@ -15,7 +15,9 @@ public record AnalysisResultDto(
         String analyzedAt,
         SummaryDto summary,
         RequiredDocumentsDto requiredDocuments,
-        DocumentFormatsDto documentFormats
+        DocumentFormatsDto documentFormats,
+        // CR-021: TipTap JSON 본문 — FE 렌더러가 노드 트리 그대로 해석
+        Map<String, Object> contentJson
 ) {
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
@@ -27,7 +29,7 @@ public record AnalysisResultDto(
         String analyzedAt = notice.getAnalyzedAt() != null ? notice.getAnalyzedAt().format(FMT) : null;
 
         if (notice.getGenerationStatus() != NoticeGenerationStatus.COMPLETED) {
-            return new AnalysisResultDto(status, analyzedAt, null, null, null);
+            return new AnalysisResultDto(status, analyzedAt, null, null, null, null);
         }
 
         return new AnalysisResultDto(
@@ -35,7 +37,8 @@ public record AnalysisResultDto(
                 analyzedAt,
                 SummaryDto.from(notice.getSummaryJson()),
                 RequiredDocumentsDto.from(notice.getRequiredDocumentsJson()),
-                DocumentFormatsDto.from(notice.getDocumentFormatsJson())
+                DocumentFormatsDto.from(notice.getDocumentFormatsJson()),
+                notice.getContentJson()
         );
     }
 

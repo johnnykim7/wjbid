@@ -37,14 +37,14 @@ public class NoticeAdminController {
     @Operation(summary = "공고문 목록 (관리자)", description = "한글화 상태, 노출 상태 포함")
     public ResponseEntity<Page<NoticeAdminDto>> listNotices(
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<NoticeAdminDto> page = noticeService.findAll(pageable).map(NoticeAdminDto::fromList);
+        Page<NoticeAdminDto> page = noticeService.findAllAsDto(pageable);
         return ResponseEntity.ok(page);
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "공고문 상세 (관리자)", description = "한글화 결과 포함")
     public ResponseEntity<NoticeAdminDto> getNotice(@PathVariable UUID id) {
-        return ResponseEntity.ok(NoticeAdminDto.from(noticeService.findById(id)));
+        return ResponseEntity.ok(noticeService.findByIdAsDto(id));
     }
 
     @PostMapping("/{id}/publish")
@@ -94,8 +94,9 @@ public class NoticeAdminController {
         Map<String, Object> documentFormatsJson = (Map<String, Object>) body.get("documentFormatsJson");
         Map<String, Object> requiredDocumentsJson = (Map<String, Object>) body.get("requiredDocumentsJson");
         Map<String, Object> llmPromptPresetJson = (Map<String, Object>) body.get("llmPromptPresetJson");
+        Map<String, Object> contentJson = (Map<String, Object>) body.get("contentJson");
 
-        noticeService.updateResult(id, koreanTitle, summaryJson, documentFormatsJson, requiredDocumentsJson, llmPromptPresetJson);
+        noticeService.updateResult(id, koreanTitle, summaryJson, documentFormatsJson, requiredDocumentsJson, llmPromptPresetJson, contentJson);
         log.info("공고문 한글화 결과 보정: noticeId={}", id);
         return ResponseEntity.ok(Map.of("status", "UPDATED", "noticeId", id.toString()));
     }

@@ -18,6 +18,10 @@ public interface DocumentTemplateRepository extends JpaRepository<DocumentTempla
     /** 모든 활성 템플릿 목록 */
     List<DocumentTemplate> findAllByActiveTrueOrderByDocumentTypeAsc();
 
+    /** 활성/비활성 무관 전체 목록 (관리자 화면용) */
+    @Query("SELECT t FROM DocumentTemplate t ORDER BY t.documentType ASC, t.templateVersion DESC")
+    List<DocumentTemplate> findAllOrderByDocumentTypeAndVersion();
+
     /** 특정 문서 타입의 전체 버전 이력 */
     List<DocumentTemplate> findByDocumentTypeOrderByTemplateVersionDesc(DocumentType documentType);
 }

@@ -67,6 +67,10 @@ public class Notice extends BaseEntity {
     @Column(name = "llm_prompt_preset_json", columnDefinition = "longtext")
     private String llmPromptPresetJsonRaw;
 
+    /** CR-021: TipTap JSON 본문 — PDF 양식 풍부도 재현용 (사람이 읽는 본문) */
+    @Column(name = "content_json", columnDefinition = "longtext")
+    private String contentJsonRaw;
+
     @Column(name = "analyzed_at")
     private LocalDateTime analyzedAt;
 
@@ -96,6 +100,11 @@ public class Notice extends BaseEntity {
 
     public Map<String, Object> getLlmPromptPresetJson() {
         return parseJson(llmPromptPresetJsonRaw);
+    }
+
+    /** CR-021: TipTap JSON 본문 (PDF 양식 풍부도) */
+    public Map<String, Object> getContentJson() {
+        return parseJson(contentJsonRaw);
     }
 
     private Map<String, Object> parseJson(String raw) {
@@ -128,13 +137,15 @@ public class Notice extends BaseEntity {
                               Map<String, Object> summaryJson,
                               Map<String, Object> documentFormatsJson,
                               Map<String, Object> requiredDocumentsJson,
-                              Map<String, Object> llmPromptPresetJson) {
+                              Map<String, Object> llmPromptPresetJson,
+                              Map<String, Object> contentJson) {
         this.generationStatus = NoticeGenerationStatus.COMPLETED;
         this.koreanTitle = koreanTitle;
         this.summaryJsonRaw = toJsonString(summaryJson);
         this.documentFormatsJsonRaw = toJsonString(documentFormatsJson);
         this.requiredDocumentsJsonRaw = toJsonString(requiredDocumentsJson);
         this.llmPromptPresetJsonRaw = toJsonString(llmPromptPresetJson);
+        this.contentJsonRaw = toJsonString(contentJson);
         this.analyzedAt = LocalDateTime.now();
         this.errorMessage = null;
     }
@@ -154,12 +165,14 @@ public class Notice extends BaseEntity {
                              Map<String, Object> summaryJson,
                              Map<String, Object> documentFormatsJson,
                              Map<String, Object> requiredDocumentsJson,
-                             Map<String, Object> llmPromptPresetJson) {
+                             Map<String, Object> llmPromptPresetJson,
+                             Map<String, Object> contentJson) {
         if (koreanTitle != null) this.koreanTitle = koreanTitle;
         this.summaryJsonRaw = toJsonString(summaryJson);
         this.documentFormatsJsonRaw = toJsonString(documentFormatsJson);
         this.requiredDocumentsJsonRaw = toJsonString(requiredDocumentsJson);
         this.llmPromptPresetJsonRaw = toJsonString(llmPromptPresetJson);
+        if (contentJson != null) this.contentJsonRaw = toJsonString(contentJson);
     }
 
     // Business methods — 노출 축 (게이트②)

@@ -1,0 +1,133 @@
+{
+  "_meta": {
+    "wfId": "opportunity-analysis",
+    "purpose": "공고문(Notice) 한글화 + 정형 데이터 추출 + 표시용 본문(contentJson) 생성 워크플로우",
+    "callbackTool": "save_opportunity_analysis (BE MCP)",
+    "lastUpdatedReason": "CR-021 — noticeViewTemplate 입력 + contentJson 출력 슬롯 추가",
+    "putApi": "PUT http://59.8.160.12:8280/api/v1/workflows/opportunity-analysis (X-API-Key + X-Tenant-Id: bidding_system)"
+  },
+  "id": "opportunity-analysis",
+  "name": "opportunity-analysis",
+  "domain": "bidding",
+  "projectId": null,
+  "triggerConfig": { "type": "manual" },
+  "steps": [
+    {
+      "id": "fetch_opportunity",
+      "name": "공고 메타 조회",
+      "type": "TOOL_CALL",
+      "config": {
+        "tool": "get_opportunity",
+        "input": { "opportunityId": "{{input.opportunityId}}" }
+      },
+      "depends_on": []
+    },
+    {
+      "id": "analyze_freeform",
+      "name": "공고 첨부 자율 열람 + 한국어 자유 분석",
+      "type": "AGENT_CALL",
+      "config": {
+        "description": "USFK 정부조달 공고 분석 에이전트 (1단계: 자유 텍스트)",
+        "connection_id": "bb3bc8bc-d17d-4e8e-a15b-d9f077e83d18",
+        "timeout_ms": 600000,
+        "prompt": "당신은 미군(USFK) 정부조달 RFP 분석 전문가입니다.\n\n공고 메타:\n{{fetch_opportunity.output}}\n\n공고 본문 요약(영문):\n{{input.opportunityText}}\n\n첨부 파일(필요시 parse_document tool로 열람):\n{{input.attachmentFiles}}\n\n표시용 양식 골격(NOTICE_VIEW 템플릿, TipTap JSON):\n{{input.noticeViewTemplate}}\n\n다음을 수행하세요:\n1. 필요한 첨부(공고문 본문/PWS/Price Schedule 등)를 parse_document tool로 모두 열람\n2. 공고 핵심을 한국어로 상세히 분석\n3. 다음 항목을 자유 텍스트로 빠짐없이 작성:\n   - 한국 PM/영업이 이해할 수 있는 한국어 공고 제목\n   - 핵심 요약 (2-3문장)\n   - 작업 범위(SoW) — PWS 기반\n   - 참여 자격(SAM 등록, set-aside 여부 등)\n   - 평가 기준 (LPTA / Best Value 등)\n   - 주요 일정 (각 항목: 라벨 / 날짜 / 비고)\n   - 예산 추정/명시 정보\n   - 특이사항\n   - 제출 서류 목록 (각 항목: 이름 / 설명 / 필수여부 / 양식 / 페이지 제한 / 비고). 공고가 명시한 모든 제출물 포함\n   - 양식 정보 (있으면)\n   - 담당자 정보(POC): 이름 / 이메일 / 전화(DSN 포함) / 기관·부서. 공고에 있는 모든 담당자 포함\n4. 추가 산출물: 표시용 양식 골격(noticeViewTemplate)이 주어졌다면, 그 골격의 노드 구조(noticeHeader/metaGrid/kvTable/dataTable/groupedList/calloutList/heading/paragraph/bulletList)를 그대로 유지하되, 모든 {{변수}} 자리를 실제 추출 내용으로 풍부하게 채워서 출력할 contentJson 을 따로 한국어로 자유 서술하세요. (예: 트럭 톤수별 가구 구성 표는 groupedList의 groups 항목에 5톤/2.5톤/1톤 각각 작성, PRS 매트릭스는 dataTable의 rows 항목에 행별로 작성, 9. 특별 유의 사항은 calloutList items 에 항목별 작성 등.) 골격 미제공 시 contentJson 생략.\n\n주의:\n- structured_output tool 호출하지 마세요. 이번 단계는 자유 텍스트 분석만 합니다.\n- 다음 단계에서 별도로 JSON Schema 변환을 합니다."
+      },
+      "depends_on": ["fetch_opportunity"]
+    },
+    {
+      "id": "structure_output",
+      "name": "분석 결과를 JSON Schema 로 변환",
+      "type": "LLM_CALL",
+      "config": {
+        "system": "You are a precise JSON structurer. Convert the given Korean analysis text into the requested JSON schema. Preserve every detail (titles, dates, document items, eligibility, etc.) — do not summarize away facts. Return ONLY the structured object.",
+        "max_tokens": 12288,
+        "connection_id": "bb3bc8bc-d17d-4e8e-a15b-d9f077e83d18",
+        "prompt": "다음 한국어 분석 결과를 JSON Schema 에 맞춰 빠짐없이 변환하세요.\n\n=== 분석 결과 (1단계 산출물) ===\n{{analyze_freeform.output}}\n\n=== 표시용 양식 골격 (NOTICE_VIEW 템플릿, TipTap JSON) ===\n{{input.noticeViewTemplate}}\n\n=== 변환 규칙 ===\n- 모든 항목(제목/요약/일정/제출 서류 등)을 누락 없이 포함\n- requiredDocuments.documents 는 본문에 언급된 모든 서류 포함\n- 본문에 없는 정보는 빈 문자열 또는 빈 배열로 두고 절대 추측하지 말 것\n- contentJson 은 위 NOTICE_VIEW 양식 골격의 노드 구조를 그대로 따르되 모든 {{변수}} 자리를 실제 값으로 치환한 결과여야 함:\n  - 골격의 type=\"doc\" 와 content 배열을 유지\n  - 커스텀 노드(noticeHeader/metaGrid/kvTable/dataTable/groupedList/calloutList)의 attrs 자리에 실제 데이터 주입\n  - kvTable.attrs.rows = [{label, value}, ...]\n  - dataTable.attrs.rows = [[cell, cell, ...], ...]  (헤더 수 만큼의 셀 배열)\n  - groupedList.attrs.groups = [{label, items: [...], required?}, ...]\n  - calloutList.attrs.items = [\"...\", ...]\n  - bulletList.attrs.items = [\"...\", ...]\n  - paragraph 내 text 슬롯은 1단계 분석 결과 본문으로 치환\n  - 골격이 주어지지 않았다면 contentJson 은 null\n- 응답은 schema 에 맞는 JSON 만",
+        "response_schema": {
+          "type": "object",
+          "required": ["koreanTitle", "summary", "requiredDocuments"],
+          "properties": {
+            "summary": {
+              "type": "object",
+              "required": ["overview"],
+              "properties": {
+                "scope":             { "type": "string" },
+                "keyDates":          { "type": "array"  },
+                "overview":          { "type": "string" },
+                "budgetInfo":        { "type": "string" },
+                "eligibility":       { "type": "string" },
+                "specialNotes":      { "type": "array"  },
+                "evaluationCriteria":{ "type": "string" },
+                "contactInfo": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name":         { "type": "string" },
+                      "role":         { "type": "string" },
+                      "email":        { "type": "string" },
+                      "phone":        { "type": "string" },
+                      "organization": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            },
+            "koreanTitle":      { "type": "string" },
+            "documentFormats":  { "type": "object" },
+            "llmPromptPreset":  { "type": "object" },
+            "requiredDocuments":{
+              "type": "object",
+              "required": ["documents"],
+              "properties": {
+                "documents": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["name", "mandatory"],
+                    "properties": {
+                      "name":        { "type": "string" },
+                      "notes":       { "type": "string" },
+                      "format":      { "type": "string" },
+                      "mandatory":   { "type": "boolean"},
+                      "pageLimit":   { "type": "string" },
+                      "description": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            },
+            "contentJson": {
+              "type": "object",
+              "description": "NOTICE_VIEW 양식 골격을 채운 TipTap JSON. type='doc' + content 배열."
+            }
+          }
+        }
+      },
+      "depends_on": ["analyze_freeform"]
+    },
+    {
+      "id": "save",
+      "name": "결과 저장 콜백",
+      "type": "TOOL_CALL",
+      "config": {
+        "tool": "save_opportunity_analysis",
+        "input": {
+          "summary":           "{{structure_output.structured_data.summary}}",
+          "noticeId":          "{{input.noticeId}}",
+          "koreanTitle":       "{{structure_output.structured_data.koreanTitle}}",
+          "documentFormats":   "{{structure_output.structured_data.documentFormats}}",
+          "llmPromptPreset":   "{{structure_output.structured_data.llmPromptPreset}}",
+          "requiredDocuments": "{{structure_output.structured_data.requiredDocuments}}",
+          "contentJson":       "{{structure_output.structured_data.contentJson}}"
+        }
+      },
+      "depends_on": ["structure_output"]
+    }
+  ],
+  "errorHandling": null,
+  "outputSchema": null,
+  "inputSchema": null,
+  "graphMode": null,
+  "active": true
+}

@@ -80,7 +80,8 @@ public class OpportunityAnalysisMcpTool {
                             "documents", Map.of("type", "array", "description", "서류 목록 [{name, description, mandatory, format, pageLimit, notes}]")
                         ))
                     ),
-                    "llmPromptPreset", Map.of("type", "object", "description", "LLM 프롬프트 프리셋 (내부용)")
+                    "llmPromptPreset", Map.of("type", "object", "description", "LLM 프롬프트 프리셋 (내부용)"),
+                    "contentJson", Map.of("type", "object", "description", "TipTap JSON 본문 — NOTICE_VIEW 템플릿 골격을 채워서 반환 (PDF 풍부도). 노드 타입: noticeHeader/metaGrid/kvTable/dataTable/groupedList/calloutList 등 커스텀 + heading/paragraph/bulletList 표준")
                 ),
                 "required", List.of("noticeId")
             )
@@ -130,13 +131,15 @@ public class OpportunityAnalysisMcpTool {
         UUID noticeId = UUID.fromString((String) args.get("noticeId"));
         String koreanTitle = (String) args.get("koreanTitle");
 
-        Map<String, Object> summary = args.containsKey("summary") ? (Map<String, Object>) args.get("summary") : null;
-        Map<String, Object> documentFormats = args.containsKey("documentFormats") ? (Map<String, Object>) args.get("documentFormats") : null;
-        Map<String, Object> requiredDocuments = args.containsKey("requiredDocuments") ? (Map<String, Object>) args.get("requiredDocuments") : null;
-        Map<String, Object> llmPromptPreset = args.containsKey("llmPromptPreset") ? (Map<String, Object>) args.get("llmPromptPreset") : null;
+        // Aimbase 워크플로우의 변수 치환이 객체를 JSON 문자열로 직렬화해서 보낼 수 있어 양쪽 호환
+        Map<String, Object> summary = coerceToMap(args.get("summary"));
+        Map<String, Object> documentFormats = coerceToMap(args.get("documentFormats"));
+        Map<String, Object> requiredDocuments = coerceToMap(args.get("requiredDocuments"));
+        Map<String, Object> llmPromptPreset = coerceToMap(args.get("llmPromptPreset"));
+        Map<String, Object> contentJson = coerceToMap(args.get("contentJson"));
 
         Notice notice = noticeService.saveResult(
-                noticeId, koreanTitle, summary, documentFormats, requiredDocuments, llmPromptPreset);
+                noticeId, koreanTitle, summary, documentFormats, requiredDocuments, llmPromptPreset, contentJson);
 
         log.info("MCP save_opportunity_analysis: noticeId={}, status={}", noticeId, notice.getGenerationStatus());
 
@@ -189,5 +192,24 @@ public class OpportunityAnalysisMcpTool {
         } catch (Exception e) {
             return obj.toString();
         }
+    }
+
+    /** Aimbase 변수 치환이 객체를 JSON 문자열로 보내는 경우가 있어 양쪽 호환. */
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> coerceToMap(Object value) {
+        if (value == null) return null;
+        if (value instanceof Map<?, ?> m) return (Map<String, Object>) m;
+        if (value instanceof String s) {
+            String trimmed = s.trim();
+            if (trimmed.isEmpty() || "null".equals(trimmed)) return null;
+            try {
+                return objectMapper.readValue(trimmed, Map.class);
+            } catch (Exception e) {
+                log.warn("MCP coerceToMap: String→Map 파싱 실패, null 반환. preview={}", trimmed.substring(0, Math.min(120, trimmed.length())));
+                return null;
+            }
+        }
+        log.warn("MCP coerceToMap: 예상 외 타입 {} → null", value.getClass().getName());
+        return null;
     }
 }

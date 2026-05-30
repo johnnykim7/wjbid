@@ -24,10 +24,15 @@ public class DocumentTemplateAdminController {
 
     private final DocumentTemplateService documentTemplateService;
 
-    /** 전체 활성 템플릿 목록 */
+    /** 전체 템플릿 목록 (기본=활성만, includeInactive=true면 전체) */
     @GetMapping
-    public ResponseEntity<List<DocumentTemplate>> findAll() {
-        return ResponseEntity.ok(documentTemplateService.findAll());
+    public ResponseEntity<List<DocumentTemplate>> findAll(
+        @RequestParam(name = "includeInactive", defaultValue = "false") boolean includeInactive
+    ) {
+        List<DocumentTemplate> list = includeInactive
+                ? documentTemplateService.findAllIncludingInactive()
+                : documentTemplateService.findAll();
+        return ResponseEntity.ok(list);
     }
 
     /** 문서 타입별 버전 이력 */
@@ -65,6 +70,13 @@ public class DocumentTemplateAdminController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deactivate(@PathVariable UUID id) {
         documentTemplateService.deactivate(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    /** 템플릿 재활성화 */
+    @PostMapping("/{id}/activate")
+    public ResponseEntity<Void> activate(@PathVariable UUID id) {
+        documentTemplateService.activate(id);
         return ResponseEntity.noContent().build();
     }
 

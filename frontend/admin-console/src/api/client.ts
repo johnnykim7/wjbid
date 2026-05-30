@@ -58,8 +58,8 @@ export const getCollectionStatus = () =>
   api.get('/admin/collection/status')
 
 // Document Templates
-export const getDocumentTemplates = () =>
-  api.get('/admin/document-templates')
+export const getDocumentTemplates = (includeInactive = false) =>
+  api.get('/admin/document-templates', { params: { includeInactive } })
 
 export const getDocumentTemplatesByType = (documentType: string) =>
   api.get(`/admin/document-templates/${documentType}`)
@@ -72,6 +72,15 @@ export const createDocumentTemplate = (data: {
 
 export const deactivateDocumentTemplate = (id: string) =>
   api.delete(`/admin/document-templates/${id}`)
+
+export const activateDocumentTemplate = (id: string) =>
+  api.post(`/admin/document-templates/${id}/activate`)
+
+export const updateDocumentTemplate = (id: string, data: {
+  templateName?: string
+  contentJson?: Record<string, unknown>
+  description?: string
+}) => api.patch(`/admin/document-templates/${id}`, data)
 
 // Bid Documents (editing)
 export const getBidDocument = (id: string) =>
@@ -114,8 +123,8 @@ export const getCollectionRuns = (page = 0) =>
   api.get('/admin/collection/runs', { params: { page, size: 20 } })
 
 // 원본 공고 Admin — 선별 풀 (CR-016)
-export const getAdminOpportunities = (page = 0) =>
-  api.get('/admin/opportunities', { params: { page, size: 20 } })
+export const getAdminOpportunities = (page = 0, q = '') =>
+  api.get('/admin/opportunities', { params: { page, size: 20, ...(q ? { q } : {}) } })
 
 export const getAdminOpportunityDetail = (id: string) =>
   api.get(`/admin/opportunities/${id}`)

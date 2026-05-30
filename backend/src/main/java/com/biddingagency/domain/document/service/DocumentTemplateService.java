@@ -34,6 +34,12 @@ public class DocumentTemplateService {
         return templateRepository.findAllByActiveTrueOrderByDocumentTypeAsc();
     }
 
+    /** 활성/비활성 무관 전체 목록 (관리자 화면용) */
+    @Transactional(readOnly = true)
+    public List<DocumentTemplate> findAllIncludingInactive() {
+        return templateRepository.findAllOrderByDocumentTypeAndVersion();
+    }
+
     /** 특정 문서 타입의 전체 버전 이력 */
     @Transactional(readOnly = true)
     public List<DocumentTemplate> findByDocumentType(DocumentType documentType) {
@@ -93,5 +99,14 @@ public class DocumentTemplateService {
             .orElseThrow(() -> new NoSuchElementException("템플릿을 찾을 수 없습니다: " + id));
         template.deactivate();
         log.info("DocumentTemplate 비활성화: id={}, type={}", id, template.getDocumentType());
+    }
+
+    /** 템플릿 재활성화 */
+    @Transactional
+    public void activate(UUID id) {
+        DocumentTemplate template = templateRepository.findById(id)
+            .orElseThrow(() -> new NoSuchElementException("템플릿을 찾을 수 없습니다: " + id));
+        template.activate();
+        log.info("DocumentTemplate 재활성화: id={}, type={}", id, template.getDocumentType());
     }
 }
