@@ -1,51 +1,45 @@
 package com.biddingagency.domain.proposal.service;
 
-import com.biddingagency.domain.proposal.entity.GenerationTargetType;
+import java.util.Map;
 
 /**
- * CR-029 모델 라우팅 정책 + 단가 (비용 추적용).
+ * CR-029 모델 단가표 + cost 계산.
  *
- * <p>현재 범위(2026-06-01 결정): <b>비용 추적 + 로깅만</b>. 모델을 Aimbase 워크플로우에 실제 강제하지 않는다.
- * 즉 여기 모델명은 "이 단계는 이 모델로 돈다고 약속된 값"이며, generation_log.model_name 과 cost 계산의 기준이다.
- * 실제 강제(input.model → step config override)는 Aimbase 워크플로우 수정이 필요해 후속 단계로 분리.
+ * <p><b>실측 기반 변경(2026-06-02)</b>: 초기 설계는 단계→모델을 정책값(design=Haiku)으로 추정했으나,
+ * 실측 결과 proposal-design/write-section/assemble 3개 워크플로우가 전부 AGENT_CALL + 동일 connection
+ * {@code bidding-claude-sonnet}(=claude-sonnet-4-20250514)을 사용 — design 도 실제로는 Sonnet 으로 돈다.
+ * 따라서 모델은 추정하지 않고 {@code LLMPlatformClient.resolveStageModel()} 이 워크플로우→connection 에서
+ * 실측 조회한다. 이 클래스는 그 모델명에 대한 단가표만 담당.
  *
- * <p>정본 라우팅(cr029-model-routing-cost):
- * <ul>
- *   <li>design → Haiku 4.5 (구조 발췌·검증)</li>
- *   <li>write-section → Sonnet 4.6 (본문 분량·깊이)</li>
- *   <li>assemble → Sonnet 4.6 (문체 통일)</li>
- * </ul>
+ * <p>모델별 미등록 시 보수적으로 Sonnet 단가로 폴백.
  */
 public final class ModelRouting {
 
     private ModelRouting() {}
 
-    // 모델 ID (CLAUDE.md 기준)
-    public static final String HAIKU  = "claude-haiku-4-5-20251001";
-    public static final String SONNET = "claude-sonnet-4-6";
+    // ── 단가 (USD per 1M tokens). 출처: Anthropic 공개 단가. 운영 청구서 대조로 보정 필요(미검증 값). ──
+    // [input, output]
+    private static final double[] SONNET = {3.00, 15.00};   // Sonnet 4.x
+    private static final double[] HAIKU  = {1.00,  5.00};   // Haiku 4.5
+    private static final double[] OPUS   = {15.00, 75.00};  // Opus 4.x
 
-    /** 파이프라인 단계 → 라우팅 모델. */
-    public static String modelFor(GenerationTargetType stage) {
-        return switch (stage) {
-            case DESIGN -> HAIKU;
-            case WRITE_SECTION, ASSEMBLE -> SONNET;
-            case VERIFY -> HAIKU;          // [[cr031]] 검증은 Haiku
-            default -> SONNET;             // 알 수 없는 단계는 보수적으로 Sonnet 단가
-        };
+    /** model id(=connection 의 config.model) prefix 로 단가 매핑. 알 수 없으면 Sonnet 단가. */
+    private static double[] priceOf(String model) {
+        if (model == null) return SONNET;
+        String m = model.toLowerCase();
+        if (m.contains("haiku")) return HAIKU;
+        if (m.contains("opus"))  return OPUS;
+        return SONNET; // sonnet 및 미상
     }
 
-    // ── 단가 (USD per 1M tokens) ──────────────────────────────────────────
-    // 출처: Anthropic 공개 단가. 단가 변동·할인 미반영 — 운영 청구서와 대조해 보정 필요(미검증 값).
-    // Haiku 4.5: input $1.00 / output $5.00
-    // Sonnet 4.6: input $3.00 / output $15.00
-    private static final double HAIKU_IN  = 1.00,  HAIKU_OUT  = 5.00;
-    private static final double SONNET_IN = 3.00,  SONNET_OUT = 15.00;
+    public static double inputPricePerMTok(String model)  { return priceOf(model)[0]; }
+    public static double outputPricePerMTok(String model) { return priceOf(model)[1]; }
 
-    public static double inputPricePerMTok(String model) {
-        return HAIKU.equals(model) ? HAIKU_IN : SONNET_IN;
-    }
+    /** 토큰 매핑이 비어있을 때 cost 계산 헬퍼가 참조하는 키. */
+    public static final String KEY_INPUT  = "input_tokens";
+    public static final String KEY_OUTPUT = "output_tokens";
 
-    public static double outputPricePerMTok(String model) {
-        return HAIKU.equals(model) ? HAIKU_OUT : SONNET_OUT;
+    static Map<String, double[]> table() {
+        return Map.of("sonnet", SONNET, "haiku", HAIKU, "opus", OPUS);
     }
 }

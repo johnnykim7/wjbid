@@ -17,6 +17,7 @@ import org.springframework.web.client.RestTemplate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Aimbase Workflow 기반 클라이언트 (CR-002)
@@ -174,6 +175,69 @@ public class LLMPlatformClient {
     public WorkflowRunResponse runProposalAssemble(Map<String, Object> input) {
         log.info("Aimbase: 제안서 assemble 시작 documentId={}", input.get("documentId"));
         return runWorkflowAndWait(proposalAssembleWorkflowId, input);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // CR-029: 워크플로우 실측 모델 해석 (워크플로우 → step connection_id → connection.config.model)
+    //   stepResults·agents API 둘 다 model 을 노출하지 않으므로 connection 에서 실측한다.
+    //   워크플로우별 모델은 고정이므로 1회 조회 후 캐싱.
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private final Map<String, String> workflowModelCache = new ConcurrentHashMap<>();
+
+    private static final ParameterizedTypeReference<AimbaseApiResponse<Map<String, Object>>> MAP_RESPONSE_TYPE =
+        new ParameterizedTypeReference<>() {};
+
+    public String resolveDesignModel()       { return resolveWorkflowModel(proposalDesignWorkflowId); }
+    public String resolveWriteSectionModel() { return resolveWorkflowModel(proposalWriteSectionWorkflowId); }
+    public String resolveAssembleModel()     { return resolveWorkflowModel(proposalAssembleWorkflowId); }
+
+    /**
+     * 워크플로우의 첫 AGENT_CALL/LLM_CALL step 이 쓰는 connection 의 모델명을 반환.
+     * 조회 실패 시 null (호출부는 null 이면 단가 폴백·model NULL 기록).
+     */
+    public String resolveWorkflowModel(String workflowId) {
+        return workflowModelCache.computeIfAbsent(workflowId, this::fetchWorkflowModel);
+    }
+
+    @SuppressWarnings("unchecked")
+    private String fetchWorkflowModel(String workflowId) {
+        try {
+            Map<String, Object> wf = getMap(baseUrl + "/api/v1/workflows/" + workflowId);
+            if (wf == null) return null;
+
+            List<Map<String, Object>> steps = (List<Map<String, Object>>) wf.get("steps");
+            if (steps == null || steps.isEmpty()) return null;
+
+            // 첫 step 의 config.connection_id (3개 워크플로우 모두 단일 step)
+            String connectionId = null;
+            for (Map<String, Object> step : steps) {
+                Map<String, Object> config = (Map<String, Object>) step.get("config");
+                if (config != null && config.get("connection_id") != null) {
+                    connectionId = String.valueOf(config.get("connection_id"));
+                    break;
+                }
+            }
+            if (connectionId == null) return null;
+
+            Map<String, Object> conn = getMap(baseUrl + "/api/v1/connections/" + connectionId);
+            if (conn == null) return null;
+            Map<String, Object> connConfig = (Map<String, Object>) conn.get("config");
+            String model = connConfig != null ? (String) connConfig.get("model") : null;
+            log.info("[CR-029] 워크플로우 모델 해석: workflowId={} → connection={} → model={}",
+                    workflowId, connectionId, model);
+            return model;
+        } catch (Exception e) {
+            log.warn("[CR-029] 워크플로우 모델 해석 실패 workflowId={}: {}", workflowId, e.getMessage());
+            return null;
+        }
+    }
+
+    private Map<String, Object> getMap(String url) {
+        ResponseEntity<AimbaseApiResponse<Map<String, Object>>> resp =
+                llmPlatformRestTemplate.exchange(url, HttpMethod.GET, null, MAP_RESPONSE_TYPE);
+        AimbaseApiResponse<Map<String, Object>> body = resp.getBody();
+        return (body != null && body.getData() != null) ? body.getData() : null;
     }
 
     /**

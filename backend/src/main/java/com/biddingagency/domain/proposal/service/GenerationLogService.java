@@ -47,17 +47,19 @@ public class GenerationLogService {
     /**
      * CR-029 — 파이프라인 단계 1회 실행 결과를 비용 로그로 적재.
      *
-     * <p>토큰은 Aimbase 응답 stepResults 에서 합산, 모델은 라우팅 정책값, cost 는 모델 단가 × 토큰.
-     * 토큰이 0(응답에 토큰 미포함)이어도 model/단가는 기록 — 누락 자체가 데이터.
+     * <p>토큰은 Aimbase 응답 stepResults 에서 합산, <b>모델은 호출부가 워크플로우 connection 에서 실측 조회한 값</b>
+     * (정책 추정 아님 — 실측 결과 design 도 Sonnet 으로 돌기 때문), cost 는 모델 단가 × 토큰.
+     * model 이 null(조회 실패)이면 단가 폴백(Sonnet)으로 cost 계산하되 model_name 은 null 로 남겨 미해석을 드러낸다.
+     * 토큰이 0(응답에 토큰 미포함)이어도 기록 — 누락 자체가 데이터.
      * append-only 보조 작업이므로 실패해도 본 파이프라인을 막지 않는다(상위에서 try/catch).
      *
      * @param stage    DESIGN / WRITE_SECTION / ASSEMBLE
      * @param targetId 단계 대상 (documentId 또는 sectionId)
+     * @param model    워크플로우 connection 에서 실측한 모델 ID (null 가능)
      */
     @Transactional
     public GenerationLog recordStage(GenerationTargetType stage, UUID targetId,
-                                     WorkflowRunResponse run) {
-        String model = ModelRouting.modelFor(stage);
+                                     WorkflowRunResponse run, String model) {
         int tokensIn = run != null ? run.totalInputTokens() : 0;
         int tokensOut = run != null ? run.totalOutputTokens() : 0;
         BigDecimal cost = computeCost(model, tokensIn, tokensOut);

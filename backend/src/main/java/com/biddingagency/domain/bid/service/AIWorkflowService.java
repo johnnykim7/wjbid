@@ -201,10 +201,17 @@ public class AIWorkflowService {
     /**
      * CR-029 — 단계 1회 결과를 generation_log 에 적재. 비용 추적용 보조 작업이므로
      * 실패해도 본 파이프라인을 막지 않는다(append-only, best-effort).
+     * 모델은 워크플로우 connection 에서 실측 조회(캐싱) — 정책 추정 아님.
      */
     private void logGeneration(GenerationTargetType stage, UUID targetId, WorkflowRunResponse run) {
         try {
-            generationLogService.recordStage(stage, targetId, run);
+            String model = switch (stage) {
+                case DESIGN -> llmPlatformClient.resolveDesignModel();
+                case WRITE_SECTION -> llmPlatformClient.resolveWriteSectionModel();
+                case ASSEMBLE -> llmPlatformClient.resolveAssembleModel();
+                default -> null;
+            };
+            generationLogService.recordStage(stage, targetId, run, model);
         } catch (Exception e) {
             log.warn("[CR-029] generation_log 적재 실패(무시): stage={}, target={}", stage, targetId, e);
         }

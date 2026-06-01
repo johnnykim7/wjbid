@@ -64,57 +64,64 @@ class GenerationLogServiceTest {
         assertThat(saved.getCostUsd()).isEqualByComparingTo("0.012345");
     }
 
-    // ── CR-029 recordStage ────────────────────────────────────────────────
+    // ── CR-029 recordStage (모델은 호출부가 실측 조회해 인자로 전달) ──────────────
 
     @Test
-    @DisplayName("DESIGN단계_Haiku모델로기록됨")
-    void design단계_Haiku모델() {
+    @DisplayName("전달된모델_그대로기록됨")
+    void 전달모델_기록() {
         given(generationLogRepository.save(any())).willAnswer(i -> i.getArgument(0));
-        generationLogService.recordStage(GenerationTargetType.DESIGN, UUID.randomUUID(), runWith(1000, 500));
-        assertThat(captureSaved().getModelName()).isEqualTo(ModelRouting.HAIKU);
-    }
-
-    @Test
-    @DisplayName("WRITE_SECTION단계_Sonnet모델로기록됨")
-    void writeSection단계_Sonnet모델() {
-        given(generationLogRepository.save(any())).willAnswer(i -> i.getArgument(0));
-        generationLogService.recordStage(GenerationTargetType.WRITE_SECTION, UUID.randomUUID(), runWith(1000, 500));
-        assertThat(captureSaved().getModelName()).isEqualTo(ModelRouting.SONNET);
+        generationLogService.recordStage(GenerationTargetType.DESIGN, UUID.randomUUID(),
+                runWith(1000, 500), "claude-sonnet-4-20250514");
+        assertThat(captureSaved().getModelName()).isEqualTo("claude-sonnet-4-20250514");
     }
 
     @Test
     @DisplayName("토큰합산_stepResults값이로그에반영됨")
     void 토큰합산_로그반영() {
         given(generationLogRepository.save(any())).willAnswer(i -> i.getArgument(0));
-        generationLogService.recordStage(GenerationTargetType.DESIGN, UUID.randomUUID(), runWith(1234, 567));
+        generationLogService.recordStage(GenerationTargetType.DESIGN, UUID.randomUUID(), runWith(1234, 567), "x");
         GenerationLog log = captureSaved();
         assertThat(log.getTokensIn()).isEqualTo(1234);
         assertThat(log.getTokensOut()).isEqualTo(567);
     }
 
     @Test
-    @DisplayName("비용계산_Haiku_1M입력1M출력_6달러")
+    @DisplayName("비용계산_Haiku모델명_1M입력1M출력_6달러")
     void 비용계산_Haiku() {
-        // Haiku: input $1/MTok + output $5/MTok → $6
+        // model 명에 'haiku' 포함 → input $1/MTok + output $5/MTok → $6
         given(generationLogRepository.save(any())).willAnswer(i -> i.getArgument(0));
-        generationLogService.recordStage(GenerationTargetType.DESIGN, UUID.randomUUID(), runWith(1_000_000, 1_000_000));
+        generationLogService.recordStage(GenerationTargetType.DESIGN, UUID.randomUUID(),
+                runWith(1_000_000, 1_000_000), "claude-haiku-4-5-20251001");
         assertThat(captureSaved().getCostUsd()).isEqualByComparingTo(new BigDecimal("6.000000"));
     }
 
     @Test
-    @DisplayName("비용계산_Sonnet_1M입력1M출력_18달러")
+    @DisplayName("비용계산_Sonnet모델명_1M입력1M출력_18달러")
     void 비용계산_Sonnet() {
-        // Sonnet: input $3/MTok + output $15/MTok → $18
+        // model 명에 'sonnet' 포함 → input $3/MTok + output $15/MTok → $18
         given(generationLogRepository.save(any())).willAnswer(i -> i.getArgument(0));
-        generationLogService.recordStage(GenerationTargetType.ASSEMBLE, UUID.randomUUID(), runWith(1_000_000, 1_000_000));
+        generationLogService.recordStage(GenerationTargetType.ASSEMBLE, UUID.randomUUID(),
+                runWith(1_000_000, 1_000_000), "claude-sonnet-4-20250514");
         assertThat(captureSaved().getCostUsd()).isEqualByComparingTo(new BigDecimal("18.000000"));
+    }
+
+    @Test
+    @DisplayName("model null_Sonnet단가폴백_18달러")
+    void 비용계산_modelNull_Sonnet폴백() {
+        // 모델 조회 실패(null) → 단가는 Sonnet 폴백, model_name 은 null 기록
+        given(generationLogRepository.save(any())).willAnswer(i -> i.getArgument(0));
+        generationLogService.recordStage(GenerationTargetType.DESIGN, UUID.randomUUID(),
+                runWith(1_000_000, 1_000_000), null);
+        GenerationLog log = captureSaved();
+        assertThat(log.getModelName()).isNull();
+        assertThat(log.getCostUsd()).isEqualByComparingTo(new BigDecimal("18.000000"));
     }
 
     @Test
     @DisplayName("응답null_토큰0비용0으로기록됨")
     void 응답null_0으로기록() {
         given(generationLogRepository.save(any())).willAnswer(i -> i.getArgument(0));
-        generationLogService.recordStage(GenerationTargetType.DESIGN, UUID.randomUUID(), null);
+        generationLogService.recordStage(GenerationTargetType.DESIGN, UUID.randomUUID(), null, "x");
         GenerationLog log = captureSaved();
         assertThat(log.getTokensIn()).isZero();
         assertThat(log.getCostUsd()).isEqualByComparingTo(BigDecimal.ZERO);

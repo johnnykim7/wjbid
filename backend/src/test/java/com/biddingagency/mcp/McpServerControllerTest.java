@@ -5,6 +5,7 @@ import com.biddingagency.mcp.tool.DocumentTemplateMcpTool;
 import com.biddingagency.mcp.tool.OpportunityAnalysisMcpTool;
 import com.biddingagency.mcp.tool.OpportunityMcpTool;
 import com.biddingagency.mcp.tool.PatternGuideMcpTool;
+import com.biddingagency.mcp.tool.ProposalMcpTool;
 import com.biddingagency.mcp.tool.RequirementMcpTool;
 import com.biddingagency.mcp.tool.StateMcpTool;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,6 +41,8 @@ class McpServerControllerTest {
     private OpportunityAnalysisMcpTool opportunityAnalysisMcpTool;
     @Mock
     private PatternGuideMcpTool patternGuideMcpTool;
+    @Mock
+    private ProposalMcpTool proposalMcpTool;
 
     private McpServerController mcpServerController;
 
@@ -48,7 +51,7 @@ class McpServerControllerTest {
         McpDispatcher dispatcher = new McpDispatcher(
             opportunityMcpTool, requirementMcpTool, documentMcpTool,
             documentTemplateMcpTool, stateMcpTool, opportunityAnalysisMcpTool,
-            patternGuideMcpTool);
+            patternGuideMcpTool, proposalMcpTool);
         mcpServerController = new McpServerController(dispatcher);
     }
 
