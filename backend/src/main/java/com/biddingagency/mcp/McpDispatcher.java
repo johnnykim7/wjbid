@@ -24,6 +24,7 @@ public class McpDispatcher {
     private final StateMcpTool stateMcpTool;
     private final OpportunityAnalysisMcpTool opportunityAnalysisMcpTool;
     private final PatternGuideMcpTool patternGuideMcpTool;
+    private final ProposalMcpTool proposalMcpTool;
 
     /** 전체 도구 정의 목록 */
     private static final List<Map<String, Object>> ALL_TOOLS = Stream.of(
@@ -33,7 +34,8 @@ public class McpDispatcher {
         DocumentTemplateMcpTool.TOOL_DEFINITIONS,
         StateMcpTool.TOOL_DEFINITIONS,
         OpportunityAnalysisMcpTool.TOOL_DEFINITIONS,
-        PatternGuideMcpTool.TOOL_DEFINITIONS
+        PatternGuideMcpTool.TOOL_DEFINITIONS,
+        ProposalMcpTool.TOOL_DEFINITIONS
     ).flatMap(Collection::stream).toList();
 
     /**
@@ -111,6 +113,11 @@ public class McpDispatcher {
             case "get_past_submissions"        -> opportunityAnalysisMcpTool.getPastSubmissions(args);
             case "get_reference_samples"       -> patternGuideMcpTool.getReferenceSamples(args);
             case "save_pattern_guide"          -> patternGuideMcpTool.savePatternGuide(args);
+            // CR-028: 제안서 파이프라인 3단계
+            case "get_proposal_design_input"   -> proposalMcpTool.getProposalDesignInput(args);
+            case "save_proposal_structure"     -> proposalMcpTool.saveProposalStructure(args);
+            case "get_section_context"         -> proposalMcpTool.getSectionContext(args);
+            case "save_section_blocks"         -> proposalMcpTool.saveSectionBlocks(args);
             default -> throw new IllegalArgumentException("알 수 없는 도구: " + toolName);
         };
     }

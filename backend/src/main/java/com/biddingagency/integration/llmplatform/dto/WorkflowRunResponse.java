@@ -53,4 +53,35 @@ public class WorkflowRunResponse {
     public boolean isRunning() {
         return "running".equalsIgnoreCase(status) || "pending".equalsIgnoreCase(status);
     }
+
+    // ── CR-029 비용 추적: stepResults 의 토큰을 합산 ─────────────────────────
+    // Aimbase AGENT_CALL step 결과 map 은 "input_tokens"/"output_tokens" 키를 담는다
+    // (aimbase AgentCallStepExecutor). stepResults = { stepId -> resultMap } 전체를 순회해 합산.
+
+    /** 전체 step 의 input 토큰 합. 데이터 없으면 0. */
+    public int totalInputTokens() {
+        return sumTokens("input_tokens");
+    }
+
+    /** 전체 step 의 output 토큰 합. 데이터 없으면 0. */
+    public int totalOutputTokens() {
+        return sumTokens("output_tokens");
+    }
+
+    @SuppressWarnings("unchecked")
+    private int sumTokens(String key) {
+        if (stepResults == null || stepResults.isEmpty()) {
+            return 0;
+        }
+        int sum = 0;
+        for (Object stepResult : stepResults.values()) {
+            if (stepResult instanceof Map<?, ?> resultMap) {
+                Object val = ((Map<String, Object>) resultMap).get(key);
+                if (val instanceof Number num) {
+                    sum += num.intValue();
+                }
+            }
+        }
+        return sum;
+    }
 }

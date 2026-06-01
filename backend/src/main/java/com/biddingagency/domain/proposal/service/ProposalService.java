@@ -53,6 +53,12 @@ public class ProposalService {
     }
 
     @Transactional(readOnly = true)
+    public ProposalChapter getChapter(UUID chapterId) {
+        return chapterRepository.findById(chapterId)
+                .orElseThrow(() -> new IllegalArgumentException("Chapter not found: " + chapterId));
+    }
+
+    @Transactional(readOnly = true)
     public ProposalSection getSection(UUID sectionId) {
         return sectionRepository.findById(sectionId)
                 .orElseThrow(() -> new IllegalArgumentException("Section not found: " + sectionId));
@@ -90,6 +96,49 @@ public class ProposalService {
                 .status(SectionStatus.PENDING)
                 .build();
         return sectionRepository.save(section);
+    }
+
+    // ─────────────────────────────────────────────
+    // 트리 일괄 저장 (design 단계 콜백 — CR-028 save_proposal_structure 가 호출)
+    // design WF 가 chapter/section 트리를 통째로 콜백 → 기존 트리 비우고 재생성.
+    // LOCKED section 이 하나라도 있으면 사람이 다듬은 산출물 보호를 위해 전체 거부.
+    // ─────────────────────────────────────────────
+
+    @Transactional
+    public List<ProposalChapter> saveStructure(UUID documentId, List<ChapterInput> chapters) {
+        // LOCKED 보호: 기존 트리에 LOCKED section 이 있으면 통째 재생성 금지
+        List<ProposalSection> existing = sectionRepository.findAllByDocumentId(documentId);
+        boolean hasLocked = existing.stream().anyMatch(ProposalSection::isLocked);
+        if (hasLocked) {
+            throw new IllegalStateException(
+                "LOCKED section 이 있는 문서는 design 재생성 불가 (documentId=" + documentId + "). 개별 section 만 재작성하세요.");
+        }
+
+        // 기존 chapter 삭제 → section/block 은 FK ON DELETE CASCADE 로 함께 제거
+        chapterRepository.deleteByDocumentId(documentId);
+        chapterRepository.flush();
+
+        int chapterOrder = 0;
+        for (ChapterInput ci : chapters) {
+            ProposalChapter chapter = createChapter(documentId, ci.factorLabel(), ci.factorTitle(),
+                    parseSourceSection(ci.sourceSection()), chapterOrder++);
+            int sectionOrder = 0;
+            List<SectionInput> sections = ci.sections() != null ? ci.sections() : List.of();
+            for (SectionInput si : sections) {
+                createSection(chapter.getId(), si.subfactorLabel(), si.title(), si.scope(),
+                        si.requirementRefs(), si.minWords(), sectionOrder++);
+            }
+        }
+        return chapterRepository.findByDocumentIdOrderByOrderNoAsc(documentId);
+    }
+
+    private SourceSection parseSourceSection(String raw) {
+        if (raw == null || raw.isBlank()) return SourceSection.NOTICE_M;
+        try {
+            return SourceSection.valueOf(raw.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return SourceSection.NOTICE_M;
+        }
     }
 
     // ─────────────────────────────────────────────
@@ -156,5 +205,22 @@ public class ProposalService {
             BlockType blockType,
             Map<String, Object> contentJson,
             Map<String, Object> sourceEvidence
+    ) {}
+
+    /** design 트리 일괄 저장 입력 (chapter 단위). */
+    public record ChapterInput(
+            String factorLabel,
+            String factorTitle,
+            String sourceSection,
+            List<SectionInput> sections
+    ) {}
+
+    /** design 트리 일괄 저장 입력 (section 단위). */
+    public record SectionInput(
+            String subfactorLabel,
+            String title,
+            String scope,
+            List<String> requirementRefs,
+            Integer minWords
     ) {}
 }

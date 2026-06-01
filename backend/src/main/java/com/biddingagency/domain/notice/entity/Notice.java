@@ -71,6 +71,14 @@ public class Notice extends BaseEntity {
     @Column(name = "content_json", columnDefinition = "longtext")
     private String contentJsonRaw;
 
+    /** CR-028: Section L/M 에서 도출한 FACTOR/Subfactor 트리 (proposal-design 입력). NULL 가능 */
+    @Column(name = "factor_tree_json", columnDefinition = "longtext")
+    private String factorTreeJsonRaw;
+
+    /** CR-028: Price 항목·수량·단위 추천 (단가 제외). NULL 가능 */
+    @Column(name = "price_items_json", columnDefinition = "longtext")
+    private String priceItemsJsonRaw;
+
     @Column(name = "analyzed_at")
     private LocalDateTime analyzedAt;
 
@@ -105,6 +113,16 @@ public class Notice extends BaseEntity {
     /** CR-021: TipTap JSON 본문 (PDF 양식 풍부도) */
     public Map<String, Object> getContentJson() {
         return parseJson(contentJsonRaw);
+    }
+
+    /** CR-028: FACTOR/Subfactor 트리 (proposal-design 입력) */
+    public Map<String, Object> getFactorTreeJson() {
+        return parseJson(factorTreeJsonRaw);
+    }
+
+    /** CR-028: Price 항목·수량·단위 추천 (단가 제외) */
+    public Map<String, Object> getPriceItemsJson() {
+        return parseJson(priceItemsJsonRaw);
     }
 
     private Map<String, Object> parseJson(String raw) {
@@ -173,6 +191,16 @@ public class Notice extends BaseEntity {
         this.requiredDocumentsJsonRaw = toJsonString(requiredDocumentsJson);
         this.llmPromptPresetJsonRaw = toJsonString(llmPromptPresetJson);
         if (contentJson != null) this.contentJsonRaw = toJsonString(contentJson);
+    }
+
+    /**
+     * CR-028: 정제 시 도출한 FACTOR 트리 / Price 항목을 저장.
+     * 정제(NoticeService) 가 Section L/M 에서 도출하지 못하면 호출하지 않음 → NULL 유지,
+     * 그 경우 proposal-design WF 가 공고 본문에서 직접 발췌한다.
+     */
+    public void updateFactorTree(Map<String, Object> factorTreeJson, Map<String, Object> priceItemsJson) {
+        if (factorTreeJson != null) this.factorTreeJsonRaw = toJsonString(factorTreeJson);
+        if (priceItemsJson != null) this.priceItemsJsonRaw = toJsonString(priceItemsJson);
     }
 
     // Business methods — 노출 축 (게이트②)

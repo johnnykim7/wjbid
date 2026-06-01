@@ -51,6 +51,16 @@ public class LLMPlatformClient {
     @Value("${app.aimbase.workflows.type-pattern-extraction:type-pattern-extraction}")
     private String typePatternExtractionWorkflowId;
 
+    // CR-028: 제안서 파이프라인 3단계
+    @Value("${app.aimbase.workflows.proposal-design:proposal-design}")
+    private String proposalDesignWorkflowId;
+
+    @Value("${app.aimbase.workflows.proposal-write-section:proposal-write-section}")
+    private String proposalWriteSectionWorkflowId;
+
+    @Value("${app.aimbase.workflows.proposal-assemble:proposal-assemble}")
+    private String proposalAssembleWorkflowId;
+
     @Value("${app.aimbase.polling.interval-ms:3000}")
     private long pollingIntervalMs;
 
@@ -126,6 +136,44 @@ public class LLMPlatformClient {
     public WorkflowRunResponse extractTypePattern(Map<String, Object> input) {
         log.info("Aimbase: 유형 패턴 추출 시작 industryType={}", input.get("industryType"));
         return runWorkflowAndWait(typePatternExtractionWorkflowId, input);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // CR-028: 제안서 파이프라인 3단계
+    // 모두 MCP 콜백으로 결과를 저장한다 (BE 는 실행/폴링만):
+    //   design        → save_proposal_structure (chapter/section 트리)
+    //   write-section → save_section_blocks      (해당 section block)
+    //   assemble      → save_document_version    (통합 contentJson, 기존 도구 재사용)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * 1단계 design — proposal-design 워크플로우 실행.
+     * 입력: documentId, bidRequestId, factorTree/priceItems (NULL 가능 → WF 가 본문 발췌), 공고 텍스트.
+     * Aimbase 가 MCP save_proposal_structure 로 chapter/section 트리를 직접 저장.
+     */
+    public WorkflowRunResponse runProposalDesign(Map<String, Object> input) {
+        log.info("Aimbase: 제안서 design 시작 documentId={}", input.get("documentId"));
+        return runWorkflowAndWait(proposalDesignWorkflowId, input);
+    }
+
+    /**
+     * 2단계 write-section — proposal-write-section 워크플로우 실행 (section 1개 = 1회).
+     * 입력: sectionId (그 section 만). WF 는 get_section_context 로 scope/요구사항/샘플 조회 후 본문 작성.
+     * Aimbase 가 MCP save_section_blocks 로 block 을 직접 저장.
+     */
+    public WorkflowRunResponse runWriteSection(Map<String, Object> input) {
+        log.info("Aimbase: 제안서 write-section 시작 sectionId={}", input.get("sectionId"));
+        return runWorkflowAndWait(proposalWriteSectionWorkflowId, input);
+    }
+
+    /**
+     * 3단계 assemble — proposal-assemble 워크플로우 실행.
+     * 입력: documentId, bidRequestId, documentType. WF 는 트리 전체를 합쳐 문체 통일.
+     * Aimbase 가 MCP save_document_version 으로 통합 contentJson 을 저장.
+     */
+    public WorkflowRunResponse runProposalAssemble(Map<String, Object> input) {
+        log.info("Aimbase: 제안서 assemble 시작 documentId={}", input.get("documentId"));
+        return runWorkflowAndWait(proposalAssembleWorkflowId, input);
     }
 
     /**
