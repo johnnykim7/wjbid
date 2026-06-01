@@ -29,6 +29,7 @@ public class OpportunityService {
 
     private final OpportunityRepository opportunityRepository;
     private final OpportunityAttachmentRepository attachmentRepository;
+    private final AttachmentAutoDownloadService attachmentAutoDownloadService;
 
     /**
      * Find opportunity by ID
@@ -150,14 +151,18 @@ public class OpportunityService {
     }
 
     /**
-     * CR-019: SAM resourceLinks를 OpportunityAttachment로 적재.
-     * 외부 사이트 다운로드 자동화는 후속 범위 — 현재는 보수적으로 MANUAL_FETCH_REQUIRED 표식.
+     * CR-019/CR-025: SAM resourceLinks를 OpportunityAttachment로 적재.
+     * <p>화이트리스트(SAM 자체호스팅 download URL) 매칭 링크는 PENDING으로 적재 후 자동 다운로드를 비동기 트리거한다.
+     * 비매칭(외부 도메인)은 기존대로 MANUAL_FETCH_REQUIRED(관리자 수동 업로드 대상)로 둔다.
      * 신규 공고 1회만 호출(중복 적재 방지).
      */
     private void ingestResourceLinks(Opportunity opportunity, List<String> resourceLinks) {
         if (resourceLinks == null || resourceLinks.isEmpty()) {
             return;
         }
+        int autoCount = 0;
+        int manualCount = 0;
+        List<UUID> autoTargets = new java.util.ArrayList<>();
         for (String link : resourceLinks) {
             if (link == null || link.isBlank()) continue;
             OpportunityAttachment attachment = OpportunityAttachment.builder()
@@ -165,11 +170,23 @@ public class OpportunityService {
                     .fileName(extractFileName(link))
                     .sourceUrl(link)
                     .build();
-            attachment.markManualFetchRequired();
-            attachmentRepository.save(attachment);
+            if (attachmentAutoDownloadService.isAutoDownloadable(link)) {
+                attachment.markPending();
+                OpportunityAttachment saved = attachmentRepository.save(attachment);
+                autoTargets.add(saved.getId());
+                autoCount++;
+            } else {
+                attachment.markManualFetchRequired();
+                attachmentRepository.save(attachment);
+                manualCount++;
+            }
         }
-        log.info("[CR-019] 첨부 {}건 적재(MANUAL_FETCH_REQUIRED): noticeId={}",
-                resourceLinks.size(), opportunity.getNoticeId());
+        log.info("[CR-019/025] 첨부 적재: noticeId={}, 자동(PENDING)={}, 수동(MANUAL)={}",
+                opportunity.getNoticeId(), autoCount, manualCount);
+        // PENDING 행은 별도 풀에서 자동 다운로드 (트랜잭션 커밋 후 실행되도록 비동기 호출)
+        for (UUID attachmentId : autoTargets) {
+            attachmentAutoDownloadService.tryAutoFetchAsync(attachmentId);
+        }
     }
 
     /** URL 마지막 경로 세그먼트를 파일명으로 사용. 없으면 'attachment' */

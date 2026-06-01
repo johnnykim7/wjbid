@@ -7,6 +7,7 @@ import com.biddingagency.domain.opportunity.entity.AttachmentDownloadStatus;
 import com.biddingagency.domain.opportunity.entity.Opportunity;
 import com.biddingagency.domain.opportunity.entity.OpportunityAttachment;
 import com.biddingagency.domain.opportunity.repository.OpportunityAttachmentRepository;
+import com.biddingagency.domain.opportunity.service.AttachmentAutoDownloadService;
 import com.biddingagency.domain.opportunity.service.OpportunityService;
 import com.biddingagency.integration.storage.StorageService;
 import com.biddingagency.security.CustomUserDetails;
@@ -46,6 +47,7 @@ public class OpportunityAdminController {
     private final NoticeService noticeService;
     private final OpportunityAttachmentRepository attachmentRepository;
     private final StorageService storageService;
+    private final AttachmentAutoDownloadService attachmentAutoDownloadService;
 
     @GetMapping
     @Operation(summary = "원본 공고 목록 (관리자)", description = "SAM 수집 원본 + 첨부파일 수 + 공고문 생성 여부")
@@ -121,6 +123,34 @@ public class OpportunityAdminController {
                 "status", "UPLOADED",
                 "fileName", fileName != null ? fileName : "",
                 "opportunityId", id.toString()
+        ));
+    }
+
+    @PostMapping("/{id}/attachments/{attachmentId}/auto-fetch")
+    @Operation(summary = "첨부 자동 다운로드 시도 (CR-025)",
+            description = "SAM 자체호스팅 첨부를 SAM API 키로 직접 다운로드해 적재. 동기 실행, 성공/실패 즉시 응답. 화이트리스트 비매칭이면 SKIPPED.")
+    public ResponseEntity<Map<String, Object>> autoFetchAttachment(
+            @PathVariable UUID id,
+            @PathVariable UUID attachmentId) {
+        OpportunityAttachment attachment = attachmentRepository.findById(attachmentId)
+                .orElseThrow(() -> new IllegalArgumentException("첨부 없음: " + attachmentId));
+        if (!attachment.getOpportunity().getId().equals(id)) {
+            throw new IllegalArgumentException("첨부가 해당 공고 소속이 아님: " + attachmentId);
+        }
+        if (!attachmentAutoDownloadService.isAutoDownloadable(attachment.getSourceUrl())) {
+            return ResponseEntity.ok(Map.of(
+                    "status", "SKIPPED",
+                    "reason", "화이트리스트 비매칭 — 자동 다운로드 불가 (외부 도메인). 수동 업로드 필요.",
+                    "attachmentId", attachmentId.toString()
+            ));
+        }
+        boolean ok = attachmentAutoDownloadService.tryAutoFetch(attachmentId);
+        OpportunityAttachment after = attachmentRepository.findById(attachmentId).orElse(attachment);
+        return ResponseEntity.ok(Map.of(
+                "status", ok ? "SUCCESS" : "FAILED",
+                "downloadStatus", after.getDownloadStatus().name(),
+                "failureReason", after.getFailureReason() != null ? after.getFailureReason() : "",
+                "attachmentId", attachmentId.toString()
         ));
     }
 

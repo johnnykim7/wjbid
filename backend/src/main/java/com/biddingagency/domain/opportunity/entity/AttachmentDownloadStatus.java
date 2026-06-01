@@ -5,5 +5,7 @@ public enum AttachmentDownloadStatus {
     FAILED,
     LINK_ONLY,
     /** CR-019: 외부 사이트 첨부 — 관리자가 외부서 직접 가져와 업로드해야 함 */
-    MANUAL_FETCH_REQUIRED
+    MANUAL_FETCH_REQUIRED,
+    /** CR-025: SAM 자체호스팅 첨부 — 자동 다운로드 큐 대기/진행 중 */
+    PENDING
 }

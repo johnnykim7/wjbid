@@ -11,6 +11,12 @@ public interface StorageService {
     /** 파일을 저장하고 식별 가능한 storageUrl(상대경로 또는 URI)을 반환 */
     String store(String keyPrefix, MultipartFile file);
 
+    /**
+     * CR-025: 바이트 배열을 저장하고 storageUrl을 반환.
+     * 자동 다운로드(MultipartFile 없이 받은 첨부 바이트) 저장 경로.
+     */
+    String store(String keyPrefix, String fileName, byte[] content);
+
     /** storageUrl로 저장된 바이트를 로드 */
     byte[] load(String storageUrl);
 

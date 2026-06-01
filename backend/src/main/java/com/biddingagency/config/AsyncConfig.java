@@ -27,4 +27,21 @@ public class AsyncConfig {
         executor.initialize();
         return executor;
     }
+
+    /**
+     * CR-025: SAM 첨부 자동 다운로드 전용 풀.
+     * IO bound 작업이며 LLM 풀과 분리. SAM rate limit 보호를 위해 동시성 제한(core=3, max=5).
+     */
+    @Bean(name = "attachmentDownloadExecutor")
+    public Executor attachmentDownloadExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(3);
+        executor.setMaxPoolSize(5);
+        executor.setQueueCapacity(100);
+        executor.setThreadNamePrefix("attach-dl-");
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(120);
+        executor.initialize();
+        return executor;
+    }
 }

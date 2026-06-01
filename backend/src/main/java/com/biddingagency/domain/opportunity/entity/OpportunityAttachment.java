@@ -45,6 +45,10 @@ public class OpportunityAttachment extends BaseEntity {
     @Column(name = "downloaded_at")
     private LocalDateTime downloadedAt;
 
+    /** CR-025: 자동 다운로드 실패 사유 (FAILED 시 보관) */
+    @Column(name = "failure_reason", length = 500)
+    private String failureReason;
+
     public void markDownloaded(String storageUrl) {
         this.storageUrl = storageUrl;
         this.downloadStatus = AttachmentDownloadStatus.SUCCESS;
@@ -53,6 +57,29 @@ public class OpportunityAttachment extends BaseEntity {
 
     public void markFailed() {
         this.downloadStatus = AttachmentDownloadStatus.FAILED;
+    }
+
+    /** CR-025: 자동 다운로드 실패 — 사유 보관 */
+    public void markFailed(String reason) {
+        this.downloadStatus = AttachmentDownloadStatus.FAILED;
+        this.failureReason = reason != null && reason.length() > 500 ? reason.substring(0, 500) : reason;
+    }
+
+    /** CR-025: 자동 다운로드 큐 대기/진행 표식 */
+    public void markPending() {
+        this.downloadStatus = AttachmentDownloadStatus.PENDING;
+        this.failureReason = null;
+    }
+
+    /** CR-025: 자동 다운로드 성공 — 실제 파일 메타 확정 + SUCCESS 전이 */
+    public void applyAutoDownloadSuccess(String fileName, Long fileSize, String contentType, String storageUrl) {
+        if (fileName != null && !fileName.isBlank()) {
+            this.fileName = fileName;
+        }
+        this.fileSize = fileSize;
+        this.contentType = contentType;
+        this.failureReason = null;
+        markDownloaded(storageUrl);
     }
 
     public void markLinkOnly() {

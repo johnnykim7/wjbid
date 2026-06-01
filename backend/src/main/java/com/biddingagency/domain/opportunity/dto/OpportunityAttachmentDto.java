@@ -24,6 +24,8 @@ public class OpportunityAttachmentDto {
     private AttachmentDownloadStatus downloadStatus;
     /** 외부서 직접 가져와야 하는 첨부 여부 (표식) */
     private boolean manualFetchRequired;
+    /** CR-025: 자동 다운로드 실패 사유 (FAILED 시) */
+    private String failureReason;
     private LocalDateTime downloadedAt;
 
     public static OpportunityAttachmentDto from(OpportunityAttachment a) {
@@ -35,6 +37,7 @@ public class OpportunityAttachmentDto {
                 .sourceUrl(a.getSourceUrl())
                 .downloadStatus(a.getDownloadStatus())
                 .manualFetchRequired(a.getDownloadStatus() == AttachmentDownloadStatus.MANUAL_FETCH_REQUIRED)
+                .failureReason(a.getFailureReason())
                 .downloadedAt(a.getDownloadedAt())
                 .build();
     }
