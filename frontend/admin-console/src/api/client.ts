@@ -106,6 +106,25 @@ export const unlockDocument = (id: string) =>
 export const exportDocumentPdf = (id: string) =>
   api.get(`/bid-documents/${id}/export/pdf`, { responseType: 'blob' })
 
+// CR-030 — Proposal section tree
+export const getProposalTree = (documentId: string) =>
+  api.get(`/admin/bid-documents/${documentId}/chapters`)
+
+export const getProposalSection = (documentId: string, sectionId: string) =>
+  api.get(`/admin/bid-documents/${documentId}/sections/${sectionId}`)
+
+export const regenerateProposalSection = (documentId: string, sectionId: string) =>
+  api.post(`/admin/bid-documents/${documentId}/sections/${sectionId}/regenerate`)
+
+export const lockProposalSection = (documentId: string, sectionId: string) =>
+  api.post(`/admin/bid-documents/${documentId}/sections/${sectionId}/lock`)
+
+export const unlockProposalSection = (documentId: string, sectionId: string) =>
+  api.post(`/admin/bid-documents/${documentId}/sections/${sectionId}/unlock`)
+
+export const getProposalSectionVerification = (documentId: string, sectionId: string) =>
+  api.get(`/admin/bid-documents/${documentId}/sections/${sectionId}/verification`)
+
 // Bid Request Detail (admin)
 export const getAdminBidRequestDetail = (id: string) =>
   api.get(`/admin/bid-requests/${id}`)

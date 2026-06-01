@@ -52,6 +52,21 @@ public class ProposalService {
         return blockRepository.findBySectionIdOrderByOrderNoAsc(sectionId);
     }
 
+    /**
+     * CR-030 트리 조립 — chapter + 하위 section 을 orderNo 순으로 묶어 반환.
+     * 좌측 트리 렌더용. block 본문은 미포함 (section 선택 시 {@link #getBlocks}).
+     */
+    @Transactional(readOnly = true)
+    public List<ChapterWithSections> getTree(UUID documentId) {
+        List<ProposalChapter> chapters = chapterRepository.findByDocumentIdOrderByOrderNoAsc(documentId);
+        return chapters.stream()
+                .map(c -> new ChapterWithSections(c, getSections(c.getId())))
+                .toList();
+    }
+
+    /** 트리 조립 결과 (Controller 가 DTO 로 매핑). */
+    public record ChapterWithSections(ProposalChapter chapter, List<ProposalSection> sections) {}
+
     @Transactional(readOnly = true)
     public ProposalChapter getChapter(UUID chapterId) {
         return chapterRepository.findById(chapterId)

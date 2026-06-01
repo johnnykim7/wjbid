@@ -7,6 +7,7 @@ import BidRequestAdminPage from './pages/BidRequestAdminPage'
 import CollectionPage from './pages/CollectionPage'
 import DocumentTemplatePage from './pages/DocumentTemplatePage'
 import DocumentEditPage from './pages/DocumentEditPage'
+import ProposalTreePage from './pages/ProposalTreePage'
 import BidRequestDetailPage from './pages/BidRequestDetailPage'
 import OpportunityAdminPage from './pages/OpportunityAdminPage'
 import OpportunityAdminDetailPage from './pages/OpportunityAdminDetailPage'
@@ -48,6 +49,7 @@ export default function App() {
           <Route path="rfp-samples" element={<RfpSamplePage />} />
           <Route path="rfp-samples/:id" element={<RfpSampleDetailPage />} />
           <Route path="documents/:id/edit" element={<DocumentEditPage />} />
+          <Route path="documents/:id/sections" element={<ProposalTreePage />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

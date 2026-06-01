@@ -250,6 +250,12 @@ export default function DocumentEditPage() {
               </>
             )}
             <button
+              onClick={() => navigate(`/documents/${id}/sections`)}
+              className="px-3 py-1.5 text-sm border rounded hover:bg-gray-50"
+            >
+              🗂 Section 관리
+            </button>
+            <button
               onClick={handleExportPdf}
               className="px-3 py-1.5 text-sm bg-gray-600 text-white rounded hover:bg-gray-700"
             >
