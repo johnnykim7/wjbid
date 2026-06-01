@@ -1,6 +1,5 @@
 package com.biddingagency.controller.admin;
 
-import com.biddingagency.domain.notice.entity.Notice;
 import com.biddingagency.domain.notice.service.NoticeService;
 import com.biddingagency.domain.opportunity.dto.OpportunityAdminDto;
 import com.biddingagency.domain.opportunity.dto.OpportunityAttachmentDto;
@@ -79,13 +78,13 @@ public class OpportunityAdminController {
     public ResponseEntity<Map<String, String>> createNotice(
             @PathVariable UUID id,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
-        Notice notice = noticeService.createNotice(id, userDetails.getMember().getId());
-        log.info("공고문 생성(게이트①): opportunityId={}, noticeId={}", id, notice.getId());
+        UUID noticeId = noticeService.createNotice(id, userDetails.getMember().getId());
+        log.info("공고문 생성(게이트①): opportunityId={}, noticeId={}", id, noticeId);
         return ResponseEntity.accepted().body(Map.of(
                 "status", "ACCEPTED",
                 "message", "공고문 생성 및 한글화가 시작되었습니다.",
                 "opportunityId", id.toString(),
-                "noticeId", notice.getId().toString()
+                "noticeId", noticeId.toString()
         ));
     }
 
