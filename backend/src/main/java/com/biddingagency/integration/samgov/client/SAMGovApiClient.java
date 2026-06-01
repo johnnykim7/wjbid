@@ -106,6 +106,36 @@ public class SAMGovApiClient {
     }
 
     /**
+     * CR-022 (재구현): noticedesc URL을 호출해 본문(평문) 응답을 가져온다.
+     * SAM 응답: {"description": "<HTML 또는 평문>"}. 빈 본문이면 " " 한 칸.
+     * 실패/빈 본문 시 null. 예외 안 던짐(수집 흐름 방해 방지).
+     */
+    public String fetchNoticeDescription(String noticeDescUrl) {
+        if (noticeDescUrl == null || noticeDescUrl.isBlank()) return null;
+        try {
+            String url = noticeDescUrl + (noticeDescUrl.contains("?") ? "&" : "?") + "api_key=" + apiKey;
+            HttpGet request = new HttpGet(url);
+            request.addHeader("Accept", "application/json");
+            return httpClient.execute(request, response -> {
+                if (response.getCode() != 200) {
+                    log.warn("[CR-022] noticedesc {}: {}", response.getCode(), noticeDescUrl);
+                    return null;
+                }
+                String body = EntityUtils.toString(response.getEntity());
+                @SuppressWarnings("unchecked")
+                Map<String, Object> json = objectMapper.readValue(body, Map.class);
+                Object desc = json.get("description");
+                if (!(desc instanceof String s)) return null;
+                String trimmed = s.trim();
+                return trimmed.isEmpty() ? null : trimmed;
+            });
+        } catch (Exception e) {
+            log.warn("[CR-022] noticedesc fetch 실패: {} ({})", noticeDescUrl, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
      * Build search URL with parameters
      */
     private String buildSearchUrl(String keyword, LocalDate postedFrom, LocalDate postedTo,

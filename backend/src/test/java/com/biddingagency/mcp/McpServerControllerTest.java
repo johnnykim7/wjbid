@@ -101,7 +101,17 @@ class McpServerControllerTest {
         assertThat(result).containsKey("tools");
         java.util.List<?> tools = (java.util.List<?>) result.get("tools");
         assertThat(tools).isNotEmpty();
-        assertThat(tools).hasSize(13);
+        // 전체 도구 목록에 핵심 도구가 노출되는지 검증 (개수 하드코딩 대신 존재 단언 — 도구 추가 시 깨지지 않게)
+        java.util.List<String> toolNames = tools.stream()
+                .map(t -> (String) ((Map<String, Object>) t).get("name"))
+                .toList();
+        assertThat(toolNames).contains(
+                "get_opportunity", "save_requirements", "save_document_version",
+                // CR-028 제안서 파이프라인
+                "get_proposal_design_input", "save_proposal_structure",
+                "get_section_context", "save_section_blocks",
+                // CR-031 충실성 검증
+                "get_section_verify_input", "get_notice_verify_input", "save_verification_result");
     }
 
     // TC-MCP-003: tools/call 유효 도구 (get_opportunity)

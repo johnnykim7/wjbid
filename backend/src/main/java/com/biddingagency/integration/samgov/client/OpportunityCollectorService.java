@@ -1,7 +1,9 @@
 package com.biddingagency.integration.samgov.client;
 
+import com.biddingagency.domain.opportunity.entity.Opportunity;
 import com.biddingagency.domain.opportunity.service.IndustryClassifier;
 import com.biddingagency.domain.opportunity.service.OpportunityService;
+import com.biddingagency.domain.opportunity.service.OpportunityTranslationService;
 import com.biddingagency.domain.rfp.entity.IndustryType;
 import com.biddingagency.integration.samgov.dto.SAMOpportunityResponse;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +38,7 @@ public class OpportunityCollectorService {
     private final SAMGovApiClient samGovApiClient;
     private final OpportunityService opportunityService;
     private final IndustryClassifier industryClassifier;
+    private final OpportunityTranslationService translationService;
 
     /**
      * Determine start date for incremental sync:
@@ -101,6 +104,10 @@ public class OpportunityCollectorService {
                                 // q=korea 전문검색이 끌어오는 무관 부품조달(미분류)은 메일 카운트에서 제외.
                                 if (result.industryType() != null) {
                                     targetCreated++;
+                                }
+                                // CR-022 (재구현): 신규 공고 본문 비동기 번역. 실패해도 수집 흐름 방해 안 함.
+                                if (result.opportunity() != null) {
+                                    translationService.translateAsync(result.opportunity().getId());
                                 }
                             }
                             case CHANGED -> changed++;   // CR-009: 기존이지만 contentHash 변경
@@ -179,7 +186,7 @@ public class OpportunityCollectorService {
                 data.getResourceLinks() // CR-019: SAM 첨부 적재
         );
 
-        return new ProcessResult(outcome.result(), industryType); // upsert 결과 + 분류 결과
+        return new ProcessResult(outcome.result(), industryType, outcome.opportunity()); // CR-022: 비동기 번역 트리거용 엔티티
     }
 
     /**
@@ -271,6 +278,6 @@ public class OpportunityCollectorService {
     }
 
     /** processOpportunity 결과: upsert 결과(NEW/CHANGED/UNCHANGED) + 분류된 사업유형(미분류 시 null). */
-    private record ProcessResult(OpportunityService.UpsertResult result, IndustryType industryType) {
+    private record ProcessResult(OpportunityService.UpsertResult result, IndustryType industryType, Opportunity opportunity) {
     }
 }

@@ -62,6 +62,18 @@ public class LLMPlatformClient {
     @Value("${app.aimbase.workflows.proposal-assemble:proposal-assemble}")
     private String proposalAssembleWorkflowId;
 
+    // CR-031: 충실성 검증 (Haiku)
+    @Value("${app.aimbase.workflows.proposal-verify-fidelity:proposal-verify-fidelity}")
+    private String proposalVerifyFidelityWorkflowId;
+
+    // CR-022 (재구현): 공고 본문 영→한 번역. 결과는 MCP 콜백 없이 stepResults에서 직접 추출.
+    @Value("${app.aimbase.workflows.opportunity-description-translation:translate-opportunity-description}")
+    private String opportunityDescriptionTranslationWorkflowId;
+
+    // CR-022 (재구현): 공고 제목 영→한 번역. 어제부터 Aimbase에 등록되어있던 워크플로우.
+    @Value("${app.aimbase.workflows.opportunity-title-translation:translate-opportunity-title}")
+    private String opportunityTitleTranslationWorkflowId;
+
     @Value("${app.aimbase.polling.interval-ms:3000}")
     private long pollingIntervalMs;
 
@@ -139,6 +151,86 @@ public class LLMPlatformClient {
         return runWorkflowAndWait(typePatternExtractionWorkflowId, input);
     }
 
+    /**
+     * 공고 제목 영→한 번역 (CR-022 재구현).
+     * 워크플로우 입력: { title, organizationName? }
+     * 워크플로우 출력: stepResults.{step}.structured_data.titleKo
+     */
+    public String translateOpportunityTitle(String title, String organizationName) {
+        if (title == null || title.isBlank()) return null;
+        Map<String, Object> input = new HashMap<>();
+        input.put("title", title);
+        if (organizationName != null && !organizationName.isBlank()) {
+            input.put("organizationName", organizationName);
+        }
+        WorkflowRunResponse response = runWorkflowAndWait(opportunityTitleTranslationWorkflowId, input);
+        String translated = extractKoreanText(response);
+        if (translated == null || translated.isBlank()) {
+            throw new LLMPlatformException("제목 번역 결과가 비어있음: runId=" + response.getId());
+        }
+        return translated.trim();
+    }
+
+    /**
+     * 공고 본문 영→한 번역 (CR-022 재구현).
+     * 워크플로우 입력: { title, body, connection_id? }
+     * 워크플로우 출력: stepResults.{step}.structured_data.descriptionKo 등에서 추출.
+     * 빈 본문 입력이면 그대로 null 반환(예외 없음).
+     */
+    public String translateOpportunityDescription(String title, String body) {
+        if (body == null || body.isBlank()) return null;
+        Map<String, Object> input = new HashMap<>();
+        input.put("title", title);
+        input.put("body", body);
+
+        WorkflowRunResponse response = runWorkflowAndWait(opportunityDescriptionTranslationWorkflowId, input);
+        String translated = extractKoreanText(response);
+        if (translated == null || translated.isBlank()) {
+            throw new LLMPlatformException("본문 번역 결과가 비어있음: runId=" + response.getId());
+        }
+        return translated.trim();
+    }
+
+    /**
+     * WorkflowRunResponse에서 한글 텍스트 추출.
+     * Aimbase LLM_CALL은 response_schema 적용 시 stepResults.{step}.structured_data.{key}에 결과를 담음.
+     * 우선순위: output > stepResults 마지막 step의 structured_data > stepResults 평면.
+     */
+    private static final List<String> KO_TEXT_KEYS = List.of(
+            "descriptionKo", "description_ko", "summaryKo", "summary_ko", "summary",
+            "titleKo", "title_ko", "translated", "text", "result", "output", "answer", "content");
+
+    private String extractKoreanText(WorkflowRunResponse response) {
+        if (response == null) return null;
+        if (response.getOutput() != null) {
+            String hit = pickFromMap(response.getOutput());
+            if (hit != null) return hit;
+        }
+        if (response.getStepResults() != null && !response.getStepResults().isEmpty()) {
+            Object lastValue = null;
+            for (Object v : response.getStepResults().values()) lastValue = v;
+            if (lastValue instanceof Map<?, ?> stepMap) {
+                Object sd = stepMap.get("structured_data");
+                if (sd instanceof Map<?, ?> sdMap) {
+                    String hit = pickFromMap(sdMap);
+                    if (hit != null) return hit;
+                }
+                String hit = pickFromMap(stepMap);
+                if (hit != null) return hit;
+            }
+            if (lastValue instanceof String s && !s.isBlank()) return s;
+        }
+        return null;
+    }
+
+    private String pickFromMap(Map<?, ?> map) {
+        for (String key : KO_TEXT_KEYS) {
+            Object v = map.get(key);
+            if (v instanceof String s && !s.isBlank()) return s;
+        }
+        return null;
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // CR-028: 제안서 파이프라인 3단계
     // 모두 MCP 콜백으로 결과를 저장한다 (BE 는 실행/폴링만):
@@ -177,6 +269,18 @@ public class LLMPlatformClient {
         return runWorkflowAndWait(proposalAssembleWorkflowId, input);
     }
 
+    /**
+     * CR-031 충실성 검증 — proposal-verify-fidelity 워크플로우 실행 (Haiku).
+     * 입력: targetType(NOTICE/PROPOSAL_SECTION), targetId, attempt, (선택)hallucinations(이전 회차 negative example).
+     * WF 는 get_section_verify_input 으로 원문/첨부/결과물을 조회하고 문장 단위 환각·누락을 추출,
+     * Aimbase 가 MCP save_verification_result 로 verification_log 에 직접 저장한다.
+     */
+    public WorkflowRunResponse runVerifyFidelity(Map<String, Object> input) {
+        log.info("Aimbase: 충실성 검증 시작 target={}/{}, attempt={}",
+                input.get("targetType"), input.get("targetId"), input.get("attempt"));
+        return runWorkflowAndWait(proposalVerifyFidelityWorkflowId, input);
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // CR-029: 워크플로우 실측 모델 해석 (워크플로우 → step connection_id → connection.config.model)
     //   stepResults·agents API 둘 다 model 을 노출하지 않으므로 connection 에서 실측한다.
@@ -191,6 +295,7 @@ public class LLMPlatformClient {
     public String resolveDesignModel()       { return resolveWorkflowModel(proposalDesignWorkflowId); }
     public String resolveWriteSectionModel() { return resolveWorkflowModel(proposalWriteSectionWorkflowId); }
     public String resolveAssembleModel()     { return resolveWorkflowModel(proposalAssembleWorkflowId); }
+    public String resolveVerifyModel()       { return resolveWorkflowModel(proposalVerifyFidelityWorkflowId); }
 
     /**
      * 워크플로우의 첫 AGENT_CALL/LLM_CALL step 이 쓰는 connection 의 모델명을 반환.

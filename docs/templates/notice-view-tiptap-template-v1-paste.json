@@ -15,16 +15,28 @@
       "type": "metaGrid",
       "attrs": { "columns": 6 },
       "content": [
-        { "type": "metaCell", "attrs": { "label": "입찰 번호", "value": "{{header.meta.solicitationNumber}}" } },
-        { "type": "metaCell", "attrs": { "label": "조달 방식", "value": "{{header.meta.method}}" } },
-        { "type": "metaCell", "attrs": { "label": "입찰 마감", "value": "{{header.meta.deadline}}" } },
-        { "type": "metaCell", "attrs": { "label": "계약 기간", "value": "{{header.meta.contractPeriod}}" } },
-        { "type": "metaCell", "attrs": { "label": "NAICS", "value": "{{header.meta.naics}}" } },
-        { "type": "metaCell", "attrs": { "label": "수행 장소", "value": "{{header.meta.location}}" } }
+        { "type": "metaCell", "attrs": { "label": "공고번호", "value": "{{meta.solicitationNumber}}" } },
+        { "type": "metaCell", "attrs": { "label": "공고유형", "value": "{{meta.noticeType}}" } },
+        { "type": "metaCell", "attrs": { "label": "조달방식", "value": "{{meta.procurementMethod}}" } },
+        { "type": "metaCell", "attrs": { "label": "발주기관", "value": "{{meta.agency}}" } },
+        { "type": "metaCell", "attrs": { "label": "마감일", "value": "{{meta.deadline}}" } },
+        { "type": "metaCell", "attrs": { "label": "NAICS", "value": "{{meta.naics}}" } }
       ]
     },
-    { "type": "heading", "attrs": { "level": 2 }, "content": [{ "type": "text", "text": "1. 입찰 번호 (Solicitation Number)" }] },
-    { "type": "kvTable", "attrs": { "rows": "{{section1.table}}" } },
+    { "type": "heading", "attrs": { "level": 2 }, "content": [{ "type": "text", "text": "1. 공고 기본 정보 (General Information)" }] },
+    {
+      "type": "kvTable",
+      "attrs": {
+        "rows": [
+          { "label": "공고번호", "value": "{{meta.solicitationNumber}}" },
+          { "label": "공고유형 (Notice Type)", "value": "{{meta.noticeType}}" },
+          { "label": "조달방식 (Procurement Method)", "value": "{{meta.procurementMethod}}" },
+          { "label": "발주기관 (Issuing Agency)", "value": "{{meta.agency}}" },
+          { "label": "마감일 (Response Deadline)", "value": "{{meta.deadline}}" },
+          { "label": "NAICS 코드", "value": "{{meta.naics}}" }
+        ]
+      }
+    },
     { "type": "heading", "attrs": { "level": 2 }, "content": [{ "type": "text", "text": "2. 내용 (Scope of Work)" }] },
     { "type": "paragraph", "content": [{ "type": "text", "text": "{{section2.overview}}" }] },
     { "type": "heading", "attrs": { "level": 3 }, "content": [{ "type": "text", "text": "포함 작업" }] },

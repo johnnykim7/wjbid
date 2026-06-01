@@ -96,7 +96,7 @@ export default function BidDetailPage() {
             {isBookmarked ? '저장됨' : '관심 공고 저장'}
           </Button>
           <Button variant="accent" onClick={() => setAiModalOpen(true)}>
-            <i className="fa-solid fa-wand-magic-sparkles mr-1" /> AI 제안서 작성
+            <i className="fa-solid fa-wand-magic-sparkles mr-1" /> 제안서 작성
           </Button>
         </div>
       </div>
@@ -149,12 +149,12 @@ export default function BidDetailPage() {
             <hr className="border-gray-200 my-8" />
 
             {bid.analysis?.analysisStatus === 'COMPLETED' ? (
-              /* ── 정리된 공고문 (AI 분석 완료) ── */
+              /* ── 정리된 공고문 (분석 완료) ── */
               <div className="space-y-8">
-                {/* AI 분석 배지 */}
+                {/* 분석 배지 */}
                 <div className="flex items-center gap-2">
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-700 rounded-full text-xs font-semibold">
-                    <i className="fa-solid fa-wand-magic-sparkles" /> AI 분석 완료
+                    <i className="fa-solid fa-wand-magic-sparkles" /> 분석 완료
                   </span>
                   {bid.analysis.analyzedAt && (
                     <span className="text-xs text-gray-400">{bid.analysis.analyzedAt} 분석</span>
@@ -377,7 +377,7 @@ export default function BidDetailPage() {
                 {bid.analysis?.analysisStatus === 'ANALYZING' && (
                   <div className="flex items-center gap-2 px-4 py-3 bg-purple-50 border border-purple-100 rounded-lg">
                     <i className="fa-solid fa-spinner fa-spin text-purple-500" />
-                    <span className="text-sm text-purple-700 font-medium">AI 분석이 진행 중입니다...</span>
+                    <span className="text-sm text-purple-700 font-medium">분석이 진행 중입니다...</span>
                   </div>
                 )}
 

@@ -79,7 +79,7 @@ export default function ProfilePage() {
           <div>
             <h2 className="text-xl font-bold text-gray-800">기업 프로필 설정</h2>
             <p className="text-sm text-gray-500 mt-1">
-              이 정보를 바탕으로 AI가 귀사에 최적화된 제안서를 자동 작성합니다.
+              이 정보를 바탕으로 귀사에 최적화된 제안서를 작성합니다.
             </p>
           </div>
           <Button variant="primary" onClick={handleSave} disabled={saving}>

@@ -75,6 +75,22 @@ public class Opportunity extends BaseEntity {
     @Column(name = "last_modified_at", nullable = false)
     private LocalDateTime lastModifiedAt;
 
+    /** CR-022 (재구현): 제목 한글 번역 결과. V21 컬럼 재활용. null = 미번역 */
+    @Column(name = "title_ko", length = 500)
+    private String titleKo;
+
+    /** CR-022: 공고 유형(type) 한글 라벨. null = 미번역 */
+    @Column(name = "type_ko", length = 100)
+    private String typeKo;
+
+    /** CR-022 (재구현): 본문(description) 한글 번역 결과. V23 컬럼 재활용. null = 미번역 또는 실패 */
+    @Column(name = "description_summary_ko", length = 500)
+    private String descriptionSummaryKo;
+
+    /** CR-022 (재구현): 마지막 번역 성공 시각(제목/본문 어느 쪽이든 갱신). null = 한 번도 성공 안 함 */
+    @Column(name = "translated_at")
+    private LocalDateTime translatedAt;
+
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "raw_json", columnDefinition = "JSON")
     private Map<String, Object> rawJson;
@@ -105,6 +121,28 @@ public class Opportunity extends BaseEntity {
     /** 자동분류 결과 반영 (CR-014). null이면 미분류로 둔다 */
     public void assignIndustryType(IndustryType industryType) {
         this.industryType = industryType;
+    }
+
+    /** CR-022 (재구현): 본문 한글 번역 결과 반영. 빈 문자열/null은 무시 (실패 시 영문 fallback) */
+    public void applyDescriptionTranslation(String koreanText) {
+        if (koreanText == null || koreanText.isBlank()) return;
+        this.descriptionSummaryKo = koreanText.length() > 500
+                ? koreanText.substring(0, 500) : koreanText;
+        this.translatedAt = LocalDateTime.now();
+    }
+
+    /** CR-022 (재구현): 제목 한글 번역 결과 반영. 빈 문자열/null은 무시. */
+    public void applyTitleTranslation(String koreanTitle) {
+        if (koreanTitle == null || koreanTitle.isBlank()) return;
+        this.titleKo = koreanTitle.length() > 500
+                ? koreanTitle.substring(0, 500) : koreanTitle;
+        this.translatedAt = LocalDateTime.now();
+    }
+
+    /** CR-022: type 한글 라벨 적용 (코드 매핑 결과). null/blank면 무시(영문 fallback 유지). */
+    public void applyTypeKo(String koreanType) {
+        if (koreanType == null || koreanType.isBlank()) return;
+        this.typeKo = koreanType;
     }
 
     public boolean isDeadlinePassed() {

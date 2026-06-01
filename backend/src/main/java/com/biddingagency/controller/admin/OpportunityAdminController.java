@@ -48,6 +48,7 @@ public class OpportunityAdminController {
     private final OpportunityAttachmentRepository attachmentRepository;
     private final StorageService storageService;
     private final AttachmentAutoDownloadService attachmentAutoDownloadService;
+    private final com.biddingagency.domain.opportunity.service.OpportunityTranslationService translationService;
 
     @GetMapping
     @Operation(summary = "원본 공고 목록 (관리자)", description = "SAM 수집 원본 + 첨부파일 수 + 공고문 생성 여부")
@@ -151,6 +152,20 @@ public class OpportunityAdminController {
                 "downloadStatus", after.getDownloadStatus().name(),
                 "failureReason", after.getFailureReason() != null ? after.getFailureReason() : "",
                 "attachmentId", attachmentId.toString()
+        ));
+    }
+
+    @PostMapping("/{id}/retranslate-description")
+    @Operation(summary = "본문 한글 번역 (CR-022 재구현)",
+            description = "원본 공고 본문(description)을 LLM으로 한글 번역. 자동 번역이 실패했거나 누락된 경우 관리자가 수동으로 호출. 동기 실행.")
+    public ResponseEntity<Map<String, Object>> retranslateDescription(@PathVariable UUID id) {
+        boolean ok = translationService.translate(id);
+        Opportunity opp = opportunityService.findById(id);
+        log.info("[CR-022] 본문 번역 요청: opportunityId={}, success={}", id, ok);
+        return ResponseEntity.ok(Map.of(
+                "status", ok ? "TRANSLATED" : "FAILED_OR_EMPTY",
+                "descriptionKo", opp.getDescriptionSummaryKo() != null ? opp.getDescriptionSummaryKo() : "",
+                "translatedAt", opp.getTranslatedAt() != null ? opp.getTranslatedAt().toString() : ""
         ));
     }
 

@@ -77,13 +77,13 @@ export default function RegisterPage() {
           </h2>
           <p className="text-sm leading-relaxed mb-10" style={{ color: 'rgba(255,255,255,0.6)' }}>
             회원가입 후 바로 SAM.gov 공고를 검색하고<br />
-            AI 기반 제안서 자동 생성 서비스를 이용할 수 있습니다.
+            전문가 제안서 작성 서비스를 이용할 수 있습니다.
           </p>
           <div className="space-y-3">
             {[
               { icon: 'fa-solid fa-user-plus', text: '간편한 회원가입' },
               { icon: 'fa-solid fa-bolt', text: '즉시 공고 검색 시작' },
-              { icon: 'fa-solid fa-brain', text: 'AI 제안서 자동 작성' },
+              { icon: 'fa-solid fa-brain', text: '전문가 제안서 작성' },
             ].map((f) => (
               <div key={f.text} className="flex items-center gap-3">
                 <div

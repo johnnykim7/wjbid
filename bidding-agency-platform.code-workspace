@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../../bp-platform/aimbase"
+		},
+		{
+			"path": "../../bp-platform/bp-notification"
+		}
+	],
+	"settings": {}
+}

@@ -107,7 +107,7 @@ export function AiProposalModal({
               <i className="fa-solid fa-wand-magic-sparkles" />
             </div>
             <div>
-              <DialogTitle>AI 제안서 자동 작성</DialogTitle>
+              <DialogTitle>제안서 작성 신청</DialogTitle>
               <p className="text-xs text-gray-500 mt-0.5 font-mono">{noticeId}</p>
             </div>
           </div>
@@ -117,7 +117,7 @@ export function AiProposalModal({
           {status === 'idle' && (
             <div>
               <p className="text-sm text-gray-600 mb-3">
-                아래 공고에 대한 AI 제안서를 자동으로 생성합니다.
+                아래 공고에 대한 제안서 작성을 신청합니다.
               </p>
               <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-sm font-medium text-gray-800 line-clamp-2">
                 {noticeTitle}
@@ -125,7 +125,7 @@ export function AiProposalModal({
               <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
                 <p className="text-xs text-blue-700">
                   <i className="fa-solid fa-circle-info mr-1" />
-                  입찰 요청이 생성되고 AI가 백그라운드에서 요구사항 분석 및 문서를 자동 작성합니다.
+                  입찰 요청이 생성되고 요구사항 분석 및 문서 작성이 진행됩니다.
                 </p>
               </div>
               {error && (
@@ -181,7 +181,7 @@ export function AiProposalModal({
               <h3 className="text-lg font-bold text-gray-800 mb-2">입찰 요청 접수 완료!</h3>
               <p className="text-sm text-gray-500">
                 입찰 요청이 생성되었습니다.<br />
-                AI가 백그라운드에서 요구사항 분석과 문서 작성을 진행합니다.<br />
+                요구사항 분석과 문서 작성이 진행됩니다.<br />
                 <span className="text-xs text-gray-400 mt-1 block">완료까지 몇 분이 소요될 수 있습니다.</span>
               </p>
             </div>

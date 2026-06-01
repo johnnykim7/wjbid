@@ -16,9 +16,17 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401) {
+    const status = err.response?.status
+    const url: string = err.config?.url ?? ''
+    // 인증 실패(401) 또는 권한/토큰 무효(403, BE가 만료·무효 토큰에 403 반환)면 세션 만료로 보고 로그인으로.
+    // 단 로그인 API 자체의 실패(비번 오류 등)는 제외 — 무한 리다이렉트 방지.
+    const isAuthEndpoint = url.includes('/auth/')
+    if ((status === 401 || status === 403) && !isAuthEndpoint) {
       localStorage.removeItem('adminToken')
-      window.location.href = '/login'
+      // admin은 /admin/ 서브경로로 서빙 → 절대경로로 로그인 화면 이동
+      if (!window.location.pathname.endsWith('/login')) {
+        window.location.href = '/admin/login'
+      }
     }
     return Promise.reject(err)
   }
@@ -122,8 +130,12 @@ export const lockProposalSection = (documentId: string, sectionId: string) =>
 export const unlockProposalSection = (documentId: string, sectionId: string) =>
   api.post(`/admin/bid-documents/${documentId}/sections/${sectionId}/unlock`)
 
+// CR-031 — 충실성·분량 검증
 export const getProposalSectionVerification = (documentId: string, sectionId: string) =>
   api.get(`/admin/bid-documents/${documentId}/sections/${sectionId}/verification`)
+
+export const reverifyProposalSection = (documentId: string, sectionId: string) =>
+  api.post(`/admin/bid-documents/${documentId}/sections/${sectionId}/reverify`)
 
 // Bid Request Detail (admin)
 export const getAdminBidRequestDetail = (id: string) =>
@@ -163,6 +175,10 @@ export const uploadOpportunityAttachment = (id: string, file: File) => {
 // CR-019: 원본 공고 첨부 목록 (상태/외부 링크 포함)
 export const getOpportunityAttachments = (id: string) =>
   api.get(`/admin/opportunities/${id}/attachments`)
+
+// CR-022 (재구현): 본문 한글 번역 수동 트리거
+export const retranslateOpportunityDescription = (id: string) =>
+  api.post(`/admin/opportunities/${id}/retranslate-description`)
 
 // 공고문(Notice) Admin (CR-016)
 export const getAdminNotices = (page = 0) =>

@@ -104,7 +104,7 @@ function SidebarContent({ onItemClick }: { onItemClick?: () => void }) {
             </p>
             <p className="text-xs text-green-400 flex items-center">
               <span className="w-2 h-2 rounded-full bg-green-400 mr-1 pulse-dot inline-block" />
-              Pro Plan (AI 5회 남음)
+              Pro Plan (제안서 5회 남음)
             </p>
           </div>
           <button

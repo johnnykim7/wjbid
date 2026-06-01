@@ -6,12 +6,9 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '.
 import { Pagination } from '../components/ui/pagination'
 import { LoadingSpinner } from '../components/ui/loading-spinner'
 import { EmptyState } from '../components/ui/empty-state'
-import { AiProposalModal } from '../components/modals/AiProposalModal'
 import {
   getOpportunities,
   searchOpportunities,
-  addBookmark,
-  removeBookmark,
   getMyBookmarks,
   getMyBidRequests,
 } from '../api/client'
@@ -41,13 +38,6 @@ export default function SearchPage() {
   const [totalPages, setTotalPages] = useState(1)
   const [totalElements, setTotalElements] = useState(0)
   const [keyword, setKeyword] = useState('')
-  const [aiModal, setAiModal] = useState<{ open: boolean; opportunityId: string; noticeId: string; title: string }>({
-    open: false,
-    opportunityId: '',
-    noticeId: '',
-    title: '',
-  })
-  const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set())
   const [stats, setStats] = useState({ total: 0, bookmarks: 0, proposals: 0 })
 
   // 초기 북마크 & 통계 로드
@@ -60,7 +50,6 @@ export default function SearchPage() {
         ])
         if (bookmarksRes.status === 'fulfilled') {
           const content: Opportunity[] = bookmarksRes.value.data.content ?? []
-          setBookmarkedIds(new Set(content.map((b) => b.id)))
           setStats((s) => ({ ...s, bookmarks: bookmarksRes.value.data.totalElements ?? content.length }))
         }
         if (proposalsRes.status === 'fulfilled') {
@@ -110,27 +99,6 @@ export default function SearchPage() {
     fetchData(p)
   }
 
-  const openAiModal = (bid: Opportunity, e: React.MouseEvent) => {
-    e.stopPropagation()
-    setAiModal({ open: true, opportunityId: bid.id, noticeId: bid.solicitationNumber, title: bid.title })
-  }
-
-  const toggleBookmark = async (bid: Opportunity, e: React.MouseEvent) => {
-    e.stopPropagation()
-    const isBookmarked = bookmarkedIds.has(bid.id)
-    try {
-      if (isBookmarked) {
-        await removeBookmark(bid.id)
-        setBookmarkedIds((prev) => { const s = new Set(prev); s.delete(bid.id); return s })
-        setStats((s) => ({ ...s, bookmarks: Math.max(0, s.bookmarks - 1) }))
-      } else {
-        await addBookmark(bid.id)
-        setBookmarkedIds((prev) => new Set(prev).add(bid.id))
-        setStats((s) => ({ ...s, bookmarks: s.bookmarks + 1 }))
-      }
-    } catch { /* ignore */ }
-  }
-
   return (
     <div className="p-6">
       {/* Stats */}
@@ -154,7 +122,7 @@ export default function SearchPage() {
         />
         <StatCard
           dark
-          label="AI 제안서 작성"
+          label="제안서 작성"
           value="→"
           unit="내 제안서"
           action={
@@ -219,10 +187,11 @@ export default function SearchPage() {
               <Table>
                 <TableHeader>
                   <tr>
-                    <TableHead className="w-48">Notice ID / NAICS</TableHead>
-                    <TableHead>Title / Agency</TableHead>
-                    <TableHead className="w-32">Deadline</TableHead>
-                    <TableHead className="w-40 text-center">AI 작업</TableHead>
+                    <TableHead className="w-48">공고번호 / NAICS</TableHead>
+                    <TableHead>제목 / 기관</TableHead>
+                    <TableHead className="w-32">공고유형</TableHead>
+                    <TableHead className="w-32">공고일</TableHead>
+                    <TableHead className="w-32">마감일</TableHead>
                   </tr>
                 </TableHeader>
                 <TableBody>
@@ -247,28 +216,16 @@ export default function SearchPage() {
                           {bid.agencyName}
                         </div>
                       </TableCell>
+                      <TableCell className="whitespace-nowrap align-top text-sm text-gray-600">
+                        {bid.type || '-'}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap align-top text-sm text-gray-600">
+                        {bid.postedDate || '-'}
+                      </TableCell>
                       <TableCell className="whitespace-nowrap align-top">
                         <Badge variant={getDeadlineBadgeVariant(bid.responseDeadline)}>
                           {bid.responseDeadline}
                         </Badge>
-                      </TableCell>
-                      <TableCell className="text-center align-middle">
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            title={bookmarkedIds.has(bid.id) ? '북마크 제거' : '관심 공고 저장'}
-                            className={`p-1.5 transition ${bookmarkedIds.has(bid.id) ? 'text-secondary' : 'text-gray-400 hover:text-secondary'}`}
-                            onClick={(e) => toggleBookmark(bid, e)}
-                          >
-                            <i className={bookmarkedIds.has(bid.id) ? 'fa-solid fa-bookmark' : 'fa-regular fa-bookmark'} />
-                          </button>
-                          <button
-                            title="AI 제안서 작성"
-                            className="p-1.5 text-secondary hover:text-blue-700 transition"
-                            onClick={(e) => openAiModal(bid, e)}
-                          >
-                            <i className="fa-solid fa-wand-magic-sparkles" />
-                          </button>
-                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -284,14 +241,6 @@ export default function SearchPage() {
           </>
         )}
       </div>
-
-      <AiProposalModal
-        isOpen={aiModal.open}
-        onClose={() => setAiModal((m) => ({ ...m, open: false }))}
-        opportunityId={aiModal.opportunityId}
-        noticeId={aiModal.noticeId}
-        noticeTitle={aiModal.title}
-      />
     </div>
   )
 }

@@ -11,29 +11,29 @@ const STEPS = [
   },
   {
     no: 2,
-    title: 'AI 제안서 신청',
-    desc: '관심 있는 공고를 선택하고 "AI 제안서 작성" 버튼을 클릭하면 자동으로 입찰 프로세스가 시작됩니다.',
+    title: '제안서 작성 신청',
+    desc: '관심 있는 공고를 선택하고 "제안서 작성" 버튼을 클릭하면 입찰 프로세스가 시작됩니다.',
     icon: 'fa-solid fa-wand-magic-sparkles',
     color: 'bg-purple-50 text-purple-500',
   },
   {
     no: 3,
     title: '필요 서류 제출',
-    desc: '과거 수행 실적, 회사 프로필 등 필요한 서류를 업로드하세요. AI가 분석에 활용합니다.',
+    desc: '과거 수행 실적, 회사 프로필 등 필요한 서류를 업로드하세요. 제안서 작성에 활용됩니다.',
     icon: 'fa-solid fa-cloud-arrow-up',
     color: 'bg-teal-50 text-teal-500',
   },
   {
     no: 4,
-    title: 'AI 요구사항 분석',
-    desc: 'AI가 공고 요구사항을 자동 추출하고 자격 요건 충족 여부를 검토합니다.',
+    title: '요구사항 분석',
+    desc: '공고 요구사항을 추출하고 자격 요건 충족 여부를 검토합니다.',
     icon: 'fa-solid fa-robot',
     color: 'bg-indigo-50 text-indigo-500',
   },
   {
     no: 5,
-    title: '제안서 자동 생성',
-    desc: 'Cover Letter, Technical Proposal, Past Performance 등 필요한 문서를 AI가 초안 작성합니다.',
+    title: '제안서 초안 작성',
+    desc: 'Cover Letter, Technical Proposal, Past Performance 등 필요한 문서의 초안을 작성합니다.',
     icon: 'fa-solid fa-file-lines',
     color: 'bg-orange-50 text-orange-500',
   },
@@ -48,8 +48,8 @@ const STEPS = [
 
 const FAQS = [
   {
-    q: 'AI가 작성한 제안서의 품질은 어떤가요?',
-    a: 'AI 초안은 SAM.gov 공고 요구사항을 정밀 분석하여 생성됩니다. 이후 입찰 전문가가 내용을 검토·보완하여 최종 품질을 보장합니다.',
+    q: '제안서의 품질은 어떤가요?',
+    a: '초안은 SAM.gov 공고 요구사항을 정밀 분석하여 작성됩니다. 이후 입찰 전문가가 내용을 검토·보완하여 최종 품질을 보장합니다.',
   },
   {
     q: '어떤 서류를 준비해야 하나요?',
@@ -57,7 +57,7 @@ const FAQS = [
   },
   {
     q: '마감일이 임박한 공고도 신청 가능한가요?',
-    a: '최소 D-3 이전 신청을 권장합니다. AI 분석과 문서 생성에 약 1-2일, 전문가 검토에 1일이 소요됩니다.',
+    a: '최소 D-3 이전 신청을 권장합니다. 요구사항 분석과 문서 작성에 약 1-2일, 전문가 검토에 1일이 소요됩니다.',
   },
   {
     q: '비용은 어떻게 되나요?',
@@ -73,10 +73,10 @@ export default function GuidePage() {
       {/* Hero */}
       <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white px-6 py-16 text-center">
         <h1 className="text-3xl md:text-4xl font-extrabold mb-4">
-          AI 입찰 대행 서비스 가이드
+          입찰 대행 서비스 가이드
         </h1>
         <p className="text-gray-300 max-w-2xl mx-auto text-lg leading-relaxed">
-          SAM.gov 미군(USFK) 정부 조달 입찰을 AI가 자동으로 분석하고<br className="hidden md:block" />
+          SAM.gov 미군(USFK) 정부 조달 입찰을 전문가가 분석하고<br className="hidden md:block" />
           제안서를 작성해드립니다.
         </p>
         <div className="flex justify-center gap-3 mt-8">
@@ -131,7 +131,7 @@ export default function GuidePage() {
       {/* CTA */}
       <div className="text-center px-6 py-16">
         <h2 className="text-xl font-bold text-gray-900 mb-3">지금 시작하세요</h2>
-        <p className="text-gray-500 mb-6">AI가 입찰 제안서를 작성하는 동안, 본업에 집중하세요.</p>
+        <p className="text-gray-500 mb-6">전문가가 입찰 제안서를 작성하는 동안, 본업에 집중하세요.</p>
         <Button variant="accent" size="lg" onClick={() => navigate('/search')}>
           <i className="fa-solid fa-rocket mr-2" /> 공고 검색 시작
         </Button>

@@ -1,13 +1,17 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getAdminOpportunities, createNotice } from '../api/client'
+import { getAdminOpportunities } from '../api/client'
 
 interface OpportunityAdmin {
   id: string
   noticeId: string
   solicitationNumber?: string
   title: string
+  titleKo?: string          // CR-022: 한글 제목 (없으면 영문 fallback)
+  typeKo?: string           // CR-022: SAM type 한글 라벨
+  translatedAt?: string     // CR-022: 마지막 번역 시각
   organizationName?: string
+  postedDate?: string
   responseDeadline?: string
   attachmentCount: number
   manualFetchRequiredCount: number
@@ -20,7 +24,6 @@ export default function OpportunityAdminPage() {
   const [page, setPage] = useState(0)
   const [totalPages, setTotalPages] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [actionLoading, setActionLoading] = useState<string | null>(null)
 
   const fetchData = async () => {
     setLoading(true)
@@ -36,18 +39,6 @@ export default function OpportunityAdminPage() {
   }
 
   useEffect(() => { fetchData() }, [page])
-
-  const handleCreateNotice = async (id: string) => {
-    setActionLoading(id)
-    try {
-      await createNotice(id)
-      fetchData()
-    } catch (err) {
-      console.error('공고문 생성 실패:', err)
-    } finally {
-      setActionLoading(null)
-    }
-  }
 
   return (
     <div className="p-6 space-y-5">
@@ -72,59 +63,62 @@ export default function OpportunityAdminPage() {
         ) : opportunities.length === 0 ? (
           <div className="text-center py-20 text-gray-400 text-sm">원본 공고가 없습니다.</div>
         ) : (
-          <table className="w-full text-sm">
+          <table className="w-full text-sm table-fixed">
+            <colgroup>
+              <col className="w-[38%]" />
+              <col />
+              <col className="w-28" />
+              <col className="w-28" />
+              <col className="w-28" />
+              <col className="w-24" />
+            </colgroup>
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">공고 (원문)</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">기관</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">마감일</th>
-                <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase">첨부</th>
-                <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase">공고문</th>
-                <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase">작업</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">공고유형</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">공고일</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">마감일</th>
+                <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">생성여부</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {opportunities.map((opp) => (
-                <tr key={opp.id} className="hover:bg-gray-50">
+                <tr
+                  key={opp.id}
+                  className="hover:bg-gray-50 cursor-pointer"
+                  onClick={() => navigate(`/opportunities/${opp.id}`)}
+                >
                   <td className="px-4 py-3">
-                    <div className="font-medium text-gray-900 line-clamp-1">{opp.title}</div>
-                    <div className="text-xs text-gray-400 font-mono">{opp.solicitationNumber || opp.noticeId}</div>
+                    <div className="font-medium text-gray-900 truncate">{opp.titleKo || opp.title}</div>
+                    {opp.titleKo && (
+                      <div className="text-xs text-gray-500 truncate">{opp.title}</div>
+                    )}
+                    <div className="text-xs text-gray-400 font-mono flex items-center gap-2 mt-0.5">
+                      <span>{opp.solicitationNumber || opp.noticeId}</span>
+                      {!opp.translatedAt && (
+                        <span className="inline-flex px-1.5 py-0.5 rounded bg-amber-50 text-amber-600 text-[10px]" title="제목 한글화 미완료 — 영문 표시">미번역</span>
+                      )}
+                    </div>
                   </td>
-                  <td className="px-4 py-3 text-gray-600">{opp.organizationName || '-'}</td>
+                  <td className="px-4 py-3 text-gray-600">
+                    <div className="truncate" title={opp.organizationName || ''}>{opp.organizationName || '-'}</div>
+                  </td>
+                  <td className="px-4 py-3 text-gray-600">
+                    <div className="truncate" title={opp.typeKo || ''}>{opp.typeKo || '-'}</div>
+                  </td>
+                  <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                    {opp.postedDate ? new Date(opp.postedDate).toLocaleDateString('ko') : '-'}
+                  </td>
                   <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
                     {opp.responseDeadline ? new Date(opp.responseDeadline).toLocaleDateString('ko') : '-'}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${
-                      opp.attachmentCount > 0 ? 'bg-blue-50 text-blue-700' : 'bg-gray-50 text-gray-400'
-                    }`}>
-                      {opp.attachmentCount}건
-                    </span>
-                    {opp.manualFetchRequiredCount > 0 && (
-                      <span
-                        className="ml-1 inline-flex px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700"
-                        title="외부 사이트 첨부 — 직접 가져와 업로드해야 함"
-                      >
-                        가져와야 함 {opp.manualFetchRequiredCount}
-                      </span>
-                    )}
                   </td>
                   <td className="px-4 py-3 text-center">
                     <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
                       opp.noticeCount > 0 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
                     }`}>
-                      {opp.noticeCount > 0 ? `${opp.noticeCount}개 생성됨` : '미생성'}
+                      {opp.noticeCount > 0 ? '생성' : '미생성'}
                     </span>
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <button
-                      onClick={() => handleCreateNotice(opp.id)}
-                      disabled={actionLoading === opp.id}
-                      className="px-2.5 py-1 text-xs rounded-lg bg-purple-50 text-purple-700 hover:bg-purple-100 disabled:opacity-40"
-                      title="공고문 만들기 (한글화)"
-                    >
-                      <i className="fa-solid fa-wand-magic-sparkles mr-1" />공고문 만들기
-                    </button>
                   </td>
                 </tr>
               ))}

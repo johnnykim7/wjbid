@@ -48,13 +48,13 @@ export default function LoginPage() {
             미 연방정부 입찰의<br />새로운 기준
           </h2>
           <p className="text-sm leading-relaxed mb-10" style={{ color: 'rgba(255,255,255,0.6)' }}>
-            SAM.gov 공고 검색부터 AI 제안서 자동 생성까지.<br />
+            SAM.gov 공고 검색부터 전문가 제안서 작성까지.<br />
             입찰 준비의 모든 과정을 자동화합니다.
           </p>
           <div className="space-y-3">
             {[
               { icon: 'fa-solid fa-bolt',          text: 'SAM.gov 실시간 공고 연동' },
-              { icon: 'fa-solid fa-brain',          text: 'Claude AI 기반 제안서 자동 생성' },
+              { icon: 'fa-solid fa-brain',          text: '전문가 기반 제안서 작성' },
               { icon: 'fa-solid fa-shield-halved',  text: '제출 규격 자동 검증' },
             ].map((f) => (
               <div key={f.text} className="flex items-center gap-3">

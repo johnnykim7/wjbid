@@ -3,7 +3,10 @@ package com.biddingagency.controller.admin;
 import com.biddingagency.domain.bid.service.AIWorkflowService;
 import com.biddingagency.domain.proposal.dto.ProposalTreeDto;
 import com.biddingagency.domain.proposal.entity.ProposalSection;
+import com.biddingagency.domain.proposal.entity.VerificationLog;
+import com.biddingagency.domain.proposal.entity.VerificationTargetType;
 import com.biddingagency.domain.proposal.service.ProposalService;
+import com.biddingagency.domain.proposal.service.VerificationLogService;
 import com.biddingagency.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -37,6 +40,7 @@ public class ProposalAdminController {
 
     private final ProposalService proposalService;
     private final AIWorkflowService aiWorkflowService;
+    private final VerificationLogService verificationLogService;
 
     /** 좌측 트리 — chapter → section. */
     @GetMapping("/chapters")
@@ -108,18 +112,54 @@ public class ProposalAdminController {
     }
 
     /**
-     * 검증 결과 패널 — CR-031 verification_log 미도입. 현재 placeholder.
-     * CR-031 구현 시 verification_log 조회로 교체한다.
+     * 검증 결과 패널 (CR-031) — section 의 최신 충실성·분량 검증 결과.
+     * RULE(BE 정형 룰)·LLM(verify-fidelity) 중 최신 1건을 배지·패널로 노출한다.
      */
     @GetMapping("/sections/{sectionId}/verification")
-    @Operation(summary = "검증 결과 (CR-031 예정)", description = "환각/분량 검증 결과 — CR-031 도입 후 연결")
+    @Operation(summary = "검증 결과", description = "환각/분량 검증 결과 (CR-031 verification_log 최신 1건)")
     public ResponseEntity<Map<String, Object>> verification(
             @PathVariable UUID documentId,
             @PathVariable UUID sectionId) {
-        return ResponseEntity.ok(Map.of(
+        return verificationLogService.findLatest(VerificationTargetType.PROPOSAL_SECTION, sectionId)
+                .<ResponseEntity<Map<String, Object>>>map(v -> ResponseEntity.ok(toVerificationView(v)))
+                .orElseGet(() -> ResponseEntity.ok(Map.of(
+                        "sectionId", sectionId.toString(),
+                        "available", false,
+                        "message", "아직 검증되지 않았습니다."
+                )));
+    }
+
+    /**
+     * 수동 재검증 (CR-031) — section 본문은 그대로 두고 충실성 검증만 1회 재실행 (비동기).
+     * 재생성(/regenerate)과 분리. LOCKED 도 검증은 허용 (본문 변경 없음).
+     */
+    @PostMapping("/sections/{sectionId}/reverify")
+    @Operation(summary = "Section 재검증", description = "본문 유지, 충실성 검증만 재실행")
+    public ResponseEntity<Map<String, Object>> reverify(
+            @PathVariable UUID documentId,
+            @PathVariable UUID sectionId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        log.info("[CR-031] section 재검증 요청: sectionId={} by {}", sectionId, userDetails.getUsername());
+        aiWorkflowService.verifySectionAsync(sectionId);
+        return ResponseEntity.accepted().body(Map.of(
                 "sectionId", sectionId.toString(),
-                "available", false,
-                "message", "검증 파이프라인(CR-031) 도입 후 제공됩니다."
+                "message", "재검증을 시작했습니다. 완료 시 결과가 갱신됩니다."
         ));
+    }
+
+    private Map<String, Object> toVerificationView(VerificationLog v) {
+        Map<String, Object> m = new java.util.LinkedHashMap<>();
+        m.put("available", true);
+        m.put("targetId", v.getTargetId().toString());
+        m.put("method", v.getMethod().name());
+        m.put("verdict", v.getVerdict().name());
+        m.put("hallucinations", v.getHallucinations() != null ? v.getHallucinations() : List.of());
+        m.put("hallucinationCount", v.hallucinationCount());
+        m.put("missingFromSource", v.getMissingFromSource() != null ? v.getMissingFromSource() : List.of());
+        m.put("ruleFindings", v.getRuleFindings() != null ? v.getRuleFindings() : List.of());
+        m.put("wordCount", v.getWordCount());
+        m.put("attempt", v.getAttempt());
+        m.put("verifiedAt", v.getVerifiedAt().toString());
+        return m;
     }
 }

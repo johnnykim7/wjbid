@@ -118,6 +118,10 @@ public class McpDispatcher {
             case "save_proposal_structure"     -> proposalMcpTool.saveProposalStructure(args);
             case "get_section_context"         -> proposalMcpTool.getSectionContext(args);
             case "save_section_blocks"         -> proposalMcpTool.saveSectionBlocks(args);
+            // CR-031: 충실성 검증
+            case "get_section_verify_input"    -> proposalMcpTool.getSectionVerifyInput(args);
+            case "get_notice_verify_input"     -> proposalMcpTool.getNoticeVerifyInput(args);
+            case "save_verification_result"    -> proposalMcpTool.saveVerificationResult(args);
             default -> throw new IllegalArgumentException("알 수 없는 도구: " + toolName);
         };
     }

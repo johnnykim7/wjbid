@@ -232,7 +232,7 @@ export default function ProposalDetailPage() {
               </div>
               <h3 className="text-lg font-bold text-gray-800 mb-2">아직 생성된 문서가 없습니다</h3>
               <p className="text-sm text-gray-500 max-w-xs">
-                AI가 요구사항을 분석하고 문서를 생성하면 여기에 표시됩니다.
+                요구사항을 분석하고 문서를 작성하면 여기에 표시됩니다.
               </p>
             </div>
           ) : (

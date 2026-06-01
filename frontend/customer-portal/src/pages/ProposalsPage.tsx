@@ -57,9 +57,9 @@ function StateGuide({ state }: { state: string }) {
         <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4">
           <i className="fa-solid fa-magnifying-glass text-2xl text-secondary" />
         </div>
-        <h3 className="text-lg font-bold text-gray-800 mb-2">AI 요구사항 분석 중</h3>
+        <h3 className="text-lg font-bold text-gray-800 mb-2">요구사항 분석 중</h3>
         <p className="text-sm text-gray-500 max-w-xs">
-          AI가 공고를 분석하고 요구사항을 추출하고 있습니다.<br />
+          공고를 분석하고 요구사항을 추출하고 있습니다.<br />
           잠시 후 문서 작성이 시작됩니다.
         </p>
         <div className="mt-4 flex gap-1.5">
@@ -78,7 +78,7 @@ function StateGuide({ state }: { state: string }) {
         </div>
         <h3 className="text-lg font-bold text-gray-800 mb-2">문서 작성 / 검토 중</h3>
         <p className="text-sm text-gray-500 max-w-xs">
-          AI가 제안서 문서를 작성하거나 내부 검토가 진행 중입니다.<br />
+          제안서 문서를 작성하거나 내부 검토가 진행 중입니다.<br />
           문서가 생성되면 좌측에서 확인하세요.
         </p>
       </div>
@@ -154,7 +154,7 @@ export default function ProposalsPage() {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h2 className="text-xl font-bold text-gray-800">내 제안서 관리</h2>
-          <p className="text-sm text-gray-500 mt-1">AI가 자동으로 작성한 제안서 초안을 확인하고 수정하세요.</p>
+          <p className="text-sm text-gray-500 mt-1">작성된 제안서 초안을 확인하고 수정하세요.</p>
         </div>
       </div>
 
@@ -164,7 +164,7 @@ export default function ProposalsPage() {
         <EmptyState
           icon="fa-solid fa-folder-open"
           title="작성된 제안서가 없습니다"
-          description="입찰 검색 화면에서 AI 제안서 작성 버튼을 눌러 시작하세요."
+          description="입찰 검색 화면에서 제안서 작성 버튼을 눌러 시작하세요."
         />
       ) : (
         <div className="flex gap-6 h-[calc(100vh-220px)]">

@@ -8,12 +8,16 @@ import com.biddingagency.domain.notice.entity.Notice;
 import com.biddingagency.domain.notice.repository.NoticeRepository;
 import com.biddingagency.domain.opportunity.entity.Opportunity;
 import com.biddingagency.domain.opportunity.entity.OpportunityVisibility;
+import com.biddingagency.domain.proposal.entity.ProposalBlock;
 import com.biddingagency.domain.proposal.entity.ProposalChapter;
 import com.biddingagency.domain.proposal.entity.ProposalSection;
+import com.biddingagency.domain.proposal.entity.VerificationTargetType;
+import com.biddingagency.domain.proposal.entity.Verdict;
 import com.biddingagency.domain.proposal.service.ProposalService;
 import com.biddingagency.domain.proposal.service.ProposalService.BlockInput;
 import com.biddingagency.domain.proposal.service.ProposalService.ChapterInput;
 import com.biddingagency.domain.proposal.service.ProposalService.SectionInput;
+import com.biddingagency.domain.proposal.service.VerificationLogService;
 import com.biddingagency.domain.proposal.entity.BlockType;
 import com.biddingagency.domain.rfp.entity.IndustryType;
 import com.biddingagency.domain.rfp.service.ReferenceSampleService;
@@ -46,6 +50,7 @@ public class ProposalMcpTool {
     private final NoticeRepository noticeRepository;
     private final ProposalService proposalService;
     private final ReferenceSampleService referenceSampleService;
+    private final VerificationLogService verificationLogService;
     private final ObjectMapper objectMapper;
 
     // ─── 도구 정의 ────────────────────────────────────────────────────────
@@ -126,6 +131,56 @@ public class ProposalMcpTool {
                     )
                 ),
                 "required", List.of("sectionId", "blocks")
+            )
+        ),
+        // ── CR-031 충실성 검증 ──
+        Map.of(
+            "name", "get_section_verify_input",
+            "description", "한 section 의 충실성 검증에 필요한 입력을 조회합니다 (CR-031). " +
+                    "section 의 scope·요구사항(requirementRefs)·현재 작성된 본문(blocks 의 text 평탄화)·" +
+                    "공고 본문 텍스트(opportunityText)·참조 샘플 목록을 반환합니다. " +
+                    "생성된 본문의 각 문장이 공고 본문/첨부에 근거하는지 검증하세요 — 근거 없는 문장은 환각입니다.",
+            "inputSchema", Map.of(
+                "type", "object",
+                "properties", Map.of(
+                    "sectionId", Map.of("type", "string", "description", "ProposalSection UUID")
+                ),
+                "required", List.of("sectionId")
+            )
+        ),
+        Map.of(
+            "name", "get_notice_verify_input",
+            "description", "공고문 정제 결과의 충실성 검증에 필요한 입력을 조회합니다 (CR-031). " +
+                    "noticeId 로 한글 제목·요약(summary)·생성 본문(contentJson 평탄화)·요구서류와 " +
+                    "원문 공고 텍스트(opportunityText)·첨부 파일 목록(attachmentFiles)을 반환합니다. " +
+                    "생성된 본문/요약의 각 사실이 원문/첨부에 근거하는지 검증하세요 — 근거 없는 내용은 환각입니다.",
+            "inputSchema", Map.of(
+                "type", "object",
+                "properties", Map.of(
+                    "noticeId", Map.of("type", "string", "description", "Notice UUID")
+                ),
+                "required", List.of("noticeId")
+            )
+        ),
+        Map.of(
+            "name", "save_verification_result",
+            "description", "충실성 검증 결과를 verification_log 에 저장합니다 (CR-031). " +
+                    "환각(근거 없는 문장)이 1건 이상이면 verdict=FAIL, 없으면 PASS. " +
+                    "targetType 은 NOTICE(공고문) 또는 PROPOSAL_SECTION(제안서 section).",
+            "inputSchema", Map.of(
+                "type", "object",
+                "properties", Map.ofEntries(
+                    Map.entry("targetType", Map.of("type", "string", "description", "NOTICE | PROPOSAL_SECTION")),
+                    Map.entry("targetId", Map.of("type", "string", "description", "noticeId 또는 sectionId UUID")),
+                    Map.entry("verdict", Map.of("type", "string", "description", "PASS | FAIL")),
+                    Map.entry("attempt", Map.of("type", "integer", "description", "자동 재시도 회차 (기본 1)")),
+                    Map.entry("hallucinations", Map.of("type", "array", "description",
+                            "근거 없는 문장 배열. 각 항목 {sentence, reason}")),
+                    Map.entry("missingFromSource", Map.of("type", "array", "description",
+                            "원문에 있는데 결과물에 누락된 항목 배열. 각 항목 {source_quote, reason}")),
+                    Map.entry("wordCount", Map.of("type", "integer", "description", "결과물 단어 수 (optional)"))
+                ),
+                "required", List.of("targetType", "targetId", "verdict")
             )
         )
     );
@@ -274,6 +329,123 @@ public class ProposalMcpTool {
                 "blockCount", blocks.size(),
                 "message", "section block 저장 완료"
         ));
+    }
+
+    // ─── CR-031 충실성 검증 도구 ──────────────────────────────────────────
+
+    /** verify-fidelity WF — section 원문/scope/현재 본문/참조 샘플 반환. */
+    @Transactional(readOnly = true)
+    public String getSectionVerifyInput(Map<String, Object> args) {
+        UUID sectionId = uuid(args.get("sectionId"));
+        ProposalSection section = proposalService.getSection(sectionId);
+        ProposalChapter chapter = proposalService.getChapter(section.getChapterId());
+
+        // section → document → bidRequest → opportunity
+        BidDocument doc = bidDocumentService.findById(chapter.getDocumentId());
+        BidRequest bidRequest = bidRequestService.findByIdWithDetails(doc.getBidRequest().getId());
+        Opportunity opp = bidRequest.getOpportunity();
+
+        // 현재 작성된 본문 (block text 평탄화)
+        List<ProposalBlock> blocks = proposalService.getBlocks(sectionId);
+        StringBuilder body = new StringBuilder();
+        for (ProposalBlock b : blocks) {
+            if (b.getContentJson() != null) collectText(b.getContentJson(), body);
+        }
+
+        IndustryType industryType = opp.getIndustryType();
+        List<Map<String, Object>> samples = industryType != null
+                ? referenceSampleService.collect(industryType) : List.of();
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("sectionId", sectionId.toString());
+        result.put("title", section.getTitle());
+        result.put("scope", section.getScope());
+        result.put("minWords", section.getMinWords());
+        result.put("requirementRefs", section.getRequirementRefs());
+        result.put("generatedBody", body.toString().trim());
+        result.put("blockCount", blocks.size());
+        result.put("opportunityText", buildOpportunityText(opp));
+        result.put("referenceSamples", samples);
+        return toJson(result);
+    }
+
+    /** verify-fidelity WF — 공고문 정제 원문/생성 본문 반환 (NOTICE 분기). */
+    @Transactional(readOnly = true)
+    public String getNoticeVerifyInput(Map<String, Object> args) {
+        UUID noticeId = uuid(args.get("noticeId"));
+        Notice notice = noticeRepository.findById(noticeId)
+                .orElseThrow(() -> new IllegalArgumentException("Notice not found: " + noticeId));
+        Opportunity opp = notice.getOpportunity();
+
+        // 생성 본문 (contentJson TipTap 평탄화) + 요약 overview 를 검증 대상 본문으로 결합
+        StringBuilder body = new StringBuilder();
+        if (notice.getContentJson() != null) collectText(notice.getContentJson(), body);
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("noticeId", noticeId.toString());
+        result.put("koreanTitle", notice.getKoreanTitle());
+        result.put("summary", nullSafe(notice.getSummaryJson()));
+        result.put("requiredDocuments", nullSafe(notice.getRequiredDocumentsJson()));
+        result.put("generatedBody", body.toString().trim());
+        result.put("opportunityText", buildOpportunityText(opp));
+        return toJson(result);
+    }
+
+    /** verify-fidelity WF 콜백 — 충실성 검증 결과 저장 (NOTICE/PROPOSAL_SECTION 공통). */
+    public String saveVerificationResult(Map<String, Object> args) {
+        VerificationTargetType targetType = parseTargetType(args.get("targetType"));
+        UUID targetId = uuid(args.get("targetId"));
+        Verdict verdict = parseVerdict(args.get("verdict"));
+        int attempt = args.get("attempt") instanceof Number n ? n.intValue()
+                : verificationLogService.nextAttempt(targetType, targetId);
+        List<Map<String, Object>> hallucinations = castList(args.get("hallucinations"));
+        List<Map<String, Object>> missing = castList(args.get("missingFromSource"));
+        Integer wordCount = intOrNull(args.get("wordCount"));
+
+        verificationLogService.recordLlm(targetType, targetId, null, verdict,
+                hallucinations, missing, wordCount, attempt);
+
+        log.info("MCP save_verification_result: target={}/{}, verdict={}, 환각={}, attempt={}",
+                targetType, targetId, verdict, hallucinations.size(), attempt);
+        return toJson(Map.of(
+                "targetType", targetType.name(),
+                "targetId", targetId.toString(),
+                "verdict", verdict.name(),
+                "hallucinationCount", hallucinations.size(),
+                "status", "SAVED"
+        ));
+    }
+
+    private VerificationTargetType parseTargetType(Object raw) {
+        if (raw == null) throw new IllegalArgumentException("targetType 이 필요합니다 (NOTICE | PROPOSAL_SECTION)");
+        try {
+            return VerificationTargetType.valueOf(raw.toString().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("알 수 없는 targetType: " + raw);
+        }
+    }
+
+    private Verdict parseVerdict(Object raw) {
+        if (raw == null) throw new IllegalArgumentException("verdict 가 필요합니다 (PASS | FAIL)");
+        try {
+            return Verdict.valueOf(raw.toString().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("알 수 없는 verdict: " + raw);
+        }
+    }
+
+    /** TipTap node 의 text 평탄화 (공백 결합). */
+    private void collectText(Object node, StringBuilder sb) {
+        if (node instanceof Map<?, ?> map) {
+            Object text = map.get("text");
+            if (text instanceof String s) sb.append(s).append(' ');
+            Object content = map.get("content");
+            if (content instanceof List<?> list) {
+                for (Object child : list) collectText(child, sb);
+            }
+        } else if (node instanceof List<?> list) {
+            for (Object child : list) collectText(child, sb);
+        }
     }
 
     // ─── 내부 조회 헬퍼 ────────────────────────────────────────────────────

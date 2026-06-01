@@ -49,7 +49,7 @@ public record OpportunityDto(
                 getString(raw, "placeOfPerformance"),
                 getString(raw, "description"),
                 Boolean.TRUE.equals(opp.getActive()) ? "active" : "closed",
-                opp.getType(),
+                opp.getTypeKo() != null && !opp.getTypeKo().isBlank() ? opp.getTypeKo() : opp.getType(),
                 opp.getUiLink(),
                 getStringList(raw, "resourceLinks"),
                 null
@@ -65,6 +65,9 @@ public record OpportunityDto(
         Map<String, Object> raw = opp.getRawJson();
         String displayTitle = notice.getKoreanTitle() != null && !notice.getKoreanTitle().isBlank()
                 ? notice.getKoreanTitle() : opp.getTitle();
+        // 고객 노출은 번역본 우선: typeKo가 있으면 그걸, 없으면 영문 type fallback
+        String displayType = opp.getTypeKo() != null && !opp.getTypeKo().isBlank()
+                ? opp.getTypeKo() : opp.getType();
 
         return new OpportunityDto(
                 notice.getId().toString(),
@@ -78,7 +81,7 @@ public record OpportunityDto(
                 getString(raw, "placeOfPerformance"),
                 getString(raw, "description"),
                 Boolean.TRUE.equals(opp.getActive()) ? "active" : "closed",
-                opp.getType(),
+                displayType,
                 opp.getUiLink(),
                 getStringList(raw, "resourceLinks"),
                 AnalysisResultDto.fromNotice(notice)

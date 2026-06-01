@@ -122,7 +122,7 @@ export default function BookmarksPage() {
                         : <i className="fa-solid fa-bookmark text-lg" />}
                     </button>
                     <button
-                      title="AI 제안서 작성"
+                      title="제안서 작성"
                       className="text-secondary hover:text-blue-700 transition"
                       onClick={(e) => openAiModal(bid, e)}
                     >

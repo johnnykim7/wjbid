@@ -5,7 +5,7 @@ import { getOpportunities } from '../api/client'
 const HERO_STATS = [
   { value: '2,800+', label: '활성 입찰 공고' },
   { value: '43%',    label: '평균 낙찰 성공률' },
-  { value: '1,200+', label: 'AI 생성 제안서' },
+  { value: '1,200+', label: '작성 제안서' },
   { value: '150+',   label: '기업 파트너' },
 ]
 
@@ -19,14 +19,14 @@ const PROCESS_STEPS = [
   {
     num: '02',
     icon: 'fa-solid fa-robot',
-    title: 'AI 적격성 분석',
-    desc: '공고 요건과 귀사 역량을 AI가 자동 비교 분석하여 입찰 적합도와 전략을 제시합니다.',
+    title: '적격성 분석',
+    desc: '공고 요건과 귀사 역량을 비교 분석하여 입찰 적합도와 전략을 제시합니다.',
   },
   {
     num: '03',
     icon: 'fa-solid fa-file-lines',
-    title: '제안서 자동 생성',
-    desc: 'Cover Letter, Technical Proposal, Past Performance 등 입찰 필수 서류를 AI가 작성합니다.',
+    title: '제안서 작성',
+    desc: 'Cover Letter, Technical Proposal, Past Performance 등 입찰 필수 서류를 작성합니다.',
   },
   {
     num: '04',
@@ -44,8 +44,8 @@ const FEATURES = [
   },
   {
     icon: 'fa-solid fa-brain',
-    title: 'Claude AI 제안서 생성',
-    desc: 'Anthropic Claude 기반 AI가 입찰 요건을 깊이 이해하고 경쟁력 있는 맞춤형 제안서를 작성합니다.',
+    title: '맞춤형 제안서 작성',
+    desc: '입찰 요건을 깊이 분석하여 경쟁력 있는 맞춤형 제안서를 작성합니다.',
   },
   {
     icon: 'fa-solid fa-pen-to-square',
@@ -131,15 +131,15 @@ export default function HomePage() {
               style={{ background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.75)' }}
             >
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
-              SAM.gov 실시간 연동 · Claude AI 제안서 자동화
+              SAM.gov 실시간 연동 · 전문가 제안서 작성
             </div>
 
             <h1 className="text-4xl md:text-[56px] font-bold leading-tight tracking-tight mb-5">
-              미군 입찰,<br />AI로 더 빠르고<br />정확하게
+              미군 입찰,<br />더 빠르고<br />정확하게
             </h1>
 
             <p className="text-base md:text-lg leading-relaxed mb-8" style={{ color: 'rgba(255,255,255,0.65)' }}>
-              SAM.gov 공고 실시간 검색부터 AI 제안서 자동 생성까지.<br />
+              SAM.gov 공고 실시간 검색부터 전문가 제안서 작성까지.<br />
               복잡한 미군 입찰 절차를 WJbid가 간소화합니다.
             </p>
 
@@ -219,10 +219,10 @@ export default function HomePage() {
               How It Works
             </p>
             <h2 className="text-2xl md:text-3xl font-bold text-[#0c1e3d]">
-              4단계 입찰 자동화 프로세스
+              4단계 입찰 대행 프로세스
             </h2>
             <p className="mt-3 text-sm text-gray-500 max-w-lg mx-auto">
-              복잡한 미군 입찰 절차를 WJbid의 AI가 단계별로 자동화합니다
+              복잡한 미군 입찰 절차를 WJbid가 단계별로 대행합니다
             </p>
           </div>
 
@@ -348,7 +348,7 @@ export default function HomePage() {
           </div>
 
           <p className="text-center text-sm text-gray-500 mt-5">
-            로그인하면 전체 2,800+ 건의 공고를 검색하고 AI 제안서를 생성할 수 있습니다.
+            로그인하면 전체 2,800+ 건의 공고를 검색하고 제안서를 작성할 수 있습니다.
             <button
               onClick={() => navigate('/login')}
               className="ml-1.5 font-semibold text-[#1a56db] hover:underline"
@@ -484,8 +484,8 @@ export default function HomePage() {
                 <span className="font-bold text-sm text-white">WJbid.com</span>
               </div>
               <p className="text-xs leading-relaxed max-w-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                미군 입찰 AI 자동화 플랫폼.<br />
-                SAM.gov 연동 및 AI 제안서 생성 서비스를 제공합니다.
+                미군 입찰 대행 플랫폼.<br />
+                SAM.gov 연동 및 제안서 작성 서비스를 제공합니다.
               </p>
             </div>
 
@@ -496,7 +496,7 @@ export default function HomePage() {
                   서비스
                 </p>
                 <div className="space-y-2">
-                  {['입찰 검색', 'AI 제안서', '요금제'].map((t) => (
+                  {['입찰 검색', '제안서 작성', '요금제'].map((t) => (
                     <button
                       key={t}
                       onClick={() => navigate('/login')}

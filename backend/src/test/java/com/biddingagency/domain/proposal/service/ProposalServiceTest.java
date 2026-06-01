@@ -27,6 +27,7 @@ class ProposalServiceTest {
     @Mock private ProposalChapterRepository chapterRepository;
     @Mock private ProposalSectionRepository sectionRepository;
     @Mock private ProposalBlockRepository blockRepository;
+    @Mock private VerificationLogService verificationLogService;
 
     @InjectMocks private ProposalService proposalService;
 
@@ -50,6 +51,8 @@ class ProposalServiceTest {
         ProposalSection section = pendingSection(sectionId);
         given(sectionRepository.findById(sectionId)).willReturn(java.util.Optional.of(section));
         given(blockRepository.findBySectionIdOrderByOrderNoAsc(sectionId)).willReturn(List.of());
+        // CR-031: 정형 룰 통과(findings 비어있음) → DRAFTED 유지
+        given(verificationLogService.evaluateSectionRules(anyInt(), anyInt(), any())).willReturn(List.of());
 
         List<ProposalService.BlockInput> inputs = List.of(
                 new ProposalService.BlockInput(BlockType.PARAGRAPH, Map.of("type", "doc"), null),

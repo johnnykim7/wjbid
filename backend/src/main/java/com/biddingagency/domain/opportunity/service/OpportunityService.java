@@ -1,5 +1,6 @@
 package com.biddingagency.domain.opportunity.service;
 
+import com.biddingagency.domain.opportunity.NoticeTypeTranslator;
 import com.biddingagency.domain.opportunity.entity.Opportunity;
 import com.biddingagency.domain.opportunity.entity.OpportunityAttachment;
 import com.biddingagency.domain.opportunity.repository.OpportunityAttachmentRepository;
@@ -130,6 +131,7 @@ public class OpportunityService {
                             .solicitationNumber(solicitationNumber)
                             .title(title)
                             .type(type)
+                            .typeKo(NoticeTypeTranslator.toKorean(type)) // CR-022: type 한글 라벨 코드 매핑
                             .organizationName(organizationName)
                             .industryType(industryType) // CR-014: 수집 시 자동분류 결과
                             .postedDate(postedDate)

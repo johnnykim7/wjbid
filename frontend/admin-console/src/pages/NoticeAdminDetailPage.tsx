@@ -33,7 +33,7 @@ interface NoticeDetail {
 }
 
 const GEN_LABELS: Record<string, string> = {
-  PENDING: '대기', ANALYZING: '한글화 중', COMPLETED: '완료', FAILED: '실패',
+  PENDING: '대기', ANALYZING: '분석 중', COMPLETED: '완료', FAILED: '실패',
 }
 
 export default function NoticeAdminDetailPage() {

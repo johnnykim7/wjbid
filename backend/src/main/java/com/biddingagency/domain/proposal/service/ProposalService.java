@@ -27,6 +27,7 @@ public class ProposalService {
     private final ProposalChapterRepository chapterRepository;
     private final ProposalSectionRepository sectionRepository;
     private final ProposalBlockRepository blockRepository;
+    private final VerificationLogService verificationLogService;
 
     // ─────────────────────────────────────────────
     // 트리 조회
@@ -182,8 +183,52 @@ public class ProposalService {
                     .build();
             blockRepository.save(block);
         }
-        section.markDrafted();
+
+        // CR-031 BE 정형 룰 (LLM 0콜): block 0개 / min_words 미달 평가 → verification_log(RULE) 적재.
+        // 위반 시 NEEDS_REGEN, 통과 시 DRAFTED. LLM 충실성 검증은 호출부(AIWorkflowService)가 후속으로 돌린다.
+        int wordCount = countWords(blocks);
+        int attempt = verificationLogService.nextAttempt(VerificationTargetType.PROPOSAL_SECTION, sectionId);
+        List<String> findings = verificationLogService.evaluateSectionRules(
+                blocks.size(), wordCount, section.getMinWords());
+        verificationLogService.recordRule(
+                VerificationTargetType.PROPOSAL_SECTION, sectionId, findings, wordCount, attempt);
+
+        if (findings.isEmpty()) {
+            section.markDrafted();
+        } else {
+            log.warn("[CR-031] section 정형 룰 위반 → NEEDS_REGEN: sectionId={}, findings={}", sectionId, findings);
+            section.markDrafted();   // 본문은 존재하므로 일단 DRAFTED 로 둔 뒤
+            section.markNeedsRegen(); // 분량/구조 미달 표식
+        }
         return blockRepository.findBySectionIdOrderByOrderNoAsc(sectionId);
+    }
+
+    /** block contentJson(TipTap) 의 text 노드를 평탄화해 단어 수 추정 (공백 분리). */
+    private int countWords(List<BlockInput> blocks) {
+        StringBuilder sb = new StringBuilder();
+        for (BlockInput b : blocks) {
+            if (b.contentJson() != null) {
+                collectText(b.contentJson(), sb);
+            }
+        }
+        String text = sb.toString().trim();
+        if (text.isEmpty()) return 0;
+        return text.split("\\s+").length;
+    }
+
+    private void collectText(Object node, StringBuilder sb) {
+        if (node instanceof Map<?, ?> map) {
+            Object text = map.get("text");
+            if (text instanceof String s) {
+                sb.append(s).append(' ');
+            }
+            Object content = map.get("content");
+            if (content instanceof List<?> list) {
+                for (Object child : list) collectText(child, sb);
+            }
+        } else if (node instanceof List<?> list) {
+            for (Object child : list) collectText(child, sb);
+        }
     }
 
     // ─────────────────────────────────────────────

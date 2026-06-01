@@ -6,6 +6,8 @@ import {
   regenerateProposalSection,
   lockProposalSection,
   unlockProposalSection,
+  getProposalSectionVerification,
+  reverifyProposalSection,
 } from '../api/client'
 
 // ── 타입 (BE ProposalTreeDto 대응) ──
@@ -49,6 +51,21 @@ interface SectionDetail {
 
 type SectionStatus = 'PENDING' | 'DRAFTING' | 'DRAFTED' | 'VERIFIED' | 'NEEDS_REGEN' | 'LOCKED'
 
+// CR-031 검증 결과
+interface VerificationView {
+  available: boolean
+  method?: 'RULE' | 'LLM'
+  verdict?: 'PASS' | 'FAIL'
+  hallucinations?: { sentence?: string; reason?: string }[]
+  hallucinationCount?: number
+  missingFromSource?: { source_quote?: string; reason?: string }[]
+  ruleFindings?: string[]
+  wordCount?: number | null
+  attempt?: number
+  verifiedAt?: string
+  message?: string
+}
+
 const STATUS_STYLE: Record<SectionStatus, string> = {
   PENDING: 'bg-gray-100 text-gray-600',
   DRAFTING: 'bg-blue-100 text-blue-700',
@@ -84,6 +101,7 @@ export default function ProposalTreePage() {
   const [chapters, setChapters] = useState<ChapterNode[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [detail, setDetail] = useState<SectionDetail | null>(null)
+  const [verification, setVerification] = useState<VerificationView | null>(null)
   const [loading, setLoading] = useState(true)
   const [detailLoading, setDetailLoading] = useState(false)
   const [acting, setActing] = useState(false)
@@ -110,15 +128,38 @@ export default function ProposalTreePage() {
     if (!documentId) return
     setSelectedId(sectionId)
     setDetailLoading(true)
+    setVerification(null)
     try {
       const res = await getProposalSection(documentId, sectionId)
       setDetail(res.data)
+      // CR-031 검증 결과 병행 로드 (실패해도 상세는 표시)
+      try {
+        const v = await getProposalSectionVerification(documentId, sectionId)
+        setVerification(v.data)
+      } catch {
+        setVerification(null)
+      }
     } catch {
       setError('section 상세를 불러오지 못했습니다.')
     } finally {
       setDetailLoading(false)
     }
   }, [documentId])
+
+  const handleReverify = async () => {
+    if (!documentId || !detail) return
+    setActing(true)
+    setError(null)
+    try {
+      await reverifyProposalSection(documentId, detail.id)
+      setError(null)
+      alert('재검증을 시작했습니다. 잠시 후 새로고침하면 결과가 갱신됩니다.')
+    } catch {
+      setError('재검증 요청에 실패했습니다.')
+    } finally {
+      setActing(false)
+    }
+  }
 
   const handleRegenerate = async () => {
     if (!documentId || !detail) return
@@ -282,9 +323,92 @@ export default function ProposalTreePage() {
                 </div>
               )}
 
-              {/* 검증 결과 — CR-031 도입 후 연결 (placeholder) */}
-              <div className="mb-4 p-2 border border-dashed rounded text-xs text-gray-400">
-                검증 결과(환각/분량)는 검증 파이프라인(CR-031) 도입 후 표시됩니다.
+              {/* 검증 결과 (CR-031) */}
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm font-medium text-gray-700">충실성·분량 검증</span>
+                  <button
+                    onClick={handleReverify}
+                    disabled={acting}
+                    className="px-2 py-1 text-xs rounded border disabled:opacity-40 hover:bg-gray-50"
+                  >
+                    재검증
+                  </button>
+                </div>
+                {!verification || !verification.available ? (
+                  <div className="p-2 border border-dashed rounded text-xs text-gray-400">
+                    {verification?.message || '아직 검증되지 않았습니다.'}
+                  </div>
+                ) : (
+                  <div className="p-2 border rounded text-sm">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded font-medium ${
+                          verification.verdict === 'PASS'
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-red-100 text-red-700'
+                        }`}
+                      >
+                        {verification.verdict === 'PASS' ? '검증 통과' : '검증 실패'}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {verification.method === 'RULE' ? '정형 룰' : 'LLM 충실성'}
+                        {verification.attempt && verification.attempt > 1
+                          ? ` · 재시도 ${verification.attempt - 1}회`
+                          : ''}
+                        {verification.wordCount != null ? ` · ${verification.wordCount} words` : ''}
+                      </span>
+                    </div>
+
+                    {/* 환각 문장 */}
+                    {verification.hallucinations && verification.hallucinations.length > 0 && (
+                      <div className="mt-2">
+                        <div className="text-xs font-medium text-red-700 mb-1">
+                          근거 없는 문장 (환각) {verification.hallucinations.length}건
+                        </div>
+                        <ul className="space-y-1">
+                          {verification.hallucinations.map((h, i) => (
+                            <li key={i} className="text-xs bg-red-50 rounded p-1.5">
+                              <span className="text-gray-800">“{h.sentence}”</span>
+                              {h.reason && <span className="text-gray-500"> — {h.reason}</span>}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* 누락 */}
+                    {verification.missingFromSource && verification.missingFromSource.length > 0 && (
+                      <div className="mt-2">
+                        <div className="text-xs font-medium text-amber-700 mb-1">
+                          원문 누락 {verification.missingFromSource.length}건
+                        </div>
+                        <ul className="space-y-1">
+                          {verification.missingFromSource.map((m, i) => (
+                            <li key={i} className="text-xs bg-amber-50 rounded p-1.5">
+                              <span className="text-gray-800">“{m.source_quote}”</span>
+                              {m.reason && <span className="text-gray-500"> — {m.reason}</span>}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* 정형 룰 위반 */}
+                    {verification.ruleFindings && verification.ruleFindings.length > 0 && (
+                      <div className="mt-2">
+                        <div className="text-xs font-medium text-red-700 mb-1">정형 룰 위반</div>
+                        <ul className="list-disc ml-4 space-y-0.5">
+                          {verification.ruleFindings.map((f, i) => (
+                            <li key={i} className="text-xs text-gray-700">
+                              {f}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* 본문 (읽기 전용 미리보기) */}

@@ -10,8 +10,12 @@ import com.biddingagency.domain.document.service.DocumentVersionService;
 import com.biddingagency.domain.notice.repository.NoticeRepository;
 import com.biddingagency.domain.proposal.entity.GenerationTargetType;
 import com.biddingagency.domain.proposal.entity.ProposalSection;
+import com.biddingagency.domain.proposal.entity.VerificationLog;
+import com.biddingagency.domain.proposal.entity.VerificationTargetType;
+import com.biddingagency.domain.proposal.entity.Verdict;
 import com.biddingagency.domain.proposal.service.GenerationLogService;
 import com.biddingagency.domain.proposal.service.ProposalService;
+import com.biddingagency.domain.proposal.service.VerificationLogService;
 import com.biddingagency.domain.opportunity.entity.Opportunity;
 import com.biddingagency.domain.opportunity.entity.OpportunityRequirementItem;
 import com.biddingagency.domain.opportunity.entity.OpportunityVisibility;
@@ -58,6 +62,8 @@ public class AIWorkflowService {
     private final ProposalService proposalService;
     // CR-029: 단계별 비용 추적
     private final GenerationLogService generationLogService;
+    // CR-031: 충실성·분량 검증
+    private final VerificationLogService verificationLogService;
 
     /** DOCUMENT_DRAFTING 진입 시 자동 생성할 문서 타입 목록 */
     @Value("${app.ai.auto-generate-document-types:COVER_LETTER,TECHNICAL_PROPOSAL}")
@@ -189,13 +195,91 @@ public class AIWorkflowService {
         }
     }
 
-    /** write-section WF 동기 호출 (Aimbase 가 get_section_context → save_section_blocks 콜백). */
+    /**
+     * write-section WF 동기 호출 (Aimbase 가 get_section_context → save_section_blocks 콜백).
+     * save_section_blocks 콜백 시점에 ProposalService.replaceBlocks 가 BE 정형 룰(RULE) 을 적재한다.
+     * 이어서 CR-031 LLM 충실성 검증을 1회 돌리고, FAIL 이면 1회만 자동 재작성+재검증한다.
+     */
     private void writeSection(UUID sectionId) {
         proposalService.markDrafting(sectionId);
         Map<String, Object> input = new HashMap<>();
         input.put("sectionId", sectionId.toString());
         WorkflowRunResponse run = llmPlatformClient.runWriteSection(input);
         logGeneration(GenerationTargetType.WRITE_SECTION, sectionId, run);
+
+        // CR-031: 충실성 검증 + 1회 자동 재시도
+        verifySectionWithRetry(sectionId);
+    }
+
+    /**
+     * CR-031: section 충실성 검증 (verify-fidelity WF). 환각 ≥1(FAIL) 이면 1회만 자동 재작성 후 재검증.
+     * 2회째도 FAIL 이면 NEEDS_REGEN 으로 두고 사람을 호출한다(자동 재시도 종료).
+     * verify-fidelity WF 가 MCP save_verification_result 로 verification_log 를 직접 저장하므로,
+     * BE 는 WF 완료 후 최신 LLM 검증 결과를 읽어 PASS/FAIL 분기만 한다.
+     */
+    /**
+     * CR-031: 관리자 수동 재검증 — section 본문을 재작성하지 않고 충실성 검증만 1회 재실행.
+     * "재생성"(writeSectionAsync) 과 분리 — 본문은 그대로 두고 검증 결과만 갱신.
+     */
+    @Async("llmTaskExecutor")
+    public void verifySectionAsync(UUID sectionId) {
+        log.info("[CR-031] 수동 재검증 시작: sectionId={}", sectionId);
+        Verdict verdict = runVerifyFidelity(sectionId);
+        if (verdict == Verdict.FAIL) {
+            proposalService.markNeedsRegen(sectionId);
+        }
+    }
+
+    private void verifySectionWithRetry(UUID sectionId) {
+        Verdict verdict = runVerifyFidelity(sectionId);
+        if (verdict == Verdict.FAIL) {
+            log.warn("[CR-031] section 충실성 FAIL — 1회 자동 재작성: sectionId={}", sectionId);
+            // 환각 목록을 negative example 로 다음 write-section 입력에 실어 재작성
+            List<Map<String, Object>> halls = latestHallucinations(sectionId);
+            Map<String, Object> retryInput = new HashMap<>();
+            retryInput.put("sectionId", sectionId.toString());
+            retryInput.put("avoidHallucinations", halls);
+            proposalService.markDrafting(sectionId);
+            WorkflowRunResponse retryRun = llmPlatformClient.runWriteSection(retryInput);
+            logGeneration(GenerationTargetType.WRITE_SECTION, sectionId, retryRun);
+
+            Verdict retryVerdict = runVerifyFidelity(sectionId);
+            if (retryVerdict == Verdict.FAIL) {
+                log.warn("[CR-031] 재작성 후도 FAIL — NEEDS_REGEN(사람 호출): sectionId={}", sectionId);
+                proposalService.markNeedsRegen(sectionId);
+            }
+        }
+    }
+
+    /**
+     * verify-fidelity WF 1회 실행 후 최신 LLM 검증 결과의 verdict 반환.
+     * WF/검증 자체 실패 시 보수적으로 FAIL 로 간주하지 않고 PASS 폴백 — 검증 부재로 파이프라인을 막지 않는다.
+     */
+    private Verdict runVerifyFidelity(UUID sectionId) {
+        try {
+            int attempt = verificationLogService.nextAttempt(VerificationTargetType.PROPOSAL_SECTION, sectionId);
+            Map<String, Object> input = new HashMap<>();
+            input.put("targetType", VerificationTargetType.PROPOSAL_SECTION.name());
+            input.put("targetId", sectionId.toString());
+            input.put("attempt", attempt);
+            WorkflowRunResponse run = llmPlatformClient.runVerifyFidelity(input);
+            logGeneration(GenerationTargetType.VERIFY, sectionId, run);
+
+            // 최신 LLM 검증 결과 (WF 가 save_verification_result 콜백으로 이미 저장)
+            return verificationLogService.findLatest(VerificationTargetType.PROPOSAL_SECTION, sectionId)
+                    .filter(v -> v.getMethod() == com.biddingagency.domain.proposal.entity.VerificationMethod.LLM)
+                    .map(VerificationLog::getVerdict)
+                    .orElse(Verdict.PASS);
+        } catch (Exception e) {
+            log.warn("[CR-031] section 충실성 검증 실패(PASS 폴백): sectionId={}", sectionId, e);
+            return Verdict.PASS;
+        }
+    }
+
+    private List<Map<String, Object>> latestHallucinations(UUID sectionId) {
+        return verificationLogService.findLatest(VerificationTargetType.PROPOSAL_SECTION, sectionId)
+                .map(VerificationLog::getHallucinations)
+                .orElse(List.of());
     }
 
     /**
@@ -209,6 +293,7 @@ public class AIWorkflowService {
                 case DESIGN -> llmPlatformClient.resolveDesignModel();
                 case WRITE_SECTION -> llmPlatformClient.resolveWriteSectionModel();
                 case ASSEMBLE -> llmPlatformClient.resolveAssembleModel();
+                case VERIFY -> llmPlatformClient.resolveVerifyModel();
                 default -> null;
             };
             generationLogService.recordStage(stage, targetId, run, model);

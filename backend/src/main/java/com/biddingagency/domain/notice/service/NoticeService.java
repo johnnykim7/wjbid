@@ -53,6 +53,8 @@ public class NoticeService {
     private final LLMPlatformClient llmPlatformClient;
     private final ApplicationEventPublisher eventPublisher;
     private final DocumentTemplateService documentTemplateService;
+    private final com.biddingagency.domain.proposal.service.VerificationLogService verificationLogService;
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
     /**
      * self-injection — @Async self-call이 AOP 프록시를 통과 못 해 동기 호출되는 함정 회피.
@@ -128,6 +130,14 @@ public class NoticeService {
         Opportunity opportunity = opportunityRepository.findById(opportunityId)
                 .orElseThrow(() -> new IllegalArgumentException("Opportunity not found: " + opportunityId));
 
+        // 이미 이 원본으로 만든 공고문이 있으면 새로 만들지 않고 기존 최신 공고문으로 안내 (중복 생성 방지)
+        Optional<Notice> existing = noticeRepository.findFirstByOpportunityIdOrderByCreatedAtDesc(opportunityId);
+        if (existing.isPresent()) {
+            UUID existingId = existing.get().getId();
+            log.info("[공고문] 기존 공고문 존재 → 재사용: opportunityId={}, noticeId={}", opportunityId, existingId);
+            return existingId;
+        }
+
         Notice notice = noticeRepository.save(Notice.builder()
                 .opportunity(opportunity)
                 .createdBy(createdBy)
@@ -179,6 +189,11 @@ public class NoticeService {
             log.info("[공고문] 한글화/요약 완료 (Aimbase MCP 콜백으로 저장됨): noticeId={}, run={}",
                     noticeId, response != null ? response.getId() : null);
 
+            // CR-031: 정제(콜백 저장) 완료 후 공고문 충실성 LLM 검증 1회.
+            // saveResult 콜백 안의 BE 정형 룰(RULE)과 별개로, 본문 환각을 문장 단위로 검증한다.
+            // 완료(COMPLETED) 상태일 때만 — FAILED 면 검증할 본문이 없다.
+            verifyNoticeFidelity(noticeId);
+
             eventPublisher.publishEvent(
                     new OpportunityAnalysisCompletedEvent(noticeId, opportunityId, true, null));
 
@@ -188,6 +203,30 @@ public class NoticeService {
         } catch (Exception e) {
             log.error("[공고문] 예상치 못한 오류 (한글화): noticeId={}", noticeId, e);
             markFailed(noticeId, opportunityId, e.getMessage());
+        }
+    }
+
+    /**
+     * CR-031: 공고문 충실성 LLM 검증 1회 (verify-fidelity WF, NOTICE 분기).
+     * WF 가 get_notice_verify_input → parse_document → save_verification_result 로 자율주행.
+     * COMPLETED 상태일 때만 (검증할 본문 존재). 검증 실패는 정제 자체를 막지 않는다(표식만).
+     */
+    private void verifyNoticeFidelity(UUID noticeId) {
+        try {
+            Notice notice = findById(noticeId);
+            if (!notice.isGenerationCompleted()) {
+                return; // FAILED — 검증 대상 없음
+            }
+            int attempt = verificationLogService.nextAttempt(
+                    com.biddingagency.domain.proposal.entity.VerificationTargetType.NOTICE, noticeId);
+            Map<String, Object> input = new HashMap<>();
+            input.put("targetType", com.biddingagency.domain.proposal.entity.VerificationTargetType.NOTICE.name());
+            input.put("targetId", noticeId.toString());
+            input.put("attempt", attempt);
+            llmPlatformClient.runVerifyFidelity(input);
+            log.info("[CR-031] 공고문 충실성 검증 완료(콜백 저장): noticeId={}", noticeId);
+        } catch (Exception e) {
+            log.warn("[CR-031] 공고문 충실성 검증 실패(무시): noticeId={}", noticeId, e);
         }
     }
 
@@ -226,7 +265,54 @@ public class NoticeService {
         }
 
         notice.markCompleted(koreanTitle, summaryJson, documentFormatsJson, requiredDocumentsJson, llmPromptPresetJson, contentJson);
-        return noticeRepository.save(notice);
+        Notice saved = noticeRepository.save(notice);
+
+        // CR-031 BE 정형 룰 (LLM 0콜): 분량·첨부 0건 평가 → verification_log(RULE) 적재.
+        // FAILED 로 막지 않고 PARTIAL 신호로 남긴다 — 관리자 콘솔이 배지로 노출, 재검증/재생성은 사람 판단.
+        recordNoticeRuleCheck(saved, summaryJson, contentJson);
+        return saved;
+    }
+
+    /**
+     * CR-031: 공고문 정제 결과의 분량/첨부 정형 룰을 평가해 verification_log 에 RULE 결과 적재.
+     * 첨부 0건 + description ≤ 300자에 본문이 작성되면 환각 위험으로 표식한다.
+     */
+    private void recordNoticeRuleCheck(Notice notice, Map<String, Object> summaryJson,
+                                       Map<String, Object> contentJson) {
+        try {
+            UUID opportunityId = notice.getOpportunity().getId();
+            int attachmentCount = attachmentRepository
+                    .findByOpportunityIdAndDownloadStatus(opportunityId, AttachmentDownloadStatus.SUCCESS).size();
+            int descriptionLen = descriptionLength(notice.getOpportunity());
+            int overviewLen = summaryJson != null ? asString(summaryJson.get("overview")) != null
+                    ? asString(summaryJson.get("overview")).length() : 0 : 0;
+            int contentLen = jsonLength(contentJson);
+
+            List<String> findings = verificationLogService.evaluateNoticeRules(
+                    attachmentCount, descriptionLen, overviewLen, contentLen, false, false);
+            int attempt = verificationLogService.nextAttempt(
+                    com.biddingagency.domain.proposal.entity.VerificationTargetType.NOTICE, notice.getId());
+            verificationLogService.recordRule(
+                    com.biddingagency.domain.proposal.entity.VerificationTargetType.NOTICE,
+                    notice.getId(), findings, contentLen, attempt);
+        } catch (Exception e) {
+            log.warn("[CR-031] 공고문 정형 룰 평가 실패(무시): noticeId={}", notice.getId(), e);
+        }
+    }
+
+    private int descriptionLength(Opportunity opp) {
+        if (opp.getRawJson() == null) return 0;
+        Object desc = opp.getRawJson().get("description");
+        return desc != null ? desc.toString().length() : 0;
+    }
+
+    private int jsonLength(Map<String, Object> json) {
+        if (json == null || json.isEmpty()) return 0;
+        try {
+            return objectMapper.writeValueAsString(json).length();
+        } catch (Exception e) {
+            return 0;
+        }
     }
 
     /**
