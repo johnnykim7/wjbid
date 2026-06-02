@@ -259,7 +259,7 @@ function Field({ label, value }: { label: string; value: ReactNode }) {
 
 function formatDate(s: string): string {
   try {
-    return new Date(s).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit' })
+    return new Date(s).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })
   } catch {
     return s
   }
@@ -268,10 +268,10 @@ function formatDate(s: string): string {
 function formatDateTime(s: string): string {
   try {
     const d = new Date(s)
-    return d.toLocaleString('en-US', {
+    return d.toLocaleString('ko-KR', {
       year: 'numeric',
-      month: 'short',
-      day: '2-digit',
+      month: 'long',
+      day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
     })

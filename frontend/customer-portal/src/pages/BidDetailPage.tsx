@@ -67,6 +67,15 @@ export default function BidDetailPage() {
     (new Date(bid.responseDeadline).getTime() - Date.now()) / 86400000
   )
 
+  // 마감일 한글 표기 (2026년 6월 17일 오전 11:00). 파싱 실패 시 원본 그대로.
+  const deadlineKo = (() => {
+    if (!bid.responseDeadline) return ''
+    const d = new Date(bid.responseDeadline)
+    return isNaN(d.getTime())
+      ? bid.responseDeadline
+      : d.toLocaleString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+  })()
+
   return (
     <div className="flex flex-col h-full">
       {/* Sticky Header */}
@@ -124,7 +133,7 @@ export default function BidDetailPage() {
                 <div className="flex items-center gap-1">
                   <i className="fa-solid fa-calendar-days text-gray-400 w-5" />
                   마감일:{' '}
-                  <span className="font-bold text-gray-900 ml-1">{bid.responseDeadline}</span>
+                  <span className="font-bold text-gray-900 ml-1">{deadlineKo}</span>
                   {daysLeft >= 0 && (
                     <span className={`ml-1 font-bold ${daysLeft <= 7 ? 'text-red-500' : daysLeft <= 14 ? 'text-yellow-500' : 'text-gray-600'}`}>
                       (D-{daysLeft})
