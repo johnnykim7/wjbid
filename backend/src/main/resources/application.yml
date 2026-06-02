@@ -144,6 +144,9 @@ app:
     api-key: ${SAM_GOV_API_KEY:your-api-key-here}
     # Collection Schedule: 4 times daily (06:00, 12:00, 18:00, 23:00 KST)
     collection-cron: "0 0 6,12,18,23 * * *"  # Spring @Scheduled cron expression
+    # 스케줄 수집 on/off (SAM 일일 쿼터 보호). 환경변수 SAM_SCHEDULER_ENABLED로 제어. 수동 트리거는 영향 없음.
+    scheduler:
+      enabled: ${SAM_SCHEDULER_ENABLED:true}
     keywords:
       main:
         - "411th csb"

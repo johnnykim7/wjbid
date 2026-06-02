@@ -27,6 +27,8 @@ services:
       APP_CORS_ALLOWED_ORIGINS: https://woojinusbid.com,http://woojinusbid.com
       MANAGEMENT_HEALTH_MAIL_ENABLED: "false"
       SAM_GOV_API_KEY: SAM-cc4923d9-011d-4a7f-9202-c60fcf028572
+      # SAM 일일 쿼터 보호 — 스케줄 수집 OFF (수동 트리거/실측은 영향 없음). 재가동 시 true로.
+      SAM_SCHEDULER_ENABLED: "false"
       AIMBASE_WF_OPP_ANALYSIS: opportunity-analysis
       STORAGE_LOCAL_DIR: /app/storage/rfp-samples
       # CR-028: 제안서 파이프라인 3단계 워크플로우 (application.yml 기본값과 동일, 운영 가시성용 명시)

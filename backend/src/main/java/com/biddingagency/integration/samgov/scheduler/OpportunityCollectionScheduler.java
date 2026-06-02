@@ -4,6 +4,7 @@ import com.biddingagency.domain.event.OpportunitiesCollectedEvent;
 import com.biddingagency.integration.samgov.client.OpportunityCollectorService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -24,6 +25,10 @@ public class OpportunityCollectionScheduler {
     private final OpportunityCollectorService collectorService;
     private final ApplicationEventPublisher eventPublisher;
 
+    /** 스케줄 수집 on/off. SAM 일일 쿼터 보호용으로 운영에서 끌 수 있다. 수동 트리거는 영향 없음. */
+    @Value("${app.sam-gov.scheduler.enabled:true}")
+    private boolean schedulerEnabled;
+
     // 타깃: 411TH CSB 단일 키워드만 수집 (CR-026).
     // SAM의 fullParentPathName은 '411TH CSB' 대문자가 정본. phrase 검색 + organization 후필터 양쪽에 동일 토큰 사용.
     private static final List<String> MAIN_KEYWORDS = List.of("411TH CSB");
@@ -34,6 +39,10 @@ public class OpportunityCollectionScheduler {
      */
     @Scheduled(cron = "0 0 6,12,18,23 * * *", zone = "Asia/Seoul")
     public void collectOpportunities() {
+        if (!schedulerEnabled) {
+            log.info("====== Scheduled collection SKIPPED (app.sam-gov.scheduler.enabled=false) ======");
+            return;
+        }
         log.info("====== Starting scheduled opportunity collection at {} ======",
                 LocalDateTime.now());
 
