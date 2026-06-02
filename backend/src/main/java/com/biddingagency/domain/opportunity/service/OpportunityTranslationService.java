@@ -66,6 +66,30 @@ public class OpportunityTranslationService {
         return titleOk || descOk;
     }
 
+    /** CR-022 2차: 제목만 번역 (Enricher 비동기 단계가 호출). id로 조회 후 제목 번역 1회. */
+    @Transactional
+    public void translateTitle(UUID opportunityId) {
+        Opportunity opp = opportunityRepository.findById(opportunityId).orElse(null);
+        if (opp == null) return;
+        translateTitleOf(opp);
+    }
+
+    /** CR-022 2차: 본문 요약 (Enricher 비동기 단계가 호출). 평문 body를 받아 LLM 요약 후 반영. */
+    @Transactional
+    public void summarizeDescription(UUID opportunityId, String body) {
+        if (body == null || body.isBlank()) return;
+        Opportunity opp = opportunityRepository.findById(opportunityId).orElse(null);
+        if (opp == null) return;
+        try {
+            String translated = llmPlatformClient.translateOpportunityDescription(opp.getTitle(), body);
+            if (translated == null || translated.isBlank()) return;
+            opp.applyDescriptionTranslation(translated);
+            log.info("[CR-022-2] 본문 요약 완료 noticeId={}, len={}", opp.getNoticeId(), translated.length());
+        } catch (RuntimeException e) {
+            log.warn("[CR-022-2] 본문 요약 실패 noticeId={}: {}", opp.getNoticeId(), e.getMessage());
+        }
+    }
+
     /** 제목 번역 — 1회 시도. 실패해도 예외 안 던짐. 이미 한글이면 skip. */
     private boolean translateTitleOf(Opportunity opp) {
         if (opp.getTitleKo() != null && !opp.getTitleKo().isBlank()) {

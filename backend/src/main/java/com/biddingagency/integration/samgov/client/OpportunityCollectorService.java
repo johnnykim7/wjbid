@@ -39,6 +39,7 @@ public class OpportunityCollectorService {
     private final OpportunityService opportunityService;
     private final IndustryClassifier industryClassifier;
     private final OpportunityTranslationService translationService;
+    private final com.biddingagency.domain.opportunity.service.OpportunitySelectionEnricher selectionEnricher;
 
     /**
      * Determine start date for incremental sync:
@@ -110,9 +111,16 @@ public class OpportunityCollectorService {
                                 if (result.industryType() != null) {
                                     targetCreated++;
                                 }
-                                // CR-022 (재구현): 신규 공고 본문 비동기 번역. 실패해도 수집 흐름 방해 안 함.
                                 if (result.opportunity() != null) {
-                                    translationService.translateAsync(result.opportunity().getId());
+                                    java.util.UUID oppId = result.opportunity().getId();
+                                    // CR-022 2차: 코드 매핑·금액·장소 메타 즉시 반영(동기). 실패해도 수집 방해 안 함.
+                                    try {
+                                        selectionEnricher.applyMeta(oppId, data);
+                                    } catch (Exception ex) {
+                                        log.warn("[CR-022-2] 선별 메타 반영 실패 id={}: {}", oppId, ex.getMessage());
+                                    }
+                                    // CR-022 (재구현): 신규 공고 제목/본문 비동기 번역.
+                                    translationService.translateAsync(oppId);
                                 }
                             }
                             case CHANGED -> changed++;   // CR-009: 기존이지만 contentHash 변경

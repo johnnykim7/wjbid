@@ -91,6 +91,22 @@ public class Opportunity extends BaseEntity {
     @Column(name = "translated_at")
     private LocalDateTime translatedAt;
 
+    /** CR-022 2차: 낙찰가 등 금액 ($ 포함 문자열). null = 정보 없음 */
+    @Column(name = "award_amount", length = 50)
+    private String awardAmount;
+
+    /** CR-022 2차: 수행 장소 단답(City, ST). null = 정보 없음 */
+    @Column(name = "place_of_performance_short", length = 200)
+    private String placeOfPerformanceShort;
+
+    /** CR-022 2차: 우선조달 유형 한글 라벨. null = 해당 없음 */
+    @Column(name = "set_aside_ko", length = 100)
+    private String setAsideKo;
+
+    /** CR-022 2차: NAICS top-level 한글 라벨. null = 미매핑 */
+    @Column(name = "naics_label_ko", length = 200)
+    private String naicsLabelKo;
+
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "raw_json", columnDefinition = "JSON")
     private Map<String, Object> rawJson;
@@ -143,6 +159,15 @@ public class Opportunity extends BaseEntity {
     public void applyTypeKo(String koreanType) {
         if (koreanType == null || koreanType.isBlank()) return;
         this.typeKo = koreanType;
+    }
+
+    /** CR-022 2차: 코드 매핑·단순 추출 결과(수집 동기 단계). 자유텍스트 LLM 결과는 별도 메서드. */
+    public void applySelectionMeta(String awardAmount, String placeOfPerformanceShort,
+                                   String setAsideKo, String naicsLabelKo) {
+        this.awardAmount = awardAmount;
+        this.placeOfPerformanceShort = placeOfPerformanceShort;
+        this.setAsideKo = setAsideKo;
+        this.naicsLabelKo = naicsLabelKo;
     }
 
     public boolean isDeadlinePassed() {

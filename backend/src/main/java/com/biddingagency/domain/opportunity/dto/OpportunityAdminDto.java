@@ -59,6 +59,16 @@ public class OpportunityAdminDto {
     /** 마지막 번역 성공 시각. null = 한 번도 성공 안 함 */
     private LocalDateTime translatedAt;
 
+    // ── CR-022 2차: 선별용 가공 메타 (엔티티 컬럼 기반, 한글) ──
+    /** 낙찰가 등 금액 ($ 포함 문자열). null = 정보 없음 */
+    private String awardAmount;
+    /** 수행 장소 단답(City, ST). null = 정보 없음 */
+    private String placeOfPerformanceShort;
+    /** 우선조달 유형 한글 라벨. null = 해당 없음 */
+    private String setAsideKo;
+    /** NAICS top-level 한글 라벨. null = 미매핑 */
+    private String naicsLabelKo;
+
     @SuppressWarnings("unchecked")
     public static OpportunityAdminDto from(Opportunity opp, long attachmentCount,
                                            long manualFetchRequiredCount, int noticeCount) {
@@ -110,6 +120,10 @@ public class OpportunityAdminDto {
                 .titleKo(opp.getTitleKo())
                 .typeKo(opp.getTypeKo())
                 .translatedAt(opp.getTranslatedAt())
+                .awardAmount(opp.getAwardAmount())
+                .placeOfPerformanceShort(opp.getPlaceOfPerformanceShort())
+                .setAsideKo(opp.getSetAsideKo())
+                .naicsLabelKo(opp.getNaicsLabelKo())
                 .build();
     }
 
