@@ -49,6 +49,9 @@ public class OpportunityAdminDto {
     /** Resource Links — 외부 자료 링크 */
     private List<String> resourceLinks;
 
+    /** CR-032: noticedesc에서 가져온 원문 본문(평문). 관리자 상세에서 본문 표시. null = 미수집 */
+    private String descriptionBody;
+
     // ── CR-022 (재구현): 본문 한글 번역 ──
     /** 본문 한글 번역 결과. null = 미번역 또는 실패. 화면은 영문 description fallback */
     private String descriptionSummaryKo;
@@ -114,6 +117,7 @@ public class OpportunityAdminDto {
                 .classificationCode(psc)
                 .placeOfPerformance(pop)
                 .description(desc)
+                .descriptionBody(opp.getDescriptionBody())
                 .pointOfContact(pocs)
                 .resourceLinks(resourceLinks)
                 .descriptionSummaryKo(opp.getDescriptionSummaryKo())

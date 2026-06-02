@@ -80,6 +80,8 @@ public class OpportunityTranslationService {
         if (body == null || body.isBlank()) return;
         Opportunity opp = opportunityRepository.findById(opportunityId).orElse(null);
         if (opp == null) return;
+        // CR-032: LLM 번역 성패와 무관하게 원문 본문을 먼저 저장(관리자 상세 노출용)
+        opp.applyDescriptionBody(body);
         try {
             String translated = llmPlatformClient.translateOpportunityDescription(opp.getTitle(), body);
             if (translated == null || translated.isBlank()) return;

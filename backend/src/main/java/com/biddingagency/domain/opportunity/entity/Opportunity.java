@@ -87,6 +87,13 @@ public class Opportunity extends BaseEntity {
     @Column(name = "description_summary_ko", length = 500)
     private String descriptionSummaryKo;
 
+    /**
+     * CR-032: SAM noticedesc에서 가져온 원문 본문(평문). null = 미수집 또는 실패.
+     * search 응답의 description은 URL이라 별도 fetch해 여기에 저장(관리자 상세 노출용).
+     */
+    @Column(name = "description_body", columnDefinition = "MEDIUMTEXT")
+    private String descriptionBody;
+
     /** CR-022 (재구현): 마지막 번역 성공 시각(제목/본문 어느 쪽이든 갱신). null = 한 번도 성공 안 함 */
     @Column(name = "translated_at")
     private LocalDateTime translatedAt;
@@ -137,6 +144,12 @@ public class Opportunity extends BaseEntity {
     /** 자동분류 결과 반영 (CR-014). null이면 미분류로 둔다 */
     public void assignIndustryType(IndustryType industryType) {
         this.industryType = industryType;
+    }
+
+    /** CR-032: noticedesc 원문 본문 저장. 빈 문자열/null은 무시. */
+    public void applyDescriptionBody(String body) {
+        if (body == null || body.isBlank()) return;
+        this.descriptionBody = body;
     }
 
     /** CR-022 (재구현): 본문 한글 번역 결과 반영. 빈 문자열/null은 무시 (실패 시 영문 fallback) */
