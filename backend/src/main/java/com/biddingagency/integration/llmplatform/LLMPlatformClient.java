@@ -430,7 +430,7 @@ public class LLMPlatformClient {
             }
 
             if (pollResponse.isFailed()) {
-                throw new LLMPlatformException("워크플로우 실행 실패: runId=" + runId + ", error=" + pollResponse.getError());
+                throw new LLMPlatformException("워크플로우 실행 실패: runId=" + runId + ", error=" + pollResponse.getErrorAsString());
             }
         }
 

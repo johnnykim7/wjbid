@@ -30,8 +30,24 @@ public class WorkflowRunResponse {
     /** 스텝별 실행 결과 (Aimbase 형식) */
     private Map<String, Object> stepResults;
 
-    /** 오류 메시지 (status=failed 일 때 채워짐) */
-    private String error;
+    /**
+     * 오류 정보 (status=failed 일 때 채워짐).
+     * Aimbase는 문자열 또는 {step, message, ...} 객체 양쪽으로 보냄 — Object로 받아 호환.
+     * (String 고정 시 객체 응답에서 Jackson 역직렬화 실패 → 폴링이 매번 깨져 무한 재시도)
+     */
+    private Object error;
+
+    /** error를 사람이 읽기 좋은 문자열로 변환. 객체면 message 필드 우선, 없으면 toString. */
+    @SuppressWarnings("unchecked")
+    public String getErrorAsString() {
+        if (error == null) return null;
+        if (error instanceof String s) return s;
+        if (error instanceof Map<?, ?> m) {
+            Object msg = ((Map<String, Object>) m).get("message");
+            return msg != null ? msg.toString() : error.toString();
+        }
+        return error.toString();
+    }
 
     @JsonProperty("startedAt")
     private String createdAt;
