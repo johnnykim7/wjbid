@@ -24,11 +24,17 @@ public class OpportunityAttachmentDto {
     private AttachmentDownloadStatus downloadStatus;
     /** 외부서 직접 가져와야 하는 첨부 여부 (표식) */
     private boolean manualFetchRequired;
-    /** CR-025: 자동 다운로드 실패 사유 (FAILED 시) */
+    /** CR-025: 자동 다운로드 가능 URL인지 (sam.gov 자체호스팅) → FE 재시도 버튼 노출 판단 */
+    private boolean autoFetchable;
+    /** CR-025: 자동 다운로드 실패 사유 (FAILED 상태일 때) */
     private String failureReason;
     private LocalDateTime downloadedAt;
 
     public static OpportunityAttachmentDto from(OpportunityAttachment a) {
+        return from(a, false);
+    }
+
+    public static OpportunityAttachmentDto from(OpportunityAttachment a, boolean autoFetchable) {
         return OpportunityAttachmentDto.builder()
                 .id(a.getId())
                 .fileName(a.getFileName())
@@ -37,6 +43,7 @@ public class OpportunityAttachmentDto {
                 .sourceUrl(a.getSourceUrl())
                 .downloadStatus(a.getDownloadStatus())
                 .manualFetchRequired(a.getDownloadStatus() == AttachmentDownloadStatus.MANUAL_FETCH_REQUIRED)
+                .autoFetchable(autoFetchable)
                 .failureReason(a.getFailureReason())
                 .downloadedAt(a.getDownloadedAt())
                 .build();

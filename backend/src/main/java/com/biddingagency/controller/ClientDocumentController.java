@@ -3,7 +3,9 @@ package com.biddingagency.controller;
 import com.biddingagency.domain.bid.entity.ClientDocument;
 import com.biddingagency.domain.bid.repository.ClientDocumentRepository;
 import com.biddingagency.domain.bid.service.BidRequestService;
+import com.biddingagency.integration.storage.StorageService;
 import com.biddingagency.security.CustomUserDetails;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +17,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -27,10 +30,35 @@ public class ClientDocumentController {
 
     private final ClientDocumentRepository clientDocumentRepository;
     private final BidRequestService bidRequestService;
+    private final StorageService storageService;
+
+    /** CR-024: 엔티티 직렬화 시 Member/BidRequest LAZY 폭발 방지용 가벼운 DTO */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record ClientDocumentDto(
+            String id,
+            String fileName,
+            Long fileSize,
+            String contentType,
+            String documentCategory,
+            String storageUrl,
+            LocalDateTime createdAt
+    ) {
+        public static ClientDocumentDto from(ClientDocument d) {
+            return new ClientDocumentDto(
+                    d.getId() != null ? d.getId().toString() : null,
+                    d.getFileName(),
+                    d.getFileSize(),
+                    d.getContentType(),
+                    d.getDocumentCategory(),
+                    d.getStorageUrl(),
+                    d.getCreatedAt()
+            );
+        }
+    }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "고객 문서 업로드")
-    public ResponseEntity<ClientDocument> upload(
+    public ResponseEntity<ClientDocumentDto> upload(
             @PathVariable UUID bidRequestId,
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "category", required = false) String category,
@@ -43,8 +71,8 @@ public class ClientDocumentController {
             throw new IllegalArgumentException("File size exceeds 50MB limit");
         }
 
-        // TODO: MinIO 업로드 구현 — 현재는 storage_url placeholder
-        String storageUrl = "minio://bidding-agency/client-docs/" + bidRequestId + "/" + file.getOriginalFilename();
+        // 실파일 저장 (CR-026: AGENT가 parse_document로 본문 가져갈 수 있어야 함)
+        String storageUrl = storageService.store("client-docs/" + bidRequestId, file);
 
         ClientDocument doc = ClientDocument.builder()
                 .bidRequest(bidRequest)
@@ -59,14 +87,16 @@ public class ClientDocumentController {
         ClientDocument saved = clientDocumentRepository.save(doc);
         log.info("Client document uploaded: {} for bid request {}", saved.getId(), bidRequestId);
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ClientDocumentDto.from(saved));
     }
 
     @GetMapping
     @Operation(summary = "제출 문서 목록")
-    public ResponseEntity<List<ClientDocument>> list(@PathVariable UUID bidRequestId) {
+    public ResponseEntity<List<ClientDocumentDto>> list(@PathVariable UUID bidRequestId) {
         bidRequestService.findById(bidRequestId); // existence check
-        return ResponseEntity.ok(clientDocumentRepository.findByBidRequestId(bidRequestId));
+        List<ClientDocumentDto> dtos = clientDocumentRepository.findByBidRequestId(bidRequestId)
+                .stream().map(ClientDocumentDto::from).toList();
+        return ResponseEntity.ok(dtos);
     }
 
     @DeleteMapping("/{docId}")

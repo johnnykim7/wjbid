@@ -52,7 +52,7 @@ public class BidRequestController {
                 userDetails.getMember().getId(),
                 userDetails.getUsername()
         );
-        return ResponseEntity.status(HttpStatus.CREATED).body(BidRequestDto.from(bidRequest));
+        return ResponseEntity.status(HttpStatus.CREATED).body(BidRequestDto.from(bidRequest, notice));
     }
 
     @GetMapping("/my")
@@ -62,7 +62,7 @@ public class BidRequestController {
             @PageableDefault(size = 20) Pageable pageable) {
         Page<BidRequestDto> page = bidRequestService.findByMember(
                 userDetails.getMember().getId(), pageable)
-                .map(BidRequestDto::from);
+                .map(br -> BidRequestDto.from(br, findLatestVisibleNotice(br)));
         return ResponseEntity.ok(page);
     }
 
@@ -70,7 +70,7 @@ public class BidRequestController {
     @Operation(summary = "입찰 요청 상세")
     public ResponseEntity<BidRequestDto> getBidRequest(@PathVariable UUID id) {
         BidRequest bidRequest = bidRequestService.findByIdWithDetails(id);
-        return ResponseEntity.ok(BidRequestDto.withHistory(bidRequest));
+        return ResponseEntity.ok(BidRequestDto.withHistory(bidRequest, findLatestVisibleNotice(bidRequest)));
     }
 
     @PatchMapping("/{id}/state")
@@ -86,7 +86,13 @@ public class BidRequestController {
                 userDetails.getUsername(),
                 request.getNotes()
         );
-        return ResponseEntity.ok(BidRequestDto.withHistory(bidRequest));
+        return ResponseEntity.ok(BidRequestDto.withHistory(bidRequest, findLatestVisibleNotice(bidRequest)));
+    }
+
+    /** CR-024: BidRequest의 원본 opportunity에 딸린 노출 노티 최신 1건 (한글 타이틀+필요서류 매핑용) */
+    private Notice findLatestVisibleNotice(BidRequest br) {
+        if (br.getOpportunity() == null) return null;
+        return noticeService.findLatestVisibleByOpportunityId(br.getOpportunity().getId()).orElse(null);
     }
 
     @GetMapping("/{id}/next-states")

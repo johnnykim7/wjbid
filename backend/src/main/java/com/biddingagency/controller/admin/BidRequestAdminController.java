@@ -1,6 +1,6 @@
 package com.biddingagency.controller.admin;
 
-import com.biddingagency.domain.bid.entity.BidRequest;
+import com.biddingagency.domain.bid.dto.BidRequestDto;
 import com.biddingagency.domain.bid.entity.BidRequestState;
 import com.biddingagency.domain.bid.service.BidFSMService;
 import com.biddingagency.domain.bid.service.BidRequestService;
@@ -44,20 +44,13 @@ public class BidRequestAdminController {
      * Get all bid requests by state
      */
     @GetMapping
-    @Operation(summary = "List bid requests", description = "Get bid requests filtered by state")
-    public ResponseEntity<Page<BidRequest>> listBidRequests(
+    @Operation(summary = "List bid requests", description = "Get bid requests filtered by state (state 없으면 전체)")
+    public ResponseEntity<Page<BidRequestDto>> listBidRequests(
             @RequestParam(required = false) BidRequestState state,
             @PageableDefault(size = 20) Pageable pageable) {
         log.debug("Fetching bid requests, state filter: {}", state);
-
-        Page<BidRequest> bidRequests;
-        if (state != null) {
-            bidRequests = bidRequestService.findByState(state, pageable);
-        } else {
-            bidRequests = bidRequestService.findByState(BidRequestState.CREATED, pageable);
-        }
-
-        return ResponseEntity.ok(bidRequests);
+        // state==null이면 전체 조회 (이전엔 CREATED로 잘못 한정 → '전체' 탭이 비던 버그)
+        return ResponseEntity.ok(bidRequestService.findAsDto(state, pageable));
     }
 
     /**
@@ -75,9 +68,17 @@ public class BidRequestAdminController {
      */
     @GetMapping("/requiring-client-action")
     @Operation(summary = "Requiring client action", description = "Get bid requests waiting for client")
-    public ResponseEntity<List<BidRequest>> getRequestsRequiringClientAction() {
-        List<BidRequest> requests = bidRequestService.getRequestsRequiringClientAction();
-        return ResponseEntity.ok(requests);
+    public ResponseEntity<List<BidRequestDto>> getRequestsRequiringClientAction() {
+        return ResponseEntity.ok(bidRequestService.getRequestsRequiringClientActionAsDto());
+    }
+
+    /**
+     * Get bid request detail — CR-024: notice 매핑(noticeId/displayTitle) + 이력 포함 DTO
+     */
+    @GetMapping("/{id}")
+    @Operation(summary = "Get bid request detail", description = "Admin bid request detail with state history")
+    public ResponseEntity<BidRequestDto> getBidRequest(@PathVariable UUID id) {
+        return ResponseEntity.ok(bidRequestService.findByIdAsDto(id));
     }
 
     /**
@@ -85,7 +86,7 @@ public class BidRequestAdminController {
      */
     @PostMapping("/{id}/transition")
     @Operation(summary = "Transition state", description = "Change bid request state (FSM)")
-    public ResponseEntity<BidRequest> transitionState(
+    public ResponseEntity<BidRequestDto> transitionState(
             @PathVariable UUID id,
             @Valid @RequestBody StateTransitionRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -97,7 +98,7 @@ public class BidRequestAdminController {
             fsmService.validateReadyForSubmission(id);
         }
 
-        BidRequest bidRequest = fsmService.transition(
+        fsmService.transition(
                 id,
                 request.getToState(),
                 userDetails.getMember().getId(),
@@ -105,7 +106,8 @@ public class BidRequestAdminController {
                 request.getNotes()
         );
 
-        return ResponseEntity.ok(bidRequest);
+        // 전이 후 최신 상태를 DTO로 재조회 (Entity 직렬화 금지)
+        return ResponseEntity.ok(bidRequestService.findByIdAsDto(id));
     }
 
     /**
@@ -136,14 +138,14 @@ public class BidRequestAdminController {
      */
     @PostMapping("/{id}/assign")
     @Operation(summary = "Assign to user", description = "Assign bid request to a team member")
-    public ResponseEntity<BidRequest> assignToUser(
+    public ResponseEntity<BidRequestDto> assignToUser(
             @PathVariable UUID id,
             @RequestParam UUID userId) {
         log.info("Assigning bid request {} to user {}", id, userId);
 
-        BidRequest bidRequest = bidRequestService.assignTo(id, userId);
+        bidRequestService.assignTo(id, userId);
 
-        return ResponseEntity.ok(bidRequest);
+        return ResponseEntity.ok(bidRequestService.findByIdAsDto(id));
     }
 
     /**
@@ -151,12 +153,10 @@ public class BidRequestAdminController {
      */
     @GetMapping("/assigned-to-me")
     @Operation(summary = "Assigned to me", description = "Get bid requests assigned to current user")
-    public ResponseEntity<Page<BidRequest>> getMyAssignedRequests(
+    public ResponseEntity<Page<BidRequestDto>> getMyAssignedRequests(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PageableDefault(size = 20) Pageable pageable) {
-        Page<BidRequest> requests = bidRequestService.findByAssignedTo(
-                userDetails.getMember().getId(), pageable);
-
-        return ResponseEntity.ok(requests);
+        return ResponseEntity.ok(bidRequestService.findByAssignedToAsDto(
+                userDetails.getMember().getId(), pageable));
     }
 }

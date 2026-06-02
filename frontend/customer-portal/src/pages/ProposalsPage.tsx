@@ -19,7 +19,8 @@ const DOC_TYPE_LABELS: Record<string, string> = {
   OTHER: 'Other',
 }
 
-const PENDING_STATES = ['CREATED', 'DOCS_PENDING', 'DOCS_RECEIVED', 'ANALYZING']
+// DOCS_PENDING 은 고객이 직접 필요서류를 올려야 하는 단계 → 별도 안내(아래 StateGuide에서 분기)
+const ANALYZING_STATES = ['DOCS_RECEIVED', 'ANALYZING']
 const DRAFTING_STATES = ['GENERATING', 'REVIEW']
 const READY_STATES = ['CONFIRMED', 'SUBMITTED']
 
@@ -50,8 +51,26 @@ function extractTextFromTipTap(contentJson: Record<string, unknown>): string {
   return traverse(contentJson).trim()
 }
 
-function StateGuide({ state }: { state: string }) {
-  if (PENDING_STATES.includes(state)) {
+function StateGuide({ state, onUpload }: { state: string; onUpload: () => void }) {
+  // 고객이 직접 필요서류를 올려야 하는 단계 — "분석 중"이 아니라 업로드 안내
+  if (state === 'CREATED' || state === 'DOCS_PENDING') {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-center p-8">
+        <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center mb-4">
+          <i className="fa-solid fa-cloud-arrow-up text-2xl text-amber-500" />
+        </div>
+        <h3 className="text-lg font-bold text-gray-800 mb-2">필요서류 제출이 필요합니다</h3>
+        <p className="text-sm text-gray-500 max-w-xs mb-5">
+          공고가 요구하는 서류를 업로드한 뒤 ‘문서 제출 완료’를 누르면<br />
+          요구사항 분석과 문서 작성이 시작됩니다.
+        </p>
+        <Button variant="accent" onClick={onUpload}>
+          <i className="fa-solid fa-arrow-up-from-bracket mr-2" /> 제출 서류 등록하러 가기
+        </Button>
+      </div>
+    )
+  }
+  if (ANALYZING_STATES.includes(state)) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center p-8">
         <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4">
@@ -194,7 +213,7 @@ export default function ProposalsPage() {
                     </Badge>
                   </div>
                   <p className="text-sm font-medium text-gray-800 line-clamp-2 leading-snug">
-                    {p.opportunityTitle}
+                    {p.displayTitle || p.opportunityTitle}
                   </p>
                   <div className="flex items-center justify-between mt-1">
                     <p className="text-xs text-gray-400">{p.createdAt?.slice(0, 10)}</p>
@@ -219,7 +238,7 @@ export default function ProposalsPage() {
             ) : docLoading ? (
               <LoadingSpinner fullPage />
             ) : documents.length === 0 ? (
-              <StateGuide state={selected.state} />
+              <StateGuide state={selected.state} onUpload={() => navigate(`/proposals/${selected.id}?tab=uploads`)} />
             ) : (
               <>
                 {/* Doc header */}

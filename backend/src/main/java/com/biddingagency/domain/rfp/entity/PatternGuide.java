@@ -9,6 +9,7 @@ import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * 공고유형별 패턴 가이드 (CR-013 재설계).
@@ -43,13 +44,21 @@ public class PatternGuide extends BaseEntity {
     @Builder.Default
     private GuideSource source = GuideSource.AI_EXTRACTED;
 
-    /** 구조화 가이드 (골격/체크리스트/금기 — LLM 입력용) */
+    /** 구조화 가이드 (작성 노하우/원칙/금기 — LLM 입력용) */
     @Column(name = "guide_json", columnDefinition = "longtext")
     private String guideJsonRaw;
+
+    /** 산출물 포맷 (Volume·Section 골격 — LLM 입력용, CR-026) */
+    @Column(name = "format_json", columnDefinition = "longtext")
+    private String formatJsonRaw;
 
     /** 편집용 본문 (사람 편집 위주) */
     @Column(name = "guide_markdown", columnDefinition = "longtext")
     private String guideMarkdown;
+
+    /** 상속 부모 패턴 ID (CR-026). DEFAULT 패턴이면 null */
+    @Column(name = "parent_id", columnDefinition = "BINARY(16)")
+    private UUID parentId;
 
     @Column(name = "sample_count")
     private Integer sampleCount;
@@ -71,6 +80,15 @@ public class PatternGuide extends BaseEntity {
             return OBJECT_MAPPER.readValue(guideJsonRaw, new TypeReference<>() {});
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to parse guide JSON", e);
+        }
+    }
+
+    public Map<String, Object> getFormatJson() {
+        if (formatJsonRaw == null || formatJsonRaw.isBlank()) return null;
+        try {
+            return OBJECT_MAPPER.readValue(formatJsonRaw, new TypeReference<>() {});
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Failed to parse format JSON", e);
         }
     }
 
@@ -112,8 +130,16 @@ public class PatternGuide extends BaseEntity {
 
     /** 관리자 수동 편집 → 출처를 HUMAN_EDITED로 전환(자동추출 보호) */
     public void applyManualEdit(Map<String, Object> guideJson, String guideMarkdown) {
+        applyManualEdit(guideJson, null, guideMarkdown);
+    }
+
+    /** 관리자 수동 편집 (CR-026: formatJson 동시 편집) */
+    public void applyManualEdit(Map<String, Object> guideJson, Map<String, Object> formatJson, String guideMarkdown) {
         if (guideJson != null) {
             this.guideJsonRaw = toJsonString(guideJson);
+        }
+        if (formatJson != null) {
+            this.formatJsonRaw = toJsonString(formatJson);
         }
         if (guideMarkdown != null) {
             this.guideMarkdown = guideMarkdown;

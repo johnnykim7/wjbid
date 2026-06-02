@@ -20,9 +20,13 @@ import java.util.UUID;
 public interface BidRequestRepository extends JpaRepository<BidRequest, UUID> {
 
     /**
-     * Find by member ID
+     * Find by member ID.
+     * Controller가 BidRequestDto.from(br) 으로 매핑하며 br.getOpportunity()/getMember() 를 LAZY 접근하므로
+     * member·opportunity JOIN FETCH 로 미리 로딩한다 (트랜잭션 밖 LazyInit → /error → 무한로딩/403 방지).
      */
-    Page<BidRequest> findByMemberId(UUID memberId, Pageable pageable);
+    @Query(value = "SELECT br FROM BidRequest br JOIN FETCH br.member JOIN FETCH br.opportunity WHERE br.member.id = :memberId",
+            countQuery = "SELECT COUNT(br) FROM BidRequest br WHERE br.member.id = :memberId")
+    Page<BidRequest> findByMemberId(@Param("memberId") UUID memberId, Pageable pageable);
 
     /**
      * Find by member ID and state
@@ -30,9 +34,18 @@ public interface BidRequestRepository extends JpaRepository<BidRequest, UUID> {
     Page<BidRequest> findByMemberIdAndState(UUID memberId, BidRequestState state, Pageable pageable);
 
     /**
-     * Find by state
+     * Find by state.
+     * member·opportunity를 JOIN FETCH — 컨트롤러가 Entity를 그대로 JSON 직렬화하므로
+     * 트랜잭션 밖 LAZY 초기화(LazyInit/HttpMessageNotWritable → /error → 403) 방지.
      */
-    Page<BidRequest> findByState(BidRequestState state, Pageable pageable);
+    @Query(value = "SELECT br FROM BidRequest br JOIN FETCH br.member JOIN FETCH br.opportunity WHERE br.state = :state",
+            countQuery = "SELECT COUNT(br) FROM BidRequest br WHERE br.state = :state")
+    Page<BidRequest> findByState(@Param("state") BidRequestState state, Pageable pageable);
+
+    /** 전체 조회(상태 필터 없음) — member·opportunity JOIN FETCH (직렬화 LazyInit 방지) */
+    @Query(value = "SELECT br FROM BidRequest br JOIN FETCH br.member JOIN FETCH br.opportunity",
+            countQuery = "SELECT COUNT(br) FROM BidRequest br")
+    Page<BidRequest> findAllWithDetails(Pageable pageable);
 
     /**
      * Find by assigned to

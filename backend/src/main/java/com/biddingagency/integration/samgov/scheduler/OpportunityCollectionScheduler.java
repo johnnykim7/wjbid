@@ -24,9 +24,9 @@ public class OpportunityCollectionScheduler {
     private final OpportunityCollectorService collectorService;
     private final ApplicationEventPublisher eventPublisher;
 
-    // Keyword groups as defined in the plan
-    private static final List<String> MAIN_KEYWORDS = List.of("411th csb");
-    private static final List<String> KOREA_KEYWORDS = List.of("korea");
+    // 타깃: 411TH CSB 단일 키워드만 수집 (CR-026).
+    // SAM의 fullParentPathName은 '411TH CSB' 대문자가 정본. phrase 검색 + organization 후필터 양쪽에 동일 토큰 사용.
+    private static final List<String> MAIN_KEYWORDS = List.of("411TH CSB");
 
     /**
      * Scheduled collection - runs at 06:00, 12:00, 18:00, 23:00 KST
@@ -46,21 +46,9 @@ public class OpportunityCollectionScheduler {
         // Collect last 30 days
         int daysBack = 30;
 
-        // MAIN Keywords (411th csb - primary target)
+        // MAIN Keywords (411TH CSB - primary target)
         log.info("Collecting MAIN keywords...");
         for (String keyword : MAIN_KEYWORDS) {
-            OpportunityCollectorService.CollectionResult result =
-                    collectorService.collectByKeyword(keyword, daysBack);
-            totalCollected += result.collected();
-            totalTargetNew += result.targetNew();
-            totalChanged += result.changed();
-            totalUnchanged += result.unchanged();
-            totalErrors += result.errors();
-        }
-
-        // KOREA Keywords
-        log.info("Collecting KOREA keywords...");
-        for (String keyword : KOREA_KEYWORDS) {
             OpportunityCollectorService.CollectionResult result =
                     collectorService.collectByKeyword(keyword, daysBack);
             totalCollected += result.collected();
@@ -95,15 +83,6 @@ public class OpportunityCollectionScheduler {
         int totalErrors = 0;
 
         for (String keyword : MAIN_KEYWORDS) {
-            OpportunityCollectorService.CollectionResult result =
-                    collectorService.collectByKeyword(keyword, daysBack);
-            totalCollected += result.collected();
-            totalChanged += result.changed();
-            totalUnchanged += result.unchanged();
-            totalErrors += result.errors();
-        }
-
-        for (String keyword : KOREA_KEYWORDS) {
             OpportunityCollectorService.CollectionResult result =
                     collectorService.collectByKeyword(keyword, daysBack);
             totalCollected += result.collected();

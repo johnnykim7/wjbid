@@ -57,6 +57,12 @@ public interface OpportunityRepository extends JpaRepository<Opportunity, UUID> 
             "AND LOWER(o.title) LIKE LOWER(CONCAT('%', :keyword, '%'))")
     Page<Opportunity> searchByTitle(@Param("keyword") String keyword, Pageable pageable);
 
+    @Query("SELECT o FROM Opportunity o WHERE o.active = true " +
+            "AND (LOWER(o.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+            "  OR LOWER(o.solicitationNumber) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+            "  OR LOWER(o.noticeId) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+    Page<Opportunity> searchAdmin(@Param("keyword") String keyword, Pageable pageable);
+
     /**
      * Search by organization
      */

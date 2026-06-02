@@ -74,6 +74,7 @@ public class BidFSMService {
 
         VALID_TRANSITIONS.put(BidRequestState.DOCS_RECEIVED, List.of(
                 BidRequestState.ANALYZING,
+                BidRequestState.DOCS_PENDING,  // 관리자 첨부 반려 → 고객 재업로드
                 BidRequestState.CLOSED
         ));
 
@@ -131,7 +132,8 @@ public class BidFSMService {
     @Transactional
     public BidRequest transition(UUID bidRequestId, BidRequestState toState,
                                    UUID userId, String username, String notes) {
-        BidRequest bidRequest = bidRequestRepository.findById(bidRequestId)
+        // CR-024: opportunity/member fetch join — 전이 후 DTO 매핑 시 LazyInit 방지
+        BidRequest bidRequest = bidRequestRepository.findByIdWithDetails(bidRequestId)
                 .orElseThrow(() -> new IllegalArgumentException("Bid request not found: " + bidRequestId));
 
         BidRequestState currentState = bidRequest.getState();
@@ -185,7 +187,7 @@ public class BidFSMService {
      */
     @Transactional
     public void regenerateDocument(UUID bidRequestId, DocumentType documentType) {
-        BidRequest bidRequest = bidRequestRepository.findById(bidRequestId)
+        BidRequest bidRequest = bidRequestRepository.findByIdWithDetails(bidRequestId)
                 .orElseThrow(() -> new IllegalArgumentException("Bid request not found: " + bidRequestId));
 
         if (bidRequest.getState() != BidRequestState.REVIEW) {

@@ -96,6 +96,11 @@ public class OpportunityCollectorService {
 
                 for (SAMOpportunityResponse.OpportunityData data : response.getOpportunitiesData()) {
                     try {
+                        // CR-026: SAM phrase 검색을 우회해 들어온 무관 공고 차단.
+                        // 키워드 토큰 전부가 organization_name(fullParentPathName)에 포함되지 않으면 skip.
+                        if (!organizationMatches(data, keyword)) {
+                            continue;
+                        }
                         ProcessResult result = processOpportunity(data);
                         switch (result.result()) {
                             case NEW -> {
@@ -136,6 +141,24 @@ public class OpportunityCollectorService {
                 keyword, created, targetCreated, changed, unchanged, errors);
 
         return new CollectionResult(created, targetCreated, changed, unchanged, errors);
+    }
+
+    /**
+     * CR-026: 키워드의 모든 토큰이 발주처(fullParentPathName)에 포함될 때만 통과.
+     * SAM phrase 검색을 우회해 들어오는 무관 부서 공고(DLA, NAVSUP 등)를 차단.
+     * 키워드가 비어있으면 통과.
+     */
+    private boolean organizationMatches(SAMOpportunityResponse.OpportunityData data, String keyword) {
+        if (keyword == null || keyword.isBlank()) return true;
+        String org = data.getOrganizationName();
+        if (org == null || org.isBlank()) return false;
+        String orgUpper = org.toUpperCase();
+        // 키워드를 따옴표/공백 기준으로 토큰화, 모두 포함해야 OK
+        for (String token : keyword.replaceAll("\"", "").trim().split("\\s+")) {
+            if (token.isEmpty()) continue;
+            if (!orgUpper.contains(token.toUpperCase())) return false;
+        }
+        return true;
     }
 
     /**

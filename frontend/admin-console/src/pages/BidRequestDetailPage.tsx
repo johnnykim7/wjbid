@@ -39,7 +39,7 @@ const STATE_COLORS: Record<string, string> = {
 const NEXT_STATES: Record<string, string[]> = {
   CREATED: ['DOCS_PENDING', 'CLOSED'],
   DOCS_PENDING: ['DOCS_RECEIVED', 'CLOSED'],
-  DOCS_RECEIVED: ['ANALYZING', 'CLOSED'],
+  DOCS_RECEIVED: ['ANALYZING', 'DOCS_PENDING', 'CLOSED'],
   ANALYZING: ['GENERATING'],
   GENERATING: ['REVIEW'],
   REVIEW: ['CONFIRMED', 'GENERATING'],
@@ -136,13 +136,21 @@ export default function BidRequestDetailPage() {
 
   useEffect(() => { loadData() }, [id])
 
+  // DOCS_RECEIVED → DOCS_PENDING 은 "첨부 반려"(고객 재업로드 요청) — 사유 필수
+  const isRejection = bidRequest?.state === 'DOCS_RECEIVED' && selectedState === 'DOCS_PENDING'
+
   const handleTransition = async () => {
     if (!id || !selectedState) return
+    if (isRejection && !notes.trim()) {
+      setError('반려 사유를 입력하세요. 고객에게 전달됩니다.')
+      return
+    }
     setTransitioning(true)
     try {
       await transitionBidRequest(id, selectedState, notes)
       setShowTransition(false)
       setNotes('')
+      setError('')
       loadData()
     } catch {
       setError('상태 전환에 실패했습니다.')
@@ -419,6 +427,7 @@ export default function BidRequestDetailPage() {
                       className="text-secondary" />
                     <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${STATE_COLORS[s]}`}>
                       {STATE_LABELS[s]}
+                      {bidRequest.state === 'DOCS_RECEIVED' && s === 'DOCS_PENDING' && ' (첨부 반려)'}
                     </span>
                   </label>
                 ))}
@@ -427,8 +436,10 @@ export default function BidRequestDetailPage() {
                 value={notes}
                 onChange={e => setNotes(e.target.value)}
                 rows={3}
-                placeholder="전환 사유 (선택)"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-secondary resize-none"
+                placeholder={isRejection ? '반려 사유 (필수 — 고객에게 전달됩니다)' : '전환 사유 (선택)'}
+                className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-secondary resize-none ${
+                  isRejection && !notes.trim() ? 'border-red-300' : 'border-gray-300'
+                }`}
               />
             </div>
             <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-200">

@@ -63,7 +63,12 @@ export interface AnalysisDocumentFormats {
 export interface BidRequest {
   id: string
   opportunityId: string
+  /** CR-024: 노티 ID (공고문 본문/필요서류 조회용). 노티가 없으면 null */
+  noticeId?: string
+  /** opportunity.title (영문 원본) */
   opportunityTitle: string
+  /** CR-024: notice.koreanTitle ?? opportunity.title — 화면 표시용 */
+  displayTitle?: string
   solicitationNumber?: string
   agencyName?: string
   state: BidRequestState

@@ -18,10 +18,10 @@ api.interceptors.response.use(
   (err) => {
     const status = err.response?.status
     const url: string = err.config?.url ?? ''
-    // 인증 실패(401) 또는 권한/토큰 무효(403, BE가 만료·무효 토큰에 403 반환)면 세션 만료로 보고 로그인으로.
-    // 단 로그인 API 자체의 실패(비번 오류 등)는 제외 — 무한 리다이렉트 방지.
+    // 인증 실패(401)만 세션 만료로 보고 로그인으로. BE가 인증실패=401, 권한부족=403으로 구분하므로
+    // 403(권한 부족·기능 버그)은 로그아웃시키지 않는다. 로그인 API 자체 실패는 제외(무한 리다이렉트 방지).
     const isAuthEndpoint = url.includes('/auth/')
-    if ((status === 401 || status === 403) && !isAuthEndpoint) {
+    if (status === 401 && !isAuthEndpoint) {
       localStorage.removeItem('adminToken')
       // admin은 /admin/ 서브경로로 서빙 → 절대경로로 로그인 화면 이동
       if (!window.location.pathname.endsWith('/login')) {

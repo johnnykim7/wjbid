@@ -105,6 +105,12 @@ public class NoticeService {
         return noticeRepository.findByIdAndVisibility(noticeId, OpportunityVisibility.VISIBLE);
     }
 
+    /** CR-024: 한 원본의 노출 중인 공고문 중 최신 1건 (BidRequest 한글 타이틀+필요서류 매핑용) */
+    public Optional<Notice> findLatestVisibleByOpportunityId(UUID opportunityId) {
+        return noticeRepository.findFirstByOpportunityIdAndVisibilityOrderByAnalyzedAtDesc(
+                opportunityId, OpportunityVisibility.VISIBLE);
+    }
+
     /** 고객 검색 (노출 공고문, 한글/원문 제목). CR-009: includeExpired=false(기본)면 마감 지난 공고 제외 */
     public Page<Notice> searchVisible(String keyword, boolean includeExpired, Pageable pageable) {
         return noticeRepository.searchVisibleByKeyword(

@@ -2,6 +2,7 @@ package com.biddingagency.domain.bid.service;
 
 import com.biddingagency.domain.bid.entity.BidRequest;
 import com.biddingagency.domain.bid.entity.BidRequestState;
+import com.biddingagency.domain.bid.dto.BidRequestDto;
 import com.biddingagency.domain.bid.repository.BidRequestRepository;
 import com.biddingagency.domain.member.entity.Member;
 import com.biddingagency.domain.member.repository.MemberRepository;
@@ -35,6 +36,7 @@ public class BidRequestService {
     private final MemberRepository memberRepository;
     private final OpportunityRepository opportunityRepository;
     private final BidFSMService fsmService;
+    private final com.biddingagency.domain.notice.service.NoticeService noticeService;
     private final ApplicationEventPublisher eventPublisher;
 
     /**
@@ -82,7 +84,13 @@ public class BidRequestService {
 
         eventPublisher.publishEvent(new BidRequestCreatedEvent(saved.getId(), memberId, opportunityId, createdBy));
 
-        return saved;
+        // 신청 즉시 문서 대기 상태로 전이 → 고객이 내 제안서에서 필요서류 업로드 + 제출 완료 가능
+        // (CREATED → DOCS_PENDING 은 FSM 화이트리스트 허용 전이)
+        BidRequest pending = fsmService.transition(
+                saved.getId(), BidRequestState.DOCS_PENDING,
+                createdBy, creatorName, "신청 접수 — 필요서류 제출 대기");
+
+        return pending;
     }
 
     /**
@@ -120,6 +128,35 @@ public class BidRequestService {
      */
     public Page<BidRequest> findByAssignedTo(UUID userId, Pageable pageable) {
         return bidRequestRepository.findByAssignedTo(userId, pageable);
+    }
+
+    // ── 관리자 목록/조회 — DTO를 트랜잭션 안에서 변환 (Entity 직렬화 금지, LazyInit 방지) ──
+
+    /** 상태 필터 조회 → DTO. state==null이면 전체. */
+    public Page<BidRequestDto> findAsDto(BidRequestState state, Pageable pageable) {
+        Page<BidRequest> page = (state != null)
+                ? bidRequestRepository.findByState(state, pageable)
+                : bidRequestRepository.findAllWithDetails(pageable);
+        return page.map(BidRequestDto::from);
+    }
+
+    /** 담당자 배정 목록 → DTO */
+    public Page<BidRequestDto> findByAssignedToAsDto(UUID userId, Pageable pageable) {
+        return bidRequestRepository.findByAssignedTo(userId, pageable).map(BidRequestDto::from);
+    }
+
+    /** 고객 액션 필요 목록 → DTO */
+    public List<BidRequestDto> getRequestsRequiringClientActionAsDto() {
+        return getRequestsRequiringClientAction().stream().map(BidRequestDto::from).toList();
+    }
+
+    /** 단건 → DTO (이력 포함). CR-024: 노출 노티 매핑(noticeId/displayTitle) 포함 */
+    public BidRequestDto findByIdAsDto(UUID id) {
+        BidRequest br = findByIdWithDetails(id);
+        com.biddingagency.domain.notice.entity.Notice notice = br.getOpportunity() != null
+                ? noticeService.findLatestVisibleByOpportunityId(br.getOpportunity().getId()).orElse(null)
+                : null;
+        return BidRequestDto.withHistory(br, notice);
     }
 
     /**

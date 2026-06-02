@@ -76,5 +76,13 @@ public class SAMOpportunityResponse {
 
         @JsonProperty("pointOfContact")
         private List<Map<String, Object>> pointOfContact;
+
+        /** CR-022 2차: Award Notice의 낙찰 정보. amount/awardee/date/number 포함 */
+        @JsonProperty("award")
+        private Map<String, Object> award;
+
+        /** CR-022 2차: 수행 장소. city/state/zip 등 포함 */
+        @JsonProperty("placeOfPerformance")
+        private Map<String, Object> placeOfPerformance;
     }
 }

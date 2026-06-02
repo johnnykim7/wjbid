@@ -105,18 +105,19 @@ export const updateMyProfile = (data: {
 
 // Client Documents
 export const getClientDocuments = (bidRequestId: string) =>
-  api.get(`/client-documents/${bidRequestId}`)
+  api.get(`/bid-requests/${bidRequestId}/client-documents`)
 
-export const uploadClientDocument = (bidRequestId: string, file: File) => {
+export const uploadClientDocument = (bidRequestId: string, file: File, category?: string) => {
   const formData = new FormData()
   formData.append('file', file)
-  return api.post(`/client-documents/${bidRequestId}`, formData, {
+  if (category) formData.append('category', category)
+  return api.post(`/bid-requests/${bidRequestId}/client-documents`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   })
 }
 
-export const deleteClientDocument = (id: string) =>
-  api.delete(`/client-documents/${id}`)
+export const deleteClientDocument = (bidRequestId: string, docId: string) =>
+  api.delete(`/bid-requests/${bidRequestId}/client-documents/${docId}`)
 
 // Required Document Slots (CR-010: 공고 요구서류 슬롯 매칭)
 export const getRequiredDocumentSlots = (bidRequestId: string) =>

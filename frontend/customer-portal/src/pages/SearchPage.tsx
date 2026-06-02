@@ -9,10 +9,11 @@ import { EmptyState } from '../components/ui/empty-state'
 import {
   getOpportunities,
   searchOpportunities,
+  addBookmark,
+  removeBookmark,
   getMyBookmarks,
   getMyBidRequests,
 } from '../api/client'
-import { MOCK_BIDS } from '../data/mockData'
 import type { Opportunity } from '../types'
 
 const AGENCIES = [
@@ -38,7 +39,9 @@ export default function SearchPage() {
   const [totalPages, setTotalPages] = useState(1)
   const [totalElements, setTotalElements] = useState(0)
   const [keyword, setKeyword] = useState('')
+  const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set())
   const [stats, setStats] = useState({ total: 0, bookmarks: 0, proposals: 0 })
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   // 초기 북마크 & 통계 로드
   useEffect(() => {
@@ -50,6 +53,7 @@ export default function SearchPage() {
         ])
         if (bookmarksRes.status === 'fulfilled') {
           const content: Opportunity[] = bookmarksRes.value.data.content ?? []
+          setBookmarkedIds(new Set(content.map((b) => b.id)))
           setStats((s) => ({ ...s, bookmarks: bookmarksRes.value.data.totalElements ?? content.length }))
         }
         if (proposalsRes.status === 'fulfilled') {
@@ -62,6 +66,7 @@ export default function SearchPage() {
 
   const fetchData = async (p = 0, kw = keyword) => {
     setLoading(true)
+    setLoadError(null)
     try {
       let data
       if (kw.trim()) {
@@ -75,10 +80,14 @@ export default function SearchPage() {
       setTotalPages(data.totalPages ?? 1)
       setTotalElements(data.totalElements ?? 0)
       setStats((s) => ({ ...s, total: data.totalElements ?? 0 }))
-    } catch {
-      setItems(MOCK_BIDS)
+    } catch (err) {
+      const msg = (err as { response?: { status?: number } })?.response?.status === 401
+        ? '로그인이 필요합니다.'
+        : '공고문을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.'
+      setLoadError(msg)
+      setItems([])
       setTotalPages(1)
-      setTotalElements(MOCK_BIDS.length)
+      setTotalElements(0)
     } finally {
       setLoading(false)
     }
@@ -97,6 +106,22 @@ export default function SearchPage() {
   const handlePageChange = (p: number) => {
     setPage(p)
     fetchData(p)
+  }
+
+  const toggleBookmark = async (bid: Opportunity, e: React.MouseEvent) => {
+    e.stopPropagation()
+    const isBookmarked = bookmarkedIds.has(bid.id)
+    try {
+      if (isBookmarked) {
+        await removeBookmark(bid.id)
+        setBookmarkedIds((prev) => { const s = new Set(prev); s.delete(bid.id); return s })
+        setStats((s) => ({ ...s, bookmarks: Math.max(0, s.bookmarks - 1) }))
+      } else {
+        await addBookmark(bid.id)
+        setBookmarkedIds((prev) => new Set(prev).add(bid.id))
+        setStats((s) => ({ ...s, bookmarks: s.bookmarks + 1 }))
+      }
+    } catch { /* ignore */ }
   }
 
   return (
@@ -175,6 +200,12 @@ export default function SearchPage() {
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
         {loading ? (
           <LoadingSpinner fullPage />
+        ) : loadError ? (
+          <EmptyState
+            icon="fa-solid fa-triangle-exclamation"
+            title="공고문을 불러오지 못했습니다"
+            description={loadError}
+          />
         ) : items.length === 0 ? (
           <EmptyState
             icon="fa-solid fa-magnifying-glass"
@@ -187,11 +218,10 @@ export default function SearchPage() {
               <Table>
                 <TableHeader>
                   <tr>
-                    <TableHead className="w-48">공고번호 / NAICS</TableHead>
-                    <TableHead>제목 / 기관</TableHead>
-                    <TableHead className="w-32">공고유형</TableHead>
-                    <TableHead className="w-32">공고일</TableHead>
-                    <TableHead className="w-32">마감일</TableHead>
+                    <TableHead className="w-48">Notice ID / NAICS</TableHead>
+                    <TableHead>Title / Agency</TableHead>
+                    <TableHead className="w-32">Deadline</TableHead>
+                    <TableHead className="w-24 text-center">관심</TableHead>
                   </tr>
                 </TableHeader>
                 <TableBody>
@@ -216,16 +246,19 @@ export default function SearchPage() {
                           {bid.agencyName}
                         </div>
                       </TableCell>
-                      <TableCell className="whitespace-nowrap align-top text-sm text-gray-600">
-                        {bid.type || '-'}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap align-top text-sm text-gray-600">
-                        {bid.postedDate || '-'}
-                      </TableCell>
                       <TableCell className="whitespace-nowrap align-top">
                         <Badge variant={getDeadlineBadgeVariant(bid.responseDeadline)}>
                           {bid.responseDeadline}
                         </Badge>
+                      </TableCell>
+                      <TableCell className="text-center align-middle">
+                        <button
+                          title={bookmarkedIds.has(bid.id) ? '북마크 제거' : '관심 공고 저장'}
+                          className={`p-1.5 transition ${bookmarkedIds.has(bid.id) ? 'text-secondary' : 'text-gray-400 hover:text-secondary'}`}
+                          onClick={(e) => toggleBookmark(bid, e)}
+                        >
+                          <i className={bookmarkedIds.has(bid.id) ? 'fa-solid fa-bookmark' : 'fa-regular fa-bookmark'} />
+                        </button>
                       </TableCell>
                     </TableRow>
                   ))}

@@ -46,8 +46,9 @@ const NEXT_STATES: Record<string, string[]> = {
 interface BidRequest {
   id: string
   state: string
-  opportunity?: { title: string; organizationName: string }
-  member?: { email: string; companyName: string }
+  opportunityTitle?: string
+  agencyName?: string
+  memberEmail?: string
   assignedTo?: string
   createdAt?: string
 }
@@ -92,7 +93,7 @@ export default function BidRequestAdminPage() {
   }, [page])
 
   const openTransition = (br: BidRequest) => {
-    setModal({ bidRequestId: br.id, currentState: br.state, opportunityTitle: br.opportunity?.title ?? '-' })
+    setModal({ bidRequestId: br.id, currentState: br.state, opportunityTitle: br.opportunityTitle ?? '-' })
     setSelectedNextState(NEXT_STATES[br.state]?.[0] ?? '')
     setNotes('')
     setError('')
@@ -173,14 +174,14 @@ export default function BidRequestAdminPage() {
                       <td className="px-4 py-3 font-medium text-gray-900 max-w-xs">
                         <div className="truncate cursor-pointer text-secondary hover:underline"
                           onClick={() => navigate(`/bid-requests/${br.id}`)}>
-                          {br.opportunity?.title ?? '-'}
+                          {br.opportunityTitle ?? '-'}
                         </div>
                       </td>
                       <td className="px-4 py-3 text-gray-500 text-xs">
-                        {br.opportunity?.organizationName ?? '-'}
+                        {br.agencyName ?? '-'}
                       </td>
                       <td className="px-4 py-3 text-gray-500 text-xs">
-                        {br.member?.email ?? '-'}
+                        {br.memberEmail ?? '-'}
                       </td>
                       <td className="px-4 py-3">
                         <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${STATE_COLORS[br.state] ?? 'bg-gray-100 text-gray-600'}`}>

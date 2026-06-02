@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { Button } from '../components/ui/button'
 import { Badge } from '../components/ui/badge'
 import { LoadingSpinner } from '../components/ui/loading-spinner'
@@ -7,9 +7,10 @@ import {
   getBidRequest,
   getBidRequestDocuments,
   getBidRequestHistory,
-  getRequiredDocumentSlots,
-  uploadToSlot,
-  unmapSlot,
+  getOpportunity,
+  getClientDocuments,
+  uploadClientDocument,
+  deleteClientDocument,
   transitionBidRequestState,
 } from '../api/client'
 import { STATE_LABEL, STATE_BADGE } from '../types'
@@ -35,28 +36,22 @@ interface BidDocSummary {
   editedAt?: string
 }
 
-interface MappedDocument {
+interface RequiredDoc {
+  name: string
+  description?: string
+  mandatory?: boolean
+  format?: string
+  pageLimit?: string
+  notes?: string
+}
+
+interface ClientDocument {
   id: string
   fileName: string
   fileSize: number
-  uploadedAt?: string
-}
-
-interface RequiredSlot {
-  requirementItemId: string
-  title: string
-  description?: string
-  isBlocker: boolean
-  category: string
-  status: 'FULFILLED' | 'PENDING' | 'MISSING'
-  fulfillmentType?: string | null
-  mappedClientDocument?: MappedDocument | null
-}
-
-interface SlotSummary {
-  totalBlocker: number
-  fulfilledBlocker: number
-  canTransitionToDocsReceived: boolean
+  contentType?: string
+  documentCategory?: string
+  createdAt?: string
 }
 
 function extractText(contentJson: Record<string, unknown>): string {
@@ -82,19 +77,23 @@ export default function ProposalDetailPage() {
   const [proposal, setProposal] = useState<BidRequest | null>(null)
   const [documents, setDocuments] = useState<BidDocSummary[]>([])
   const [history, setHistory] = useState<StateTransition[]>([])
-  const [slots, setSlots] = useState<RequiredSlot[]>([])
-  const [slotSummary, setSlotSummary] = useState<SlotSummary | null>(null)
+  const [requiredDocs, setRequiredDocs] = useState<RequiredDoc[]>([])
+  const [clientDocs, setClientDocs] = useState<ClientDocument[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'documents' | 'uploads' | 'history'>('documents')
+  const [searchParams] = useSearchParams()
+  // 기본 탭은 '제출 서류'(uploads). ?tab= 으로 딥링크 시 해당 탭으로 진입
+  const tabParam = searchParams.get('tab')
+  const initialTab: 'uploads' | 'documents' | 'history' =
+    tabParam === 'documents' || tabParam === 'history' ? tabParam : 'uploads'
+  const [activeTab, setActiveTab] = useState<'uploads' | 'documents' | 'history'>(initialTab)
   const [activeDocIdx, setActiveDocIdx] = useState(0)
-  const [uploadingSlot, setUploadingSlot] = useState<string | null>(null)
+  const [uploadingDoc, setUploadingDoc] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
-  const loadSlots = async (bidId: string) => {
-    const res = await getRequiredDocumentSlots(bidId)
-    setSlots(res.data?.data ?? [])
-    setSlotSummary(res.data?.summary ?? null)
+  const loadClientDocs = async (bidId: string) => {
+    const res = await getClientDocuments(bidId)
+    setClientDocs(res.data ?? [])
   }
 
   const loadAll = async () => {
@@ -102,18 +101,26 @@ export default function ProposalDetailPage() {
     setLoading(true)
     try {
       const { data } = await getBidRequest(id)
-      setProposal(data.data ?? data)
+      const p: BidRequest = data.data ?? data
+      setProposal(p)
 
-      const [docRes, histRes, slotRes] = await Promise.allSettled([
+      // CR-024: noticeId(공고문 ID)로 GET /opportunities/{noticeId} → analysis.requiredDocuments 획득
+      // (고객 엔드포인트는 noticeId만 받음. opportunityId(원본 UUID)는 404)
+      const calls: Promise<unknown>[] = [
         getBidRequestDocuments(id),
         getBidRequestHistory(id),
-        getRequiredDocumentSlots(id),
-      ])
-      if (docRes.status === 'fulfilled') setDocuments(docRes.value.data ?? [])
-      if (histRes.status === 'fulfilled') setHistory(histRes.value.data ?? [])
-      if (slotRes.status === 'fulfilled') {
-        setSlots(slotRes.value.data?.data ?? [])
-        setSlotSummary(slotRes.value.data?.summary ?? null)
+        getClientDocuments(id),
+      ]
+      if (p.noticeId) calls.push(getOpportunity(p.noticeId))
+      const settled = await Promise.allSettled(calls)
+      const [docRes, histRes, clientRes, oppRes] = settled
+      if (docRes.status === 'fulfilled') setDocuments((docRes.value as { data: BidDocSummary[] }).data ?? [])
+      if (histRes.status === 'fulfilled') setHistory((histRes.value as { data: StateTransition[] }).data ?? [])
+      if (clientRes.status === 'fulfilled') setClientDocs((clientRes.value as { data: ClientDocument[] }).data ?? [])
+      if (oppRes && oppRes.status === 'fulfilled') {
+        const data = (oppRes.value as { data: { analysis?: { requiredDocuments?: { documents?: RequiredDoc[] } } } }).data
+        const docs = data?.analysis?.requiredDocuments?.documents ?? []
+        setRequiredDocs(docs)
       }
     } catch {
       setProposal(null)
@@ -124,27 +131,39 @@ export default function ProposalDetailPage() {
 
   useEffect(() => { loadAll() }, [id])
 
-  const handleSlotUpload = async (requirementItemId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+  // 공고 서류명 ↔ 업로드된 ClientDocument 매핑 (documentCategory로)
+  const docByCategory = (name: string) =>
+    clientDocs.find((c) => c.documentCategory === name)
+
+  const handleUpload = async (docName: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file || !id) return
-    setUploadingSlot(requirementItemId)
+    setUploadingDoc(docName)
     try {
-      await uploadToSlot(id, requirementItemId, file)
-      await loadSlots(id)
-    } catch { /* ignore */ }
-    finally {
-      setUploadingSlot(null)
+      // 기존 동일 category 업로드 있으면 먼저 삭제(=변경 효과)
+      const existing = docByCategory(docName)
+      if (existing) await deleteClientDocument(id, existing.id)
+      await uploadClientDocument(id, file, docName)
+      await loadClientDocs(id)
+    } catch {
+      /* ignore — TODO: 인라인 에러 표시 */
+    } finally {
+      setUploadingDoc(null)
       e.target.value = ''
     }
   }
 
-  const handleSlotUnmap = async (requirementItemId: string) => {
+  const handleRemove = async (docId: string) => {
     if (!id) return
     try {
-      await unmapSlot(id, requirementItemId)
-      await loadSlots(id)
+      await deleteClientDocument(id, docId)
+      await loadClientDocs(id)
     } catch { /* ignore */ }
   }
+
+  const mandatoryDocs = requiredDocs.filter((d) => d.mandatory)
+  const fulfilledMandatory = mandatoryDocs.filter((d) => docByCategory(d.name)).length
+  const canSubmitDocs = mandatoryDocs.length === 0 || fulfilledMandatory === mandatoryDocs.length
 
   const handleSubmitDocuments = async () => {
     if (!id) return
@@ -153,13 +172,8 @@ export default function ProposalDetailPage() {
     try {
       await transitionBidRequestState(id, 'DOCS_RECEIVED', '고객 서류 제출 완료')
       await loadAll()
-    } catch (err: unknown) {
-      const e = err as { response?: { status?: number; data?: { error?: string } } }
-      setSubmitError(
-        e.response?.data?.error === 'REQUIREMENT_SLOTS_NOT_FULFILLED'
-          ? '필수 서류가 모두 업로드되지 않았습니다.'
-          : '제출에 실패했습니다. 잠시 후 다시 시도해주세요.',
-      )
+    } catch {
+      setSubmitError('제출에 실패했습니다. 잠시 후 다시 시도해주세요.')
     } finally {
       setSubmitting(false)
     }
@@ -176,6 +190,13 @@ export default function ProposalDetailPage() {
 
   const activeDoc = documents[activeDocIdx]
 
+  // 관리자 첨부 반려: 가장 최근 DOCS_RECEIVED → DOCS_PENDING 전이의 사유 (현재 DOCS_PENDING일 때만 노출)
+  const rejectionReason = proposal.state === 'DOCS_PENDING'
+    ? history
+        .filter(h => h.fromState === 'DOCS_RECEIVED' && h.toState === 'DOCS_PENDING')
+        .sort((a, b) => (b.timestamp ?? '').localeCompare(a.timestamp ?? ''))[0]?.notes
+    : undefined
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -185,7 +206,7 @@ export default function ProposalDetailPage() {
             <i className="fa-solid fa-arrow-left text-xl" />
           </button>
           <div>
-            <h3 className="text-lg font-bold text-gray-800 line-clamp-1">{proposal.opportunityTitle}</h3>
+            <h3 className="text-lg font-bold text-gray-800 line-clamp-1">{proposal.displayTitle || proposal.opportunityTitle}</h3>
             <div className="flex items-center gap-2 mt-0.5">
               <span className="text-xs text-gray-500">{proposal.solicitationNumber ?? proposal.opportunityId}</span>
               <Badge variant={STATE_BADGE[proposal.state] ?? 'active'} size="sm">
@@ -199,8 +220,8 @@ export default function ProposalDetailPage() {
       {/* Tabs */}
       <div className="bg-white border-b border-gray-200 px-6 flex gap-1">
         {([
+          { key: 'uploads', label: '제출 서류', icon: 'fa-solid fa-cloud-arrow-up', count: requiredDocs.length },
           { key: 'documents', label: '생성 문서', icon: 'fa-solid fa-file-lines', count: documents.length },
-          { key: 'uploads', label: '제출 서류', icon: 'fa-solid fa-cloud-arrow-up', count: slots.length },
           { key: 'history', label: '진행 이력', icon: 'fa-solid fa-clock-rotate-left', count: history.length },
         ] as const).map(tab => (
           <button
@@ -232,7 +253,7 @@ export default function ProposalDetailPage() {
               </div>
               <h3 className="text-lg font-bold text-gray-800 mb-2">아직 생성된 문서가 없습니다</h3>
               <p className="text-sm text-gray-500 max-w-xs">
-                요구사항을 분석하고 문서를 작성하면 여기에 표시됩니다.
+                요구사항 분석과 문서 생성이 끝나면 여기에 표시됩니다.
               </p>
             </div>
           ) : (
@@ -282,103 +303,125 @@ export default function ProposalDetailPage() {
           )
         )}
 
-        {/* Uploads Tab — CR-010 요구사항 슬롯 */}
+        {/* Uploads Tab — 공고문 필요서류 + ClientDocument 업로드 (변경/삭제 자유) */}
         {activeTab === 'uploads' && (
           <div className="p-6 max-w-3xl mx-auto space-y-4">
-            {slots.length === 0 ? (
+            {/* 관리자 첨부 반려 사유 — 재업로드 안내 */}
+            {rejectionReason && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                <div className="flex items-start gap-2">
+                  <i className="fa-solid fa-triangle-exclamation text-amber-500 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-semibold text-amber-800">제출 서류가 반려되었습니다</p>
+                    <p className="text-xs text-amber-700 mt-1 whitespace-pre-wrap">{rejectionReason}</p>
+                    <p className="text-xs text-amber-600 mt-2">아래에서 서류를 다시 업로드한 뒤 ‘문서 제출 완료’를 눌러주세요.</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            {requiredDocs.length === 0 ? (
               <div className="text-center py-12 text-gray-400">
                 <i className="fa-solid fa-folder-open text-4xl mb-3" />
-                <p className="text-sm">이 공고에는 등록된 필수 서류 요구사항이 없습니다.</p>
+                <p className="text-sm">이 공고에는 명시된 필요 서류가 없습니다.</p>
+                <p className="text-xs mt-1">바로 제출 가능합니다.</p>
               </div>
             ) : (
               <>
                 {/* 충족 요약 */}
-                {slotSummary && (
-                  <div className="bg-white border border-gray-200 rounded-xl p-4 flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-800">필수 서류 충족 현황</p>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        {slotSummary.fulfilledBlocker} / {slotSummary.totalBlocker} 건 업로드 완료
-                      </p>
-                    </div>
-                    <div className="w-32 h-2 bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-secondary transition-all"
-                        style={{
-                          width: slotSummary.totalBlocker > 0
-                            ? `${(slotSummary.fulfilledBlocker / slotSummary.totalBlocker) * 100}%`
-                            : '100%',
-                        }}
-                      />
-                    </div>
+                <div className="bg-white border border-gray-200 rounded-xl p-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-800">필수 서류 충족 현황</p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {fulfilledMandatory} / {mandatoryDocs.length} 건 업로드 완료
+                    </p>
                   </div>
-                )}
+                  <div className="w-32 h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-secondary transition-all"
+                      style={{
+                        width: mandatoryDocs.length > 0
+                          ? `${(fulfilledMandatory / mandatoryDocs.length) * 100}%`
+                          : '100%',
+                      }}
+                    />
+                  </div>
+                </div>
 
-                {/* 슬롯 목록 */}
+                {/* 서류 목록 */}
                 <div className="space-y-3">
-                  {slots.map(slot => {
-                    const fulfilled = slot.status === 'FULFILLED'
-                    const isUploading = uploadingSlot === slot.requirementItemId
+                  {requiredDocs.map((doc) => {
+                    const uploaded = docByCategory(doc.name)
+                    const isUploading = uploadingDoc === doc.name
                     return (
                       <div
-                        key={slot.requirementItemId}
+                        key={doc.name}
                         className={`bg-white border rounded-xl p-4 ${
-                          fulfilled ? 'border-green-200' : 'border-gray-200'
+                          uploaded ? 'border-green-200' : 'border-gray-200'
                         }`}
                       >
                         <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <i className={`fa-solid ${
-                                fulfilled ? 'fa-circle-check text-green-500' : 'fa-circle-exclamation text-amber-400'
+                                uploaded ? 'fa-circle-check text-green-500' : 'fa-circle-exclamation text-amber-400'
                               }`} />
-                              <p className="text-sm font-semibold text-gray-800">{slot.title}</p>
-                              {slot.isBlocker && (
+                              <p className="text-sm font-semibold text-gray-800">{doc.name}</p>
+                              {doc.mandatory ? (
                                 <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-50 text-red-500">필수</span>
+                              ) : (
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-500">선택</span>
                               )}
                             </div>
-                            {slot.description && (
-                              <p className="text-xs text-gray-500 mt-1 ml-6">{slot.description}</p>
+                            {doc.description && (
+                              <p className="text-xs text-gray-500 mt-1 ml-6">{doc.description}</p>
                             )}
-                            {fulfilled && slot.mappedClientDocument && (
-                              <div className="flex items-center gap-2 mt-2 ml-6 text-xs text-gray-600">
-                                <i className="fa-solid fa-paperclip text-gray-300" />
-                                <span className="truncate">{slot.mappedClientDocument.fileName}</span>
-                                <span className="text-gray-400">
-                                  ({(slot.mappedClientDocument.fileSize / 1024).toFixed(1)} KB)
+                            <div className="flex gap-3 mt-1 ml-6 text-xs text-gray-400">
+                              {doc.format && <span><i className="fa-solid fa-file mr-1" />{doc.format}</span>}
+                              {doc.pageLimit && <span><i className="fa-solid fa-ruler mr-1" />{doc.pageLimit}</span>}
+                            </div>
+                            {uploaded && (
+                              <div className="flex items-center gap-2 mt-2 ml-6 text-xs text-gray-700">
+                                <i className="fa-solid fa-paperclip text-gray-400" />
+                                <span className="truncate">{uploaded.fileName}</span>
+                                <span className="text-gray-400 flex-shrink-0">
+                                  ({(uploaded.fileSize / 1024).toFixed(1)} KB)
                                 </span>
                               </div>
                             )}
                           </div>
-                          <div className="flex-shrink-0">
-                            {fulfilled ? (
+                          <div className="flex-shrink-0 flex items-center gap-1">
+                            {uploaded && (
                               <button
-                                onClick={() => handleSlotUnmap(slot.requirementItemId)}
-                                className="text-xs text-gray-400 hover:text-red-500 transition"
-                                title="다시 업로드하려면 해제"
+                                onClick={() => handleRemove(uploaded.id)}
+                                disabled={isUploading}
+                                className="text-xs text-gray-400 hover:text-red-500 px-1.5 py-1"
+                                title="삭제"
                               >
-                                <i className="fa-solid fa-rotate-left mr-1" /> 변경
+                                <i className="fa-solid fa-xmark" />
                               </button>
-                            ) : (
-                              <label className={`inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition ${
-                                isUploading
-                                  ? 'bg-gray-100 text-gray-400'
-                                  : 'bg-secondary text-white hover:opacity-90'
-                              }`}>
-                                {isUploading ? (
-                                  <><i className="fa-solid fa-spinner fa-spin mr-1.5" /> 업로드 중</>
-                                ) : (
-                                  <><i className="fa-solid fa-arrow-up-from-bracket mr-1.5" /> 업로드</>
-                                )}
-                                <input
-                                  type="file"
-                                  className="hidden"
-                                  disabled={isUploading}
-                                  onChange={(e) => handleSlotUpload(slot.requirementItemId, e)}
-                                  accept=".pdf,.doc,.docx,.xls,.xlsx,.zip,.jpg,.png"
-                                />
-                              </label>
                             )}
+                            <label className={`inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition ${
+                              isUploading
+                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                : uploaded
+                                  ? 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                                  : 'bg-secondary text-white hover:opacity-90'
+                            }`}>
+                              {isUploading ? (
+                                <><i className="fa-solid fa-spinner fa-spin mr-1.5" /> 업로드 중</>
+                              ) : uploaded ? (
+                                <><i className="fa-solid fa-rotate-left mr-1.5" /> 변경</>
+                              ) : (
+                                <><i className="fa-solid fa-arrow-up-from-bracket mr-1.5" /> 파일 선택</>
+                              )}
+                              <input
+                                type="file"
+                                className="hidden"
+                                disabled={isUploading}
+                                onChange={(e) => handleUpload(doc.name, e)}
+                                accept=".pdf,.doc,.docx,.xls,.xlsx,.zip,.jpg,.png"
+                              />
+                            </label>
                           </div>
                         </div>
                       </div>
@@ -386,25 +429,49 @@ export default function ProposalDetailPage() {
                   })}
                 </div>
 
-                {/* 문서 제출 완료 (DOCS_PENDING에서만, 전부 충족 시 활성) */}
-                {proposal.state === 'DOCS_PENDING' && (
+                {/* 분류 외 추가 첨부(category 미지정) — 있으면 표시 */}
+                {clientDocs.filter((c) => !c.documentCategory).length > 0 && (
+                  <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                    <p className="text-xs font-medium text-gray-500 mb-2">기타 첨부</p>
+                    <div className="space-y-1.5">
+                      {clientDocs.filter((c) => !c.documentCategory).map((c) => (
+                        <div key={c.id} className="flex items-center justify-between text-xs">
+                          <span className="text-gray-700 truncate">
+                            <i className="fa-solid fa-paperclip text-gray-400 mr-1" />
+                            {c.fileName}
+                          </span>
+                          <button
+                            onClick={() => handleRemove(c.id)}
+                            className="text-gray-400 hover:text-red-500 px-1.5"
+                            title="삭제"
+                          >
+                            <i className="fa-solid fa-xmark" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 제출 버튼 — CREATED 또는 DOCS_PENDING에서 노출 */}
+                {(proposal.state === 'CREATED' || proposal.state === 'DOCS_PENDING') && (
                   <div className="pt-2">
                     {submitError && (
                       <p className="text-xs text-red-500 mb-2 text-center">{submitError}</p>
                     )}
                     <Button
-                      variant="accent"
+                      variant="primary"
                       className="w-full"
-                      disabled={submitting || !(slotSummary?.canTransitionToDocsReceived ?? false)}
+                      disabled={submitting || !canSubmitDocs}
                       onClick={handleSubmitDocuments}
                     >
                       {submitting ? (
                         <><i className="fa-solid fa-spinner fa-spin mr-2" /> 제출 중...</>
                       ) : (
-                        <><i className="fa-solid fa-paper-plane mr-2" /> 문서 제출 완료</>
+                        <><i className="fa-solid fa-paper-plane mr-2" /> 서류 제출 완료</>
                       )}
                     </Button>
-                    {!(slotSummary?.canTransitionToDocsReceived ?? false) && (
+                    {!canSubmitDocs && (
                       <p className="text-xs text-gray-400 mt-2 text-center">
                         모든 필수 서류를 업로드하면 제출할 수 있습니다.
                       </p>

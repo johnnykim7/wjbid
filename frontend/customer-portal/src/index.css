@@ -8,6 +8,8 @@
   --color-secondary: #1a56db;  /* 하위호환 */
   --color-surface:  #f5f7fa;   /* 페이지 배경 */
   --color-border:   #e2e8f0;   /* 기본 테두리 */
+  --color-accent:   #10b981;   /* 강조 액션 (제안서 작성 등) */
+  --color-brandBlue:#1e40af;   /* 브랜드 블루 */
 }
 
 :root {

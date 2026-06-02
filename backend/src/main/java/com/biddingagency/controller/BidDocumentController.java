@@ -34,6 +34,16 @@ public class BidDocumentController {
     private final BidDocumentService bidDocumentService;
     private final DocumentVersionService documentVersionService;
 
+    @GetMapping
+    @Operation(summary = "입찰 요청별 문서 목록")
+    public ResponseEntity<List<BidDocumentDto>> listByBidRequest(@RequestParam UUID bidRequestId) {
+        List<BidDocumentDto> docs = bidDocumentService.findByBidRequest(bidRequestId)
+                .stream()
+                .map(BidDocumentDto::from)
+                .toList();
+        return ResponseEntity.ok(docs);
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "문서 상세 (현재 버전 포함)")
     public ResponseEntity<BidDocumentDto> getDocument(@PathVariable UUID id) {

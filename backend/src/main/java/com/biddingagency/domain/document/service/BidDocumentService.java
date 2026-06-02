@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -47,6 +48,10 @@ public class BidDocumentService {
         return documentRepository.findByBidRequestIdAndDocumentType(bidRequestId, documentType)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Document of type " + documentType + " not found for bid request " + bidRequestId));
+    }
+
+    public Optional<BidDocument> findOptionalByBidRequestAndType(UUID bidRequestId, DocumentType documentType) {
+        return documentRepository.findByBidRequestIdAndDocumentType(bidRequestId, documentType);
     }
 
     /**
