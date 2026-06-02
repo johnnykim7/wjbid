@@ -32,7 +32,8 @@ public interface NoticeRepository extends JpaRepository<Notice, UUID> {
      * CR-009: includeExpired=false면 마감 지난 공고 제외(마감일 NULL은 유지). 정렬은 Pageable.
      */
     @Query("SELECT n FROM Notice n JOIN FETCH n.opportunity o WHERE n.visibility = :visibility "
-            + "AND (:includeExpired = true OR o.responseDeadline IS NULL OR o.responseDeadline >= :now)")
+            + "AND (:includeExpired = true OR o.responseDeadline IS NULL OR o.responseDeadline >= :now) "
+            + "ORDER BY o.postedDate DESC, n.createdAt DESC")
     Page<Notice> findVisible(@Param("visibility") OpportunityVisibility visibility,
                              @Param("includeExpired") boolean includeExpired,
                              @Param("now") java.time.LocalDateTime now,
@@ -54,7 +55,8 @@ public interface NoticeRepository extends JpaRepository<Notice, UUID> {
     @Query("SELECT n FROM Notice n JOIN FETCH n.opportunity o WHERE n.visibility = :visibility "
             + "AND (:includeExpired = true OR o.responseDeadline IS NULL OR o.responseDeadline >= :now) "
             + "AND (LOWER(n.koreanTitle) LIKE LOWER(CONCAT('%', :keyword, '%')) "
-            + "OR LOWER(o.title) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+            + "OR LOWER(o.title) LIKE LOWER(CONCAT('%', :keyword, '%'))) "
+            + "ORDER BY o.postedDate DESC, n.createdAt DESC")
     Page<Notice> searchVisibleByKeyword(@Param("keyword") String keyword,
                                         @Param("visibility") OpportunityVisibility visibility,
                                         @Param("includeExpired") boolean includeExpired,

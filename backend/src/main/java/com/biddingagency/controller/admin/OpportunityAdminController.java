@@ -17,7 +17,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -53,7 +52,8 @@ public class OpportunityAdminController {
     @GetMapping
     @Operation(summary = "원본 공고 목록 (관리자)", description = "SAM 수집 원본 + 첨부파일 수 + 공고문 생성 여부")
     public ResponseEntity<Page<OpportunityAdminDto>> listOpportunities(
-            @PageableDefault(size = 20, sort = "lastModifiedAt", direction = Sort.Direction.DESC) Pageable pageable) {
+            // 정렬은 Repository 메서드에 고정(게시일 DESC, 2차 수집순 DESC) — Pageable sort 미지정
+            @PageableDefault(size = 20) Pageable pageable) {
         Page<OpportunityAdminDto> page = opportunityService.findAllActive(pageable)
                 .map(opp -> {
                     long attachmentCount = attachmentRepository.countByOpportunityId(opp.getId());

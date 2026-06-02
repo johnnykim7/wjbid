@@ -31,9 +31,11 @@ public interface OpportunityRepository extends JpaRepository<Opportunity, UUID> 
     boolean existsByNoticeId(String noticeId);
 
     /**
-     * Find active opportunities
+     * Find active opportunities.
+     * 정렬 고정: 게시일(postedDate) DESC → 동률 시 수집순(createdAt) DESC.
+     * (postedDate가 같은날 일괄 수집으로 동률이 많아 2차 정렬 필수)
      */
-    Page<Opportunity> findByActiveTrue(Pageable pageable);
+    Page<Opportunity> findByActiveTrueOrderByPostedDateDescCreatedAtDesc(Pageable pageable);
 
     /**
      * Find by deadline range

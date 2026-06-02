@@ -59,7 +59,7 @@ public class OpportunityService {
      * Find all active opportunities
      */
     public Page<Opportunity> findAllActive(Pageable pageable) {
-        return opportunityRepository.findByActiveTrue(pageable);
+        return opportunityRepository.findByActiveTrueOrderByPostedDateDescCreatedAtDesc(pageable);
     }
 
     /**

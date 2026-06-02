@@ -13,7 +13,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -46,7 +45,8 @@ public class OpportunityController {
     @Operation(summary = "공고문 목록", description = "노출(VISIBLE) 공고문, 한글화 제목 포함. CR-009: 최신순 + 마감 공고 기본 제외")
     public ResponseEntity<Page<OpportunityDto>> listOpportunities(
             @RequestParam(defaultValue = "false") boolean includeExpired,
-            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+            // 정렬은 쿼리에 고정(게시일 DESC, 2차 수집순 DESC) — Pageable sort 미지정
+            @PageableDefault(size = 20) Pageable pageable) {
         Page<OpportunityDto> notices = noticeService.findVisible(includeExpired, pageable)
                 .map(OpportunityDto::fromNotice);
         return ResponseEntity.ok(notices);
@@ -72,7 +72,8 @@ public class OpportunityController {
     public ResponseEntity<Page<OpportunityDto>> searchOpportunities(
             @RequestParam String keyword,
             @RequestParam(defaultValue = "false") boolean includeExpired,
-            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+            // 정렬은 쿼리에 고정(게시일 DESC, 2차 수집순 DESC) — Pageable sort 미지정
+            @PageableDefault(size = 20) Pageable pageable) {
         Page<OpportunityDto> notices = noticeService.searchVisible(keyword, includeExpired, pageable)
                 .map(OpportunityDto::fromNotice);
         return ResponseEntity.ok(notices);
