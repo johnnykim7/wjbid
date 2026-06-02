@@ -43,6 +43,9 @@ interface Props {
     description?: string | null
     pointOfContact?: POC[] | null
     resourceLinks?: string[] | null
+    /** CR-034: 입찰서류 정본이 PIEE에 있는 공고 */
+    pieeAvailable?: boolean
+    pieeUrl?: string | null
   }
   /** 페이지가 자체 헤더(제목·배지)를 갖는 경우 hideHeader=true로 메타 그룹만 렌더 */
   hideHeader?: boolean
@@ -211,6 +214,27 @@ export default function OpportunityMetaPanel({ data, hideHeader = false }: Props
             ) : (
               <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{description}</p>
             )}
+          </MetaGroup>
+        )}
+
+        {/* CR-034: PIEE 입찰서류 (정본). 본문에 piee.eb.mil 제출 지정이 있는 공고만 노출 */}
+        {data.pieeAvailable && data.pieeUrl && (
+          <MetaGroup title="입찰서류 (PIEE)">
+            <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2.5">
+              <p className="text-xs text-amber-800 mb-2 leading-relaxed">
+                이 공고의 입찰서류 정본(본 공고서·수정본)은 PIEE에 있습니다. SAM 자동 수집분만으로는
+                불완전할 수 있으니, 아래에서 직접 받아 첨부에 업로드하세요.
+              </p>
+              <a
+                href={data.pieeUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-md bg-amber-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-amber-700"
+              >
+                <i className="fa-solid fa-up-right-from-square" />
+                PIEE 입찰서류 보기
+              </a>
+            </div>
           </MetaGroup>
         )}
 

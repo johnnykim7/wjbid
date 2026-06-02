@@ -42,6 +42,8 @@ interface OpportunityDetail {
     fax?: string
   }> | null
   resourceLinks?: string[] | null
+  pieeAvailable?: boolean
+  pieeUrl?: string | null
   attachmentCount: number
   manualFetchRequiredCount: number
   noticeCount: number
@@ -216,6 +218,8 @@ export default function OpportunityAdminDetailPage() {
           description: opp.descriptionSummaryKo || opp.description,
           pointOfContact: opp.pointOfContact,
           resourceLinks: opp.resourceLinks,
+          pieeAvailable: opp.pieeAvailable,
+          pieeUrl: opp.pieeUrl,
         }}
       />
 

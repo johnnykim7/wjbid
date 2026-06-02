@@ -52,6 +52,11 @@ public class OpportunityAdminDto {
     /** CR-032: noticedesc에서 가져온 원문 본문(평문). 관리자 상세에서 본문 표시. null = 미수집 */
     private String descriptionBody;
 
+    /** CR-034: 입찰서류 정본이 PIEE에 있는 공고 여부. true면 pieeUrl 노출 */
+    private boolean pieeAvailable;
+    /** CR-034: PIEE 입찰서류 페이지 링크(solNo 기반). pieeAvailable=false면 null */
+    private String pieeUrl;
+
     // ── CR-022 (재구현): 본문 한글 번역 ──
     /** 본문 한글 번역 결과. null = 미번역 또는 실패. 화면은 영문 description fallback */
     private String descriptionSummaryKo;
@@ -118,6 +123,8 @@ public class OpportunityAdminDto {
                 .placeOfPerformance(pop)
                 .description(desc)
                 .descriptionBody(opp.getDescriptionBody())
+                .pieeAvailable(opp.isPieeAvailable())
+                .pieeUrl(buildPieeUrl(opp))
                 .pointOfContact(pocs)
                 .resourceLinks(resourceLinks)
                 .descriptionSummaryKo(opp.getDescriptionSummaryKo())
@@ -135,6 +142,17 @@ public class OpportunityAdminDto {
         if (o == null) return null;
         String s = o.toString().trim();
         return s.isEmpty() ? null : s;
+    }
+
+    /** CR-034: PIEE 입찰서류 페이지 링크. pieeAvailable=false거나 solNo 없으면 null. */
+    private static final String PIEE_OPP_URL =
+            "https://piee.eb.mil/sol/xhtml/unauth/search/oppMgmtLink.xhtml?solNo=";
+
+    private static String buildPieeUrl(Opportunity opp) {
+        if (!opp.isPieeAvailable()) return null;
+        String sol = opp.getSolicitationNumber();
+        if (sol == null || sol.isBlank()) return null;
+        return PIEE_OPP_URL + java.net.URLEncoder.encode(sol, java.nio.charset.StandardCharsets.UTF_8);
     }
 
     public static OpportunityAdminDto fromList(Opportunity opp, long attachmentCount,
