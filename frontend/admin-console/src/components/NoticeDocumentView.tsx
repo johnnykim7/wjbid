@@ -13,6 +13,7 @@
  * contentJson 미존재 시(양식 미등록 / LLM 미생성) summaryJson fallback 렌더 — 옛 화면.
  */
 
+import { Fragment } from 'react'
 import type { ReactNode } from 'react'
 
 type Node = {
@@ -22,8 +23,20 @@ type Node = {
   text?: string
 }
 
+// CR-033: 자격요건 정밀추출 항목
+export interface EligibilityItem {
+  title: string
+  description?: string
+  mandatory?: boolean
+  evidenceBy?: string
+  isGate?: boolean
+  sourceRef?: string
+}
+
 interface Props {
   contentJson?: Record<string, unknown> | null
+  // CR-033: 정밀추출 자격요건 — 본문 "자격 요건" 섹션 자리에 인라인 렌더(중복 방지)
+  eligibility?: EligibilityItem[]
 }
 
 const NAVY = 'bg-slate-800 text-white'
@@ -31,7 +44,7 @@ const NAVY_DARK = 'bg-slate-900 text-white'
 const NAVY_BORDER = 'border-slate-700'
 const SECTION_BORDER = 'border-slate-200'
 
-export default function NoticeDocumentView({ contentJson }: Props) {
+export default function NoticeDocumentView({ contentJson, eligibility }: Props) {
   if (!contentJson) {
     return (
       <div className="rounded-lg bg-yellow-50 border border-yellow-200 px-4 py-3 text-sm text-yellow-800">
@@ -45,12 +58,64 @@ export default function NoticeDocumentView({ contentJson }: Props) {
     return <div className="text-sm text-red-600">올바르지 않은 본문 형식입니다.</div>
   }
 
+  // CR-033: 본문에 "자격 요건"/"Qualifications" heading 이 있는지 — 있으면 그 직후에 정밀추출 블록을 끼운다.
+  const hasElig = !!eligibility && eligibility.length > 0
+  const isEligHeading = (node: Node) =>
+    node.type === 'heading' &&
+    (node.content || []).some((c) => {
+      const t = String(c.text || '')
+      return t.includes('자격') || /qualif/i.test(t)
+    })
+  const eligHeadingRendered = hasElig && doc.content.some(isEligHeading)
+
   return (
     <article className="bg-white">
       {doc.content.map((node, i) => (
-        <NodeRenderer key={i} node={node} />
+        <Fragment key={i}>
+          <NodeRenderer node={node} />
+          {/* 본문 "자격 요건" heading 직후에 정밀추출 자격요건 인라인 */}
+          {hasElig && isEligHeading(node) && <EligibilityBlock items={eligibility!} />}
+        </Fragment>
       ))}
+      {/* 본문에 자격요건 heading 이 없으면(양식 차이) 맨 끝에라도 노출 */}
+      {hasElig && !eligHeadingRendered && (
+        <section className="mt-6">
+          <h2 className="text-base font-bold text-slate-900 mb-3 pb-1.5 border-b-2 border-slate-800">참여 자격요건</h2>
+          <EligibilityBlock items={eligibility!} />
+        </section>
+      )}
     </article>
+  )
+}
+
+// CR-033: 자격요건 정밀추출 렌더 (본문 §자격요건 자리에 인라인)
+function EligibilityBlock({ items }: { items: EligibilityItem[] }) {
+  return (
+    <div className="space-y-2 mb-4">
+      {items.map((e, i) => (
+        <div key={i} className="flex items-start gap-3 p-3 bg-white border border-slate-200 rounded-md">
+          <i className={`fa-solid ${e.isGate ? 'fa-shield-halved text-amber-500' : 'fa-circle-check text-slate-300'} text-lg mt-0.5`} />
+          <div className="flex-1 text-sm">
+            <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+              <span className="font-semibold text-slate-900">{e.title}</span>
+              {e.mandatory ? (
+                <span className="px-1.5 py-0.5 bg-red-50 text-red-600 rounded text-[10px] font-semibold uppercase">필수</span>
+              ) : (
+                <span className="px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded text-[10px] font-semibold uppercase">선택</span>
+              )}
+              {e.isGate && (
+                <span className="px-1.5 py-0.5 bg-amber-50 text-amber-600 rounded text-[10px] font-semibold">미충족 시 부적격</span>
+              )}
+            </div>
+            {e.description && <p className="text-slate-600 mb-0.5">{e.description}</p>}
+            {e.evidenceBy && (
+              <p className="text-xs text-emerald-600 mt-1"><i className="fa-solid fa-link mr-1" />증빙 서류: {e.evidenceBy}</p>
+            )}
+            {e.sourceRef && <p className="text-[11px] text-slate-400 mt-1"><i className="fa-solid fa-quote-left mr-1" />{e.sourceRef}</p>}
+          </div>
+        </div>
+      ))}
+    </div>
   )
 }
 

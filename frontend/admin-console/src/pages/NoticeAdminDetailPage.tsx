@@ -7,6 +7,7 @@ import {
   regenerateNotice,
 } from '../api/client'
 import NoticeDocumentView from '../components/NoticeDocumentView'
+import type { EligibilityItem } from '../components/NoticeDocumentView'
 
 interface AnalysisResult {
   analysisStatus?: string
@@ -158,11 +159,70 @@ export default function NoticeAdminDetailPage() {
               <div className="text-xs text-gray-400">완료: {new Date(notice.analyzedAt).toLocaleString('ko')}</div>
             )}
 
-            {/* CR-021: TipTap JSON 본문 — PDF 양식 풍부도 */}
-            <NoticeDocumentView contentJson={a?.contentJson} />
+            {/* CR-021: TipTap JSON 본문 — PDF 양식 풍부도.
+                CR-033: 자격요건 정밀추출은 본문 "자격 요건"(§6) 자리에 인라인 렌더(중복·하단분리 방지) */}
+            <NoticeDocumentView
+              contentJson={a?.contentJson}
+              eligibility={a?.requiredDocuments?.eligibility as EligibilityItem[] | undefined}
+            />
 
-            {/* 필요 서류 체크리스트 — 액션 데이터(고객 슬롯 매칭/제출 차단 기준)이므로 본문과 별도 표시 */}
-            {Array.isArray(a?.requiredDocuments?.documents) && a.requiredDocuments.documents.length > 0 && (
+            {/* 필요 서류 체크리스트 — 액션 데이터(고객 슬롯 매칭/제출 차단 기준)이므로 본문과 별도 표시.
+                CR-033: factors[](FACTOR>Subfactor 정밀추출) 있으면 트리로 전체 노출(충족주체 배지 포함), 없으면 평면 폴백 */}
+            {Array.isArray(a?.requiredDocuments?.factors) && (a.requiredDocuments.factors as unknown[]).length > 0 ? (
+              <section>
+                <h3 className="text-base font-bold text-slate-900 mb-3 pb-1.5 border-b-2 border-slate-800">
+                  필요 서류·제출물 (FACTOR 정밀추출)
+                </h3>
+                <div className="space-y-5">
+                  {(a.requiredDocuments.factors as Array<Record<string, unknown>>).map((f, fi) => (
+                    <div key={fi}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="px-2 py-0.5 rounded bg-slate-800 text-white text-[11px] font-semibold tracking-wide">
+                          FACTOR {String(f.factorId ?? '')}
+                        </span>
+                        <span className="text-sm font-semibold text-slate-700">{String(f.factorTitle ?? '')}</span>
+                      </div>
+                      <div className="space-y-2 pl-1">
+                        {(Array.isArray(f.subfactors) ? f.subfactors as Array<Record<string, unknown>> : []).map((s, si) => {
+                          const party = String(s.fulfillmentParty ?? '')
+                          const partyLabel =
+                            party === 'CLIENT_UPLOAD' ? { t: '고객 업로드', c: 'bg-emerald-50 text-emerald-600' }
+                            : party === 'PLATFORM_GENERATED' ? { t: '플랫폼 생성', c: 'bg-blue-50 text-blue-600' }
+                            : party === 'SYSTEM_FORM' ? { t: '시스템 양식', c: 'bg-purple-50 text-purple-600' }
+                            : null
+                          return (
+                            <div key={si} className="flex items-start gap-3 p-3 bg-white border border-slate-200 rounded-md">
+                              <i className={`fa-regular fa-square text-lg mt-0.5 ${s.mandatory ? 'text-red-400' : 'text-slate-300'}`} />
+                              <div className="flex-1 text-sm">
+                                <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                                  {s.subfactorId != null && <span className="text-[11px] text-slate-400 font-mono">{String(s.subfactorId)}</span>}
+                                  <span className="font-semibold text-slate-900">{String(s.name ?? '')}</span>
+                                  {s.mandatory ? (
+                                    <span className="px-1.5 py-0.5 bg-red-50 text-red-600 rounded text-[10px] font-semibold uppercase">필수</span>
+                                  ) : (
+                                    <span className="px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded text-[10px] font-semibold uppercase">선택</span>
+                                  )}
+                                  {partyLabel && (
+                                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${partyLabel.c}`}>{partyLabel.t}</span>
+                                  )}
+                                </div>
+                                {s.description != null && <p className="text-slate-600 mb-0.5">{String(s.description)}</p>}
+                                <div className="flex gap-3 text-xs text-slate-400">
+                                  {s.format != null && <span><i className="fa-solid fa-file mr-1" />{String(s.format)}</span>}
+                                  {s.pageLimit != null && <span><i className="fa-solid fa-ruler mr-1" />{String(s.pageLimit)}</span>}
+                                </div>
+                                {s.sourceRef != null && <p className="text-[11px] text-slate-400 mt-1"><i className="fa-solid fa-quote-left mr-1" />{String(s.sourceRef)}</p>}
+                                {s.notes != null && <p className="text-xs text-slate-400 mt-1 italic">{String(s.notes)}</p>}
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ) : Array.isArray(a?.requiredDocuments?.documents) && a.requiredDocuments.documents.length > 0 ? (
               <section>
                 <h3 className="text-base font-bold text-slate-900 mb-3 pb-1.5 border-b-2 border-slate-800">
                   필요 서류 체크리스트
@@ -191,7 +251,9 @@ export default function NoticeAdminDetailPage() {
                   ))}
                 </div>
               </section>
-            )}
+            ) : null}
+
+            {/* CR-033: 자격요건은 본문 §6 자리에 인라인 렌더됨(NoticeDocumentView eligibility prop). 하단 별도 섹션 제거. */}
           </div>
         )}
       </div>

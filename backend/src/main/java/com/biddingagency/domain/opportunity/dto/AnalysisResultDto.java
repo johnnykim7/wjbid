@@ -92,17 +92,44 @@ public record AnalysisResultDto(
     // ── Required Documents ───────────────────────────────
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    public record RequiredDocumentsDto(List<RequiredDocumentItem> documents) {
+    public record RequiredDocumentsDto(List<RequiredDocumentItem> documents, List<FactorDto> factors,
+                                       List<EligibilityDto> eligibility) {
         @SuppressWarnings("unchecked")
         public static RequiredDocumentsDto from(Map<String, Object> map) {
             if (map == null || map.isEmpty()) return null;
+            // 평면 documents[] (하위호환)
             Object raw = map.get("documents");
-            if (!(raw instanceof List<?> list)) return new RequiredDocumentsDto(Collections.emptyList());
-            List<RequiredDocumentItem> items = list.stream()
-                    .filter(e -> e instanceof Map)
-                    .map(e -> RequiredDocumentItem.from((Map<String, Object>) e))
-                    .toList();
-            return new RequiredDocumentsDto(items);
+            List<RequiredDocumentItem> items = (raw instanceof List<?> list)
+                    ? list.stream().filter(e -> e instanceof Map)
+                        .map(e -> RequiredDocumentItem.from((Map<String, Object>) e)).toList()
+                    : Collections.emptyList();
+            // CR-033: FACTOR>Subfactor 트리
+            Object rawF = map.get("factors");
+            List<FactorDto> factors = (rawF instanceof List<?> fl)
+                    ? fl.stream().filter(e -> e instanceof Map)
+                        .map(e -> FactorDto.from((Map<String, Object>) e)).toList()
+                    : null;
+            // CR-033: 자격요건
+            Object rawE = map.get("eligibility");
+            List<EligibilityDto> eligibility = (rawE instanceof List<?> el)
+                    ? el.stream().filter(e -> e instanceof Map)
+                        .map(e -> EligibilityDto.from((Map<String, Object>) e)).toList()
+                    : null;
+            return new RequiredDocumentsDto(items, factors, eligibility);
+        }
+    }
+
+    // CR-033: 자격요건 (서류와 같은 근거에서 추출. 자격=제출 증빙의 동전 양면)
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record EligibilityDto(
+            String title, String description, Boolean mandatory,
+            String evidenceBy, Boolean isGate, String sourceRef
+    ) {
+        public static EligibilityDto from(Map<String, Object> m) {
+            return new EligibilityDto(
+                    str(m, "title"), str(m, "description"), bool(m, "mandatory"),
+                    str(m, "evidenceBy"), bool(m, "isGate"), str(m, "sourceRef")
+            );
         }
     }
 
@@ -112,13 +139,37 @@ public record AnalysisResultDto(
             String format, String pageLimit, String notes
     ) {
         public static RequiredDocumentItem from(Map<String, Object> m) {
-            Boolean mandatory = null;
-            Object v = m.get("mandatory");
-            if (v instanceof Boolean b) mandatory = b;
-            else if (v != null) mandatory = Boolean.parseBoolean(v.toString());
             return new RequiredDocumentItem(
-                    str(m, "name"), str(m, "description"), mandatory,
+                    str(m, "name"), str(m, "description"), bool(m, "mandatory"),
                     str(m, "format"), str(m, "pageLimit"), str(m, "notes")
+            );
+        }
+    }
+
+    // CR-033: FACTOR>Subfactor 정밀추출
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record FactorDto(String factorId, String factorTitle, List<SubfactorDto> subfactors) {
+        @SuppressWarnings("unchecked")
+        public static FactorDto from(Map<String, Object> m) {
+            List<SubfactorDto> subs = null;
+            Object raw = m.get("subfactors");
+            if (raw instanceof List<?> list) {
+                subs = list.stream().filter(e -> e instanceof Map)
+                        .map(e -> SubfactorDto.from((Map<String, Object>) e)).toList();
+            }
+            return new FactorDto(str(m, "factorId"), str(m, "factorTitle"), subs);
+        }
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record SubfactorDto(
+            String subfactorId, String name, String description, String fulfillmentParty,
+            Boolean mandatory, String format, String pageLimit, String sourceRef, String notes
+    ) {
+        public static SubfactorDto from(Map<String, Object> m) {
+            return new SubfactorDto(
+                    str(m, "subfactorId"), str(m, "name"), str(m, "description"), str(m, "fulfillmentParty"),
+                    bool(m, "mandatory"), str(m, "format"), str(m, "pageLimit"), str(m, "sourceRef"), str(m, "notes")
             );
         }
     }
@@ -176,5 +227,13 @@ public record AnalysisResultDto(
         if (v == null) return null;
         String s = v.toString().trim();
         return s.isEmpty() ? null : s;
+    }
+
+    private static Boolean bool(Map<String, Object> map, String key) {
+        if (map == null) return null;
+        Object v = map.get(key);
+        if (v instanceof Boolean b) return b;
+        if (v == null) return null;
+        return Boolean.parseBoolean(v.toString());
     }
 }

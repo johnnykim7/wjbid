@@ -29,7 +29,7 @@
 | CR-018 | 2026-05-29 | 고객 대상 진행 알림 3종(생성완료/접수/합격) + 입찰 결과 상태(AWARDED/NOT_AWARDED) 신설 | BE (domain/bid BidRequestState·BidFSMService·BidRequest, domain/notification NotificationType·NotificationEventListener, controller/admin, 마이그레이션 V16) + FE (admin-console, customer-portal) | 중규모 | 설계 먼저 + 코드 |
 | CR-020 | 2026-05-30 | 대용량 제안서 섹션 루프 워크플로우 재설계 — 단일 LLM_CALL → plan_outline + FOREACH(섹션별 EVALUATOR_LOOP) + assemble. 50~백 페이지 안정 생성 + 품질 보강 | Aimbase 워크플로우 steps JSON 재작성 (엔진 무변경) + 소비앱 인터페이스 검토 (MCP/엔티티 무변경 전제) | 중규모 이상 | 설계 초안 (상세: CR-020_대용량_제안서_섹션루프_워크플로우_재설계.md) |
 | CR-021 | 2026-05-31 | 공고문 표시 풍부화 — TipTap JSON 본문(contentJson) 신설 + NOTICE_VIEW 양식 템플릿 + Aimbase 워크플로우에 양식 입력/contentJson 출력 추가. 첨부 PDF 수준 PDF 양식으로 admin/customer 양쪽 렌더 | BE (마이그레이션 V18/V19, domain/notice Notice·NoticeService·MCP·DTO, domain/document DocumentType·DocumentTemplate API 활성/수정/재활성, application.yml polling 200) + FE (admin-console NoticeDocumentView 신규·NoticeAdminDetailPage·DocumentTemplatePage, customer-portal NoticeDocumentView·BidDetailPage·types) + Aimbase 워크플로우 PUT(noticeViewTemplate 입력·contentJson 출력·timeout_ms 600000) + docs/templates/·docs/workflows/ 자산화 | 중규모 | 1차 완료 (실제 노티 한글화 → contentJson 7768자 생성 → admin 화면 렌더 검증, 2026-05-31). 설계 캐스케이드는 사용자 지시로 보류 (나중 일괄). |
-| CR-033 | 2026-06-02 | 공고 필수서류·자격요건 정밀추출 WF 분리 + Claude Code식 채팅 재생성 — ①요약 WF와 별도로 자격요건+필요서류를 묶은 정밀추출 WF 신설(Instructions to Offerors·PWS를 자율주행 파싱) ②슬롯 FACTOR>Subfactor 계층화 + 충족주체(AI생성/고객업로드/시스템양식) 분류, 고객 화면엔 고객업로드만 노출 ③관리자 검수=Aimbase Chat Widget 재사용, 현재 산출물+지시이력+첨부URL을 contextProvider로 주입해 자율주행이 부분 수정 | BE (domain/notice 추출/재생성 WF 분리·MCP 스키마, domain/compliance 슬롯 계층 모델, controller/admin 재생성 게이트, integration/llmplatform) + FE (admin-console 슬롯 검수 + aimbase-chat 위젯 + BFF 토큰 프록시, customer-portal 슬롯 고객업로드 필터) + Aimbase 워크플로우(정밀추출 신규) | 중규모 이상 | 설계 토론 완료 (2026-06-02), T1→T3 캐스케이드 진행, 구현 대기 |
+| CR-033 | 2026-06-02 | 공고 필수서류·자격요건 정밀추출 WF 분리 + Claude Code식 채팅 재생성 — ①요약 WF와 별도로 자격요건+필요서류를 묶은 정밀추출 WF 신설(Instructions to Offerors·PWS를 자율주행 파싱) ②슬롯 FACTOR>Subfactor 계층화 + 충족주체(AI생성/고객업로드/시스템양식) 분류, 고객 화면엔 고객업로드만 노출 ③관리자 검수=Aimbase Chat Widget 재사용, 현재 산출물+지시이력+첨부URL을 contextProvider로 주입해 자율주행이 부분 수정 | BE (domain/notice 추출/재생성 WF 분리·MCP 스키마, domain/compliance 슬롯 계층 모델, controller/admin 재생성 게이트, integration/llmplatform) + FE (admin-console 슬롯 검수 + aimbase-chat 위젯 + BFF 토큰 프록시, customer-portal 슬롯 고객업로드 필터) + Aimbase 워크플로우(정밀추출 신규) | 중규모 이상 | **1차 구현 완료 (2026-06-03)**: FACTOR>Subfactor+충족주체+자격요건 스키마(BE DTO·MCP), 고객/관리자 화면 렌더, opportunity-analysis WF에 추출 프롬프트+스키마 추가. 실측으로 설계 수정(아래 상세 §CR-033 참조) — 저장소=경로A(Notice.requiredDocumentsJson) 확장, 별도 WF 신설 대신 기존 한글화 WF에 추출 통합. **남음**: 실제 LLM 추출 정확도 E2E, 교정 채팅(BFF+위젯). 운영 배포 완료 |
 | CR-034 | 2026-06-03 | 원본 공고 첨부 섹션 개선 + PIEE 안내 링크 — ①본문 piee.eb.mil contains 감지 방식 폐기(V30 컬럼 V31로 DROP): PIEE 단서는 search 응답에 없고 본문 fetch 의존이라 신뢰도 낮음 ②PIEE 입찰서류 안내 링크를 첨부 유무·본문과 무관하게 첨부 섹션에서 solicitationNumber 기반으로 항상 노출(정본/추가본이 PIEE에 있을 수 있음) ③저장된 첨부(storageUrl 보유) 다운로드 ④수동 업로드분(sourceUrl='admin-upload')만 삭제, SAM 수집 첨부는 403 거부(원본 보존) | BE (entity/Opportunity piee_available 필드·감지 제거, dto/OpportunityAdminDto pieeAvailable/pieeUrl 제거, OpportunityAdminController download GET·delete DELETE 신규, 마이그레이션 V31 DROP) + FE (admin-console OpportunityAdminDetailPage 첨부 섹션 PIEE 블록·다운로드/삭제 버튼·api client) | 중규모 | 구현·BE 컴파일·FE 타입체크·운영 배포·V31 적용·엔드포인트 매핑(401) 검증 완료 (2026-06-03). PIEE URL 형식은 브라우저 실확인 대기 |
 | CR-035 | 2026-06-03 | 공고 본문(noticedesc) fetch 흐름 정비 — SAM 일일 쿼터 보호 + 깨진 본문 링크 해결. ①수집 시 자동번역은 제목(+type 라벨)만: noticedesc fetch를 수집 시점에 일괄 호출하지 않음(쿼터 절약). ②관리자 "한글 번역하기" 버튼이 그 공고 1건만 noticedesc fetch + 원문 본문 저장(applyDescriptionBody) + 번역 → 화면 본문 섹션이 깨진 noticedesc API 링크(api_key 없어 404) 대신 실제 본문 텍스트 표시 | BE (OpportunityTranslationService translateAsync 제목만·translateDescriptionOf 본문저장 추가) | 소규모 | 구현·컴파일·운영 배포 완료 (2026-06-03) |
 | CR-036 | 2026-06-03 | SAM API 호출 계측 & 쿼터 로깅 — 일일 한도가 추측(서드파티 블로그 "1,000")만 있고 공식 미확인이라 실측 체계 구축. ①신규 sam_api_call_log(V32): 일자(UTC)·엔드포인트별 success/error 카운트 + SAM X-RateLimit-* 헤더(실제 한도/잔량) + 에러 응답 본문 전문 UPSERT. ②SamQuotaLogger: 매 호출 [SAM-QUOTA] 로그 + DB 적재(REQUIRES_NEW). ③호출처 3곳 전부 계측: search/noticedesc/attachment(모두 api.sam.gov+api_key) | BE (integration/samgov/quota SamApiCallLog·Repository(native UPSERT)·SamQuotaLogger 신규, SAMGovApiClient search·noticedesc 계측, AttachmentAutoDownloadService 계측, 마이그레이션 V32) | 중규모 | 구현·컴파일·운영 배포·V32 적용·테이블 생성 검증 완료 (2026-06-03). 실제 X-RateLimit 한도는 다음 SAM 호출 시 sam_api_call_log에서 실측 예정 |
@@ -501,3 +501,33 @@
   - 운영 배포 후 E2E: noticeId `9a697650-...` 한글화 재실행 → contentJson 7768자 생성 → admin 상세 PDF 양식 렌더 확인 (10섹션 모두 사람 글로 표시, 필요서류 체크리스트 카드)
   - 발견된 별 버그(메모리 등록): `NoticeService.markFailed` self-call 누락(워크플로우 폴링 타임아웃 시 상태 잔존), customer-portal 화면 검증은 publish 단계에서 본 흐름 E2E와 함께 진행 예정.
 - **상태**: 1차 완료. 본 흐름 후속(publish→customer→제안서 생성)은 별 세션.
+
+---
+
+### CR-033: 공고 필수서류·자격요건 정밀추출 (FACTOR>Subfactor + 충족주체 + 자격요건) (2026-06-03)
+
+- **배경**: 고객 제출서류 슬롯의 신뢰성 문제. `rfp/공고문/` 9개 정답지 교차검증 결과 요구 제출물·자격은 예외 없이 Instructions to Offerors(52.212-1 Addendum)에 있고 SAM description엔 없음. 정부조달 골격 = FACTOR I(Technical, Subfactor 세분)/II(Price)/행정서류.
+- **착수 전 실측으로 설계 수정 (메모리 cr033 + 본 세션)**:
+  1. 요구사항 추출 경로 2개 확인 — A: `save_opportunity_analysis`→`Notice.requiredDocumentsJson`(고객 화면이 읽는 유일 소스) / B: `requirement-extraction` WF→`OpportunityRequirementItem`(BLOCKER 검증용). **DB 실측 `opportunity_requirement_items` 0건 → 경로 B 사문**. → 저장소=경로 A 확장으로 확정(별도 WF·엔티티 신설 안 함).
+  2. FACTOR/Subfactor 용어 출처 실측 — 제안서 전용 용어가 아니라 **Solicitation 원문 Instructions에 그대로 존재**(`W90VN926QA034`: `4.1 FACTOR I-TECHNICAL`/`Sub-Factor 1~4`/`4.2 FACTOR II-PRICE`). 제출물=평가축 이중 성격.
+  3. 충족주체 분류 난이도 발견 — Sub-Factor 3(트럭 소유·인력 보유)은 **고객 실물 증빙(CLIENT_UPLOAD)**이지 플랫폼 생성 아님. WF 프롬프트에 명시 경고 추가.
+- **변경 사항**:
+  1. `mcp/tool/OpportunityAnalysisMcpTool` — save 스키마 `requiredDocuments`에 `factors[]`(factorId/factorTitle/subfactors[{subfactorId,name,description,fulfillmentParty(CLIENT_UPLOAD/PLATFORM_GENERATED/SYSTEM_FORM),mandatory,format,pageLimit,sourceRef,notes}]) + `eligibility[]`(title/description/mandatory/evidenceBy/isGate/sourceRef) 추가. `documents[]` 평면은 하위호환 유지. 저장 경로(String free-form)는 무변경.
+  2. `domain/opportunity/dto/AnalysisResultDto` — `RequiredDocumentsDto`에 `factors`/`eligibility` 매핑 + `FactorDto`/`SubfactorDto`/`EligibilityDto` record 신설. (기존엔 `documents`만 매핑해 factors를 떨궈내던 것 — 응답 경로 버그성 누락 보정). `bool()` 헬퍼 추가.
+  3. FE customer `pages/ProposalDetailPage` — Factor/Subfactor/Eligibility 타입, FACTOR 트리 렌더(CLIENT_UPLOAD만 업로드 슬롯·나머지 읽기전용 배지), 충족현황 CLIENT_UPLOAD 기준 재계산, 자격요건 안내(서류 아래), factors 없으면 평면 폴백.
+  4. FE admin `components/NoticeDocumentView` — `eligibility` prop 추가, 본문 "자격 요건"(§6) heading 직후에 정밀추출 자격요건 인라인 렌더(중복·하단분리 방지). `EligibilityBlock` 컴포넌트.
+  5. FE admin `pages/NoticeAdminDetailPage` — FACTOR 트리 섹션(충족주체 배지+sourceRef) + NoticeDocumentView에 eligibility 전달. 하단 별도 자격요건 섹션 제거.
+  6. Aimbase `opportunity-analysis` WF (PUT) — `analyze_freeform.prompt`에 FACTOR>Subfactor 구조·충족주체 판단(트럭/인력/실적=CLIENT_UPLOAD 경고)·자격요건 추출 지침 추가. `structure_output.prompt`에 factors/eligibility 변환 규칙. `structure_output.response_schema.requiredDocuments`에 factors/eligibility 스키마(fulfillmentParty enum). save.input은 requiredDocuments 통째 매핑이라 무변경.
+- **화면 표현 결정(사용자)**: 관리자·고객 둘 다 FACTOR 트리 노출 + 충족주체 필터(고객은 CLIENT_UPLOAD만 업로드). 자격요건은 관리자=본문 §6 인라인, 고객=서류 아래 안내.
+- **영향 범위**: BE (mcp/tool, dto) + FE (admin-console 2파일, customer-portal 1파일) + Aimbase 워크플로우 `opportunity-analysis` PUT.
+- **규모**: 중규모(MCP 스키마 + 응답 DTO + 다중 화면 + Aimbase WF). DB 마이그레이션 없음(required_documents_json = longtext free-form).
+- **검증**:
+  - BE compileJava BUILD SUCCESSFUL, FE admin/customer tsc + prod build 통과.
+  - 운영 배포(BE+FE) 완료. WF PUT 200 반영 실측(factors/eligibility 스키마·프롬프트 확인).
+  - 운영 API 응답에 factors/eligibility 정확히 실림 실측(테스트 데이터 주입→GET 확인→원복).
+  - 관리자 화면 FACTOR 트리·자격요건 인라인 렌더 사용자 육안 확인.
+- **남은 작업**:
+  - 실제 LLM 추출 정확도 E2E (정답지 W90VN926QA034 한글화 재생성 → 충족주체 분류 정확도 검증). 미수행.
+  - 교정 채팅 (Aimbase Chat Widget BFF 토큰 프록시 + contextProvider(noticeId+현 산출물) + 교정 WF 또는 기존 WF 교정모드). 미착수 — fulfillmentParty 오분류를 자연어로 교정하는 본류 기능.
+- **PUT 함정(메모리화)**: Aimbase WF PUT 시 GET 응답 통째(createdAt/updatedAt/createdBy 등 포함)면 400. 허용 필드(id/name/triggerConfig/steps/domain/inputSchema/outputSchema/errorHandling/graphMode)만 남겨야 200.
+- **상태**: 1차 구현·운영 배포 완료. E2E 추출 정확도 + 교정 채팅은 다음 세션.

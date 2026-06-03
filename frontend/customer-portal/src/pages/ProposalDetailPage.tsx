@@ -45,6 +45,33 @@ interface RequiredDoc {
   notes?: string
 }
 
+// CR-033: FACTOR>Subfactor 정밀추출 트리
+type FulfillmentParty = 'CLIENT_UPLOAD' | 'PLATFORM_GENERATED' | 'SYSTEM_FORM'
+interface Subfactor {
+  subfactorId?: string
+  name: string
+  description?: string
+  fulfillmentParty?: FulfillmentParty
+  mandatory?: boolean
+  format?: string
+  pageLimit?: string
+  sourceRef?: string
+  notes?: string
+}
+interface Factor {
+  factorId?: string
+  factorTitle?: string
+  subfactors?: Subfactor[]
+}
+interface Eligibility {
+  title: string
+  description?: string
+  mandatory?: boolean
+  evidenceBy?: string
+  isGate?: boolean
+  sourceRef?: string
+}
+
 interface ClientDocument {
   id: string
   fileName: string
@@ -78,6 +105,8 @@ export default function ProposalDetailPage() {
   const [documents, setDocuments] = useState<BidDocSummary[]>([])
   const [history, setHistory] = useState<StateTransition[]>([])
   const [requiredDocs, setRequiredDocs] = useState<RequiredDoc[]>([])
+  const [factors, setFactors] = useState<Factor[]>([])
+  const [eligibility, setEligibility] = useState<Eligibility[]>([])
   const [clientDocs, setClientDocs] = useState<ClientDocument[]>([])
   const [loading, setLoading] = useState(true)
   const [searchParams] = useSearchParams()
@@ -118,9 +147,11 @@ export default function ProposalDetailPage() {
       if (histRes.status === 'fulfilled') setHistory((histRes.value as { data: StateTransition[] }).data ?? [])
       if (clientRes.status === 'fulfilled') setClientDocs((clientRes.value as { data: ClientDocument[] }).data ?? [])
       if (oppRes && oppRes.status === 'fulfilled') {
-        const data = (oppRes.value as { data: { analysis?: { requiredDocuments?: { documents?: RequiredDoc[] } } } }).data
-        const docs = data?.analysis?.requiredDocuments?.documents ?? []
-        setRequiredDocs(docs)
+        const data = (oppRes.value as { data: { analysis?: { requiredDocuments?: { documents?: RequiredDoc[]; factors?: Factor[]; eligibility?: Eligibility[] } } } }).data
+        const rd = data?.analysis?.requiredDocuments
+        setRequiredDocs(rd?.documents ?? [])
+        setFactors(rd?.factors ?? [])
+        setEligibility(rd?.eligibility ?? [])
       }
     } catch {
       setProposal(null)
@@ -161,7 +192,119 @@ export default function ProposalDetailPage() {
     } catch { /* ignore */ }
   }
 
-  const mandatoryDocs = requiredDocs.filter((d) => d.mandatory)
+  // CR-033: 고객 업로드 슬롯 카드 (FACTOR 트리·평면 양쪽에서 재사용)
+  const renderSlotCard = (doc: RequiredDoc) => {
+    const uploaded = docByCategory(doc.name)
+    const isUploading = uploadingDoc === doc.name
+    return (
+      <div
+        key={doc.name}
+        className={`bg-white border rounded-xl p-4 ${uploaded ? 'border-green-200' : 'border-gray-200'}`}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <i className={`fa-solid ${uploaded ? 'fa-circle-check text-green-500' : 'fa-circle-exclamation text-amber-400'}`} />
+              <p className="text-sm font-semibold text-gray-800">{doc.name}</p>
+              {doc.mandatory ? (
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-50 text-red-500">필수</span>
+              ) : (
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-500">선택</span>
+              )}
+            </div>
+            {doc.description && <p className="text-xs text-gray-500 mt-1 ml-6">{doc.description}</p>}
+            <div className="flex gap-3 mt-1 ml-6 text-xs text-gray-400">
+              {doc.format && <span><i className="fa-solid fa-file mr-1" />{doc.format}</span>}
+              {doc.pageLimit && <span><i className="fa-solid fa-ruler mr-1" />{doc.pageLimit}</span>}
+            </div>
+            {uploaded && (
+              <div className="flex items-center gap-2 mt-2 ml-6 text-xs text-gray-700">
+                <i className="fa-solid fa-paperclip text-gray-400" />
+                <span className="truncate">{uploaded.fileName}</span>
+                <span className="text-gray-400 flex-shrink-0">({(uploaded.fileSize / 1024).toFixed(1)} KB)</span>
+              </div>
+            )}
+          </div>
+          <div className="flex-shrink-0 flex items-center gap-1">
+            {uploaded && (
+              <button
+                onClick={() => handleRemove(uploaded.id)}
+                disabled={isUploading}
+                className="text-xs text-gray-400 hover:text-red-500 px-1.5 py-1"
+                title="삭제"
+              >
+                <i className="fa-solid fa-xmark" />
+              </button>
+            )}
+            <label className={`inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition ${
+              isUploading
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : uploaded
+                  ? 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                  : 'bg-secondary text-white hover:opacity-90'
+            }`}>
+              {isUploading ? (
+                <><i className="fa-solid fa-spinner fa-spin mr-1.5" /> 업로드 중</>
+              ) : uploaded ? (
+                <><i className="fa-solid fa-rotate-left mr-1.5" /> 변경</>
+              ) : (
+                <><i className="fa-solid fa-arrow-up-from-bracket mr-1.5" /> 파일 선택</>
+              )}
+              <input
+                type="file"
+                className="hidden"
+                disabled={isUploading}
+                onChange={(e) => handleUpload(doc.name, e)}
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.zip,.jpg,.png"
+              />
+            </label>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // CR-033: 플랫폼생성/시스템양식 subfactor — 읽기전용 (고객이 올리지 않음)
+  const partyBadge = (party?: FulfillmentParty) => {
+    if (party === 'PLATFORM_GENERATED')
+      return <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-600">플랫폼 생성</span>
+    if (party === 'SYSTEM_FORM')
+      return <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-50 text-purple-600">시스템 양식</span>
+    return null
+  }
+  const renderReadonlySub = (s: Subfactor) => (
+    <div key={s.subfactorId ?? s.name} className="bg-gray-50 border border-gray-200 rounded-xl p-4 opacity-90">
+      <div className="flex items-center gap-2 flex-wrap">
+        <i className="fa-solid fa-robot text-gray-400" />
+        <p className="text-sm font-medium text-gray-700">{s.name}</p>
+        {partyBadge(s.fulfillmentParty)}
+      </div>
+      {s.description && <p className="text-xs text-gray-500 mt-1 ml-6">{s.description}</p>}
+      <p className="text-[11px] text-gray-400 mt-1 ml-6">
+        <i className="fa-solid fa-circle-info mr-1" />업로드 불필요 — 플랫폼이 자동 처리합니다
+      </p>
+    </div>
+  )
+
+  // CR-033: FACTOR 트리가 있으면 우선 사용. 고객이 업로드할 슬롯 = CLIENT_UPLOAD subfactor만.
+  const hasFactors = factors.length > 0
+  const clientSlots: RequiredDoc[] = hasFactors
+    ? factors.flatMap((f) =>
+        (f.subfactors ?? [])
+          .filter((s) => s.fulfillmentParty === 'CLIENT_UPLOAD')
+          .map((s) => ({
+            name: s.name,
+            description: s.description,
+            mandatory: s.mandatory,
+            format: s.format,
+            pageLimit: s.pageLimit,
+            notes: s.notes,
+          }))
+      )
+    : requiredDocs
+
+  // 충족현황은 항상 "고객이 올려야 하는" 슬롯 기준 (CLIENT_UPLOAD / 평면)
+  const mandatoryDocs = clientSlots.filter((d) => d.mandatory)
   const fulfilledMandatory = mandatoryDocs.filter((d) => docByCategory(d.name)).length
   const canSubmitDocs = mandatoryDocs.length === 0 || fulfilledMandatory === mandatoryDocs.length
 
@@ -220,7 +363,7 @@ export default function ProposalDetailPage() {
       {/* Tabs */}
       <div className="bg-white border-b border-gray-200 px-6 flex gap-1">
         {([
-          { key: 'uploads', label: '제출 서류', icon: 'fa-solid fa-cloud-arrow-up', count: requiredDocs.length },
+          { key: 'uploads', label: '제출 서류', icon: 'fa-solid fa-cloud-arrow-up', count: clientSlots.length },
           { key: 'documents', label: '생성 문서', icon: 'fa-solid fa-file-lines', count: documents.length },
           { key: 'history', label: '진행 이력', icon: 'fa-solid fa-clock-rotate-left', count: history.length },
         ] as const).map(tab => (
@@ -319,7 +462,7 @@ export default function ProposalDetailPage() {
                 </div>
               </div>
             )}
-            {requiredDocs.length === 0 ? (
+            {clientSlots.length === 0 && !hasFactors ? (
               <div className="text-center py-12 text-gray-400">
                 <i className="fa-solid fa-folder-open text-4xl mb-3" />
                 <p className="text-sm">이 공고에는 명시된 필요 서류가 없습니다.</p>
@@ -327,7 +470,7 @@ export default function ProposalDetailPage() {
               </div>
             ) : (
               <>
-                {/* 충족 요약 */}
+                {/* 충족 요약 — 고객이 업로드할 슬롯 기준 */}
                 <div className="bg-white border border-gray-200 rounded-xl p-4 flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-800">필수 서류 충족 현황</p>
@@ -347,87 +490,69 @@ export default function ProposalDetailPage() {
                   </div>
                 </div>
 
-                {/* 서류 목록 */}
-                <div className="space-y-3">
-                  {requiredDocs.map((doc) => {
-                    const uploaded = docByCategory(doc.name)
-                    const isUploading = uploadingDoc === doc.name
-                    return (
-                      <div
-                        key={doc.name}
-                        className={`bg-white border rounded-xl p-4 ${
-                          uploaded ? 'border-green-200' : 'border-gray-200'
-                        }`}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <i className={`fa-solid ${
-                                uploaded ? 'fa-circle-check text-green-500' : 'fa-circle-exclamation text-amber-400'
-                              }`} />
-                              <p className="text-sm font-semibold text-gray-800">{doc.name}</p>
-                              {doc.mandatory ? (
-                                <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-50 text-red-500">필수</span>
-                              ) : (
-                                <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-500">선택</span>
-                              )}
-                            </div>
-                            {doc.description && (
-                              <p className="text-xs text-gray-500 mt-1 ml-6">{doc.description}</p>
-                            )}
-                            <div className="flex gap-3 mt-1 ml-6 text-xs text-gray-400">
-                              {doc.format && <span><i className="fa-solid fa-file mr-1" />{doc.format}</span>}
-                              {doc.pageLimit && <span><i className="fa-solid fa-ruler mr-1" />{doc.pageLimit}</span>}
-                            </div>
-                            {uploaded && (
-                              <div className="flex items-center gap-2 mt-2 ml-6 text-xs text-gray-700">
-                                <i className="fa-solid fa-paperclip text-gray-400" />
-                                <span className="truncate">{uploaded.fileName}</span>
-                                <span className="text-gray-400 flex-shrink-0">
-                                  ({(uploaded.fileSize / 1024).toFixed(1)} KB)
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex-shrink-0 flex items-center gap-1">
-                            {uploaded && (
-                              <button
-                                onClick={() => handleRemove(uploaded.id)}
-                                disabled={isUploading}
-                                className="text-xs text-gray-400 hover:text-red-500 px-1.5 py-1"
-                                title="삭제"
-                              >
-                                <i className="fa-solid fa-xmark" />
-                              </button>
-                            )}
-                            <label className={`inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition ${
-                              isUploading
-                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                : uploaded
-                                  ? 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
-                                  : 'bg-secondary text-white hover:opacity-90'
-                            }`}>
-                              {isUploading ? (
-                                <><i className="fa-solid fa-spinner fa-spin mr-1.5" /> 업로드 중</>
-                              ) : uploaded ? (
-                                <><i className="fa-solid fa-rotate-left mr-1.5" /> 변경</>
-                              ) : (
-                                <><i className="fa-solid fa-arrow-up-from-bracket mr-1.5" /> 파일 선택</>
-                              )}
-                              <input
-                                type="file"
-                                className="hidden"
-                                disabled={isUploading}
-                                onChange={(e) => handleUpload(doc.name, e)}
-                                accept=".pdf,.doc,.docx,.xls,.xlsx,.zip,.jpg,.png"
-                              />
-                            </label>
-                          </div>
+                {/* CR-033: FACTOR 트리 (있으면) — FACTOR 헤더 > subfactor. CLIENT_UPLOAD만 업로드, 나머지 읽기전용 */}
+                {hasFactors ? (
+                  <div className="space-y-5">
+                    {factors.map((f) => (
+                      <div key={f.factorId ?? f.factorTitle}>
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="px-2 py-0.5 rounded bg-gray-800 text-white text-[11px] font-semibold tracking-wide">
+                            FACTOR {f.factorId}
+                          </span>
+                          <span className="text-sm font-semibold text-gray-700">{f.factorTitle}</span>
+                        </div>
+                        <div className="space-y-3 pl-1">
+                          {(f.subfactors ?? []).map((s) =>
+                            s.fulfillmentParty === 'CLIENT_UPLOAD'
+                              ? renderSlotCard({
+                                  name: s.name,
+                                  description: s.description,
+                                  mandatory: s.mandatory,
+                                  format: s.format,
+                                  pageLimit: s.pageLimit,
+                                  notes: s.notes,
+                                })
+                              : renderReadonlySub(s)
+                          )}
                         </div>
                       </div>
-                    )
-                  })}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  /* 평면 폴백 (factors 없는 기존 공고) */
+                  <div className="space-y-3">
+                    {clientSlots.map((doc) => renderSlotCard(doc))}
+                  </div>
+                )}
+
+                {/* CR-033: 참여 자격요건 — 제출 전 충족해야 할 자격 (읽기 안내) */}
+                {eligibility.length > 0 && (
+                  <div className="bg-amber-50/60 border border-amber-200 rounded-xl p-4">
+                    <p className="text-sm font-semibold text-amber-800 mb-2">
+                      <i className="fa-solid fa-shield-halved mr-1.5" />참여 자격요건
+                    </p>
+                    <p className="text-xs text-amber-700 mb-3">아래 자격을 충족해야 입찰에 참여할 수 있습니다. 자격 증빙은 위 제출 서류로 갈음됩니다.</p>
+                    <div className="space-y-2">
+                      {eligibility.map((e, i) => (
+                        <div key={i} className="flex items-start gap-2 text-sm">
+                          <i className={`fa-solid ${e.isGate ? 'fa-triangle-exclamation text-amber-500' : 'fa-circle-check text-amber-400'} mt-0.5`} />
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-medium text-gray-800">{e.title}</span>
+                              {e.isGate && (
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-700">미충족 시 부적격</span>
+                              )}
+                            </div>
+                            {e.description && <p className="text-xs text-gray-600 mt-0.5">{e.description}</p>}
+                            {e.evidenceBy && (
+                              <p className="text-[11px] text-emerald-600 mt-0.5"><i className="fa-solid fa-link mr-1" />증빙: {e.evidenceBy}</p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* 분류 외 추가 첨부(category 미지정) — 있으면 표시 */}
                 {clientDocs.filter((c) => !c.documentCategory).length > 0 && (

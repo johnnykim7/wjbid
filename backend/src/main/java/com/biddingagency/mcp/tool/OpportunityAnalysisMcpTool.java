@@ -75,9 +75,20 @@ public class OpportunityAnalysisMcpTool {
                     ),
                     "requiredDocuments", Map.ofEntries(
                         Map.entry("type", "object"),
-                        Map.entry("description", "필요 서류 목록"),
+                        Map.entry("description", "필요 서류·제출물 (CR-033: FACTOR>Subfactor 정밀추출). Instructions to Offerors(52.212-1 Addendum)·PWS를 읽어 추출"),
                         Map.entry("properties", Map.of(
-                            "documents", Map.of("type", "array", "description", "서류 목록 [{name, description, mandatory, format, pageLimit, notes}]")
+                            // CR-033: FACTOR>Subfactor 계층. Solicitation 원문의 평가축이자 제출물 골격.
+                            "factors", Map.of("type", "array", "description",
+                                "평가·제출 FACTOR 트리 [{factorId(예 'I'), factorTitle(예 'TECHNICAL'), subfactors:[{subfactorId(예 'I-1'), name, description, " +
+                                "fulfillmentParty('CLIENT_UPLOAD'=고객업로드(사업자등록·업종허가·과거실적)/'PLATFORM_GENERATED'=플랫폼생성(기술·가격제안서)/'SYSTEM_FORM'=시스템양식(SF1449·SF30·52.212-3)), " +
+                                "mandatory(boolean), format, pageLimit, sourceRef(근거 위치 예 'Addendum to 52.212-1 §4.1 Sub-Factor 1'), notes}]}]"),
+                            // 하위호환: 기존 평면 슬롯. factors[]와 함께 채워 무중단 전환(CLIENT_UPLOAD subfactor를 평면화).
+                            "documents", Map.of("type", "array", "description", "[하위호환] 평면 서류 목록 [{name, description, mandatory, format, pageLimit, notes}] — fulfillmentParty=CLIENT_UPLOAD 항목만 채움"),
+                            // CR-033: 자격요건(서류와 같은 근거 Instructions/PWS에서 추출). 자격=제출 증빙의 동전 양면.
+                            "eligibility", Map.of("type", "array", "description",
+                                "참여 자격요건 [{title, description, mandatory(boolean), " +
+                                "evidenceBy(이 자격을 증빙하는 서류 슬롯 name — factors의 subfactor.name과 연결, 없으면 null), " +
+                                "isGate(boolean — 미충족 시 평가 제외/입찰 부적격), sourceRef(근거 위치)}]")
                         ))
                     ),
                     "llmPromptPreset", Map.of("type", "object", "description", "LLM 프롬프트 프리셋 (내부용)"),
