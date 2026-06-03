@@ -36,12 +36,22 @@ public class OpportunityTranslationService {
     private final SAMGovApiClient samGovApiClient;
 
     /**
-     * 비동기 본문 번역 — 수집 NEW 행에 대해 호출.
-     * 별도 스레드에서 실행하므로 수집 흐름을 막지 않음.
+     * 비동기 자동 번역 — 수집 NEW 행에 대해 호출. 별도 스레드라 수집 흐름을 막지 않음.
+     * CR-035: 제목(+type 라벨)만 번역한다. 본문(noticedesc) fetch는 SAM 쿼터를 추가로 소진하므로
+     * 수집 시점에 일괄 호출하지 않고, 관리자가 상세에서 "한글 번역하기" 누를 때 그 1건만 fetch한다.
      */
     @Async("llmTaskExecutor")
     public void translateAsync(UUID opportunityId) {
-        translate(opportunityId);
+        Opportunity opp = opportunityRepository.findById(opportunityId).orElse(null);
+        if (opp == null) {
+            log.warn("[CR-022] 자동번역: 공고 없음 id={}", opportunityId);
+            return;
+        }
+        // type 한글 라벨은 코드 매핑(LLM 불필요) — 비어있으면 채움
+        if (opp.getTypeKo() == null || opp.getTypeKo().isBlank()) {
+            opp.applyTypeKo(NoticeTypeTranslator.toKorean(opp.getType()));
+        }
+        translateTitleOf(opp);
     }
 
     /**
@@ -110,13 +120,16 @@ public class OpportunityTranslationService {
         }
     }
 
-    /** 본문 번역 — noticedesc fetch + LLM. 빈 본문이면 skip. */
+    /** 본문 번역 — noticedesc fetch + 원문 본문 저장 + LLM 번역. 빈 본문이면 skip. */
     private boolean translateDescriptionOf(Opportunity opp) {
         String body = resolveDescription(opp);
         if (body == null || body.isBlank()) {
             log.info("[CR-022] 본문 없음 — 번역 skip noticeId={}", opp.getNoticeId());
             return false;
         }
+        // CR-035: fetch한 원문 본문을 먼저 저장(관리자 상세 본문 노출용 — 깨진 noticedesc API 링크 대체).
+        // LLM 번역 성패와 무관하게 본문은 남긴다.
+        opp.applyDescriptionBody(body);
         try {
             String translated = llmPlatformClient.translateOpportunityDescription(opp.getTitle(), body);
             if (translated == null || translated.isBlank()) return false;

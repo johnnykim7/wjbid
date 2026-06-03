@@ -2,6 +2,7 @@ package com.biddingagency.domain.opportunity.service;
 
 import com.biddingagency.domain.opportunity.entity.OpportunityAttachment;
 import com.biddingagency.domain.opportunity.repository.OpportunityAttachmentRepository;
+import com.biddingagency.integration.samgov.quota.SamQuotaLogger;
 import com.biddingagency.integration.storage.StorageService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hc.client5.http.classic.methods.HttpGet;
@@ -47,14 +48,17 @@ public class AttachmentAutoDownloadService {
     private final StorageService storageService;
     private final String samApiKey;
     private final CloseableHttpClient httpClient;
+    private final com.biddingagency.integration.samgov.quota.SamQuotaLogger quotaLogger;
 
     public AttachmentAutoDownloadService(
             OpportunityAttachmentRepository attachmentRepository,
             StorageService storageService,
-            @Value("${app.sam-gov.api-key}") String samApiKey) {
+            @Value("${app.sam-gov.api-key}") String samApiKey,
+            com.biddingagency.integration.samgov.quota.SamQuotaLogger quotaLogger) {
         this.attachmentRepository = attachmentRepository;
         this.storageService = storageService;
         this.samApiKey = samApiKey;
+        this.quotaLogger = quotaLogger;
         RequestConfig requestConfig = RequestConfig.custom()
                 .setConnectionRequestTimeout(Timeout.ofSeconds(5))   // connect
                 .setResponseTimeout(Timeout.ofSeconds(60))           // read
@@ -107,6 +111,10 @@ public class AttachmentAutoDownloadService {
 
             return httpClient.execute(request, response -> {
                 int status = response.getCode();
+                org.apache.hc.core5.http.Header[] respHeaders = response.getHeaders();
+                // CR-036: 첨부 다운로드도 api.sam.gov에 api_key로 호출 — SAM 쿼터 계측
+                quotaLogger.record(SamQuotaLogger.EP_ATTACHMENT, status, respHeaders,
+                        status >= 200 && status < 300, null);
                 if (status >= 200 && status < 300) {
                     byte[] body = EntityUtils.toByteArray(response.getEntity());
                     if (body == null || body.length == 0) {

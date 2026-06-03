@@ -2,6 +2,7 @@ package com.biddingagency.integration.samgov.client;
 
 import com.biddingagency.common.EvidenceLogger;
 import com.biddingagency.integration.samgov.dto.SAMOpportunityResponse;
+import com.biddingagency.integration.samgov.quota.SamQuotaLogger;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hc.client5.http.classic.methods.HttpGet;
@@ -36,12 +37,15 @@ public class SAMGovApiClient {
     private final String apiKey;
     private final ObjectMapper objectMapper;
     private final CloseableHttpClient httpClient;
+    private final SamQuotaLogger quotaLogger;
 
     public SAMGovApiClient(
             @Value("${app.sam-gov.api-key}") String apiKey,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper,
+            SamQuotaLogger quotaLogger) {
         this.apiKey = apiKey;
         this.objectMapper = objectMapper;
+        this.quotaLogger = quotaLogger;
         RequestConfig requestConfig = RequestConfig.custom()
                 .setConnectionRequestTimeout(Timeout.ofSeconds(30))
                 .setResponseTimeout(Timeout.ofSeconds(120))
@@ -69,6 +73,7 @@ public class SAMGovApiClient {
 
             return httpClient.execute(request, response -> {
                 int statusCode = response.getCode();
+                org.apache.hc.core5.http.Header[] headers = response.getHeaders();
                 String responseBody = EntityUtils.toString(response.getEntity());
 
                 if (statusCode == 200) {
@@ -76,21 +81,26 @@ public class SAMGovApiClient {
                     // SAM.gov sometimes returns 200 with a quota-exceeded JSON body
                     if (result.getOpportunitiesData() == null && responseBody.contains("throttled")) {
                         log.warn("SAM.gov quota exceeded (200 throttled): {}", responseBody);
+                        // CR-036: throttle은 200이어도 쿼터 소진 — 에러로 계측(응답 본문에 한도 단서)
+                        quotaLogger.record(SamQuotaLogger.EP_SEARCH, 200, headers, false, responseBody);
                         EvidenceLogger.logFailure("sam-gov", "GET /opportunities/v2/search", reqId,
                                 reqSummary, Map.of("statusCode", 200, "throttled", true), "THROTTLED");
                         throw new RuntimeException("SAM.gov API quota exceeded (throttled)");
                     }
                     int count = result.getOpportunitiesData() != null ? result.getOpportunitiesData().size() : 0;
+                    quotaLogger.record(SamQuotaLogger.EP_SEARCH, 200, headers, true, null);
                     EvidenceLogger.logSuccess("sam-gov", "GET /opportunities/v2/search", reqId,
                             reqSummary, Map.of("statusCode", 200, "resultCount", count));
                     return result;
                 } else if (statusCode == 429) {
                     log.warn("SAM.gov API rate limited (429). Body: {}", responseBody);
+                    quotaLogger.record(SamQuotaLogger.EP_SEARCH, 429, headers, false, responseBody);
                     EvidenceLogger.logFailure("sam-gov", "GET /opportunities/v2/search", reqId,
                             reqSummary, Map.of("statusCode", 429), "RATE_LIMITED");
                     throw new RuntimeException("SAM.gov API quota exceeded (429)");
                 } else {
                     log.error("SAM.gov API error. Status: {}, Body: {}", statusCode, responseBody);
+                    quotaLogger.record(SamQuotaLogger.EP_SEARCH, statusCode, headers, false, responseBody);
                     EvidenceLogger.logFailure("sam-gov", "GET /opportunities/v2/search", reqId,
                             reqSummary, Map.of("statusCode", statusCode), String.valueOf(statusCode));
                     throw new RuntimeException("SAM.gov API returned status: " + statusCode);
@@ -117,11 +127,18 @@ public class SAMGovApiClient {
             HttpGet request = new HttpGet(url);
             request.addHeader("Accept", "application/json");
             return httpClient.execute(request, response -> {
-                if (response.getCode() != 200) {
-                    log.warn("[CR-022-2] noticedesc {}: {}", response.getCode(), noticeDescUrl);
+                int statusCode = response.getCode();
+                org.apache.hc.core5.http.Header[] headers = response.getHeaders();
+                String body = EntityUtils.toString(response.getEntity());
+                if (statusCode != 200) {
+                    log.warn("[CR-022-2] noticedesc {}: {}", statusCode, noticeDescUrl);
+                    // CR-036: noticedesc도 SAM 쿼터를 쓴다 — non-200(throttle/429 포함) 계측
+                    quotaLogger.record(SamQuotaLogger.EP_NOTICEDESC, statusCode, headers, false, body);
                     return null;
                 }
-                String body = EntityUtils.toString(response.getEntity());
+                // CR-036: throttle은 200 + throttled 본문으로도 올 수 있음
+                boolean throttled = body != null && body.contains("throttled");
+                quotaLogger.record(SamQuotaLogger.EP_NOTICEDESC, 200, headers, !throttled, throttled ? body : null);
                 @SuppressWarnings("unchecked")
                 Map<String, Object> json = objectMapper.readValue(body, Map.class);
                 Object desc = json.get("description");
