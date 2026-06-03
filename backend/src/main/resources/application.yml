@@ -174,6 +174,10 @@ app:
     connect-timeout: 5000     # 5 seconds
     read-timeout: 300000      # 5 minutes (워크플로우 실행 포함)
     connection-id: ${AIMBASE_CONNECTION_ID:bb3bc8bc-d17d-4e8e-a15b-d9f077e83d18}  # CR-020: LLM 커넥션 (API↔CLI 전환은 이 값만 교체)
+    # CR-033: 공고문 교정 채팅 위젯 (Aimbase Chat Widget). BFF 토큰 프록시가 사용.
+    widget:
+      allowed-origin: ${WIDGET_ALLOWED_ORIGIN:http://woojinusbid.com}  # Aimbase widget.allowed-origins 화이트리스트와 정확히 일치
+      token-ttl-seconds: ${WIDGET_TOKEN_TTL:1800}
     polling:
       interval-ms: 3000       # 폴링 간격 (3초, Aimbase 권장)
       max-attempts: 200       # 최대 폴링 횟수 (200 * 3초 = 10분). CR-021: 첨부 다건 parse + contentJson 풍부도 추가로 3분 한계 초과 사례 발생

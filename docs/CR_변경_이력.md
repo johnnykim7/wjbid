@@ -526,8 +526,17 @@
   - 운영 배포(BE+FE) 완료. WF PUT 200 반영 실측(factors/eligibility 스키마·프롬프트 확인).
   - 운영 API 응답에 factors/eligibility 정확히 실림 실측(테스트 데이터 주입→GET 확인→원복).
   - 관리자 화면 FACTOR 트리·자격요건 인라인 렌더 사용자 육안 확인.
+- **E2E 추출 정확도 검증 (2026-06-03, 실측 통과)**:
+  - 실공고 2건으로 "공고문 만들기" 실행 → factors/eligibility 실제 생성 확인.
+    - W90VN826QA009: FACTOR I(기술/관리)/II(가격), 충족주체 정확(Business Authorization·SAM=CLIENT_UPLOAD, 기술/가격=PLATFORM_GENERATED). eligibility 3건 GATE.
+    - W91QVN26QA019(관제탑 재도장): FACTOR I(기술접근=PLATFORM, 과거실적·인력=CLIENT_UPLOAD)/II(가격=PLATFORM). eligibility 3건(SAM·사업자·건설업면허). **우려했던 인력=PLATFORM 오분류 없음 — 인력을 CLIENT_UPLOAD로 정확 분류**.
+  - 충족주체 분류 신뢰성 확인됨. WF 프롬프트의 "트럭/인력/실적=CLIENT_UPLOAD" 경고가 작동.
+- **추가 정리 (WF + NOTICE_VIEW 양식, 2026-06-03)**:
+  - WF `structure_output` — §6 자격요건 중복 제거 규칙: contentJson 의 section6.qualificationGroups("필수 자격"·"기술 요건")에 자격을 넣지 않고 eligibility 로만(제출 방식은 유지). 화면에서 자격이 정밀추출 인라인 + 본문 이중표시되던 중복 해소. 실측: 재생성 후 §6 groupedList 빈 배열로 확인.
+  - NOTICE_VIEW 양식(운영 DB document_templates) — ① metaGrid 에 "발행일" metaCell 추가(마감일 옆, 6→7칸. 발행일이 noticeHeader 회색 줄에만 있어 안 보이던 것). ② "1. 공고 기본 정보" heading+kvTable 제거(metaGrid 와 6항목 완전 중복). WF 에 발행일 칸 채움 지침 추가.
+  - 로컬 자산(docs/templates/notice-view-*.json)은 운영 v3 와 어긋난 옛 v1 — 본 CR 에서 동기화하지 않음(별도 정리). 운영 DB 가 SSOT.
 - **남은 작업**:
-  - 실제 LLM 추출 정확도 E2E (정답지 W90VN926QA034 한글화 재생성 → 충족주체 분류 정확도 검증). 미수행.
-  - 교정 채팅 (Aimbase Chat Widget BFF 토큰 프록시 + contextProvider(noticeId+현 산출물) + 교정 WF 또는 기존 WF 교정모드). 미착수 — fulfillmentParty 오분류를 자연어로 교정하는 본류 기능.
+  - 양식 변경(발행일 칸·기본정보 표 제거) 화면 육안 검증 — 기존 공고 재생성 필요(미수행, 사용자 "검증 나중").
+  - 교정 채팅 (Aimbase Chat Widget BFF 토큰 프록시 + contextProvider(noticeId+현 산출물) + 교정 WF). 미착수 — fulfillmentParty 오분류를 자연어로 교정하는 본류 기능.
 - **PUT 함정(메모리화)**: Aimbase WF PUT 시 GET 응답 통째(createdAt/updatedAt/createdBy 등 포함)면 400. 허용 필드(id/name/triggerConfig/steps/domain/inputSchema/outputSchema/errorHandling/graphMode)만 남겨야 200.
-- **상태**: 1차 구현·운영 배포 완료. E2E 추출 정확도 + 교정 채팅은 다음 세션.
+- **상태**: 1차 구현·운영 배포·E2E 추출 정확도 검증 완료. 양식 정리(발행일·중복제거) 운영 반영 완료(화면 육안검증·교정 채팅은 다음).

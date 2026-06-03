@@ -68,15 +68,42 @@ export default function NoticeDocumentView({ contentJson, eligibility }: Props) 
     })
   const eligHeadingRendered = hasElig && doc.content.some(isEligHeading)
 
+  // CR-033: 중복/발행일은 데이터(contentJson) 재생성 없이 "그릴 때"만 처리한다.
+  //  - 중복: 파란 박스 아래 metaGrid(6칸)와 "1. 공고 기본 정보" kvTable 이 같은 6항목 → metaGrid 를 렌더 스킵(주제표=기본정보 표를 남긴다).
+  //  - 발행일: noticeHeader.issuedDate 를 "공고 기본 정보" kvTable 의 한 행으로 끌어올려 표시(회색 줄에 묻히던 것).
+  const headerNode = doc.content.find((n) => n.type === 'noticeHeader')
+  const issuedDate = str(headerNode?.attrs?.issuedDate)
+
+  const isBasicInfoHeading = (node: Node) =>
+    node.type === 'heading' &&
+    (node.content || []).some((c) => String(c.text || '').includes('공고 기본 정보') || /general information/i.test(String(c.text || '')))
+
+  // "공고 기본 정보" heading 바로 다음 kvTable 인덱스(발행일 행을 끼울 대상)
+  const basicInfoIdx = doc.content.findIndex(isBasicInfoHeading)
+  const basicKvIdx = basicInfoIdx >= 0 && doc.content[basicInfoIdx + 1]?.type === 'kvTable'
+    ? basicInfoIdx + 1 : -1
+
   return (
     <article className="bg-white">
-      {doc.content.map((node, i) => (
-        <Fragment key={i}>
-          <NodeRenderer node={node} />
-          {/* 본문 "자격 요건" heading 직후에 정밀추출 자격요건 인라인 */}
-          {hasElig && isEligHeading(node) && <EligibilityBlock items={eligibility!} />}
-        </Fragment>
-      ))}
+      {doc.content.map((node, i) => {
+        // 중복 스킵: 파란 박스 아래 metaGrid(6칸) — "1. 공고 기본 정보" 표와 동일 내용
+        if (node.type === 'metaGrid') return null
+        // "공고 기본 정보" kvTable 에는 발행일 행을 끼워 렌더
+        if (i === basicKvIdx) {
+          return (
+            <Fragment key={i}>
+              <KvTable rows={withIssuedDate(asKvRows(node.attrs?.rows), issuedDate)} />
+            </Fragment>
+          )
+        }
+        return (
+          <Fragment key={i}>
+            <NodeRenderer node={node} />
+            {/* 본문 "자격 요건" heading 직후에 정밀추출 자격요건 인라인 */}
+            {hasElig && isEligHeading(node) && <EligibilityBlock items={eligibility!} />}
+          </Fragment>
+        )
+      })}
       {/* 본문에 자격요건 heading 이 없으면(양식 차이) 맨 끝에라도 노출 */}
       {hasElig && !eligHeadingRendered && (
         <section className="mt-6">
@@ -364,6 +391,21 @@ function asKvRows(v: unknown): { label: string; value: string }[] {
       label: str((r as Record<string, unknown>).label),
       value: str((r as Record<string, unknown>).value),
     }))
+}
+
+// CR-033: "공고 기본 정보" 표에 발행일 행을 끼운다(데이터 재생성 없이 렌더에서). 마감일 행 다음에, 이미 있으면 중복 추가 안 함.
+function withIssuedDate(
+  rows: { label: string; value: string }[],
+  issuedDate?: string,
+): { label: string; value: string }[] {
+  if (!issuedDate) return rows
+  if (rows.some((r) => r.label.includes('발행일') || r.label.includes('공고일'))) return rows
+  const out = [...rows]
+  const deadlineIdx = out.findIndex((r) => r.label.includes('마감일') || /deadline/i.test(r.label))
+  const issuedRow = { label: '발행일 (Posted Date)', value: issuedDate }
+  if (deadlineIdx >= 0) out.splice(deadlineIdx + 1, 0, issuedRow)
+  else out.push(issuedRow)
+  return out
 }
 
 function asMatrix(v: unknown): string[][] {
