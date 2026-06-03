@@ -155,6 +155,63 @@ public class OpportunityAdminController {
         ));
     }
 
+    @GetMapping("/{id}/attachments/{attachmentId}/download")
+    @Operation(summary = "첨부파일 다운로드 (CR-034)",
+            description = "저장된 첨부(storageUrl 보유 — 수동 업로드 + SAM 자동 다운로드 성공분)를 바이트로 내려준다. 미저장 첨부는 404.")
+    public ResponseEntity<byte[]> downloadAttachment(
+            @PathVariable UUID id,
+            @PathVariable UUID attachmentId) {
+        OpportunityAttachment attachment = attachmentRepository.findById(attachmentId)
+                .orElseThrow(() -> new IllegalArgumentException("첨부 없음: " + attachmentId));
+        if (!attachment.getOpportunity().getId().equals(id)) {
+            throw new IllegalArgumentException("첨부가 해당 공고 소속이 아님: " + attachmentId);
+        }
+        String storageUrl = attachment.getStorageUrl();
+        if (storageUrl == null || storageUrl.isBlank()) {
+            return ResponseEntity.notFound().build();
+        }
+        byte[] content = storageService.load(storageUrl);
+
+        String fileName = attachment.getFileName() != null ? attachment.getFileName() : "attachment";
+        org.springframework.http.ContentDisposition cd = org.springframework.http.ContentDisposition
+                .attachment().filename(fileName, java.nio.charset.StandardCharsets.UTF_8).build();
+        org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+        headers.setContentDisposition(cd);
+        String ct = attachment.getContentType();
+        headers.setContentType(ct != null && !ct.isBlank()
+                ? org.springframework.http.MediaType.parseMediaType(ct)
+                : org.springframework.http.MediaType.APPLICATION_OCTET_STREAM);
+        return new ResponseEntity<>(content, headers, org.springframework.http.HttpStatus.OK);
+    }
+
+    @DeleteMapping("/{id}/attachments/{attachmentId}")
+    @Operation(summary = "수동 업로드 첨부 삭제 (CR-034)",
+            description = "관리자가 수동 업로드한 첨부(sourceUrl='admin-upload')만 삭제. SAM 수집 첨부는 403으로 거부(원본 보존).")
+    public ResponseEntity<Map<String, String>> deleteAttachment(
+            @PathVariable UUID id,
+            @PathVariable UUID attachmentId) {
+        OpportunityAttachment attachment = attachmentRepository.findById(attachmentId)
+                .orElseThrow(() -> new IllegalArgumentException("첨부 없음: " + attachmentId));
+        if (!attachment.getOpportunity().getId().equals(id)) {
+            throw new IllegalArgumentException("첨부가 해당 공고 소속이 아님: " + attachmentId);
+        }
+        // CR-034: SAM 수집 첨부(원본)는 삭제 불가 — 관리자 수동 업로드분만 삭제 허용
+        if (!"admin-upload".equals(attachment.getSourceUrl())) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN).body(Map.of(
+                    "status", "FORBIDDEN",
+                    "reason", "SAM 수집 첨부는 삭제할 수 없습니다. 관리자가 직접 업로드한 첨부만 삭제 가능합니다.",
+                    "attachmentId", attachmentId.toString()
+            ));
+        }
+        attachmentRepository.delete(attachment);
+        log.info("[CR-034] 수동 업로드 첨부 삭제: opportunityId={}, attachmentId={}, fileName={}",
+                id, attachmentId, attachment.getFileName());
+        return ResponseEntity.ok(Map.of(
+                "status", "DELETED",
+                "attachmentId", attachmentId.toString()
+        ));
+    }
+
     @PostMapping("/{id}/retranslate-description")
     @Operation(summary = "본문 한글 번역 (CR-022 재구현)",
             description = "원본 공고 본문(description)을 LLM으로 한글 번역. 자동 번역이 실패했거나 누락된 경우 관리자가 수동으로 호출. 동기 실행.")

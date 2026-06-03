@@ -94,14 +94,6 @@ public class Opportunity extends BaseEntity {
     @Column(name = "description_body", columnDefinition = "MEDIUMTEXT")
     private String descriptionBody;
 
-    /**
-     * CR-034: 본문에 PIEE 제출 지정(piee.eb.mil)이 있는 공고. true면 입찰서류 정본이 PIEE에 있어
-     * 화면에 PIEE 링크(oppMgmtLink?solNo=)를 노출한다. SAM 자체완결 공고는 false.
-     */
-    @Column(name = "piee_available", nullable = false)
-    @Builder.Default
-    private boolean pieeAvailable = false;
-
     /** CR-022 (재구현): 마지막 번역 성공 시각(제목/본문 어느 쪽이든 갱신). null = 한 번도 성공 안 함 */
     @Column(name = "translated_at")
     private LocalDateTime translatedAt;
@@ -154,17 +146,10 @@ public class Opportunity extends BaseEntity {
         this.industryType = industryType;
     }
 
-    /**
-     * CR-032/034: noticedesc 원문 본문 저장. 빈 문자열/null은 무시.
-     * 본문에 piee.eb.mil 제출 지정이 있고 solicitationNumber가 있으면 PIEE 링크 노출 대상으로 표식.
-     */
+    /** CR-032: noticedesc 원문 본문 저장. 빈 문자열/null은 무시. */
     public void applyDescriptionBody(String body) {
         if (body == null || body.isBlank()) return;
         this.descriptionBody = body;
-        // CR-034: PIEE 제출 지정 감지 — 입찰서류 정본이 PIEE에 있는 공고
-        boolean mentionsPiee = body.toLowerCase().contains("piee.eb.mil");
-        this.pieeAvailable = mentionsPiee
-                && this.solicitationNumber != null && !this.solicitationNumber.isBlank();
     }
 
     /** CR-022 (재구현): 본문 한글 번역 결과 반영. 빈 문자열/null은 무시 (실패 시 영문 fallback) */

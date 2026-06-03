@@ -176,6 +176,16 @@ export const uploadOpportunityAttachment = (id: string, file: File) => {
 export const getOpportunityAttachments = (id: string) =>
   api.get(`/admin/opportunities/${id}/attachments`)
 
+// CR-034: 저장된 첨부 다운로드 (blob)
+export const downloadOpportunityAttachment = (id: string, attachmentId: string) =>
+  api.get(`/admin/opportunities/${id}/attachments/${attachmentId}/download`, {
+    responseType: 'blob',
+  })
+
+// CR-034: 수동 업로드 첨부 삭제 (SAM 수집 첨부는 서버가 403 거부)
+export const deleteOpportunityAttachment = (id: string, attachmentId: string) =>
+  api.delete(`/admin/opportunities/${id}/attachments/${attachmentId}`)
+
 // CR-022 (재구현): 본문 한글 번역 수동 트리거
 export const retranslateOpportunityDescription = (id: string) =>
   api.post(`/admin/opportunities/${id}/retranslate-description`)

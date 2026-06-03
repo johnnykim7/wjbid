@@ -5,6 +5,8 @@ import {
   createNotice,
   uploadOpportunityAttachment,
   getOpportunityAttachments,
+  downloadOpportunityAttachment,
+  deleteOpportunityAttachment,
   retranslateOpportunityDescription,
 } from '../api/client'
 import OpportunityMetaPanel from '../components/OpportunityMetaPanel'
@@ -42,8 +44,6 @@ interface OpportunityDetail {
     fax?: string
   }> | null
   resourceLinks?: string[] | null
-  pieeAvailable?: boolean
-  pieeUrl?: string | null
   attachmentCount: number
   manualFetchRequiredCount: number
   noticeCount: number
@@ -127,6 +127,41 @@ export default function OpportunityAdminDetailPage() {
       fetchData()
     } catch (err) {
       console.error('파일 업로드 실패:', err)
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  // CR-034: 저장된 첨부 다운로드 (blob 응답을 받아 브라우저 저장)
+  const handleDownload = async (a: Attachment) => {
+    if (!id) return
+    try {
+      const res = await downloadOpportunityAttachment(id, a.id)
+      const url = window.URL.createObjectURL(new Blob([res.data]))
+      const link = document.createElement('a')
+      link.href = url
+      link.download = a.fileName || 'attachment'
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('첨부 다운로드 실패:', err)
+      alert('다운로드에 실패했습니다.')
+    }
+  }
+
+  // CR-034: 수동 업로드 첨부 삭제 (SAM 수집 첨부는 버튼 자체가 없음)
+  const handleDelete = async (a: Attachment) => {
+    if (!id) return
+    if (!window.confirm(`"${a.fileName || '이 첨부'}"를 삭제할까요?`)) return
+    setActionLoading(true)
+    try {
+      await deleteOpportunityAttachment(id, a.id)
+      fetchData()
+    } catch (err) {
+      console.error('첨부 삭제 실패:', err)
+      alert('삭제에 실패했습니다. (SAM 수집 첨부는 삭제할 수 없습니다)')
     } finally {
       setActionLoading(false)
     }
@@ -218,8 +253,6 @@ export default function OpportunityAdminDetailPage() {
           description: opp.descriptionSummaryKo || opp.description,
           pointOfContact: opp.pointOfContact,
           resourceLinks: opp.resourceLinks,
-          pieeAvailable: opp.pieeAvailable,
-          pieeUrl: opp.pieeUrl,
         }}
       />
 
@@ -232,6 +265,25 @@ export default function OpportunityAdminDetailPage() {
               <input type="file" className="hidden" onChange={handleFileUpload} disabled={actionLoading} />
             </label>
           </div>
+          {/* CR-034: PIEE 입찰서류 안내 — 첨부 유무와 무관하게 항상 노출. 입찰서류 정본/추가본이 PIEE에 있을 수 있음 */}
+          {opp.solicitationNumber && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2.5">
+              <p className="text-xs text-amber-800 mb-2 leading-relaxed">
+                입찰서류 정본(본 공고서·수정본·추가서류)은 PIEE에도 게시될 수 있습니다.
+                아래에서 공고번호 <span className="font-semibold">{opp.solicitationNumber}</span>로 확인 후,
+                필요한 파일을 받아 "수동 업로드" 하세요.
+              </p>
+              <a
+                href={`https://piee.eb.mil/sol/xhtml/unauth/search/oppMgmtLink.xhtml?solNo=${encodeURIComponent(opp.solicitationNumber)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-md bg-amber-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-amber-700"
+              >
+                <i className="fa-solid fa-up-right-from-square" />
+                PIEE 입찰서류 보기
+              </a>
+            </div>
+          )}
           {opp.manualFetchRequiredCount > 0 && (
             <div className="text-xs bg-amber-50 text-amber-700 rounded-lg px-3 py-2">
               <i className="fa-solid fa-triangle-exclamation mr-1" />
@@ -252,13 +304,36 @@ export default function OpportunityAdminDetailPage() {
                       </a>
                     )}
                   </div>
-                  {a.manualFetchRequired ? (
-                    <span className="shrink-0 inline-flex px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700">가져와야 함</span>
-                  ) : a.downloadStatus === 'SUCCESS' ? (
-                    <span className="shrink-0 inline-flex px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">수집됨</span>
-                  ) : (
-                    <span className="shrink-0 inline-flex px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500">{a.downloadStatus}</span>
-                  )}
+                  <div className="shrink-0 flex items-center gap-1.5">
+                    {a.manualFetchRequired ? (
+                      <span className="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700">가져와야 함</span>
+                    ) : a.downloadStatus === 'SUCCESS' ? (
+                      <span className="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">수집됨</span>
+                    ) : (
+                      <span className="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500">{a.downloadStatus}</span>
+                    )}
+                    {/* CR-034: 저장된 파일(수집됨)은 다운로드 가능 */}
+                    {a.downloadStatus === 'SUCCESS' && (
+                      <button
+                        onClick={() => handleDownload(a)}
+                        className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 hover:bg-blue-100"
+                        title="다운로드"
+                      >
+                        <i className="fa-solid fa-download" />
+                      </button>
+                    )}
+                    {/* CR-034: 관리자 수동 업로드분만 삭제 가능. SAM 수집 첨부는 삭제 버튼 없음 */}
+                    {a.sourceUrl === 'admin-upload' && (
+                      <button
+                        onClick={() => handleDelete(a)}
+                        disabled={actionLoading}
+                        className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-50"
+                        title="삭제 (수동 업로드분)"
+                      >
+                        <i className="fa-solid fa-trash" />
+                      </button>
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>
