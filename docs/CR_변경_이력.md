@@ -540,3 +540,19 @@
   - 교정 채팅 (Aimbase Chat Widget BFF 토큰 프록시 + contextProvider(noticeId+현 산출물) + 교정 WF). 미착수 — fulfillmentParty 오분류를 자연어로 교정하는 본류 기능.
 - **PUT 함정(메모리화)**: Aimbase WF PUT 시 GET 응답 통째(createdAt/updatedAt/createdBy 등 포함)면 400. 허용 필드(id/name/triggerConfig/steps/domain/inputSchema/outputSchema/errorHandling/graphMode)만 남겨야 200.
 - **상태**: 1차 구현·운영 배포·E2E 추출 정확도 검증 완료. 양식 정리(발행일·중복제거) 운영 반영 완료(화면 육안검증·교정 채팅은 다음).
+
+---
+
+### CR-038: 공고문 분석 WF 재설계(Claude Code 구조) + descriptionBody 입력 보강 + facts 영속화 (2026-06-04)
+
+- **배경**: 공고문 한글화/분석 환각 문제. 노출 공고문 6개 검증 결과 첨부 0개(관제탑)·이미지뿐(LSA floor plan) 공고에서 환각 심함. 근원 실측 3개: ① 현행 WF가 단일 AGENT_CALL에 읽기+추출+요약 다 맡겨 **검증 STEP 0개**, ② parse_document만 의존하고 이미지(ocr_image/image_analysis)·실본문(descriptionBody) 안 읽음, ③ 추출 사실의 근거(sourceQuote) 영속화 0. 추가 실측: `parse_document`가 한때 등록 도구 아니었음 → Aimbase에서 정식 Tool로 개발·배포(2026-06-03, built-in 48 라이브).
+- **재설계 그림 (Claude Code 1:1 이식)**: 작업장에 첨부·본문을 텍스트로 깔고 grep/read로 자율 탐색 + 검증/누락점검 분리 + fact 근거 영속화.
+- **변경 사항**:
+  1. Aimbase WF `opportunity-analysis` — 현행 4-STEP → **6-STEP 재설계 운영 PUT**: fetch → `build_workspace`(AGENT_CALL: parse_document/ocr_image/image_analysis로 첨부·descriptionBody를 .txt 적재) → `extract_facts`(AGENT_CALL: 작업장 grep/read, 각 fact에 sourceQuote/sourceFile/page/confidence 부착) → `verify_and_gapcheck`(AGENT_CALL: fact↔작업장 원문 대조 환각 색출 + 누락 점검) → `structure_output`(facts[] 추가) → `save`(facts 동반). 로컬: docs/workflows/opportunity-analysis.steps.v2.json.
+  2. BE `buildOpportunityText` 3곳(NoticeService/ProposalMcpTool/AIWorkflowService) — 실본문 `descriptionBody` 우선 + `rawJson.description` 폴백. 첨부 없는 공고 환각 방지.
+  3. BE `OpportunityTranslationService.ensureDescriptionBody` 신규 — 공고문 만들기 직전 본문 비었으면 noticedesc fetch 보강(REQUIRES_NEW, 호출자 readOnly 트랜잭션 함정 회피). NoticeService.generateAsync에서 WF 입력 구성 전 호출.
+  4. **facts 영속화 (T3-1 캐스케이드)** — 별도 테이블 아니라 **Notice.extracted_facts_json longtext 컬럼**(factor_tree_json 패턴). 사유: 교정 채팅(CR-033)이 Notice를 markCompleted로 전체치환 저장하므로, facts가 Notice에 속해야 치환 시 함께 보존(별도 테이블이면 동기화 누락). save/get MCP tool이 facts 수신·반환.
+- **PUT 함정 정정(메모리화)**: WF PUT 400의 진짜 원인은 `PlatformWorkflowRequest` record에 없는 필드(domain/graphMode/active/projectId 등) 전송 시 @Valid 거부. 허용 9필드: id/name/description/category/triggerConfig/steps/errorHandling/outputSchema/inputSchema. (옛 메모 "domain/graphMode 포함"은 틀림)
+- **CR-033 교정 채팅과의 묶음**: save가 전체치환이라 facts 켜는 순간 교정이 facts 안 실으면 소멸 → facts 영속화 + 교정 채팅 get/save facts 처리는 한 묶음으로 구현.
+- **규모**: 중규모(WF 전면 재설계 + 새 컬럼 + MCP 스키마). 설계 캐스케이드 = T3-1(Notice.extracted_facts_json).
+- **상태**: WF 6-STEP 운영 PUT 완료, descriptionBody 보강 BE 배포·커밋 완료(18911a4). facts 영속화(컬럼·마이그레이션·get/save 처리) + 교정 채팅 위젯 = 진행 중.
