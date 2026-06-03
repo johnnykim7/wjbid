@@ -461,7 +461,11 @@ public class ProposalMcpTool {
         sb.append("공고 제목: ").append(opp.getTitle()).append("\n");
         if (opp.getOrganizationName() != null) sb.append("기관: ").append(opp.getOrganizationName()).append("\n");
         if (opp.getSolicitationNumber() != null) sb.append("공고번호: ").append(opp.getSolicitationNumber()).append("\n");
-        if (opp.getRawJson() != null && opp.getRawJson().get("description") != null) {
+        // CR-038: 실본문(descriptionBody) 우선, 없으면 rawJson.description 폴백.
+        String body = opp.getDescriptionBody();
+        if (body != null && !body.isBlank()) {
+            sb.append("\n상세 설명(원문 본문):\n").append(body);
+        } else if (opp.getRawJson() != null && opp.getRawJson().get("description") != null) {
             sb.append("\n상세 설명:\n").append(opp.getRawJson().get("description"));
         }
         return sb.toString();

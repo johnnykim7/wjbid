@@ -84,6 +84,31 @@ public class OpportunityTranslationService {
         translateTitleOf(opp);
     }
 
+    /**
+     * CR-038: 공고문 만들기(한글화 WF) 직전 호출 — descriptionBody(원문 본문)가 비어있으면
+     * noticedesc fetch해 채운다. 번역 흐름과 독립적으로 본문을 보장(번역 안 돌린 공고도 WF가 본문 받게).
+     * 이미 채워져 있으면 SAM 쿼터 소진 없이 즉시 반환. 실패해도 예외 안 던짐(WF는 폴백으로 진행).
+     * REQUIRES_NEW: 호출자(generateAsync)가 클래스레벨 readOnly 트랜잭션이라, 독립 쓰기 트랜잭션으로
+     * 커밋해야 dirty checking flush가 되고 직후 재조회가 보강된 본문을 읽는다.
+     */
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
+    public void ensureDescriptionBody(UUID opportunityId) {
+        Opportunity opp = opportunityRepository.findById(opportunityId).orElse(null);
+        if (opp == null) return;
+        if (opp.getDescriptionBody() != null && !opp.getDescriptionBody().isBlank()) return;
+        try {
+            String body = resolveDescription(opp);
+            if (body == null || body.isBlank()) {
+                log.info("[CR-038] descriptionBody 보강 — 본문 없음(skip) noticeId={}", opp.getNoticeId());
+                return;
+            }
+            opp.applyDescriptionBody(body);
+            log.info("[CR-038] descriptionBody 보강 완료 noticeId={}, len={}", opp.getNoticeId(), body.length());
+        } catch (RuntimeException e) {
+            log.warn("[CR-038] descriptionBody 보강 실패(무시) noticeId={}: {}", opp.getNoticeId(), e.getMessage());
+        }
+    }
+
     /** CR-022 2차: 본문 요약 (Enricher 비동기 단계가 호출). 평문 body를 받아 LLM 요약 후 반영. */
     @Transactional
     public void summarizeDescription(UUID opportunityId, String body) {

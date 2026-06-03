@@ -54,6 +54,7 @@ public class NoticeService {
     private final ApplicationEventPublisher eventPublisher;
     private final DocumentTemplateService documentTemplateService;
     private final com.biddingagency.domain.proposal.service.VerificationLogService verificationLogService;
+    private final com.biddingagency.domain.opportunity.service.OpportunityTranslationService opportunityTranslationService;
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
     /**
@@ -176,6 +177,11 @@ public class NoticeService {
         log.info("[공고문] 한글화/요약 시작: noticeId={}", noticeId);
 
         try {
+            // CR-038: WF 입력 구성 전에 원문 본문(descriptionBody)을 보장한다.
+            // 비어있으면 noticedesc fetch해 채움 → buildOpportunityText가 실본문을 WF에 전달(환각 방지).
+            // 별도 트랜잭션(번역 흐름과 독립)에서 채우므로 아래 재조회로 최신 본문을 읽는다.
+            opportunityTranslationService.ensureDescriptionBody(opportunityId);
+
             Opportunity opp = opportunityRepository.findById(opportunityId)
                     .orElseThrow(() -> new IllegalArgumentException("Opportunity not found: " + opportunityId));
 
@@ -442,7 +448,13 @@ public class NoticeService {
             sb.append("공고번호: ").append(opp.getSolicitationNumber()).append("\n");
         if (opp.getUiLink() != null)
             sb.append("링크: ").append(opp.getUiLink()).append("\n");
-        if (opp.getRawJson() != null && !opp.getRawJson().isEmpty()) {
+        // CR-038: 실본문(descriptionBody, CR-032/035에서 noticedesc fetch로 채움) 우선.
+        // rawJson.description 은 noticedesc URL 또는 일부 요약이라, 첨부 없는 공고(예: 관제탑)는
+        // 실본문이 WF 입력에서 빠져 LLM 이 빈칸을 환각으로 채우던 근원. 실본문 있으면 그걸 사용.
+        String body = opp.getDescriptionBody();
+        if (body != null && !body.isBlank()) {
+            sb.append("\n상세 설명(원문 본문):\n").append(body);
+        } else if (opp.getRawJson() != null && !opp.getRawJson().isEmpty()) {
             Object description = opp.getRawJson().get("description");
             if (description != null) {
                 sb.append("\n상세 설명:\n").append(description);

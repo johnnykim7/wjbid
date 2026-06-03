@@ -474,8 +474,11 @@ public class AIWorkflowService {
         if (opp.getUiLink() != null)
             sb.append("링크: ").append(opp.getUiLink()).append("\n");
 
-        // rawJson에서 추가 정보 추출
-        if (opp.getRawJson() != null && !opp.getRawJson().isEmpty()) {
+        // CR-038: 실본문(descriptionBody) 우선, 없으면 rawJson.description 폴백.
+        String body = opp.getDescriptionBody();
+        if (body != null && !body.isBlank()) {
+            sb.append("\n상세 설명(원문 본문):\n").append(body);
+        } else if (opp.getRawJson() != null && !opp.getRawJson().isEmpty()) {
             Object description = opp.getRawJson().get("description");
             if (description != null) {
                 sb.append("\n상세 설명:\n").append(description);
