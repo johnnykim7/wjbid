@@ -260,7 +260,8 @@ public class NoticeService {
                              Map<String, Object> documentFormatsJson,
                              Map<String, Object> requiredDocumentsJson,
                              Map<String, Object> llmPromptPresetJson,
-                             Map<String, Object> contentJson) {
+                             Map<String, Object> contentJson,
+                             List<Map<String, Object>> extractedFactsJson) {
         Notice notice = findById(noticeId);
 
         // CR-004: 정제 출력 필수키 검증 — 누락 시 COMPLETED 대신 FAILED로 전이해 빈 한글화 노출 차단
@@ -276,7 +277,7 @@ public class NoticeService {
             return notice;
         }
 
-        notice.markCompleted(koreanTitle, summaryJson, documentFormatsJson, requiredDocumentsJson, llmPromptPresetJson, contentJson);
+        notice.markCompleted(koreanTitle, summaryJson, documentFormatsJson, requiredDocumentsJson, llmPromptPresetJson, contentJson, extractedFactsJson);
         Notice saved = noticeRepository.save(notice);
 
         // CR-031 BE 정형 룰 (LLM 0콜): 분량·첨부 0건 평가 → verification_log(RULE) 적재.

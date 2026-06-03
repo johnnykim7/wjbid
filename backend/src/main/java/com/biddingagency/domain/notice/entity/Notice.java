@@ -79,6 +79,13 @@ public class Notice extends BaseEntity {
     @Column(name = "price_items_json", columnDefinition = "longtext")
     private String priceItemsJsonRaw;
 
+    /**
+     * CR-038: 공고문 분석 추출 사실의 근거(JSON 배열). 각 원소 = {key,value,sourceFile,sourceQuote,page,confidence}.
+     * markCompleted 에 포함시켜 전체치환 — 교정 채팅(CR-033)이 Notice 통째 덮어쓸 때 facts 도 함께 보존되도록.
+     */
+    @Column(name = "extracted_facts_json", columnDefinition = "longtext")
+    private String extractedFactsJsonRaw;
+
     @Column(name = "analyzed_at")
     private LocalDateTime analyzedAt;
 
@@ -125,6 +132,11 @@ public class Notice extends BaseEntity {
         return parseJson(priceItemsJsonRaw);
     }
 
+    /** CR-038: 추출 사실 목록(JSON 배열). 근거 추적·교정 채팅용. NULL 가능 */
+    public java.util.List<Map<String, Object>> getExtractedFactsJson() {
+        return parseJsonList(extractedFactsJsonRaw);
+    }
+
     private Map<String, Object> parseJson(String raw) {
         if (raw == null || raw.isBlank()) return null;
         try {
@@ -134,12 +146,30 @@ public class Notice extends BaseEntity {
         }
     }
 
+    private java.util.List<Map<String, Object>> parseJsonList(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        try {
+            return OBJECT_MAPPER.readValue(raw, new TypeReference<>() {});
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Failed to parse JSON list", e);
+        }
+    }
+
     private String toJsonString(Map<String, Object> map) {
         if (map == null) return null;
         try {
             return OBJECT_MAPPER.writeValueAsString(map);
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to serialize JSON", e);
+        }
+    }
+
+    private String toJsonString(java.util.List<Map<String, Object>> list) {
+        if (list == null) return null;
+        try {
+            return OBJECT_MAPPER.writeValueAsString(list);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Failed to serialize JSON list", e);
         }
     }
 
@@ -156,7 +186,8 @@ public class Notice extends BaseEntity {
                               Map<String, Object> documentFormatsJson,
                               Map<String, Object> requiredDocumentsJson,
                               Map<String, Object> llmPromptPresetJson,
-                              Map<String, Object> contentJson) {
+                              Map<String, Object> contentJson,
+                              java.util.List<Map<String, Object>> extractedFactsJson) {
         this.generationStatus = NoticeGenerationStatus.COMPLETED;
         this.koreanTitle = koreanTitle;
         this.summaryJsonRaw = toJsonString(summaryJson);
@@ -164,6 +195,10 @@ public class Notice extends BaseEntity {
         this.requiredDocumentsJsonRaw = toJsonString(requiredDocumentsJson);
         this.llmPromptPresetJsonRaw = toJsonString(llmPromptPresetJson);
         this.contentJsonRaw = toJsonString(contentJson);
+        // CR-038: facts 전체치환. null 이면 기존값 유지(교정 채팅이 facts 안 보낸 경우 보존 — get 이 반환하므로 보통은 옴).
+        if (extractedFactsJson != null) {
+            this.extractedFactsJsonRaw = toJsonString(extractedFactsJson);
+        }
         this.analyzedAt = LocalDateTime.now();
         this.errorMessage = null;
     }

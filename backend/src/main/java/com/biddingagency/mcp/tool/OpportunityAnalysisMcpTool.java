@@ -131,6 +131,10 @@ public class OpportunityAnalysisMcpTool {
         result.put("documentFormats", notice.getDocumentFormatsJson());
         result.put("requiredDocuments", notice.getRequiredDocumentsJson());
         result.put("llmPromptPreset", notice.getLlmPromptPresetJson());
+        result.put("contentJson", notice.getContentJson());
+        // CR-038: 교정 채팅이 근거(sourceQuote) 보고 판단·치환할 수 있게 facts 반환.
+        // save 가 전체치환이므로 get→수정→save 왕복 시 facts 도 함께 실려야 소멸 안 됨.
+        result.put("facts", notice.getExtractedFactsJson());
         result.put("analyzedAt", notice.getAnalyzedAt() != null ? notice.getAnalyzedAt().toString() : null);
 
         return toJson(result);
@@ -148,9 +152,11 @@ public class OpportunityAnalysisMcpTool {
         Map<String, Object> requiredDocuments = coerceToMap(args.get("requiredDocuments"));
         Map<String, Object> llmPromptPreset = coerceToMap(args.get("llmPromptPreset"));
         Map<String, Object> contentJson = coerceToMap(args.get("contentJson"));
+        // CR-038: 추출 사실(근거 부착) 배열. 없으면 null → markCompleted 가 기존값 보존.
+        List<Map<String, Object>> facts = coerceToList(args.get("facts"));
 
         Notice notice = noticeService.saveResult(
-                noticeId, koreanTitle, summary, documentFormats, requiredDocuments, llmPromptPreset, contentJson);
+                noticeId, koreanTitle, summary, documentFormats, requiredDocuments, llmPromptPreset, contentJson, facts);
 
         log.info("MCP save_opportunity_analysis: noticeId={}, status={}", noticeId, notice.getGenerationStatus());
 
@@ -221,6 +227,25 @@ public class OpportunityAnalysisMcpTool {
             }
         }
         log.warn("MCP coerceToMap: 예상 외 타입 {} → null", value.getClass().getName());
+        return null;
+    }
+
+    /** CR-038: facts 배열 변환. Aimbase 변수치환이 List 를 JSON 문자열로 직렬화해 보낼 수 있어 양쪽 호환. */
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> coerceToList(Object value) {
+        if (value == null) return null;
+        if (value instanceof List<?> l) return (List<Map<String, Object>>) l;
+        if (value instanceof String s) {
+            String trimmed = s.trim();
+            if (trimmed.isEmpty() || "null".equals(trimmed)) return null;
+            try {
+                return objectMapper.readValue(trimmed, List.class);
+            } catch (Exception e) {
+                log.warn("MCP coerceToList: String→List 파싱 실패, null 반환. preview={}", trimmed.substring(0, Math.min(120, trimmed.length())));
+                return null;
+            }
+        }
+        log.warn("MCP coerceToList: 예상 외 타입 {} → null", value.getClass().getName());
         return null;
     }
 }
