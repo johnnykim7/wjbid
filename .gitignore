@@ -100,3 +100,9 @@ coverage/
 *.pid
 *.seed
 *.pid.lock
+
+# 공고문 정답지 자산 (대용량 PDF/docx, 운영 storage/에서 관리 — git 미포함)
+rfp/
+
+# Claude Code 로컬 lock
+.claude/scheduled_tasks.lock
