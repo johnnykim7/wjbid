@@ -164,9 +164,10 @@ export const getAdminOpportunityDetail = (id: string) =>
 export const createNotice = (opportunityId: string) =>
   api.post(`/admin/opportunities/${opportunityId}/create-notice`)
 
-export const uploadOpportunityAttachment = (id: string, file: File) => {
+// CR-037: 다중 파일 업로드. ZIP은 BE가 자동 해제. files 파라미터로 여러 파일 전송.
+export const uploadOpportunityAttachment = (id: string, files: File[]) => {
   const formData = new FormData()
-  formData.append('file', file)
+  files.forEach((f) => formData.append('files', f))
   return api.post(`/admin/opportunities/${id}/attachments`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   })

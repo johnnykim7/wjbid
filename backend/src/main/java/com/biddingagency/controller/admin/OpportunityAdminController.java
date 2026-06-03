@@ -92,18 +92,71 @@ public class OpportunityAdminController {
     }
 
     @PostMapping("/{id}/attachments")
-    @Operation(summary = "첨부파일 수동 업로드 (CR-019)",
-            description = "관리자가 외부서 가져온 첨부를 실제 저장. 동일 파일명의 '가져와야 함' 행이 있으면 갱신, 없으면 신규 SUCCESS 행.")
-    public ResponseEntity<Map<String, String>> uploadAttachment(
+    @Operation(summary = "첨부파일 수동 업로드 (CR-019, CR-037)",
+            description = "관리자가 외부서 가져온 첨부를 실제 저장. 다중 파일 선택 지원. " +
+                    "ZIP 파일은 BE가 자동 해제하여 각 엔트리를 개별 첨부로 등록(폴더 구조 평탄화 — 파일명만 사용). " +
+                    "동일 파일명의 '가져와야 함' 행이 있으면 갱신, 없으면 신규 SUCCESS 행.")
+    public ResponseEntity<Map<String, Object>> uploadAttachment(
             @PathVariable UUID id,
-            @RequestParam("file") MultipartFile file) {
+            @RequestParam("files") List<MultipartFile> files) {
         Opportunity opp = opportunityService.findById(id);
-        String fileName = file.getOriginalFilename();
+        java.util.List<String> uploaded = new java.util.ArrayList<>();
 
-        // CR-019: StorageService에 실제 저장
-        String storageUrl = storageService.store("opportunity-attachments/" + id, file);
+        for (MultipartFile file : files) {
+            String originalName = file.getOriginalFilename();
+            if (isZip(originalName, file.getContentType())) {
+                // CR-037: ZIP 자동 해제 — 각 엔트리를 개별 첨부로 등록 (평탄화)
+                try (java.util.zip.ZipInputStream zis =
+                             new java.util.zip.ZipInputStream(file.getInputStream())) {
+                    java.util.zip.ZipEntry entry;
+                    while ((entry = zis.getNextEntry()) != null) {
+                        if (entry.isDirectory()) {
+                            zis.closeEntry();
+                            continue;
+                        }
+                        String entryName = flatten(entry.getName());
+                        if (entryName == null || entryName.isBlank()) {
+                            zis.closeEntry();
+                            continue;
+                        }
+                        byte[] content = zis.readAllBytes();
+                        zis.closeEntry();
+                        if (content.length == 0) continue;
+                        String storageUrl = storageService.store(
+                                "opportunity-attachments/" + id, entryName, content);
+                        saveUploadedAttachment(id, opp, entryName, (long) content.length,
+                                guessContentType(entryName), storageUrl);
+                        uploaded.add(entryName);
+                        log.info("[CR-037] ZIP 엔트리 업로드: opportunityId={}, zip={}, entry={}, size={}",
+                                id, originalName, entryName, content.length);
+                    }
+                } catch (java.io.IOException e) {
+                    log.error("[CR-037] ZIP 해제 실패: opportunityId={}, zip={}", id, originalName, e);
+                    throw new IllegalArgumentException("ZIP 파일 해제 실패: " + originalName);
+                }
+            } else {
+                // 일반 단일 파일 (기존 CR-019 경로)
+                String fileName = flatten(originalName);
+                String storageUrl = storageService.store("opportunity-attachments/" + id, file);
+                saveUploadedAttachment(id, opp, fileName, file.getSize(),
+                        file.getContentType(), storageUrl);
+                uploaded.add(fileName != null ? fileName : "");
+                log.info("[CR-019] 관리자 첨부 업로드(SUCCESS): opportunityId={}, fileName={}, storageUrl={}",
+                        id, fileName, storageUrl);
+            }
+        }
 
-        // 동일 파일명의 "가져와야 함" 행이 있으면 그 행을 채워 SUCCESS 전이, 없으면 신규
+        return ResponseEntity.ok(Map.of(
+                "status", "UPLOADED",
+                "count", uploaded.size(),
+                "fileNames", uploaded,
+                "opportunityId", id.toString()
+        ));
+    }
+
+    /** 업로드된 첨부 1건을 저장 — 동일 파일명의 '가져와야 함' 행이 있으면 채워 SUCCESS 전이, 없으면 신규. */
+    private void saveUploadedAttachment(UUID id, Opportunity opp, String fileName,
+                                        Long fileSize, String contentType, String storageUrl) {
         OpportunityAttachment attachment = attachmentRepository
                 .findByOpportunityIdAndDownloadStatus(id, AttachmentDownloadStatus.MANUAL_FETCH_REQUIRED)
                 .stream()
@@ -113,18 +166,39 @@ public class OpportunityAdminController {
                         .opportunity(opp)
                         .sourceUrl("admin-upload")
                         .build());
-
-        attachment.applyUpload(fileName, file.getSize(), file.getContentType(), storageUrl);
+        attachment.applyUpload(fileName, fileSize, contentType, storageUrl);
         attachmentRepository.save(attachment);
+    }
 
-        log.info("[CR-019] 관리자 첨부 업로드(SUCCESS): opportunityId={}, fileName={}, storageUrl={}",
-                id, fileName, storageUrl);
+    /** CR-037: ZIP 여부 판별 — 확장자 또는 content-type. */
+    private boolean isZip(String fileName, String contentType) {
+        if (fileName != null && fileName.toLowerCase().endsWith(".zip")) return true;
+        return contentType != null
+                && (contentType.equals("application/zip")
+                || contentType.equals("application/x-zip-compressed"));
+    }
 
-        return ResponseEntity.ok(Map.of(
-                "status", "UPLOADED",
-                "fileName", fileName != null ? fileName : "",
-                "opportunityId", id.toString()
-        ));
+    /** CR-037: 경로 평탄화 — 마지막 세그먼트(파일명)만 사용. zip-slip 자동 회피. */
+    private String flatten(String name) {
+        if (name == null) return null;
+        String normalized = name.replace('\\', '/');
+        int idx = normalized.lastIndexOf('/');
+        return idx >= 0 ? normalized.substring(idx + 1) : normalized;
+    }
+
+    /** 파일명 확장자로 content-type 추정 (ZIP 엔트리는 MultipartFile content-type이 없으므로). */
+    private String guessContentType(String fileName) {
+        if (fileName == null) return "application/octet-stream";
+        String lower = fileName.toLowerCase();
+        if (lower.endsWith(".pdf")) return "application/pdf";
+        if (lower.endsWith(".doc")) return "application/msword";
+        if (lower.endsWith(".docx")) return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+        if (lower.endsWith(".xls")) return "application/vnd.ms-excel";
+        if (lower.endsWith(".xlsx")) return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+        if (lower.endsWith(".txt")) return "text/plain";
+        if (lower.endsWith(".png")) return "image/png";
+        if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
+        return "application/octet-stream";
     }
 
     @PostMapping("/{id}/attachments/{attachmentId}/auto-fetch")

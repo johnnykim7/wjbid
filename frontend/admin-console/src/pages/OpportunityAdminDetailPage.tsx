@@ -120,15 +120,17 @@ export default function OpportunityAdminDetailPage() {
   }
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!id || !e.target.files?.[0]) return
+    if (!id || !e.target.files?.length) return
+    const files = Array.from(e.target.files)
     setActionLoading(true)
     try {
-      await uploadOpportunityAttachment(id, e.target.files[0])
+      await uploadOpportunityAttachment(id, files)
       fetchData()
     } catch (err) {
       console.error('파일 업로드 실패:', err)
     } finally {
       setActionLoading(false)
+      e.target.value = '' // 같은 파일 재선택 허용
     }
   }
 
@@ -262,7 +264,7 @@ export default function OpportunityAdminDetailPage() {
             <h3 className="text-sm font-semibold text-gray-700">첨부파일</h3>
             <label className="px-3 py-1.5 text-xs rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 cursor-pointer">
               <i className="fa-solid fa-upload mr-1" />수동 업로드
-              <input type="file" className="hidden" onChange={handleFileUpload} disabled={actionLoading} />
+              <input type="file" multiple className="hidden" onChange={handleFileUpload} disabled={actionLoading} />
             </label>
           </div>
           {/* CR-034: PIEE 입찰서류 안내 — 첨부 유무와 무관하게 항상 노출. 입찰서류 정본/추가본이 PIEE에 있을 수 있음 */}
