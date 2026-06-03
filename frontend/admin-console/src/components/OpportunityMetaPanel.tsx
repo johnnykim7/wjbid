@@ -195,24 +195,30 @@ export default function OpportunityMetaPanel({ data, hideHeader = false }: Props
           </MetaGroup>
         )}
 
-        {/* Description */}
-        {description && (
-          <MetaGroup title="본문">
-            {isDescUrl ? (
-              <a
-                href={description}
-                target="_blank"
-                rel="noreferrer"
-                className="text-sky-600 hover:underline text-sm break-all"
-              >
-                <i className="fa-solid fa-up-right-from-square mr-1" />
-                원본 설명 보기 (SAM.gov API)
-              </a>
-            ) : (
-              <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{description}</p>
-            )}
-          </MetaGroup>
-        )}
+        {/* Description — CR-035: 본문 텍스트(있으면) + SAM 원문 링크(번역·본문 유무와 무관하게 항상) */}
+        <MetaGroup title="본문">
+          {description && !isDescUrl ? (
+            <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap mb-2">{description}</p>
+          ) : (
+            // description이 noticedesc API URL(api_key 없어 404)이거나 비어있는 본문 미수집 상태.
+            // 깨진 API 링크는 노출하지 않고 안내만. 본문은 "한글 번역하기"로 받는다.
+            <p className="text-sm text-slate-500 mb-2">
+              본문 미수집 — "한글 번역하기"를 누르면 원문 본문을 가져옵니다.
+            </p>
+          )}
+          {/* 원문(SAM 공개 공고 페이지)으로 가는 링크 — 항상 노출 */}
+          {data.uiLink && (
+            <a
+              href={data.uiLink}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center text-sky-600 hover:underline text-sm break-all"
+            >
+              <i className="fa-solid fa-up-right-from-square mr-1" />
+              SAM.gov에서 원문 보기
+            </a>
+          )}
+        </MetaGroup>
 
         {/* Resource Links */}
         {data.resourceLinks && data.resourceLinks.length > 0 && (

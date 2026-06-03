@@ -162,10 +162,25 @@ public class OpportunityTranslationService {
         return stripHtml(body);
     }
 
-    /** HTML 태그 단순 제거 + 연속 공백 정리. 빈 결과면 null. */
+    /**
+     * HTML 태그 제거 + 문단 줄바꿈 보존. 빈 결과면 null.
+     * CR-035: 블록 태그(&lt;br&gt;,&lt;/p&gt;,&lt;/div&gt;,&lt;li&gt;)는 줄바꿈으로 바꿔 문단을 살린다.
+     * 기존엔 \s+를 공백 1개로 합쳐 줄바꿈이 전부 사라졌다(번역문이 한 줄로 보이던 원인).
+     */
     private String stripHtml(String s) {
         if (s == null) return null;
-        String plain = s.replaceAll("<[^>]+>", " ").replaceAll("\\s+", " ").trim();
+        String plain = s
+                // 블록 경계 → 줄바꿈
+                .replaceAll("(?i)<br\\s*/?>", "\n")
+                .replaceAll("(?i)</p>|</div>|</li>", "\n")
+                .replaceAll("(?i)<li[^>]*>", "\n• ")
+                // 나머지 태그 제거
+                .replaceAll("<[^>]+>", " ")
+                // 줄바꿈은 보존하되, 각 줄 안의 연속 공백/탭만 1칸으로
+                .replaceAll("[ \\t\\x0B\\f\\r]+", " ")
+                // 3줄 이상 연속 빈 줄은 2줄로 축약
+                .replaceAll("\\n{3,}", "\n\n")
+                .trim();
         return plain.isEmpty() ? null : plain;
     }
 }

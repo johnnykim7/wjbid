@@ -152,11 +152,13 @@ public class Opportunity extends BaseEntity {
         this.descriptionBody = body;
     }
 
-    /** CR-022 (재구현): 본문 한글 번역 결과 반영. 빈 문자열/null은 무시 (실패 시 영문 fallback) */
+    /**
+     * CR-022 (재구현): 본문 한글 번역 결과 반영. 빈 문자열/null은 무시 (실패 시 영문 fallback).
+     * CR-035: 컬럼이 TEXT(V33)로 확대돼 본문 전체 번역을 그대로 보존(500자 컷 제거).
+     */
     public void applyDescriptionTranslation(String koreanText) {
         if (koreanText == null || koreanText.isBlank()) return;
-        this.descriptionSummaryKo = koreanText.length() > 500
-                ? koreanText.substring(0, 500) : koreanText;
+        this.descriptionSummaryKo = koreanText;
         this.translatedAt = LocalDateTime.now();
     }
 
