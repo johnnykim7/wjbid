@@ -147,6 +147,9 @@ public class AttachmentAutoDownloadService {
                 }
             });
         } catch (Exception e) {
+            // CR-036: 응답을 못 받은 호출(timeout/IO 실패)도 쿼터를 소진했을 수 있다 — error로 계측
+            quotaLogger.record(SamQuotaLogger.EP_ATTACHMENT, null, null, false,
+                    e.getClass().getSimpleName() + ": " + e.getMessage());
             attachment.markFailed(truncate(e.getClass().getSimpleName() + ": " + e.getMessage()));
             attachmentRepository.save(attachment);
             log.warn("[CR-025] 자동 다운로드 예외: attachmentId={}", attachmentId, e);

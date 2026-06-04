@@ -109,6 +109,9 @@ public class SAMGovApiClient {
 
         } catch (IOException e) {
             log.error("Error calling SAM.gov API", e);
+            // CR-036: 응답을 못 받은 호출(timeout/IO 실패)도 쿼터를 소진했을 수 있다 — error로 계측
+            quotaLogger.record(SamQuotaLogger.EP_SEARCH, null, null, false,
+                    e.getClass().getSimpleName() + ": " + e.getMessage());
             EvidenceLogger.logTimeout("sam-gov", "GET /opportunities/v2/search",
                     UUID.randomUUID().toString(), Map.of("keyword", keyword != null ? keyword : ""));
             throw new RuntimeException("Failed to call SAM.gov API", e);
@@ -148,6 +151,9 @@ public class SAMGovApiClient {
             });
         } catch (Exception e) {
             log.warn("[CR-022-2] noticedesc fetch 실패: {} ({})", noticeDescUrl, e.getMessage());
+            // CR-036: 응답을 못 받은 호출(timeout/IO 실패)도 쿼터를 소진했을 수 있다 — error로 계측
+            quotaLogger.record(SamQuotaLogger.EP_NOTICEDESC, null, null, false,
+                    e.getClass().getSimpleName() + ": " + e.getMessage());
             return null;
         }
     }
@@ -161,10 +167,12 @@ public class SAMGovApiClient {
         url.append("?api_key=").append(apiKey);
 
         if (keyword != null && !keyword.isEmpty()) {
-            // CR-026: q=토큰분리(전문검색)로 노이즈 99.9% 발생 → 따옴표로 phrase 강제.
-            // 이미 따옴표가 있으면 그대로, 없으면 감싼다.
-            String phrase = keyword.startsWith("\"") ? keyword : "\"" + keyword + "\"";
-            url.append("&q=").append(encodeValue(phrase));
+            // CR-036: q는 SAM v2 미지원 파라미터 — 무시되어 날짜창 전체 공고가 반환됐다(4880건).
+            // 우리가 원하는 건 발주처(organization)가 411TH CSB인 공고이므로 정식 파라미터
+            // organizationName으로 서버측 필터한다. totalRecords가 실수치로 떨어져 1콜로 끝난다.
+            // (client-side organizationMatches는 이중 안전망으로 유지)
+            String orgName = keyword.replaceAll("\"", "").trim();
+            url.append("&organizationName=").append(encodeValue(orgName));
         }
 
         if (postedFrom != null) {
