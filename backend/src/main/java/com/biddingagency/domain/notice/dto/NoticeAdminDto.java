@@ -22,6 +22,7 @@ public class NoticeAdminDto {
     private String originTitle;          // 원본 영문 제목
     private String solicitationNumber;
     private String organizationName;
+    private LocalDateTime postedDate;     // 공고 게시일 (SAM 수집 확정값 — 화면 "공고일" 표시용)
     private LocalDateTime responseDeadline;
     private String koreanTitle;          // 한글화 제목
     private NoticeGenerationStatus generationStatus;
@@ -40,6 +41,7 @@ public class NoticeAdminDto {
                 .originTitle(opp.getTitle())
                 .solicitationNumber(opp.getSolicitationNumber())
                 .organizationName(opp.getOrganizationName())
+                .postedDate(opp.getPostedDate())
                 .responseDeadline(opp.getResponseDeadline())
                 .koreanTitle(notice.getKoreanTitle())
                 .generationStatus(notice.getGenerationStatus())

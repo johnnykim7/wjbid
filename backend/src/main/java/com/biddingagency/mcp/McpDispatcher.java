@@ -52,7 +52,14 @@ public class McpDispatcher {
             case "initialize"  -> handleInitialize(id);
             case "tools/list"  -> success(id, Map.of("tools", ALL_TOOLS));
             case "tools/call"  -> handleToolCall(id, body);
-            default            -> error(id, -32601, "Method not found: " + method);
+            default            -> {
+                // JSON-RPC notification (notifications/initialized 등)은 id 가 없고 응답해서도 안 됨.
+                // null 을 반환하면 호출측(McpSseController.message)이 SSE 전송을 스킵한다.
+                if (method != null && method.startsWith("notifications/")) {
+                    yield null;
+                }
+                yield error(id, -32601, "Method not found: " + method);
+            }
         };
     }
 
@@ -137,10 +144,11 @@ public class McpDispatcher {
     }
 
     private Map<String, Object> error(Object id, int code, String message) {
-        return Map.of(
-            "jsonrpc", "2.0",
-            "id", id,
-            "error", Map.of("code", code, "message", message)
-        );
+        // Map.of 는 null value 를 허용하지 않아 id=null(notification)일 때 NPE → LinkedHashMap 사용.
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("jsonrpc", "2.0");
+        response.put("id", id);
+        response.put("error", Map.of("code", code, "message", message));
+        return response;
     }
 }

@@ -8,6 +8,7 @@ import {
 } from '../api/client'
 import NoticeDocumentView from '../components/NoticeDocumentView'
 import type { EligibilityItem } from '../components/NoticeDocumentView'
+import NoticeCorrectionChat from '../components/NoticeCorrectionChat'
 
 interface AnalysisResult {
   analysisStatus?: string
@@ -24,6 +25,7 @@ interface NoticeDetail {
   originTitle: string
   solicitationNumber?: string
   organizationName?: string
+  postedDate?: string
   responseDeadline?: string
   koreanTitle?: string
   generationStatus: 'PENDING' | 'ANALYZING' | 'COMPLETED' | 'FAILED'
@@ -164,6 +166,7 @@ export default function NoticeAdminDetailPage() {
             <NoticeDocumentView
               contentJson={a?.contentJson}
               eligibility={a?.requiredDocuments?.eligibility as EligibilityItem[] | undefined}
+              postedDate={notice.postedDate}
             />
 
             {/* 필요 서류 체크리스트 — 액션 데이터(고객 슬롯 매칭/제출 차단 기준)이므로 본문과 별도 표시.
@@ -257,6 +260,11 @@ export default function NoticeAdminDetailPage() {
           </div>
         )}
       </div>
+
+      {/* CR-033: 공고문 완료 후 교정 채팅 — 분석 결과를 자연어로 부분 수정 */}
+      {notice.generationStatus === 'COMPLETED' && id && (
+        <NoticeCorrectionChat noticeId={id} />
+      )}
     </div>
   )
 }

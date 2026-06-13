@@ -179,8 +179,12 @@ app:
       allowed-origin: ${WIDGET_ALLOWED_ORIGIN:http://woojinusbid.com}  # Aimbase widget.allowed-origins 화이트리스트와 정확히 일치
       token-ttl-seconds: ${WIDGET_TOKEN_TTL:1800}
     polling:
-      interval-ms: 3000       # 폴링 간격 (3초, Aimbase 권장)
-      max-attempts: 200       # 최대 폴링 횟수 (200 * 3초 = 10분). CR-021: 첨부 다건 parse + contentJson 풍부도 추가로 3분 한계 초과 사례 발생
+      interval-ms: ${AIMBASE_POLL_INTERVAL_MS:5000}     # 폴링 간격 (5초). 횟수 대비 시간 효율 ↑, 서버 부하 ↓
+      max-attempts: ${AIMBASE_POLL_MAX_ATTEMPTS:360}    # 최대 폴링 횟수 (360 * 5초 = 30분).
+      # CR-038: WF가 끝나기 전에 BE가 포기(타임아웃)하지 않게 넉넉히 잡는다 — 타임아웃이 사실상 안 나는 게 목표.
+      # 근거: v2 WF(작업장+검증) + Aimbase LLM_CALL Phase1=4096 고정으로 큰 contentJson은 에스컬레이션 반복 → 실측 완주 ~13분,
+      # 첨부 다건(14건) 공고는 build_workspace(parse_document 직렬)만으로 더 길어짐. 구 200*3초=10분은 빈번히 초과(ANALYZING 박힘).
+      # 30분이면 최악(첨부 다건+에스컬레이션)도 완주 가능. Aimbase Phase1 시작값 수정으로 빨라지면 환경변수로 하향.
     workflows:
       requirement-extraction: ${AIMBASE_WF_REQ_EXTRACTION:e96e63d1-7bf3-493c-9473-1bd87723073c}
       document-generation: ${AIMBASE_WF_DOC_GENERATION:014e7de2-251e-432d-95dd-16bddb28f18e}

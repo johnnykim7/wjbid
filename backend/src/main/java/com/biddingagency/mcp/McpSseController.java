@@ -107,6 +107,12 @@ public class McpSseController {
 
         try {
             Map<String, Object> response = mcpDispatcher.handle(body);
+
+            // notification(notifications/initialized 등)은 응답이 없다(null) → SSE 전송 스킵, 202 반환.
+            if (response == null) {
+                return ResponseEntity.accepted().build();
+            }
+
             String json = objectMapper.writeValueAsString(response);
 
             emitter.send(SseEmitter.event()

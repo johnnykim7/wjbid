@@ -211,6 +211,11 @@ export const regenerateNotice = (id: string) =>
 export const updateNoticeResult = (id: string, data: Record<string, unknown>) =>
   api.patch(`/admin/notices/${id}`, data)
 
+// CR-033: 교정 채팅 위젯 BFF 토큰. ADMIN 인증 통과 시 Aimbase 단기 위젯 토큰(30분)을 대리 발급.
+// 응답: { token, expires_at, refresh_after, scopes }
+export const issueWidgetToken = () =>
+  api.post('/admin/aimbase/widget-token')
+
 // 성공 제안서 패턴 (CR-013)
 export const getRfpSamples = (page = 0) =>
   api.get('/admin/rfp-samples', { params: { page, size: 20 } })

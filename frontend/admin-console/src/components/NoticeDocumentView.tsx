@@ -37,6 +37,8 @@ interface Props {
   contentJson?: Record<string, unknown> | null
   // CR-033: 정밀추출 자격요건 — 본문 "자격 요건" 섹션 자리에 인라인 렌더(중복 방지)
   eligibility?: EligibilityItem[]
+  // 공고 게시일(SAM 수집 확정값). LLM이 채운 issuedDate("2026" 등)보다 우선하여 "공고일"로 표시.
+  postedDate?: string | null
 }
 
 const NAVY = 'bg-slate-800 text-white'
@@ -44,7 +46,7 @@ const NAVY_DARK = 'bg-slate-900 text-white'
 const NAVY_BORDER = 'border-slate-700'
 const SECTION_BORDER = 'border-slate-200'
 
-export default function NoticeDocumentView({ contentJson, eligibility }: Props) {
+export default function NoticeDocumentView({ contentJson, eligibility, postedDate }: Props) {
   if (!contentJson) {
     return (
       <div className="rounded-lg bg-yellow-50 border border-yellow-200 px-4 py-3 text-sm text-yellow-800">
@@ -72,7 +74,8 @@ export default function NoticeDocumentView({ contentJson, eligibility }: Props) 
   //  - 중복: 파란 박스 아래 metaGrid(6칸)와 "1. 공고 기본 정보" kvTable 이 같은 6항목 → metaGrid 를 렌더 스킵(주제표=기본정보 표를 남긴다).
   //  - 발행일: noticeHeader.issuedDate 를 "공고 기본 정보" kvTable 의 한 행으로 끌어올려 표시(회색 줄에 묻히던 것).
   const headerNode = doc.content.find((n) => n.type === 'noticeHeader')
-  const issuedDate = str(headerNode?.attrs?.issuedDate)
+  // 공고일: 실제 게시일(postedDate) 우선 — LLM이 채운 issuedDate("2026" 등)는 부정확하므로 폴백으로만.
+  const issuedDate = fmtDateKo(postedDate) || fmtDateKo(str(headerNode?.attrs?.issuedDate)) || str(headerNode?.attrs?.issuedDate)
 
   const isBasicInfoHeading = (node: Node) =>
     node.type === 'heading' &&
@@ -393,16 +396,41 @@ function asKvRows(v: unknown): { label: string; value: string }[] {
     }))
 }
 
-// CR-033: "공고 기본 정보" 표에 발행일 행을 끼운다(데이터 재생성 없이 렌더에서). 마감일 행 다음에, 이미 있으면 중복 추가 안 함.
+// 날짜 문자열/ISO 를 "YYYY년 M월 D일" 로 변환. 시·분·KST 제거. 파싱 실패 시 빈 문자열.
+// "2026" 처럼 연도만 있는 값은 정확한 날짜로 못 보므로 변환 실패 처리(폴백은 호출부에서).
+function fmtDateKo(v?: string | null): string {
+  if (!v) return ''
+  const s = String(v).trim()
+  // ISO(2026-05-29...) 또는 "2026년 6월 10일 23:59 KST" 형태 모두에서 Y/M/D 추출
+  let m = s.match(/(\d{4})[-/.년\s]+(\d{1,2})[-/.월\s]+(\d{1,2})/)
+  if (!m) {
+    // "2026-05-29" 같은 ISO 를 Date 로 한번 더 시도
+    const d = new Date(s)
+    if (isNaN(d.getTime())) return ''
+    return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`
+  }
+  return `${Number(m[1])}년 ${Number(m[2])}월 ${Number(m[3])}일`
+}
+
+// CR-033: "공고 기본 정보" 표에 공고일 행을 끼운다(데이터 재생성 없이 렌더에서). 마감일 행 다음에, 이미 있으면 중복 추가 안 함.
+// + 마감일 행 value 도 "YYYY년 M월 D일" 로 포맷(시·분·KST 제거).
 function withIssuedDate(
   rows: { label: string; value: string }[],
   issuedDate?: string,
 ): { label: string; value: string }[] {
-  if (!issuedDate) return rows
-  if (rows.some((r) => r.label.includes('발행일') || r.label.includes('공고일'))) return rows
-  const out = [...rows]
+  // 마감일 행 value 포맷팅 (issuedDate 유무와 무관하게 항상)
+  const formatted = rows.map((r) => {
+    if (r.label.includes('마감일') || /deadline/i.test(r.label)) {
+      const f = fmtDateKo(r.value)
+      return f ? { ...r, value: f } : r
+    }
+    return r
+  })
+  if (!issuedDate) return formatted
+  if (formatted.some((r) => r.label.includes('발행일') || r.label.includes('공고일'))) return formatted
+  const out = [...formatted]
   const deadlineIdx = out.findIndex((r) => r.label.includes('마감일') || /deadline/i.test(r.label))
-  const issuedRow = { label: '발행일 (Posted Date)', value: issuedDate }
+  const issuedRow = { label: '공고일', value: issuedDate }
   if (deadlineIdx >= 0) out.splice(deadlineIdx + 1, 0, issuedRow)
   else out.push(issuedRow)
   return out
