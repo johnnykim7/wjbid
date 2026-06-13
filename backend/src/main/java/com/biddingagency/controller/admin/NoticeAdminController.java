@@ -83,6 +83,19 @@ public class NoticeAdminController {
         ));
     }
 
+    @PostMapping("/{id}/cancel")
+    @Operation(summary = "한글화/분석 강제 중단 (CR-039)",
+            description = "ANALYZING으로 멈춘(stuck) 공고문을 강제 FAILED 전환. Aimbase 취소는 best-effort.")
+    public ResponseEntity<Map<String, String>> cancel(@PathVariable UUID id) {
+        boolean cancelled = noticeService.cancelAnalysis(id, "관리자 강제 중단");
+        log.info("공고문 한글화 강제 중단: noticeId={}, cancelled={}", id, cancelled);
+        return ResponseEntity.ok(Map.of(
+                "status", cancelled ? "CANCELLED" : "SKIPPED",
+                "generationStatus", cancelled ? "FAILED" : "UNCHANGED",
+                "noticeId", id.toString()
+        ));
+    }
+
     @PatchMapping("/{id}")
     @Operation(summary = "한글화 결과 보정 (관리자 수동)")
     @SuppressWarnings("unchecked")

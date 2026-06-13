@@ -242,6 +242,14 @@ app:
   # 플랫폼 자체 외부 접근 URL (CR-013: Aimbase가 패턴 추출 시 원본 파일을 다운로드할 base)
   self-base-url: ${SELF_BASE_URL:http://59.8.160.12:8183/api}
 
+  # CR-039: 공고문 한글화/분석 stuck 자동 정리 (POL-012)
+  notice:
+    analysis:
+      # ANALYZING 상태로 멈춘 것으로 간주하는 임계(분). 폴링 max(30분)보다 넉넉히.
+      stuck-threshold-minutes: ${NOTICE_ANALYSIS_STUCK_THRESHOLD_MINUTES:60}
+      # stuck 정리 스케줄러 주기(ms). 기본 10분.
+      scheduler-interval-ms: ${NOTICE_ANALYSIS_SCHEDULER_INTERVAL_MS:600000}
+
   # bp-notification 연동 (CR-005/006: 알림 발송 인프라 — Gmail SMTP 대체)
   bp-notification:
     base-url: ${BP_NOTIFICATION_URL:http://59.8.160.12:8185/api/v1}

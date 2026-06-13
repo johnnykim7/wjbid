@@ -358,6 +358,31 @@ public class LLMPlatformClient {
         }
     }
 
+    /**
+     * CR-039: 실행 중인 워크플로우 run 강제 취소 — best-effort.
+     *
+     * Aimbase에는 현재 워크플로우 run 취소 REST API가 없다(실측: WorkflowController에 run/approve/조회만).
+     * 향후 Aimbase가 SubagentController.cancel 패턴으로 취소 API를 추가하면 자동 동작하도록 미리 호출한다.
+     * 404/실패/타임아웃은 전부 삼키고 로그만 남긴다 — 호출자(공고문 강제 중단) 흐름을 막지 않는다.
+     *
+     * @param runId Notice.workflowRunId
+     */
+    public void cancelWorkflowRun(String runId) {
+        if (runId == null || runId.isBlank()) {
+            log.info("Aimbase: 취소할 runId 없음 — Aimbase 취소 호출 생략");
+            return;
+        }
+        String cancelUrl = baseUrl + "/api/v1/workflows/runs/" + runId + "/cancel";
+        try {
+            llmPlatformRestTemplate.exchange(cancelUrl, HttpMethod.POST,
+                new HttpEntity<>(Map.of()), String.class);
+            log.info("Aimbase: 워크플로우 run 취소 요청 성공 runId={}", runId);
+        } catch (RestClientException e) {
+            // best-effort: Aimbase에 취소 API가 없거나 실패해도 우리 쪽 흐름은 계속 진행
+            log.warn("Aimbase: 워크플로우 run 취소 요청 실패(무시, best-effort) runId={}, reason={}", runId, e.getMessage());
+        }
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // 워크플로우 실행 + 폴링 (Aimbase API 규격)
     // ─────────────────────────────────────────────────────────────────────────

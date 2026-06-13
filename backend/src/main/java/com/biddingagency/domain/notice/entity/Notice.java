@@ -89,6 +89,10 @@ public class Notice extends BaseEntity {
     @Column(name = "analyzed_at")
     private LocalDateTime analyzedAt;
 
+    /** CR-039: 한글화/분석 시작(markAnalyzing) 시각 — stuck 자동 정리 임계 판정 기준. updatedAt 대신 전용 필드. */
+    @Column(name = "analysis_started_at")
+    private LocalDateTime analysisStartedAt;
+
     @Column(name = "error_message", columnDefinition = "TEXT")
     private String errorMessage;
 
@@ -178,7 +182,13 @@ public class Notice extends BaseEntity {
     public void markAnalyzing(String workflowRunId) {
         this.generationStatus = NoticeGenerationStatus.ANALYZING;
         this.workflowRunId = workflowRunId;
+        this.analysisStartedAt = LocalDateTime.now();  // CR-039: stuck 판정 기준 시각
         this.errorMessage = null;
+    }
+
+    /** CR-039: ANALYZING 상태에서만 강제 중단 가능 여부. */
+    public boolean isAnalyzing() {
+        return this.generationStatus == NoticeGenerationStatus.ANALYZING;
     }
 
     public void markCompleted(String koreanTitle,

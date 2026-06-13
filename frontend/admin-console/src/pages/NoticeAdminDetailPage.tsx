@@ -5,6 +5,7 @@ import {
   publishNotice,
   hideNotice,
   regenerateNotice,
+  cancelNotice,
 } from '../api/client'
 import NoticeDocumentView from '../components/NoticeDocumentView'
 import type { EligibilityItem } from '../components/NoticeDocumentView'
@@ -117,6 +118,17 @@ export default function NoticeAdminDetailPage() {
           >
             <i className="fa-solid fa-rotate mr-1.5" />재생성
           </button>
+          {/* CR-039: ANALYZING으로 멈춘 stuck 공고문 강제 중단 (재생성은 ANALYZING 중 disabled이라 화면 잠금 탈출용) */}
+          {notice.generationStatus === 'ANALYZING' && (
+            <button
+              onClick={() => run(cancelNotice)}
+              disabled={actionLoading}
+              className="px-4 py-2 text-sm rounded-lg bg-red-50 text-red-700 hover:bg-red-100 disabled:opacity-40"
+              title="분석이 멈춰있을 때 강제로 중단하고 재생성 가능 상태로 되돌립니다."
+            >
+              <i className="fa-solid fa-stop mr-1.5" />강제 중단
+            </button>
+          )}
           {notice.visibility === 'HIDDEN' ? (
             <button
               onClick={() => run(publishNotice)}

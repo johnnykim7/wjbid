@@ -49,7 +49,7 @@ class OpportunityServiceTest {
                     .build());
         }
         Page<Opportunity> page = new PageImpl<>(opportunities, pageable, 50);
-        given(opportunityRepository.findByActiveTrue(pageable)).willReturn(page);
+        given(opportunityRepository.findByActiveTrueOrderByPostedDateDescCreatedAtDesc(pageable)).willReturn(page);
 
         // when
         Page<Opportunity> result = opportunityService.findAllActive(pageable);

@@ -28,6 +28,14 @@ public interface NoticeRepository extends JpaRepository<Notice, UUID> {
     long countByGenerationStatus(NoticeGenerationStatus status);
 
     /**
+     * CR-039: stuck 자동 정리 대상 — ANALYZING 상태로 임계 시각 이전에 시작돼 멈춘 공고문.
+     * analysisStartedAt이 NULL인 경우(구 데이터)는 V35 마이그레이션에서 updated_at으로 보정됨.
+     */
+    @Query("SELECT n FROM Notice n WHERE n.generationStatus = com.biddingagency.domain.notice.entity.NoticeGenerationStatus.ANALYZING "
+            + "AND n.analysisStartedAt IS NOT NULL AND n.analysisStartedAt < :threshold")
+    List<Notice> findStuckAnalyzing(@Param("threshold") java.time.LocalDateTime threshold);
+
+    /**
      * 고객 노출 공고문 (CR-016: VISIBLE만).
      * CR-009: includeExpired=false면 마감 지난 공고 제외(마감일 NULL은 유지). 정렬은 Pageable.
      */

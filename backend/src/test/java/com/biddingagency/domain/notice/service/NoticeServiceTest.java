@@ -35,6 +35,9 @@ class NoticeServiceTest {
     @Mock
     private ApplicationEventPublisher eventPublisher;
 
+    @Mock
+    private com.biddingagency.integration.llmplatform.LLMPlatformClient llmPlatformClient;
+
     @InjectMocks
     private NoticeService noticeService;
 
@@ -63,7 +66,7 @@ class NoticeServiceTest {
         newAnalyzingNotice(noticeId);
 
         Notice result = noticeService.saveResult(
-                noticeId, "한글 제목", validSummary(), null, validRequiredDocs(), null, null);
+                noticeId, "한글 제목", validSummary(), null, validRequiredDocs(), null, null, null);
 
         assertThat(result.getGenerationStatus()).isEqualTo(NoticeGenerationStatus.COMPLETED);
         then(eventPublisher).should(never()).publishEvent(any(OpportunityAnalysisCompletedEvent.class));
@@ -77,7 +80,7 @@ class NoticeServiceTest {
         newAnalyzingNotice(noticeId);
 
         Notice result = noticeService.saveResult(
-                noticeId, "  ", validSummary(), null, validRequiredDocs(), null, null);
+                noticeId, "  ", validSummary(), null, validRequiredDocs(), null, null, null);
 
         assertThat(result.getGenerationStatus()).isEqualTo(NoticeGenerationStatus.FAILED);
         assertThat(result.getErrorMessage()).contains("koreanTitle");
@@ -91,7 +94,7 @@ class NoticeServiceTest {
         newAnalyzingNotice(noticeId);
 
         Notice result = noticeService.saveResult(
-                noticeId, "한글 제목", Map.of("scope", "범위만 있음"), null, validRequiredDocs(), null, null);
+                noticeId, "한글 제목", Map.of("scope", "범위만 있음"), null, validRequiredDocs(), null, null, null);
 
         assertThat(result.getGenerationStatus()).isEqualTo(NoticeGenerationStatus.FAILED);
         assertThat(result.getErrorMessage()).contains("summary.overview");
@@ -105,7 +108,7 @@ class NoticeServiceTest {
         newAnalyzingNotice(noticeId);
 
         Notice result = noticeService.saveResult(
-                noticeId, "한글 제목", validSummary(), null, Map.of("documents", List.of()), null, null);
+                noticeId, "한글 제목", validSummary(), null, Map.of("documents", List.of()), null, null, null);
 
         assertThat(result.getGenerationStatus()).isEqualTo(NoticeGenerationStatus.FAILED);
         assertThat(result.getErrorMessage()).contains("requiredDocuments.documents");
@@ -118,12 +121,55 @@ class NoticeServiceTest {
         UUID noticeId = UUID.randomUUID();
         newAnalyzingNotice(noticeId);
 
-        noticeService.saveResult(noticeId, null, null, null, null, null, null);
+        noticeService.saveResult(noticeId, null, null, null, null, null, null, null);
 
         ArgumentCaptor<OpportunityAnalysisCompletedEvent> captor =
                 ArgumentCaptor.forClass(OpportunityAnalysisCompletedEvent.class);
         then(eventPublisher).should().publishEvent(captor.capture());
         assertThat(captor.getValue().isSuccess()).isFalse();
         assertThat(captor.getValue().getErrorMessage()).contains("koreanTitle");
+    }
+
+    // CR-039: ANALYZING 상태 강제 중단 → FAILED 전이
+    @Test
+    @DisplayName("강제중단_ANALYZING상태_FAILED전이됨")
+    void 강제중단_분석중_실패전이() {
+        UUID noticeId = UUID.randomUUID();
+        newAnalyzingNotice(noticeId);
+
+        boolean cancelled = noticeService.cancelAnalysis(noticeId, "관리자 강제 중단");
+
+        assertThat(cancelled).isTrue();
+    }
+
+    // CR-039: ANALYZING이 아니면 무시(idempotent) — 상태 안 바뀜
+    @Test
+    @DisplayName("강제중단_COMPLETED상태_무시됨")
+    void 강제중단_완료상태_무시() {
+        UUID noticeId = UUID.randomUUID();
+        Opportunity opp = Opportunity.builder().noticeId("N-1").title("T").build();
+        Notice notice = Notice.builder().opportunity(opp).build();
+        notice.markCompleted("제목", validSummary(), null, validRequiredDocs(), null, null, null);
+        given(noticeRepository.findById(noticeId)).willReturn(Optional.of(notice));
+
+        boolean cancelled = noticeService.cancelAnalysis(noticeId, "관리자 강제 중단");
+
+        assertThat(cancelled).isFalse();
+        assertThat(notice.getGenerationStatus()).isEqualTo(NoticeGenerationStatus.COMPLETED);
+    }
+
+    // CR-039: 강제 중단 시 Aimbase 취소 호출 후 우리 쪽 FAILED + 사유 기록 (best-effort)
+    @Test
+    @DisplayName("강제중단_분석중_Aimbase취소호출되고_FAILED사유기록됨")
+    void 강제중단_분석중_Aimbase호출_실패전이() {
+        UUID noticeId = UUID.randomUUID();
+        Notice notice = newAnalyzingNotice(noticeId);
+        // cancelWorkflowRun은 내부에서 RestClientException을 삼키는 best-effort (목은 기본 no-op)
+
+        noticeService.cancelAnalysis(noticeId, "관리자 강제 중단");
+
+        then(llmPlatformClient).should().cancelWorkflowRun(any());
+        assertThat(notice.getGenerationStatus()).isEqualTo(NoticeGenerationStatus.FAILED);
+        assertThat(notice.getErrorMessage()).isEqualTo("관리자 강제 중단");
     }
 }

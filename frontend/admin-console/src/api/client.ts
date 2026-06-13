@@ -208,6 +208,10 @@ export const hideNotice = (id: string) =>
 export const regenerateNotice = (id: string) =>
   api.post(`/admin/notices/${id}/regenerate`)
 
+// CR-039: ANALYZING으로 멈춘(stuck) 공고문 강제 중단 → FAILED 전환
+export const cancelNotice = (id: string) =>
+  api.post(`/admin/notices/${id}/cancel`)
+
 export const updateNoticeResult = (id: string, data: Record<string, unknown>) =>
   api.patch(`/admin/notices/${id}`, data)
 
