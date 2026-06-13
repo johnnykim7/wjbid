@@ -70,6 +70,16 @@ public class WorkflowRunResponse {
         return "running".equalsIgnoreCase(status) || "pending".equalsIgnoreCase(status);
     }
 
+    /** CR-039/CR-105: 협조적 중지 완료 상태 */
+    public boolean isCancelled() {
+        return "cancelled".equalsIgnoreCase(status);
+    }
+
+    /** CR-039/CR-105: 더 이상 진행하지 않는 종료 상태 (cancel 폴링 종료 조건). */
+    public boolean isTerminal() {
+        return isCompleted() || isFailed() || isCancelled();
+    }
+
     // ── CR-029 비용 추적: stepResults 의 토큰을 합산 ─────────────────────────
     // Aimbase AGENT_CALL step 결과 map 은 "input_tokens"/"output_tokens" 키를 담는다
     // (aimbase AgentCallStepExecutor). stepResults = { stepId -> resultMap } 전체를 순회해 합산.

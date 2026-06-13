@@ -10,6 +10,7 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
@@ -359,14 +360,21 @@ public class LLMPlatformClient {
     }
 
     /**
-     * CR-039: 실행 중인 워크플로우 run 강제 취소 — best-effort.
+     * CR-039 / CR-105: 실행 중인 워크플로우 run 협조적 중지 — best-effort, 비동기.
      *
-     * Aimbase에는 현재 워크플로우 run 취소 REST API가 없다(실측: WorkflowController에 run/approve/조회만).
-     * 향후 Aimbase가 SubagentController.cancel 패턴으로 취소 API를 추가하면 자동 동작하도록 미리 호출한다.
-     * 404/실패/타임아웃은 전부 삼키고 로그만 남긴다 — 호출자(공고문 강제 중단) 흐름을 막지 않는다.
+     * Aimbase `POST /api/v1/workflows/runs/{runId}/cancel` (CR-105, v3.10.0 신설)을 호출한다.
+     * 협조적 중지라 즉시 멈추지 않는다(가이드 §4-7):
+     *   - 응답 status=cancelled (pending_approval/이미 종료) → 즉시 확정.
+     *   - 응답 status=running → 중지 표식만 섰고 현재 스텝은 끝까지 수행. GET /runs/{runId} 를 2.5초 간격
+     *     폴링해 terminal(cancelled/completed/failed) 확정까지 백그라운드에서 기다린다.
+     *     (경계 케이스: 중지보다 완료가 빨라 completed 로 끝날 수 있음 — terminal 자체를 받아 로깅)
+     *
+     * @Async: 화면 잠금 즉시 해제(우리 generationStatus FAILED 전환)를 막지 않도록 별도 스레드에서 종료 확인.
+     * 404/실패/타임아웃은 전부 삼키고 로그만 남긴다 — 호출자(공고문 강제 중단) 흐름과 무관(best-effort).
      *
      * @param runId Notice.workflowRunId
      */
+    @Async("llmTaskExecutor")
     public void cancelWorkflowRun(String runId) {
         if (runId == null || runId.isBlank()) {
             log.info("Aimbase: 취소할 runId 없음 — Aimbase 취소 호출 생략");
@@ -374,13 +382,58 @@ public class LLMPlatformClient {
         }
         String cancelUrl = baseUrl + "/api/v1/workflows/runs/" + runId + "/cancel";
         try {
-            llmPlatformRestTemplate.exchange(cancelUrl, HttpMethod.POST,
-                new HttpEntity<>(Map.of()), String.class);
-            log.info("Aimbase: 워크플로우 run 취소 요청 성공 runId={}", runId);
+            ResponseEntity<AimbaseApiResponse<WorkflowRunResponse>> resp =
+                llmPlatformRestTemplate.exchange(cancelUrl, HttpMethod.POST,
+                    new HttpEntity<>(Map.of()), WORKFLOW_RESPONSE_TYPE);
+
+            WorkflowRunResponse run = resp.getBody() != null ? resp.getBody().getData() : null;
+            String status = run != null ? run.getStatus() : null;
+            log.info("Aimbase: run 중지 요청 접수 runId={}, status={}", runId, status);
+
+            // cancelled(즉시 확정) 또는 이미 terminal 이면 폴링 불필요
+            if (run == null || run.isTerminal()) {
+                return;
+            }
+            // running → 다음 스텝 경계에서 종료될 때까지 폴링으로 terminal 확정 (가이드 §4-7)
+            pollUntilTerminalAfterCancel(runId);
         } catch (RestClientException e) {
-            // best-effort: Aimbase에 취소 API가 없거나 실패해도 우리 쪽 흐름은 계속 진행
-            log.warn("Aimbase: 워크플로우 run 취소 요청 실패(무시, best-effort) runId={}, reason={}", runId, e.getMessage());
+            // best-effort: 404(미존재)·연결 실패 등은 우리 쪽 흐름과 무관하게 삼킴
+            log.warn("Aimbase: run 중지 요청 실패(무시, best-effort) runId={}, reason={}", runId, e.getMessage());
         }
+    }
+
+    /** 협조적 중지(가이드 §4-7) 폴링 간격(ms). */
+    private static final long CANCEL_POLL_INTERVAL_MS = 2500L;
+    /** 협조적 중지 폴링 상한(횟수). 한 스텝이 길 수 있어(parse_document 직렬) 넉넉히 — 120*2.5초=5분. */
+    private static final int CANCEL_POLL_MAX_ATTEMPTS = 120;
+
+    /**
+     * CR-039/CR-105: cancel 표식 후 run 이 terminal 될 때까지 폴링 (best-effort).
+     * GET /api/v1/workflows/runs/{runId} (횡단 조회) 를 2.5초 간격으로 확인.
+     * 상한 초과(스텝이 비정상적으로 김)면 로그만 남기고 포기 — 우리 generationStatus 는 이미 FAILED 라 무해.
+     */
+    private void pollUntilTerminalAfterCancel(String runId) {
+        String pollUrl = baseUrl + "/api/v1/workflows/runs/" + runId;
+        for (int attempt = 1; attempt <= CANCEL_POLL_MAX_ATTEMPTS; attempt++) {
+            sleep(CANCEL_POLL_INTERVAL_MS);
+            try {
+                ResponseEntity<AimbaseApiResponse<WorkflowRunResponse>> resp =
+                    llmPlatformRestTemplate.exchange(pollUrl, HttpMethod.GET, null, WORKFLOW_RESPONSE_TYPE);
+                WorkflowRunResponse run = resp.getBody() != null ? resp.getBody().getData() : null;
+                if (run == null) {
+                    continue;
+                }
+                if (run.isTerminal()) {
+                    // 경계 케이스: 중지보다 완료가 빨라 completed 로 끝났을 수도 있음 — terminal 자체를 로깅
+                    log.info("Aimbase: run 중지 확정 runId={}, finalStatus={} (attempt {}/{})",
+                            runId, run.getStatus(), attempt, CANCEL_POLL_MAX_ATTEMPTS);
+                    return;
+                }
+            } catch (RestClientException e) {
+                log.warn("Aimbase: 중지 폴링 실패(무시) runId={}, attempt={}, reason={}", runId, attempt, e.getMessage());
+            }
+        }
+        log.warn("Aimbase: run 중지 폴링 상한 초과 — terminal 미확정 runId={} (우리 generationStatus 는 이미 FAILED, 무해)", runId);
     }
 
     // ─────────────────────────────────────────────────────────────────────────

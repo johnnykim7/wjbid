@@ -177,8 +177,9 @@ public class NoticeService {
      *
      * ANALYZING 상태로 멈춰 무한 폴링되는(stuck) 공고문을 끊는다.
      * - ANALYZING이 아니면 무시(idempotent) — 이미 끝났거나 다른 상태면 할 일 없음(BIZ-021).
-     * - Aimbase 워크플로우 취소는 best-effort(LLMPlatformClient.cancelWorkflowRun) — 응답·성공 여부와 무관하게
-     *   우리 쪽 generationStatus는 FAILED로 전환(화면 잠금 즉시 해제 최우선, BIZ-021).
+     * - Aimbase 워크플로우 취소(CR-105 협조적 중지)는 best-effort + 비동기(LLMPlatformClient.cancelWorkflowRun @Async):
+     *   cancel 표식 후 백그라운드 스레드가 terminal 까지 폴링 확인한다(가이드 §4-7). 화면을 막지 않음.
+     * - Aimbase 응답·성공 여부와 무관하게 우리 쪽 generationStatus는 즉시 FAILED로 전환(화면 잠금 즉시 해제 최우선, BIZ-021).
      * - FAILED가 되면 FE 재생성 버튼 disabled(=ANALYZING 조건)가 풀려 재시도 가능.
      *
      * @param reason 실패 사유 (수동 중단 / stuck 자동 정리 구분)

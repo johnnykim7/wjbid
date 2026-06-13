@@ -96,7 +96,8 @@
 ```json
 { "status": "CANCELLED", "generationStatus": "FAILED", "noticeId": "..." }
 ```
-> 강제 중단 후 generationStatus가 FAILED가 되므로 FE 재생성 버튼 disabled(=ANALYZING 조건)가 풀려 재시도 가능. Aimbase 취소 API 미존재 시에도 우리 쪽 상태는 항상 FAILED (BIZ-021).
+> 강제 중단 후 generationStatus가 FAILED가 되므로 FE 재생성 버튼 disabled(=ANALYZING 조건)가 풀려 재시도 가능. 우리 쪽 상태는 Aimbase 응답과 무관하게 항상 즉시 FAILED (BIZ-021).
+> **Aimbase 취소 연동 (CR-105)**: `POST /api/v1/workflows/runs/{runId}/cancel` 협조적 중지. `LLMPlatformClient.cancelWorkflowRun`은 @Async — cancel 후 응답이 running이면 `GET /workflows/runs/{runId}`를 2.5초 간격 폴링해 terminal 확정까지 백그라운드 대기(가이드 §4-7). 우리 화면 잠금 해제(즉시 FAILED)는 비동기라 폴링에 막히지 않음.
 > **stuck 자동 정리**: `NoticeStuckCleanupScheduler`(@Scheduled)가 analysis_started_at 임계분(POL-012, 기본 60분) 초과 ANALYZING 건을 동일 cancel 경로로 자동 FAILED. API 호출 아님(백그라운드).
 
 ---
