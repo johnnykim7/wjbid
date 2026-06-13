@@ -78,6 +78,29 @@
 
 ---
 
+## B-3. 공고문 관리 — Admin (Notice Admin) — CR-016
+
+> 공고문 = 원본(Opportunity)에서 선별·한글화된 산출물. 베이스 경로 `/admin/notices` (context-path `/api` 포함 시 `/api/admin/notices`). 구현체: [NoticeAdminController](../backend/src/main/java/com/biddingagency/controller/admin/NoticeAdminController.java).
+
+| 메서드 | 경로 | 설명 | 인증 | 기능 ID |
+|--------|------|------|------|---------|
+| GET | /admin/notices | 공고문 목록 (한글화 상태, 노출 상태) | 🔒 ADMIN | BID-NOTICE |
+| GET | /admin/notices/{id} | 공고문 상세 (한글화 결과) | 🔒 ADMIN | BID-NOTICE |
+| POST | /admin/notices/{id}/publish | 노출 (검수 완료 → 고객 노출, 게이트②) | 🔒 ADMIN | BID-NOTICE |
+| POST | /admin/notices/{id}/hide | 비노출 (VISIBLE → HIDDEN) | 🔒 ADMIN | BID-NOTICE |
+| POST | /admin/notices/{id}/regenerate | 한글화 재생성 (markAnalyzing → 비동기 재실행). ANALYZING 중엔 FE에서 버튼 disabled | 🔒 ADMIN | BID-NOTICE |
+| **POST** | **/admin/notices/{id}/cancel** | **강제 중단 (CR-039)** — ANALYZING만 허용. Aimbase 워크플로우 취소 best-effort 후 결과 무관 FAILED 전환. 비-ANALYZING은 무시(idempotent) | 🔒 ADMIN | BID-NOTICE |
+| PATCH | /admin/notices/{id} | 한글화 결과 보정 (관리자 수동) | 🔒 ADMIN | BID-NOTICE |
+
+**POST /admin/notices/{id}/cancel 응답 (CR-039)**:
+```json
+{ "status": "CANCELLED", "generationStatus": "FAILED", "noticeId": "..." }
+```
+> 강제 중단 후 generationStatus가 FAILED가 되므로 FE 재생성 버튼 disabled(=ANALYZING 조건)가 풀려 재시도 가능. Aimbase 취소 API 미존재 시에도 우리 쪽 상태는 항상 FAILED (BIZ-021).
+> **stuck 자동 정리**: `NoticeStuckCleanupScheduler`(@Scheduled)가 analysis_started_at 임계분(POL-012, 기본 60분) 초과 ANALYZING 건을 동일 cancel 경로로 자동 FAILED. API 호출 아님(백그라운드).
+
+---
+
 ## C. 공고 열람 (Opportunity Browse) — Sprint 3
 
 | 메서드 | 경로 | 설명 | 인증 | 기능 ID |
