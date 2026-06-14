@@ -52,11 +52,25 @@ interface OpportunityDetail {
 interface Attachment {
   id: string
   fileName?: string
+  fileSize?: number
   contentType?: string
   sourceUrl?: string
   downloadStatus: 'SUCCESS' | 'FAILED' | 'LINK_ONLY' | 'MANUAL_FETCH_REQUIRED'
   manualFetchRequired: boolean
   downloadedAt?: string
+}
+
+/** 바이트를 사람이 읽기 좋은 단위로. null/0/미상은 빈 문자열 반환(표시 생략). */
+function formatFileSize(bytes?: number): string {
+  if (bytes == null || bytes <= 0) return ''
+  const units = ['B', 'KB', 'MB', 'GB']
+  let v = bytes
+  let i = 0
+  while (v >= 1024 && i < units.length - 1) {
+    v /= 1024
+    i++
+  }
+  return `${v < 10 && i > 0 ? v.toFixed(1) : Math.round(v)} ${units[i]}`
 }
 
 export default function OpportunityAdminDetailPage() {
@@ -318,7 +332,12 @@ export default function OpportunityAdminDetailPage() {
               {attachments.map((a) => (
                 <li key={a.id} className="flex items-center justify-between gap-2 text-sm border border-gray-100 rounded-lg px-3 py-2">
                   <div className="min-w-0">
-                    <div className="font-medium text-gray-800 truncate">{a.fileName || '(이름 없음)'}</div>
+                    <div className="font-medium text-gray-800 truncate">
+                      {a.fileName || '(이름 없음)'}
+                      {formatFileSize(a.fileSize) && (
+                        <span className="ml-2 font-normal text-xs text-gray-400">{formatFileSize(a.fileSize)}</span>
+                      )}
+                    </div>
                     {a.sourceUrl && a.sourceUrl !== 'admin-upload' && (
                       <a href={a.sourceUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline truncate inline-block max-w-full">
                         <i className="fa-solid fa-external-link mr-1" />외부 원본 링크
