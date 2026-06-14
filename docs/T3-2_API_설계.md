@@ -91,6 +91,7 @@
 | POST | /admin/notices/{id}/regenerate | 한글화 재생성 (markAnalyzing → 비동기 재실행). ANALYZING 중엔 FE에서 버튼 disabled | 🔒 ADMIN | BID-NOTICE |
 | **POST** | **/admin/notices/{id}/cancel** | **강제 중단 (CR-039)** — ANALYZING만 허용. Aimbase 워크플로우 취소 best-effort 후 결과 무관 FAILED 전환. 비-ANALYZING은 무시(idempotent) | 🔒 ADMIN | BID-NOTICE |
 | PATCH | /admin/notices/{id} | 한글화 결과 보정 (관리자 수동) | 🔒 ADMIN | BID-NOTICE |
+| **DELETE** | **/admin/notices/{id}** | **공고문 삭제 (CR-040)** — hard delete. VISIBLE/ANALYZING이면 409 거부. 고아 VerificationLog 함께 제거, 원본 Opportunity 보존 | 🔒 ADMIN | BID-NOTICE |
 
 **POST /admin/notices/{id}/cancel 응답 (CR-039)**:
 ```json

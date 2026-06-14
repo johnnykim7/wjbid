@@ -34,6 +34,7 @@
 | CR-035 | 2026-06-03 | 공고 본문(noticedesc) fetch 흐름 정비 — SAM 일일 쿼터 보호 + 깨진 본문 링크 해결. ①수집 시 자동번역은 제목(+type 라벨)만: noticedesc fetch를 수집 시점에 일괄 호출하지 않음(쿼터 절약). ②관리자 "한글 번역하기" 버튼이 그 공고 1건만 noticedesc fetch + 원문 본문 저장(applyDescriptionBody) + 번역. ③화면 본문 섹션: 깨진 noticedesc API 링크(api_key 없어 404) 제거 → 본문 텍스트(있으면) + "SAM.gov에서 원문 보기"(uiLink, 번역·본문 유무 무관 항상). ④번역문 줄바꿈 보존(stripHtml 블록태그→\n) + descriptionSummaryKo varchar(500)→TEXT 확대(V33, 500자 컷 제거) | BE (OpportunityTranslationService translateAsync 제목만·translateDescriptionOf 본문저장·stripHtml 줄바꿈, Opportunity 500자컷 제거, 마이그레이션 V33) + FE (admin-console OpportunityMetaPanel 본문섹션 uiLink 항상노출) | 소~중규모 | 구현·컴파일·FE 타입체크·운영 배포·V33 적용(TEXT) 검증 완료 (2026-06-03). 본문 번역 줄바꿈 표시 운영 확인 |
 | CR-036 | 2026-06-03 | SAM API 호출 계측 & 쿼터 로깅 — 일일 한도가 추측(서드파티 블로그 "1,000")만 있고 공식 미확인이라 실측 체계 구축. ①신규 sam_api_call_log(V32): 일자(UTC)·엔드포인트별 success/error 카운트 + SAM X-RateLimit-* 헤더(실제 한도/잔량) + 에러 응답 본문 전문 UPSERT. ②SamQuotaLogger: 매 호출 [SAM-QUOTA] 로그 + DB 적재(REQUIRES_NEW). ③호출처 3곳 전부 계측: search/noticedesc/attachment(모두 api.sam.gov+api_key) | BE (integration/samgov/quota SamApiCallLog·Repository(native UPSERT)·SamQuotaLogger 신규, SAMGovApiClient search·noticedesc 계측, AttachmentAutoDownloadService 계측, 마이그레이션 V32) | 중규모 | 구현·컴파일·운영 배포·V32 적용·테이블 생성 검증 완료 (2026-06-03). 실제 X-RateLimit 한도는 다음 SAM 호출 시 sam_api_call_log에서 실측 예정 |
 | CR-039 | 2026-06-14 | 공고문 한글화/분석 강제 중단 + stuck 자동 정리 — ANALYZING 상태로 멈춰 무한 폴링되는 공고문을 끊는 기능 부재. ①관리자 상세화면에 "강제 중단" 버튼: ANALYZING일 때만 노출(재생성은 ANALYZING 중 disabled이라 화면 잠금), 클릭 시 즉시 FAILED 전환 후 재생성 가능. ②`@Scheduled` stuck 정리 스케줄러: analysisStartedAt 기준 임계분(설정값, 기본 60분) 초과 ANALYZING 건 자동 FAILED. ③Aimbase 워크플로우 취소는 best-effort — workflowRunId로 cancel 호출하되 Aimbase에 취소 API 미존재(실측)이므로 404/실패/타임아웃 무관 우리 쪽은 무조건 FAILED(화면 복구 최우선). ④신규 컬럼 analysis_started_at(markAnalyzing 시점 기록) — updatedAt은 무관 update에 밀려 stuck 판정에 부정확하므로 전용 필드 | BE (entity/Notice markAnalyzing에 analysisStartedAt 기록·cancelAnalysis 메서드, NoticeService.cancelAnalysis·NoticeStuckCleanupScheduler 신규, NoticeAdminController POST /{id}/cancel, LLMPlatformClient.cancelWorkflowRun best-effort, application.yml notice.analysis.stuck-threshold-minutes·scheduler-interval-ms, 마이그레이션 Vxx analysis_started_at) + FE (admin-console NoticeAdminDetailPage 강제중단 버튼·noticeApi cancel) | 중규모 | 설계 캐스케이드 진행중 (2026-06-14) |
+| CR-040 | 2026-06-14 | 공고문 삭제 기능 — 잘못 만든/실패한 공고문을 목록에서 제거. ①hard delete(완전 삭제): Notice row + 고아 VerificationLog(targetType=NOTICE) 함께 제거. ②가드: VISIBLE(노출 중) 또는 ANALYZING(분석 중)이면 거부(409) — 고객이 보는 건·도는 건 실수 삭제 방지. ③원본 Opportunity 보존(BIZ-004) — Notice→Opportunity 단방향이라 원본 무영향, 재선별로 공고문 재생성 가능. ④실측: BidRequest는 Opportunity 참조(Notice 직접참조 아님)→고객신청·제안서 무영향. NotificationLog는 Notice UUID 미참조(referenceType=CollectorRun/BidRequest/Opportunity, noticeId는 SAM 공고번호 string)→정리 불필요(서브에이전트 추정 반박) | BE (NoticeService.deleteNotice 가드+VerificationLog deleteAll+Notice delete, NoticeAdminController DELETE /{id}) + FE (admin-console NoticeAdminDetailPage 삭제 버튼·확인 모달·noticeApi delete) | 소~중규모 | 설계 캐스케이드 진행중 (2026-06-14) |
 
 > CR-004~008 원본: `docs/origins/원본_운영플로우_추가요구_20260516.md`
 > 위 5건은 계획 등재만 — 각 CR 상세 설계는 해당 CR 착수 세션에서 진행. 본질 검토 결과 이미 충족된 항목(Draft+승인 / Aimbase 정제 / cron 스케줄링 / 가입형 고객 / 작성의뢰 / 맞춤 제안서 생성)은 CR 불필요.
@@ -575,3 +576,21 @@
 - **상태 전이**: ANALYZING → FAILED 경로 추가(수동 cancel / 자동 cleanup 둘 다 동일 markFailed). FSM이 아닌 generationStatus enum 전이이나 화이트리스트 정신 따라 ANALYZING에서만 cancel 허용.
 - **규모**: 중규모(화면·API·새 컬럼·스케줄러). 설계 캐스케이드 = T1-3(비즈니스 규칙)·T1-4(정책)·T3-1(데이터 모델: analysis_started_at)·T3-2(API: cancel)·T3-3(화면: 강제중단 버튼).
 - **상태**: 설계 캐스케이드 + 1차 구현·커밋(ec45f3b)·배포·검증 완료 (2026-06-14). cancel 엔드포인트 매핑 401 확인, NoticeServiceTest 8건 통과. Aimbase CR-105 cancel API 신설 반영해 협조적 중지+@Async 폴링 보강 구현 완료(가이드 §4-7).
+
+---
+
+### CR-040: 공고문 삭제 기능 (2026-06-14)
+
+- **배경**: 잘못 만든/실패(FAILED)한 공고문을 목록에서 치울 방법이 없음. CR-039로 "강제 중단(→FAILED 전환)"은 됐지만 row 제거(삭제)는 별개 — 사용자 요청.
+- **실측(연관 데이터 안전성)**:
+  - **BidRequest(고객 신청)는 Opportunity를 참조**([BidRequest.java:43](../backend/src/main/java/com/biddingagency/domain/bid/entity/BidRequest.java#L43)), Notice 직접 참조 아님 → 공고문 삭제해도 고객 신청·제안서 문서 무영향.
+  - **Notice → Opportunity 단방향**(역참조 FK 없음, V13 FK는 opportunity 삭제 시 notice cascade — 역방향 아님) → Notice 삭제 시 원본 Opportunity 보존(BIZ-004).
+  - **VerificationLog**(targetType=NOTICE, targetId=noticeId)는 FK 아닌 느슨한 참조 → 함께 삭제(고아 방지).
+  - **NotificationLog 정리 불필요(실측 반박)**: referenceType은 CollectorRun/BidRequest/Opportunity 등 엔티티명, referenceId에 우리 Notice UUID를 박는 알림 없음. 알림 vars의 `noticeId`는 SAM 공고번호(string, `opp.getNoticeId()`)이지 Notice 엔티티 PK 아님. → 삭제 대상 아님.
+- **변경 사항**:
+  1. `NoticeService.deleteNotice(noticeId)` — 가드 후 hard delete. 가드: `isVisible()`이면 409(노출 중 삭제 금지), `isAnalyzing()`이면 409(분석 중 삭제 금지). 통과 시 VerificationLog(NOTICE,noticeId) deleteAll → noticeRepository.delete.
+  2. Controller `DELETE /admin/notices/{id}`.
+  3. FE 상세화면 "삭제" 버튼 — 확인 모달 후 호출, 성공 시 목록으로 이동. VISIBLE/ANALYZING이면 버튼 비활성 또는 서버 409 메시지 노출.
+- **삭제 정책**: 완전 삭제(hard) — 소프트 삭제 안 함(복구는 원본 재선별로 공고문 재생성). 노출 중·분석 중만 금지, 그 외(PENDING/FAILED/COMPLETED+HIDDEN) 허용.
+- **규모**: 소~중규모(새 테이블·FSM·이벤트·마이그레이션 없음, 엔드포인트 1개 + 화면 버튼 1개). 캐스케이드 = T1-3(BIZ 삭제 가드)·T3-2(API DELETE)·T3-3(화면 삭제 버튼).
+- **상태**: 설계 캐스케이드 진행중 (2026-06-14).
