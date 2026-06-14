@@ -6,6 +6,7 @@ import {
   hideNotice,
   regenerateNotice,
   cancelNotice,
+  deleteNotice,
 } from '../api/client'
 import NoticeDocumentView from '../components/NoticeDocumentView'
 import type { EligibilityItem } from '../components/NoticeDocumentView'
@@ -70,6 +71,23 @@ export default function NoticeAdminDetailPage() {
       fetchData()
     } catch (err) {
       console.error('공고문 작업 실패:', err)
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  // CR-040: 삭제 — 확인 후 hard delete, 성공 시 목록으로 이동. 서버 409(노출/분석 중)면 사유 표시.
+  const handleDelete = async () => {
+    if (!id) return
+    if (!window.confirm('이 공고문을 삭제하시겠습니까? 삭제하면 복구할 수 없습니다. (원본 공고는 보존됩니다)')) return
+    setActionLoading(true)
+    try {
+      await deleteNotice(id)
+      navigate('/notices')
+    } catch (err: unknown) {
+      const reason = (err as { response?: { data?: { reason?: string } } })?.response?.data?.reason
+      alert(reason || '공고문 삭제에 실패했습니다.')
+      console.error('공고문 삭제 실패:', err)
     } finally {
       setActionLoading(false)
     }
@@ -147,6 +165,19 @@ export default function NoticeAdminDetailPage() {
               숨김 처리
             </button>
           )}
+          {/* CR-040: 삭제 — 노출 중·분석 중이 아닐 때만 활성 (서버 가드와 일치) */}
+          <button
+            onClick={handleDelete}
+            disabled={actionLoading || notice.visibility === 'VISIBLE' || notice.generationStatus === 'ANALYZING'}
+            className="px-4 py-2 text-sm rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-40"
+            title={
+              notice.visibility === 'VISIBLE' ? '노출 중인 공고문은 삭제할 수 없습니다 (먼저 숨김 처리)'
+              : notice.generationStatus === 'ANALYZING' ? '분석 중인 공고문은 삭제할 수 없습니다 (먼저 강제 중단)'
+              : '공고문 삭제 (복구 불가, 원본은 보존)'
+            }
+          >
+            <i className="fa-solid fa-trash mr-1.5" />삭제
+          </button>
         </div>
       </div>
 

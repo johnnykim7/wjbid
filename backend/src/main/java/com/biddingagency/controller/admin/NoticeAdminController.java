@@ -96,6 +96,22 @@ public class NoticeAdminController {
         ));
     }
 
+    @DeleteMapping("/{id}")
+    @Operation(summary = "공고문 삭제 (CR-040)",
+            description = "hard delete. VISIBLE(노출 중)·ANALYZING(분석 중)이면 409 거부. 원본 Opportunity는 보존.")
+    public ResponseEntity<Map<String, String>> delete(@PathVariable UUID id) {
+        try {
+            noticeService.deleteNotice(id);
+            log.info("공고문 삭제: noticeId={}", id);
+            return ResponseEntity.ok(Map.of("status", "DELETED", "noticeId", id.toString()));
+        } catch (IllegalStateException e) {
+            // 가드 위반(노출 중/분석 중) → 409 + 사유
+            log.warn("공고문 삭제 거부: noticeId={}, reason={}", id, e.getMessage());
+            return ResponseEntity.status(org.springframework.http.HttpStatus.CONFLICT)
+                    .body(Map.of("status", "REJECTED", "reason", e.getMessage(), "noticeId", id.toString()));
+        }
+    }
+
     @PatchMapping("/{id}")
     @Operation(summary = "한글화 결과 보정 (관리자 수동)")
     @SuppressWarnings("unchecked")

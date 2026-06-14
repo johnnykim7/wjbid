@@ -38,6 +38,9 @@ class NoticeServiceTest {
     @Mock
     private com.biddingagency.integration.llmplatform.LLMPlatformClient llmPlatformClient;
 
+    @Mock
+    private com.biddingagency.domain.proposal.service.VerificationLogService verificationLogService;
+
     @InjectMocks
     private NoticeService noticeService;
 
@@ -171,5 +174,55 @@ class NoticeServiceTest {
         then(llmPlatformClient).should().cancelWorkflowRun(any());
         assertThat(notice.getGenerationStatus()).isEqualTo(NoticeGenerationStatus.FAILED);
         assertThat(notice.getErrorMessage()).isEqualTo("관리자 강제 중단");
+    }
+
+    // CR-040: 비노출+분석중아님 → 삭제 + 고아 검증로그 정리
+    @Test
+    @DisplayName("삭제_비노출FAILED_삭제되고검증로그정리됨")
+    void 삭제_정상_삭제됨() {
+        UUID noticeId = UUID.randomUUID();
+        Opportunity opp = Opportunity.builder().noticeId("N-1").title("T").build();
+        Notice notice = Notice.builder().opportunity(opp).build();
+        notice.markFailed("이전 실패");  // HIDDEN 기본, FAILED
+        given(noticeRepository.findById(noticeId)).willReturn(Optional.of(notice));
+
+        noticeService.deleteNotice(noticeId);
+
+        then(verificationLogService).should().deleteByTarget(
+                com.biddingagency.domain.proposal.entity.VerificationTargetType.NOTICE, noticeId);
+        then(noticeRepository).should().delete(notice);
+    }
+
+    // CR-040: 노출 중 → 삭제 거부
+    @Test
+    @DisplayName("삭제_노출중_거부됨")
+    void 삭제_노출중_거부() {
+        UUID noticeId = UUID.randomUUID();
+        Opportunity opp = Opportunity.builder().noticeId("N-1").title("T").build();
+        Notice notice = Notice.builder().opportunity(opp).build();
+        notice.markCompleted("제목", validSummary(), null, validRequiredDocs(), null, null, null);
+        notice.publish();  // VISIBLE
+        given(noticeRepository.findById(noticeId)).willReturn(Optional.of(notice));
+
+        assertThatThrownBy(() -> noticeService.deleteNotice(noticeId))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("노출 중");
+        then(noticeRepository).should(never()).delete(any());
+    }
+
+    // CR-040: 분석 중 → 삭제 거부
+    @Test
+    @DisplayName("삭제_분석중_거부됨")
+    void 삭제_분석중_거부() {
+        UUID noticeId = UUID.randomUUID();
+        Opportunity opp = Opportunity.builder().noticeId("N-1").title("T").build();
+        Notice notice = Notice.builder().opportunity(opp).build();
+        notice.markAnalyzing(null);  // ANALYZING (save stub 불필요)
+        given(noticeRepository.findById(noticeId)).willReturn(Optional.of(notice));
+
+        assertThatThrownBy(() -> noticeService.deleteNotice(noticeId))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("분석 중");
+        then(noticeRepository).should(never()).delete(any());
     }
 }

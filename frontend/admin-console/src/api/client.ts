@@ -212,6 +212,10 @@ export const regenerateNotice = (id: string) =>
 export const cancelNotice = (id: string) =>
   api.post(`/admin/notices/${id}/cancel`)
 
+// CR-040: 공고문 삭제(hard). VISIBLE/ANALYZING이면 서버 409
+export const deleteNotice = (id: string) =>
+  api.delete(`/admin/notices/${id}`)
+
 export const updateNoticeResult = (id: string, data: Record<string, unknown>) =>
   api.patch(`/admin/notices/${id}`, data)
 

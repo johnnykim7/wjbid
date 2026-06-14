@@ -202,6 +202,31 @@ public class NoticeService {
         return true;
     }
 
+    /**
+     * CR-040: 공고문 삭제 (hard delete).
+     *
+     * 가드(BIZ-022): VISIBLE(노출 중) 또는 ANALYZING(분석 중)이면 거부 — 고객이 보는 건·진행 중인 건 실수 삭제 방지.
+     * 삭제 시 고아 VerificationLog(targetType=NOTICE)도 함께 제거. 원본 Opportunity는 보존(BIZ-004):
+     * Notice→Opportunity 단방향이라 원본·고객신청(BidRequest는 Opportunity 참조)·제안서 문서에 무영향.
+     *
+     * @throws IllegalStateException 노출 중이거나 분석 중인 경우 (Controller가 409로 매핑)
+     */
+    @Transactional
+    public void deleteNotice(UUID noticeId) {
+        Notice notice = findById(noticeId);
+        if (notice.isVisible()) {
+            throw new IllegalStateException("노출 중인 공고문은 삭제할 수 없습니다. 먼저 비노출 처리하세요.");
+        }
+        if (notice.isAnalyzing()) {
+            throw new IllegalStateException("분석 중인 공고문은 삭제할 수 없습니다. 먼저 강제 중단하세요.");
+        }
+        // 고아 검증 로그 정리(FK 아닌 느슨한 참조)
+        verificationLogService.deleteByTarget(
+                com.biddingagency.domain.proposal.entity.VerificationTargetType.NOTICE, noticeId);
+        noticeRepository.delete(notice);
+        log.info("[공고문] 삭제: noticeId={}, opportunityId={}", noticeId, notice.getOpportunity().getId());
+    }
+
     @Async("llmTaskExecutor")
     public void generateAsync(UUID noticeId, UUID opportunityId) {
         log.info("[공고문] 한글화/요약 시작: noticeId={}", noticeId);

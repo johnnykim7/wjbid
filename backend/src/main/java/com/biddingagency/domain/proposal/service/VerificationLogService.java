@@ -91,6 +91,15 @@ public class VerificationLogService {
         return repository.findByTargetTypeAndTargetIdOrderByVerifiedAtDesc(targetType, targetId);
     }
 
+    /** CR-040: 대상(예: 공고문) 삭제 시 딸린 검증 로그를 함께 제거(고아 방지). */
+    @Transactional
+    public void deleteByTarget(VerificationTargetType targetType, UUID targetId) {
+        List<VerificationLog> logs = repository.findByTargetTypeAndTargetIdOrderByVerifiedAtDesc(targetType, targetId);
+        if (!logs.isEmpty()) {
+            repository.deleteAll(logs);
+        }
+    }
+
     /** 다음 재시도 회차 = (최신 attempt) + 1. 최초면 1. */
     @Transactional(readOnly = true)
     public int nextAttempt(VerificationTargetType targetType, UUID targetId) {
