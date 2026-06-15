@@ -1,18 +1,19 @@
 {
   "_meta": {
     "wfId": "opportunity-analysis",
-    "version": "v2 (CR-038 재설계 초안 — 운영 미반영, 검토용)",
+    "version": "v5 (CR-041 + HYBRID + CR-112: build_workspace 탈-LLM(write_description+download_attachments FOREACH) + 도구지시 제거 + structure_output 값유실 수정 — extract_facts.output 입력추가/depends_on 보강(a) & verify에 value필수 강제(b))",
     "purpose": "공고문 한글화 + 정형 추출 + contentJson 생성을 'Claude Code 구조'로 재설계: 작업장 구성 → 작업장 grep/read 추출 → 검증·누락점검 → JSON → fact 영속화",
     "callbackTool": "save_opportunity_analysis (BE MCP) — notice_extracted_fact 동반 저장(BE 콜백 확장 필요)",
     "designNotes": [
       "현행 4-step(fetch→analyze_freeform 단일AGENT→structure→save)의 환각 근원 3개를 분리 해소:",
       "  ① 단일 AGENT_CALL이 읽기+추출+요약 다 함 → 검증 STEP 0개 → verify STEP 신설",
-      "  ② parse_document만 의존, 이미지/실본문 안 읽음 → build_workspace 가 ocr_image/image_analysis/descriptionBody 까지 .txt로 작업장에 깔기",
+      "  ② [CR-041+HYBRID 갱신] 적재는 결정론적 — write_description(file_write: 본문→description.txt) + download_attachments(FOREACH+download_file: 첨부 원본 그대로 attachments/에 다운로드). 읽기는 extract_facts(LLM)가 함. HYBRID 모드(=ClaudeCode 본래 방식: CLI 내장 도구 봉인 해제)이므로 프롬프트에 'PDF는 parse_document 써라' 같은 도구 지시문을 넣지 않는다 — 모델이 파일 종류 보고 도구(Read 비전/Bash/parse 등)를 자율 선택. 프롬프트엔 '분석 과업(what)'만 남기고 '도구 사용법(how)'은 뺀다.",
       "  ③ fact 근거(source_quote) 영속화 0 → extract STEP이 fact마다 source_quote+출처파일+page 부착, save가 notice_extracted_fact 저장",
       "parse_document/ocr_image/image_analysis/file_write/grep/read 는 운영 ToolRegistry 등록 도구(2026-06-03 라이브 48 built-in 확인).",
-      "작업장 구성을 FOREACH 분기 대신 AGENT_CALL 단일 STEP으로: 상위는 코드(STEP 경계) 통제, 파일타입 분기 같은 세부는 LLM 자율 (메모리 합의)."
+      "[CR-041 적용] 구 build_workspace(AGENT_CALL=LLM 단일 STEP, 'FOREACH 대신 AGENT_CALL' 합의)는 폐기. LLM 판단 불필요한 결정론적 적재를 AGENT_CALL로 보내 CLI turn 비용·가시성0·retry 멱등화 복잡도를 떠안던 문제를 해소. → write_description(TOOL_CALL file_write) + download_attachments(FOREACH+download_file, parallel/on_item_error=continue) 두 STEP으로 분리(둘 다 depends_on fetch_opportunity라 병행). LLM은 extract_facts부터.",
+      "[CR-041 선행 의존 — Aimbase] download_file 도구 신설 완료(EnhancedToolExecutor, url+file_path+overwrite, 바이너리 무손실, 50MB상한). 핵심 의존: Aimbase CR-107로 TOOL_CALL 스텝이 ToolContext(workspacePath)를 2-인자 execute로 전파하도록 수정됨(이전엔 1-인자→default/general 폴백으로 run격리 깨짐). FOREACH도 withStepResult가 workspacePath 보존(StepContext.java:25). WorkflowEngine이 resolveWorkspacePath(sessionId)로 run workspace 세팅. → FOREACH 안 download_file이 run 격리 workspace의 attachments/에 저장, extract_facts(AGENT_CALL)가 같은 workspace를 봄. 실측 확정(2026-06-14)."
     ],
-    "stepSummary": "fetch_opportunity → build_workspace → extract_facts → verify_and_gapcheck → structure_output → save",
+    "stepSummary": "fetch_opportunity → [write_description ∥ download_attachments(FOREACH)] → extract_facts → verify_and_gapcheck → structure_output → save",
     "putApi": "PUT http://59.8.160.12:8280/api/v1/workflows/opportunity-analysis (X-API-Key + X-Tenant-Id: bidding_system). PUT 함정: GET응답 통째면 400 — 허용필드(id/name/triggerConfig/steps/domain/inputSchema/outputSchema/errorHandling/graphMode)만."
   },
   "id": "opportunity-analysis",
@@ -36,14 +37,44 @@
       "depends_on": []
     },
     {
-      "id": "build_workspace",
-      "name": "작업장 구성 — 첨부·본문을 텍스트로 작업장에 적재",
-      "type": "AGENT_CALL",
+      "id": "write_description",
+      "name": "본문 적재 — opportunityText를 description.txt로 작업장에 저장",
+      "type": "TOOL_CALL",
       "config": {
-        "description": "공고 자료를 작업장에 텍스트로 까는 에이전트 (분석 아님, 적재만)",
-        "connection_id": "bb3bc8bc-d17d-4e8e-a15b-d9f077e83d18",
-        "timeout_ms": 600000,
-        "prompt": "당신은 공고 자료를 작업장(workspace)에 텍스트 파일로 적재하는 준비 에이전트입니다. 분석/요약은 하지 마세요. 오직 '읽을 수 있는 텍스트로 변환해 작업장에 저장'만 합니다.\n\n[입력]\n공고 본문(원문, 영문):\n{{input.opportunityText}}\n\n첨부 파일 목록(각 항목: fileName / contentType / downloadUrl):\n{{input.attachmentFiles}}\n\n[수행]\n1. 공고 본문(opportunityText)을 file_write 로 `description.txt` 에 그대로 저장.\n2. 첨부 목록을 순회하며 각 파일을 contentType 에 따라 텍스트로 변환해 `{원본파일명}.txt` 로 file_write:\n   - PDF/DOCX/XLSX 등 문서 → parse_document(url=downloadUrl) 로 본문 추출.\n   - 이미지(image/*) → 먼저 ocr_image 로 텍스트 추출, 추가로 image_analysis 로 도면/표 해석(예: floor plan, 배치도)을 함께 기록. 둘 다 같은 .txt 에 [OCR]/[VISION] 섹션으로 구분 저장.\n   - parse_document/ocr 결과가 비면 그 파일에 대해 `{원본파일명}.EMPTY.txt` 에 '추출 실패(빈 텍스트)' 한 줄만 기록(빈칸을 지어내지 말 것).\n3. 마지막으로 `_INDEX.md` 파일을 file_write 로 작성: 작업장에 깐 모든 .txt 파일명과 각 파일이 어떤 첨부/본문에서 왔는지(원본 fileName, downloadUrl) 한 줄씩 매핑. 다음 단계 에이전트가 이걸 보고 grep/read 합니다.\n\n[금지]\n- 내용을 요약/해석/번역하지 마세요(다음 STEP 담당). 변환·저장만.\n- 추출 실패를 추측으로 메우지 마세요. 실패는 실패로 기록.\n\n[출력]\n작업장에 적재한 파일 목록(파일명 + 글자수)과 추출 실패한 파일을 간단히 보고하세요."
+        "tool": "file_write",
+        "input": {
+          "file_path": "description.txt",
+          "content": "{{input.opportunityText}}",
+          "overwrite": true
+        }
+      },
+      "depends_on": [
+        "fetch_opportunity"
+      ]
+    },
+    {
+      "id": "download_attachments",
+      "name": "첨부 적재 — 각 첨부를 원본 그대로 작업장에 다운로드 (탈-LLM, CR-041)",
+      "type": "FOREACH",
+      "config": {
+        "items": "{{input.attachmentFiles}}",
+        "item_var": "item",
+        "mode": "parallel",
+        "max_concurrency": 4,
+        "max_items": 60,
+        "on_item_error": "continue",
+        "collect": "append",
+        "body": {
+          "type": "TOOL_CALL",
+          "config": {
+            "tool": "download_file",
+            "input": {
+              "url": "{{item.downloadUrl}}",
+              "file_path": "attachments/{{item.fileName}}",
+              "overwrite": true
+            }
+          }
+        }
       },
       "depends_on": [
         "fetch_opportunity"
@@ -55,12 +86,13 @@
       "type": "AGENT_CALL",
       "config": {
         "description": "USFK 정부조달 공고 분석 에이전트 (작업장 grep/read 기반, 근거 부착)",
-        "connection_id": "bb3bc8bc-d17d-4e8e-a15b-d9f077e83d18",
+        "connection_id": "cli-runner-bidding-001",
         "timeout_ms": 600000,
-        "prompt": "당신은 미군(USFK) 정부조달 RFP 분석 전문가입니다. 작업장(workspace)에 이미 텍스트 파일들이 적재돼 있습니다. parse_document 를 다시 호출하지 말고, glob/grep/read 로 작업장 파일을 탐색해 분석하세요.\n\n[작업장 안내]\n- `_INDEX.md` 를 먼저 read 해서 어떤 파일이 있는지 파악.\n- `description.txt` = 공고 원문 본문. `{파일명}.txt` = 각 첨부의 추출 텍스트. `*.EMPTY.txt` = 추출 실패(그 자료는 정보원으로 쓰지 말 것).\n- 필요한 정보는 grep 으로 키워드 검색(예: 'FACTOR', 'Subfactor', 'page limit', 'due date', 'KOLAS') 후 해당 파일 read.\n\n[공고 메타]\n{{fetch_opportunity.output}}\n\n[표시용 양식 골격 (NOTICE_VIEW 템플릿, TipTap JSON)]\n{{input.noticeViewTemplate}}\n\n[수행]\n1. 한국 PM/영업이 이해할 한국어로 공고 핵심을 분석. 항목: 한국어 제목 / 핵심요약 / 작업범위(PWS기반) / 참여자격 / 평가기준(LPTA·BestValue) / 주요일정(라벨·날짜·비고) / 예산 / 특이사항 / 제출서류 / 양식 / 담당자(POC).\n2. 정부조달 골격대로 제출서류를 FACTOR>Subfactor 계층으로 추출. 각 Subfactor 의 충족주체(fulfillmentParty)를 판단: 트럭/장비/인력/과거실적 증빙=CLIENT_UPLOAD, 플랫폼이 작성하는 기술·가격 제안=PLATFORM_GENERATED, 정부양식=SYSTEM_FORM. (Sub-Factor 가 트럭·인력 보유를 요구하면 반드시 CLIENT_UPLOAD)\n3. 자격요건(eligibility)을 별도 추출: title/description/mandatory/evidenceBy/isGate.\n4. ★근거 부착(핵심)★: 위에서 추출한 모든 사실(fact)에 대해, 그 근거가 된 작업장 파일과 원문 인용을 함께 남기세요. 각 fact = { key(항목명), value(추출값), sourceFile(작업장 파일명), sourceQuote(원문 1~2문장 그대로), page(있으면), confidence(HIGH/MEDIUM/LOW) }.\n   - 작업장에서 근거를 못 찾은 항목은 value 를 비우고 confidence=LOW, sourceQuote='' 로 두세요. 절대 추측으로 채우지 마세요.\n5. 추가 산출물: noticeViewTemplate 골격이 주어졌다면, 그 노드 구조(noticeHeader/metaGrid/kvTable/dataTable/groupedList/calloutList/heading/paragraph/bulletList)를 유지하되 {{변수}}를 실제 추출 내용으로 채운 contentJson 을 자유 서술.\n\n[금지]\n- structured_output tool 호출 금지(다음 STEP 담당).\n- 작업장 근거 없는 사실 생성 금지. 빈칸은 빈칸으로.\n\n[출력]\n위 분석을 자유 텍스트로, 그리고 fact 목록(key/value/sourceFile/sourceQuote/page/confidence)을 빠짐없이."
+        "prompt": "당신은 미군(USFK) 정부조달 RFP 분석 전문가입니다. 작업장(workspace)에 공고 본문과 첨부 원본 파일들이 이미 적재돼 있습니다. 이 자료를 직접 읽어 분석하세요.\n\n[작업장 구조]\n- `description.txt` = 공고 원문 본문(영문).\n- `attachments/` = 각 첨부 파일의 원본(PDF/DOCX/XLSX/이미지 등). 목록을 확인하고 각 파일을 열어 내용을 파악하세요(파일 종류에 맞는 읽기 방법은 알아서 선택).\n- 첨부 메타(원본 fileName / contentType / downloadUrl):\n{{input.attachmentFiles}}\n- 어떤 첨부가 비어 있거나 읽히지 않으면 그 자료는 정보원으로 쓰지 말고, 빈칸은 빈칸으로 두세요(추측 금지). 필요하면 'FACTOR'/'Subfactor'/'page limit'/'due date'/'KOLAS' 같은 키워드로 작업장을 검색해 해당 부분을 정독하세요.\n\n[공고 메타]\n{{fetch_opportunity.output}}\n\n[표시용 양식 골격 (NOTICE_VIEW 템플릿, TipTap JSON)]\n{{input.noticeViewTemplate}}\n\n[수행]\n1. 한국 PM/영업이 이해할 한국어로 공고 핵심을 분석. 항목: 한국어 제목 / 핵심요약 / 작업범위(PWS기반) / 참여자격 / 평가기준(LPTA·BestValue) / 주요일정(라벨·날짜·비고) / 예산 / 특이사항 / 제출서류 / 양식 / 담당자(POC).\n2. 정부조달 골격대로 제출서류를 FACTOR>Subfactor 계층으로 추출. 각 Subfactor 의 충족주체(fulfillmentParty)를 판단: 트럭/장비/인력/과거실적 증빙=CLIENT_UPLOAD, 플랫폼이 작성하는 기술·가격 제안=PLATFORM_GENERATED, 정부양식=SYSTEM_FORM. (Sub-Factor 가 트럭·인력 보유를 요구하면 반드시 CLIENT_UPLOAD)\n3. 자격요건(eligibility)을 별도 추출: title/description/mandatory/evidenceBy/isGate.\n4. ★근거 부착(핵심)★: 위에서 추출한 모든 사실(fact)에 대해, 그 근거가 된 작업장 파일과 원문 인용을 함께 남기세요. 각 fact = { key(항목명), value(추출값), sourceFile(작업장 파일명, 예: 'description.txt' 또는 'attachments/<파일명>'), sourceQuote(원문 1~2문장 그대로), page(있으면), confidence(HIGH/MEDIUM/LOW) }.\n   - 작업장에서 근거를 못 찾은 항목은 value 를 비우고 confidence=LOW, sourceQuote='' 로 두세요. 절대 추측으로 채우지 마세요.\n5. 추가 산출물: noticeViewTemplate 골격이 주어졌다면, 그 노드 구조(noticeHeader/metaGrid/kvTable/dataTable/groupedList/calloutList/heading/paragraph/bulletList)를 유지하되 {{변수}}를 실제 추출 내용으로 채운 contentJson 을 자유 서술.\n\n[금지]\n- structured_output tool 호출 금지(다음 STEP 담당).\n- 작업장 근거 없는 사실 생성 금지. 빈칸은 빈칸으로.\n\n[출력]\n위 분석을 자유 텍스트로, 그리고 fact 목록(key/value/sourceFile/sourceQuote/page/confidence)을 빠짐없이."
       },
       "depends_on": [
-        "build_workspace"
+        "write_description",
+        "download_attachments"
       ]
     },
     {
@@ -69,9 +101,9 @@
       "type": "AGENT_CALL",
       "config": {
         "description": "추출 결과를 작업장 원문과 대조 검증하는 Verifier/GapChecker",
-        "connection_id": "bb3bc8bc-d17d-4e8e-a15b-d9f077e83d18",
+        "connection_id": "cli-runner-bidding-001",
         "timeout_ms": 600000,
-        "prompt": "당신은 공고 분석 결과를 검증하는 감사자입니다. 이전 단계가 추출한 분석과 fact 목록이 작업장(workspace) 원문과 실제로 일치하는지, 그리고 빠진 필수 항목이 없는지 점검합니다.\n\n[검증 대상 (이전 STEP 산출물)]\n{{extract_facts.output}}\n\n[작업장]\n- `_INDEX.md` / `description.txt` / `{파일명}.txt` 를 grep/read 로 직접 대조하세요.\n\n[수행]\n1. 충실성 검증: 각 fact 의 sourceQuote 가 해당 sourceFile 에 실제로 존재하는지 grep 으로 확인. 원문에 없는데 value 가 채워진 fact = 환각 → 표시.\n2. 누락 점검(Gap Check): USFK 공고 필수 항목 체크리스트로 빠진 게 없는지 확인 — 마감일/제출방법(PIEE 등)/평가기준/제출서류 볼륨·페이지제한/FACTOR 구조/POC/현장설명회 유무. 작업장 원문엔 있는데 추출에서 빠진 항목 = 누락 → 표시.\n3. 충족주체 재확인: CLIENT_UPLOAD 여야 할(트럭·인력·실적) 항목이 PLATFORM_GENERATED 로 잘못 분류됐는지 점검.\n\n[출력]\n{ verifiedFacts: [...정정·확정된 fact 목록...], hallucinations: [환각으로 판단해 제거/수정한 항목], gaps: [원문에 있으나 누락된 항목 — 가능하면 작업장에서 값 보강], notes: 검증 요약 }. 정정된 최종 fact 목록과 분석을 다음 STEP 이 쓸 수 있게 정리하세요."
+        "prompt": "당신은 공고 분석 결과를 검증하는 감사자입니다. 이전 단계가 추출한 분석과 fact 목록이 작업장(workspace) 원문과 실제로 일치하는지, 그리고 빠진 필수 항목이 없는지 점검합니다.\n\n[검증 대상 (이전 STEP 산출물)]\n{{extract_facts.output}}\n\n[작업장]\n- `description.txt`(공고 본문) 와 `attachments/`(첨부 원본) 를 직접 열어 대조하세요. 파일 종류에 맞는 읽기 방법은 알아서 선택하고, 필요하면 키워드로 검색해 해당 부분을 정독합니다.\n\n[수행]\n1. 충실성 검증: 각 fact 의 sourceQuote 가 해당 sourceFile 에 실제로 존재하는지 grep 으로 확인. 원문에 없는데 value 가 채워진 fact = 환각 → 표시.\n2. 누락 점검(Gap Check): USFK 공고 필수 항목 체크리스트로 빠진 게 없는지 확인 — 마감일/제출방법(PIEE 등)/평가기준/제출서류 볼륨·페이지제한/FACTOR 구조/POC/현장설명회 유무. 작업장 원문엔 있는데 추출에서 빠진 항목 = 누락 → 표시.\n3. 충족주체 재확인: CLIENT_UPLOAD 여야 할(트럭·인력·실적) 항목이 PLATFORM_GENERATED 로 잘못 분류됐는지 점검.\n\n[출력]\n{ verifiedFacts: [...정정·확정된 fact 목록...], hallucinations: [환각으로 판단해 제거/수정한 항목], gaps: [원문에 있으나 누락된 항목 — 가능하면 작업장에서 값 보강], notes: 검증 요약 }. 정정된 최종 fact 목록과 분석을 다음 STEP 이 쓸 수 있게 정리하세요.\n★필수★ verifiedFacts 의 각 항목은 검증 마크(✓/정확/일치 등)만 남기지 말고 반드시 실제 값(value)을 그대로 포함하라. 각 항목은 { key, value(실제 추출값 — 절대 생략 금지), sourceFile, sourceQuote, page, confidence } 형태여야 한다. 값이 맞다고 판단했으면 그 값을 그대로 실어라(예: key='공고번호' value='W912xx-25-R-0001', key='발행일' value='2026-03-01'). value 를 비우거나 '정확함' 같은 검증 표현으로 대체하면 다음 STEP 이 실제 값을 잃는다."
       },
       "depends_on": [
         "extract_facts"
@@ -84,8 +116,8 @@
       "config": {
         "system": "You are a precise JSON structurer. Convert the verified Korean analysis into the requested JSON schema. Preserve every verified detail and its source reference. Drop items flagged as hallucination. Return ONLY the structured object.",
         "max_tokens": 16384,
-        "connection_id": "bb3bc8bc-d17d-4e8e-a15b-d9f077e83d18",
-        "prompt": "다음 검증된 분석 결과를 JSON Schema 에 맞춰 빠짐없이 변환하세요.\n\n=== 검증 결과 (verify_and_gapcheck 산출물) ===\n{{verify_and_gapcheck.output}}\n\n=== 표시용 양식 골격 (NOTICE_VIEW 템플릿) ===\n{{input.noticeViewTemplate}}\n\n=== 변환 규칙 ===\n- verifiedFacts 만 사용. hallucinations 로 분류된 항목은 제외.\n- requiredDocuments.documents 평면(하위호환) + factors[](factorId/factorTitle/subfactors[{subfactorId,name,description,fulfillmentParty,mandatory,format,pageLimit,sourceRef,notes}]) + eligibility[](title/description/mandatory/evidenceBy/isGate/sourceRef) 모두 채움.\n- ★facts[]★ 신규 배열: 각 verifiedFact 를 {key,value,sourceFile,sourceQuote,page,confidence} 로 그대로 실어 BE 가 notice_extracted_fact 에 저장하게 함.\n- 본문에 없는 정보는 해당 값/항목만 빈 문자열·빈 배열로 두고, 그 정보가 속한 섹션(heading) 자체는 절대 삭제하지 말 것. 추측으로 채우는 것은 금지하되, 섹션 골격은 유지한다.\n- ★골격 전수 유지 (필수)★ contentJson 은 NOTICE_VIEW 골격의 모든 heading 노드를 하나도 빠짐없이 그대로 유지해야 한다. 골격에 heading 이 10개면 결과도 heading 10개여야 하고, 순서·번호·제목도 골격과 동일해야 한다. 정보가 없는 섹션이라도 heading 은 남기고 본문만 비운다(예: '해당 없음' 문단). 섹션을 합치거나 빼거나 새로 만들지 말 것.\n- contentJson 은 골격 노드 구조를 그대로 두고 {{변수}} 자리에만 실제값 치환(kvTable.rows/dataTable.rows/groupedList.groups/calloutList.items). 골격(noticeViewTemplate) 자체가 비어 있으면 null.\n- 응답은 schema 에 맞는 JSON 만.",
+        "connection_id": "cli-runner-bidding-001",
+        "prompt": "다음 검증된 분석 결과를 JSON Schema 에 맞춰 빠짐없이 변환하세요.\n\n=== 검증 결과 (verify_and_gapcheck 산출물) ===\n{{verify_and_gapcheck.output}}\n\n=== 원본 추출 결과 (extract_facts 산출물 — 값의 원천) ===\n{{extract_facts.output}}\n\n=== 표시용 양식 골격 (NOTICE_VIEW 템플릿) ===\n{{input.noticeViewTemplate}}\n\n=== 변환 규칙 ===\n- verifiedFacts 만 사용. hallucinations 로 분류된 항목은 제외.\n- ★값의 원천(필수)★ 각 fact 의 실제 value 는 우선 verifiedFacts 에서 가져온다. 다만 verify 산출물이 검증 마크(✓/정확 등)만 남기고 실제 값을 누락했다면, 위 'extract_facts 산출물'의 동일 key 에서 원본 value 를 찾아 채워라. hallucinations 로 분류된 항목만 제외하고, 나머지는 절대 값을 비우지 말 것 — verify 가 '정확'이라 표시했다는 것은 extract 의 값이 옳다는 뜻이므로 그 값을 그대로 실어야 한다.\n- requiredDocuments.documents 평면(하위호환) + factors[](factorId/factorTitle/subfactors[{subfactorId,name,description,fulfillmentParty,mandatory,format,pageLimit,sourceRef,notes}]) + eligibility[](title/description/mandatory/evidenceBy/isGate/sourceRef) 모두 채움.\n- ★facts[]★ 신규 배열: 각 verifiedFact 를 {key,value,sourceFile,sourceQuote,page,confidence} 로 그대로 실어 BE 가 notice_extracted_fact 에 저장하게 함.\n- 본문에 없는 정보는 해당 값/항목만 빈 문자열·빈 배열로 두고, 그 정보가 속한 섹션(heading) 자체는 절대 삭제하지 말 것. 추측으로 채우는 것은 금지하되, 섹션 골격은 유지한다.\n- ★골격 전수 유지 (필수)★ contentJson 은 NOTICE_VIEW 골격의 모든 heading 노드를 하나도 빠짐없이 그대로 유지해야 한다. 골격에 heading 이 10개면 결과도 heading 10개여야 하고, 순서·번호·제목도 골격과 동일해야 한다. 정보가 없는 섹션이라도 heading 은 남기고 본문만 비운다(예: '해당 없음' 문단). 섹션을 합치거나 빼거나 새로 만들지 말 것.\n- contentJson 은 골격 노드 구조를 그대로 두고 {{변수}} 자리에만 실제값 치환(kvTable.rows/dataTable.rows/groupedList.groups/calloutList.items). 골격(noticeViewTemplate) 자체가 비어 있으면 null.\n- 응답은 schema 에 맞는 JSON 만.",
         "response_schema": {
           "type": "object",
           "required": [
@@ -317,7 +349,8 @@
         }
       },
       "depends_on": [
-        "verify_and_gapcheck"
+        "verify_and_gapcheck",
+        "extract_facts"
       ]
     },
     {
