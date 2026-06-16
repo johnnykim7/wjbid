@@ -34,6 +34,7 @@
 | CR-035 | 2026-06-03 | 공고 본문(noticedesc) fetch 흐름 정비 — SAM 일일 쿼터 보호 + 깨진 본문 링크 해결. ①수집 시 자동번역은 제목(+type 라벨)만: noticedesc fetch를 수집 시점에 일괄 호출하지 않음(쿼터 절약). ②관리자 "한글 번역하기" 버튼이 그 공고 1건만 noticedesc fetch + 원문 본문 저장(applyDescriptionBody) + 번역. ③화면 본문 섹션: 깨진 noticedesc API 링크(api_key 없어 404) 제거 → 본문 텍스트(있으면) + "SAM.gov에서 원문 보기"(uiLink, 번역·본문 유무 무관 항상). ④번역문 줄바꿈 보존(stripHtml 블록태그→\n) + descriptionSummaryKo varchar(500)→TEXT 확대(V33, 500자 컷 제거) | BE (OpportunityTranslationService translateAsync 제목만·translateDescriptionOf 본문저장·stripHtml 줄바꿈, Opportunity 500자컷 제거, 마이그레이션 V33) + FE (admin-console OpportunityMetaPanel 본문섹션 uiLink 항상노출) | 소~중규모 | 구현·컴파일·FE 타입체크·운영 배포·V33 적용(TEXT) 검증 완료 (2026-06-03). 본문 번역 줄바꿈 표시 운영 확인 |
 | CR-036 | 2026-06-03 | SAM API 호출 계측 & 쿼터 로깅 — 일일 한도가 추측(서드파티 블로그 "1,000")만 있고 공식 미확인이라 실측 체계 구축. ①신규 sam_api_call_log(V32): 일자(UTC)·엔드포인트별 success/error 카운트 + SAM X-RateLimit-* 헤더(실제 한도/잔량) + 에러 응답 본문 전문 UPSERT. ②SamQuotaLogger: 매 호출 [SAM-QUOTA] 로그 + DB 적재(REQUIRES_NEW). ③호출처 3곳 전부 계측: search/noticedesc/attachment(모두 api.sam.gov+api_key) | BE (integration/samgov/quota SamApiCallLog·Repository(native UPSERT)·SamQuotaLogger 신규, SAMGovApiClient search·noticedesc 계측, AttachmentAutoDownloadService 계측, 마이그레이션 V32) | 중규모 | 구현·컴파일·운영 배포·V32 적용·테이블 생성 검증 완료 (2026-06-03). 실제 X-RateLimit 한도는 다음 SAM 호출 시 sam_api_call_log에서 실측 예정 |
 | CR-039 | 2026-06-14 | 공고문 한글화/분석 강제 중단 + stuck 자동 정리 — ANALYZING 상태로 멈춰 무한 폴링되는 공고문을 끊는 기능 부재. ①관리자 상세화면에 "강제 중단" 버튼: ANALYZING일 때만 노출(재생성은 ANALYZING 중 disabled이라 화면 잠금), 클릭 시 즉시 FAILED 전환 후 재생성 가능. ②`@Scheduled` stuck 정리 스케줄러: analysisStartedAt 기준 임계분(설정값, 기본 60분) 초과 ANALYZING 건 자동 FAILED. ③Aimbase 워크플로우 취소는 best-effort — workflowRunId로 cancel 호출하되 Aimbase에 취소 API 미존재(실측)이므로 404/실패/타임아웃 무관 우리 쪽은 무조건 FAILED(화면 복구 최우선). ④신규 컬럼 analysis_started_at(markAnalyzing 시점 기록) — updatedAt은 무관 update에 밀려 stuck 판정에 부정확하므로 전용 필드 | BE (entity/Notice markAnalyzing에 analysisStartedAt 기록·cancelAnalysis 메서드, NoticeService.cancelAnalysis·NoticeStuckCleanupScheduler 신규, NoticeAdminController POST /{id}/cancel, LLMPlatformClient.cancelWorkflowRun best-effort, application.yml notice.analysis.stuck-threshold-minutes·scheduler-interval-ms, 마이그레이션 Vxx analysis_started_at) + FE (admin-console NoticeAdminDetailPage 강제중단 버튼·noticeApi cancel) | 중규모 | 설계 캐스케이드 진행중 (2026-06-14) |
+| CR-041 | 2026-06-14 | 공고문 분석 WF `build_workspace` 탈-LLM 재구성 — CR-038이 도입한 AGENT_CALL(LLM) 단일 STEP을 FOREACH+TOOL_CALL(download_file)로 교체. 첨부 적재는 LLM 판단 불필요한 결정론적 다운로드라 LLM 제거 → CLI turn 비용 0 + 병렬 + 타임라인 가시성(STEP_START/TOOL_RESULT 실시간) + retry 멱등화 복잡도 소거. PDF 원본 보존(extract_facts가 parse_document(file_path)로 비전 분석). CR-038 designNotes의 "FOREACH 대신 AGENT_CALL(메모리 합의)" 결정을 뒤집음 | Aimbase 워크플로우 steps JSON 재작성(build_workspace STEP만, 엔진 무변경) + Aimbase `download_file` 도구 신설 의존(타사) + extract_facts 프롬프트 조정. MCP/엔티티/BE/FE 무변경 | 중규모 | 운영 PUT 완료 (2026-06-15). Aimbase download_file 신설 + CR-107(TOOL_CALL ToolContext 전파) 블로커 해소. JSON v3 라이브(write_description+download_attachments FOREACH). E2E 검증 남음 |
 | CR-040 | 2026-06-14 | 공고문 삭제 기능 — 잘못 만든/실패한 공고문을 목록에서 제거. ①hard delete(완전 삭제): Notice row + 고아 VerificationLog(targetType=NOTICE) 함께 제거. ②가드: VISIBLE(노출 중) 또는 ANALYZING(분석 중)이면 거부(409) — 고객이 보는 건·도는 건 실수 삭제 방지. ③원본 Opportunity 보존(BIZ-004) — Notice→Opportunity 단방향이라 원본 무영향, 재선별로 공고문 재생성 가능. ④실측: BidRequest는 Opportunity 참조(Notice 직접참조 아님)→고객신청·제안서 무영향. NotificationLog는 Notice UUID 미참조(referenceType=CollectorRun/BidRequest/Opportunity, noticeId는 SAM 공고번호 string)→정리 불필요(서브에이전트 추정 반박) | BE (NoticeService.deleteNotice 가드+VerificationLog deleteAll+Notice delete, NoticeAdminController DELETE /{id}) + FE (admin-console NoticeAdminDetailPage 삭제 버튼·확인 모달·noticeApi delete) | 소~중규모 | 설계 캐스케이드 진행중 (2026-06-14) |
 
 > CR-004~008 원본: `docs/origins/원본_운영플로우_추가요구_20260516.md`
@@ -594,3 +595,51 @@
 - **삭제 정책**: 완전 삭제(hard) — 소프트 삭제 안 함(복구는 원본 재선별로 공고문 재생성). 노출 중·분석 중만 금지, 그 외(PENDING/FAILED/COMPLETED+HIDDEN) 허용.
 - **규모**: 소~중규모(새 테이블·FSM·이벤트·마이그레이션 없음, 엔드포인트 1개 + 화면 버튼 1개). 캐스케이드 = T1-3(BIZ 삭제 가드)·T3-2(API DELETE)·T3-3(화면 삭제 버튼).
 - **상태**: 설계 캐스케이드 진행중 (2026-06-14).
+
+---
+
+### CR-041: 공고문 분석 WF `build_workspace` 탈-LLM 재구성 (FOREACH+download_file) (2026-06-14)
+
+- **배경**: CR-038이 `build_workspace`를 AGENT_CALL(LLM) 단일 STEP으로 도입했으나, 이 스텝의 실제 일은 "첨부·본문을 텍스트로 변환해 작업장에 적재"하는 **결정론적 변환·복사**다(프롬프트에 "분석/요약 하지 마세요, 변환·저장만"이라 못박힘). LLM 판단이 필요 없는 일을 AGENT_CALL(CLI 두뇌)로 보내면서 발생한 비용:
+  - CLI turn 비용 발생
+  - CLI가 도구를 순차 자율 호출 → 느리고, 어디서 막혔는지 안 보임(가시성 0)
+  - turn timeout / retry 멱등화(Aimbase CR-106) 같은 복잡도까지 끌고 옴
+- **Aimbase와의 역할 분담(아임베이스 대화)**: (A) ParseDocumentTool url 비전 분기 = Aimbase가 처리(우리 무관). (B) `build_workspace` 탈-LLM = **소비앱(우리) 워크플로우 영역** → 본 CR. 둘은 독립이 아니라 보완(LLM을 빼면 가시성 문제도 함께 해소 — TOOL_CALL은 STEP_START/TOOL_USE/TOOL_RESULT가 이미 타임라인에 실시간 적재, Aimbase CR-090).
+- **사용자와 확정한 구조(실측 기반)**:
+  - **2번 적재(build_workspace)**: AGENT_CALL(LLM) → **FOREACH + TOOL_CALL{tool: download_file}**. 각 첨부 URL을 결정론적으로 workspace 파일로 다운로드. LLM 0, 병렬(`mode: parallel`), `on_item_error: continue`로 1건 실패해도 나머지 진행. (운영 동테넌트 `type-pattern-extraction`의 FOREACH+parse_document가 검증된 레퍼런스 패턴 — [opportunity-analysis.steps.v2.json 신버전 예정])
+  - **3번 분석(extract_facts)**: AGENT_CALL 유지(여기는 grep 키워드·FACTOR 계층화 등 LLM 판단 필요). 프롬프트만 조정 — workspace의 PDF는 `read`(바이너리는 메타만 반환)가 아니라 **`parse_document(file_path=)`로 비전 분석**(Aimbase CR-095: PDF 3MB↓이면 base64 document block을 Claude에 직접 주입, 텍스트추출 손실 없음). PDF 원본 보존.
+  - 나머지 STEP(fetch / verify_and_gapcheck / structure_output / save) 무변경.
+- **실측 근거**:
+  - 운영 `opportunity-analysis`에 v2(AGENT_CALL build_workspace)가 **이미 배포됨**(GET 확인) — "검토용 초안"이라던 v2가 라이브였음.
+  - 첨부 `downloadUrl` = `http://59.8.160.12:8183/api/mcp/opportunity-attachments/{id}/download`([NoticeService.buildAttachmentFiles](../backend/src/main/java/com/biddingagency/domain/notice/service/NoticeService.java)) — 공인 IP, JWT 불필요한 server-to-server 경로. Aimbase(59.8.160.12:8280)에서 직접 GET 가능. (MinIO 아닌 로컬 스토리지)
+  - 순수 "URL→workspace 파일" 단일 도구는 Aimbase에 부재(실측). `parse_document`/`http_request`는 다운로드하나 파일로 안 떨굼, `file_write`는 텍스트 content만, `bash`는 `curl -o` 가능하나 부자연. → **Aimbase가 `download_file` 도구 신설**(요청 수락, 구현 중).
+- **CR-038 결정 뒤집기**: CR-038 designNotes 라인 13 "작업장 구성을 FOREACH 분기 대신 AGENT_CALL 단일 STEP으로 ... 파일타입 분기 같은 세부는 LLM 자율 (메모리 합의)" — 본 CR이 이 합의를 폐기. 사유: 파일타입 분기는 download_file이 contentType 무관 바이트 복사로 흡수하고, PDF 비전 판단은 3번 extract_facts(LLM)가 parse_document로 처리하므로 2번에 LLM이 있을 이유가 소멸.
+- **변경 사항**:
+  1. `docs/workflows/opportunity-analysis.steps.v2.json` — `build_workspace` STEP을 AGENT_CALL → FOREACH(items={{input.attachmentFiles}}, body=TOOL_CALL{download_file}) + 본문(opportunityText) file_write로 재작성. `_meta.designNotes`의 FOREACH 반대 메모 갱신, `stepSummary` 유지.
+  2. `extract_facts` 프롬프트 — "parse_document 다시 호출하지 마라" → "workspace의 PDF는 parse_document(file_path=)로 비전 분석"으로 조정.
+  3. 운영 Aimbase에 PUT(`/api/v1/workflows/opportunity-analysis`). PUT 허용 9필드 준수(CR-038 함정 정정).
+  4. **BE/FE/MCP/엔티티 무변경** — input.attachmentFiles는 이미 downloadUrl 포함(CR-019), save 콜백 스키마 동일.
+- **규모**: 중규모(WF STEP 구조 변경). 단 데이터 모델·API·화면·이벤트 무변경 → 캐스케이드는 본 CR 이력 + workflows JSON 자산만(T1~T3 본문 영향 없음 — WF 내부 재구성이라 기능요구사항/API/화면 불변).
+- **선행 의존(해소됨)**: ①Aimbase `download_file` 도구 신설(EnhancedToolExecutor, url+file_path+overwrite, 바이너리 무손실 Files.write, 50MB상한, 부모디렉토리 자동생성). ②**블로커 실측·해소**: 초기엔 TOOL_CALL 스텝이 `toolRegistry.execute(ToolCall)` **1-인자** 호출→EnhancedToolExecutor default bridge가 `ToolContext.minimal(null,null)` 합성→WorkspaceResolver가 `default/general` 폴백→run 격리 깨짐(download_file이 엉뚱한 workspace에 저장, extract_facts가 못 찾음). type-pattern-extraction(FOREACH+parse_document)이 멀쩡한 이유는 parse_document(url)이 workspace에 파일 안 떨구고 output으로만 반환해 경로의존 0이라 폴백 무해였음(모순 해소). → **Aimbase CR-107**로 ToolCallStepExecutor가 StepContext의 workspacePath를 담은 ToolContext로 **2-인자** execute 호출하도록 수정. StepContext.workspacePath 필드 신설(withStepResult 등 복제 시 보존), WorkflowEngine이 resolveWorkspacePath(sessionId)로 세팅, FOREACH injectItem도 보존. 실측 확정(2026-06-14).
+- **구현(JSON)**: build_workspace(AGENT_CALL) 삭제 → `write_description`(TOOL_CALL file_write: 본문→description.txt) + `download_attachments`(FOREACH+download_file: 첨부 원본→attachments/{{item.fileName}}, parallel/max_concurrency=4/max_items=60/on_item_error=continue) 분리. 둘 다 depends_on fetch_opportunity라 병행. `extract_facts` 프롬프트: PDF는 read(메타만) 아닌 `parse_document(file_path="attachments/<파일명>")` 비전, 첨부 메타({{input.attachmentFiles}}) 직접 제공, _INDEX.md 제거→glob. `verify_and_gapcheck` 작업장 안내도 attachments/ 구조로 갱신. _meta version v3.
+- **상태**: **운영 PUT 완료(2026-06-15)** — `PUT /api/v1/workflows/opportunity-analysis` success, GET 재확인(7-STEP 라이브). 허용 7필드(id/name/triggerConfig/steps/errorHandling/outputSchema/inputSchema)만 전송. 운영 백업 /tmp/opp-analysis-backup-20260615.json. **남음**: 실제 공고로 다운로드→PDF비전분석 E2E 검증.
+
+---
+
+### CR-114: 공고문 분석 WF `structure_output`(LLM JSON 변환) 제거 → BE 결정론적 매핑 (2026-06-16)
+
+- **배경**: 공고문 분석 run이 save에서 FAILED. **5층 진단(실측 확정)**: 마지막 STEP `structure_output`(LLM_CALL, connection cli-runner-bidding-001)이 검증된 분석을 save 스키마 JSON으로 변환하는데, **sonnet-4.5가 CLI 경로에서 ```json 코드펜스로 감싼 텍스트**로 응답 → Aimbase `LlmCallStepExecutor.extractStructuredData`가 `ContentBlock.Structured`만 수집하므로 못 줍음 → `structured_data=null` → save STEP이 `{{structure_output.structured_data.koreanTitle}}` 등을 빈 값으로 받아 FAILED.
+- **실측 근거 (20개 run 전수조사 + CLI 격리테스트)**:
+  - structure_output이 `structured_data`를 채운 run: **1/20**. 그 1건만 모델 `claude-sonnet-4-20250514`(4.0), 실패 19건은 전부 `claude-sonnet-4-5`(4.5) 또는 socket error.
+  - 모델 교체 테스트(CLI `-p`): sonnet-4.5·**haiku-4.5 = ```json 펜스 붙임(❌)**, opus-4.8 = 순수 JSON(✅, 단 49초/$1.10). → **모델로 못 고침**. 싼 모델일수록 오히려 펜스. opus는 과·비싸·근본해결 아님(원복함).
+  - run 4437ec80: sonnet-4.5가 **올바른 JSON을 ```json으로 다 만들어냈는데도** 텍스트라 버려짐 = "모델은 일했고 받는 계층이 못 받음".
+- **본질 판단(사용자 합의)**: "이미 만들어놓은 분석을 JSON으로 정리"는 LLM이 **잘 못하는**(펜스/키틀림/환각) 일이고 **결정론적 코드가 가장 잘하는** 일. 증상 처리(펜스 닦기)·모델 교체(opus)는 다 근원(LLM에게 정형출력 위임)을 안 건드린 우회. → **본질 = structure_output(LLM_CALL) 제거, 변환은 BE 코드**.
+  - 실측: NOTICE_VIEW `contentJson`은 DB `DocumentTemplate`(관리자 등록 TipTap JSON)의 `{{변수}}` 자리를 fact로 **치환**하는 것(`NoticeService.buildNoticeViewTemplate` 481~489). 치환 = 코드의 본업. LLM의 "골격 전수 유지(heading 빼먹지 마라)" 같은 불안정 지시가 통째로 소멸 — 코드는 골격을 절대 안 건드림.
+  - verify(AGENT_CALL)는 검증 본업 유지하되 출력을 **자유 텍스트가 아닌 정형 JSON**(verifiedFacts + 스키마 필드)으로 받아 BE가 파싱 가능하게 함.
+- **변경 사항(설계)**:
+  1. **WF**: `structure_output` STEP 제거. `verify_and_gapcheck` 출력 계약을 깔끔한 JSON으로 정형화(koreanTitle/summary/requiredDocuments·factors·eligibility/facts[] — contentJson은 BE가 채움). `save` STEP의 input을 verify 출력 직결로 변경.
+  2. **BE**: `OpportunityAnalysisMcpTool.saveOpportunityAnalysis` 또는 신규 매퍼가 verify JSON을 받아 (a)save 스키마 필드 매핑 (b)NOTICE_VIEW 템플릿 `{{변수}}` 치환으로 contentJson 결정론적 생성. LLM 변환 0.
+  3. **방어**: verify 출력이 혹시 ```json 펜스로 오면 BE가 벗겨 파싱(stripCodeFence fallback) — 어떤 모델이든 받아냄.
+- **규모**: 중규모(WF STEP 제거 + verify 출력 계약 변경 + BE 신규 매핑/치환 로직). 데이터 모델·화면 무변경(save 스키마·notice_extracted_fact 동일). 캐스케이드 = 본 CR 이력 + workflows JSON + BE 매퍼.
+- **선행 관계**: CR-112(3층 value유실 수정, verify에 value필수)·4층(CLI 단절 둔갑, aimbase 수정완료) 이미 해소 → 이번 run에서 extract/verify는 완주·value 정상 확인됨. 남은 단일 차단요인이 본 CR(5층).
+- **상태**: **설계 시작(2026-06-16)**. 본질 B 방향 확정. 다음: verify 출력 JSON 계약 확정 + NOTICE_VIEW 템플릿 실변수 확인 → BE 매퍼 구현(승인 후).

@@ -1,7 +1,7 @@
 {
   "_meta": {
     "wfId": "opportunity-analysis",
-    "version": "v5 (CR-041 + HYBRID + CR-112: build_workspace 탈-LLM(write_description+download_attachments FOREACH) + 도구지시 제거 + structure_output 값유실 수정 — extract_facts.output 입력추가/depends_on 보강(a) & verify에 value필수 강제(b))",
+    "version": "v6 (CR-114: structure_output(LLM_CALL) 제거 → verify(AGENT_CALL)에 response_schema 흡수. AGENT_CALL은 structured_output 가상tool 호출이라 ```json 펜스 문제 원천소멸. save는 verify.structured_data 직결)",
     "purpose": "공고문 한글화 + 정형 추출 + contentJson 생성을 'Claude Code 구조'로 재설계: 작업장 구성 → 작업장 grep/read 추출 → 검증·누락점검 → JSON → fact 영속화",
     "callbackTool": "save_opportunity_analysis (BE MCP) — notice_extracted_fact 동반 저장(BE 콜백 확장 필요)",
     "designNotes": [
@@ -13,7 +13,7 @@
       "[CR-041 적용] 구 build_workspace(AGENT_CALL=LLM 단일 STEP, 'FOREACH 대신 AGENT_CALL' 합의)는 폐기. LLM 판단 불필요한 결정론적 적재를 AGENT_CALL로 보내 CLI turn 비용·가시성0·retry 멱등화 복잡도를 떠안던 문제를 해소. → write_description(TOOL_CALL file_write) + download_attachments(FOREACH+download_file, parallel/on_item_error=continue) 두 STEP으로 분리(둘 다 depends_on fetch_opportunity라 병행). LLM은 extract_facts부터.",
       "[CR-041 선행 의존 — Aimbase] download_file 도구 신설 완료(EnhancedToolExecutor, url+file_path+overwrite, 바이너리 무손실, 50MB상한). 핵심 의존: Aimbase CR-107로 TOOL_CALL 스텝이 ToolContext(workspacePath)를 2-인자 execute로 전파하도록 수정됨(이전엔 1-인자→default/general 폴백으로 run격리 깨짐). FOREACH도 withStepResult가 workspacePath 보존(StepContext.java:25). WorkflowEngine이 resolveWorkspacePath(sessionId)로 run workspace 세팅. → FOREACH 안 download_file이 run 격리 workspace의 attachments/에 저장, extract_facts(AGENT_CALL)가 같은 workspace를 봄. 실측 확정(2026-06-14)."
     ],
-    "stepSummary": "fetch_opportunity → [write_description ∥ download_attachments(FOREACH)] → extract_facts → verify_and_gapcheck → structure_output → save",
+    "stepSummary": "fetch_opportunity → [write_description ∥ download_attachments(FOREACH)] → extract_facts → verify_and_gapcheck(+response_schema, CR-114) → save",
     "putApi": "PUT http://59.8.160.12:8280/api/v1/workflows/opportunity-analysis (X-API-Key + X-Tenant-Id: bidding_system). PUT 함정: GET응답 통째면 400 — 허용필드(id/name/triggerConfig/steps/domain/inputSchema/outputSchema/errorHandling/graphMode)만."
   },
   "id": "opportunity-analysis",
@@ -103,21 +103,7 @@
         "description": "추출 결과를 작업장 원문과 대조 검증하는 Verifier/GapChecker",
         "connection_id": "cli-runner-bidding-001",
         "timeout_ms": 600000,
-        "prompt": "당신은 공고 분석 결과를 검증하는 감사자입니다. 이전 단계가 추출한 분석과 fact 목록이 작업장(workspace) 원문과 실제로 일치하는지, 그리고 빠진 필수 항목이 없는지 점검합니다.\n\n[검증 대상 (이전 STEP 산출물)]\n{{extract_facts.output}}\n\n[작업장]\n- `description.txt`(공고 본문) 와 `attachments/`(첨부 원본) 를 직접 열어 대조하세요. 파일 종류에 맞는 읽기 방법은 알아서 선택하고, 필요하면 키워드로 검색해 해당 부분을 정독합니다.\n\n[수행]\n1. 충실성 검증: 각 fact 의 sourceQuote 가 해당 sourceFile 에 실제로 존재하는지 grep 으로 확인. 원문에 없는데 value 가 채워진 fact = 환각 → 표시.\n2. 누락 점검(Gap Check): USFK 공고 필수 항목 체크리스트로 빠진 게 없는지 확인 — 마감일/제출방법(PIEE 등)/평가기준/제출서류 볼륨·페이지제한/FACTOR 구조/POC/현장설명회 유무. 작업장 원문엔 있는데 추출에서 빠진 항목 = 누락 → 표시.\n3. 충족주체 재확인: CLIENT_UPLOAD 여야 할(트럭·인력·실적) 항목이 PLATFORM_GENERATED 로 잘못 분류됐는지 점검.\n\n[출력]\n{ verifiedFacts: [...정정·확정된 fact 목록...], hallucinations: [환각으로 판단해 제거/수정한 항목], gaps: [원문에 있으나 누락된 항목 — 가능하면 작업장에서 값 보강], notes: 검증 요약 }. 정정된 최종 fact 목록과 분석을 다음 STEP 이 쓸 수 있게 정리하세요.\n★필수★ verifiedFacts 의 각 항목은 검증 마크(✓/정확/일치 등)만 남기지 말고 반드시 실제 값(value)을 그대로 포함하라. 각 항목은 { key, value(실제 추출값 — 절대 생략 금지), sourceFile, sourceQuote, page, confidence } 형태여야 한다. 값이 맞다고 판단했으면 그 값을 그대로 실어라(예: key='공고번호' value='W912xx-25-R-0001', key='발행일' value='2026-03-01'). value 를 비우거나 '정확함' 같은 검증 표현으로 대체하면 다음 STEP 이 실제 값을 잃는다."
-      },
-      "depends_on": [
-        "extract_facts"
-      ]
-    },
-    {
-      "id": "structure_output",
-      "name": "검증된 분석을 JSON Schema 로 변환",
-      "type": "LLM_CALL",
-      "config": {
-        "system": "You are a precise JSON structurer. Convert the verified Korean analysis into the requested JSON schema. Preserve every verified detail and its source reference. Drop items flagged as hallucination. Return ONLY the structured object.",
-        "max_tokens": 16384,
-        "connection_id": "cli-runner-bidding-001",
-        "prompt": "다음 검증된 분석 결과를 JSON Schema 에 맞춰 빠짐없이 변환하세요.\n\n=== 검증 결과 (verify_and_gapcheck 산출물) ===\n{{verify_and_gapcheck.output}}\n\n=== 원본 추출 결과 (extract_facts 산출물 — 값의 원천) ===\n{{extract_facts.output}}\n\n=== 표시용 양식 골격 (NOTICE_VIEW 템플릿) ===\n{{input.noticeViewTemplate}}\n\n=== 변환 규칙 ===\n- verifiedFacts 만 사용. hallucinations 로 분류된 항목은 제외.\n- ★값의 원천(필수)★ 각 fact 의 실제 value 는 우선 verifiedFacts 에서 가져온다. 다만 verify 산출물이 검증 마크(✓/정확 등)만 남기고 실제 값을 누락했다면, 위 'extract_facts 산출물'의 동일 key 에서 원본 value 를 찾아 채워라. hallucinations 로 분류된 항목만 제외하고, 나머지는 절대 값을 비우지 말 것 — verify 가 '정확'이라 표시했다는 것은 extract 의 값이 옳다는 뜻이므로 그 값을 그대로 실어야 한다.\n- requiredDocuments.documents 평면(하위호환) + factors[](factorId/factorTitle/subfactors[{subfactorId,name,description,fulfillmentParty,mandatory,format,pageLimit,sourceRef,notes}]) + eligibility[](title/description/mandatory/evidenceBy/isGate/sourceRef) 모두 채움.\n- ★facts[]★ 신규 배열: 각 verifiedFact 를 {key,value,sourceFile,sourceQuote,page,confidence} 로 그대로 실어 BE 가 notice_extracted_fact 에 저장하게 함.\n- 본문에 없는 정보는 해당 값/항목만 빈 문자열·빈 배열로 두고, 그 정보가 속한 섹션(heading) 자체는 절대 삭제하지 말 것. 추측으로 채우는 것은 금지하되, 섹션 골격은 유지한다.\n- ★골격 전수 유지 (필수)★ contentJson 은 NOTICE_VIEW 골격의 모든 heading 노드를 하나도 빠짐없이 그대로 유지해야 한다. 골격에 heading 이 10개면 결과도 heading 10개여야 하고, 순서·번호·제목도 골격과 동일해야 한다. 정보가 없는 섹션이라도 heading 은 남기고 본문만 비운다(예: '해당 없음' 문단). 섹션을 합치거나 빼거나 새로 만들지 말 것.\n- contentJson 은 골격 노드 구조를 그대로 두고 {{변수}} 자리에만 실제값 치환(kvTable.rows/dataTable.rows/groupedList.groups/calloutList.items). 골격(noticeViewTemplate) 자체가 비어 있으면 null.\n- 응답은 schema 에 맞는 JSON 만.",
+        "prompt": "당신은 공고 분석 결과를 검증하는 감사자입니다. 이전 단계가 추출한 분석과 fact 목록이 작업장(workspace) 원문과 실제로 일치하는지, 그리고 빠진 필수 항목이 없는지 점검합니다.\n\n[검증 대상 (이전 STEP 산출물)]\n{{extract_facts.output}}\n\n\n[표시용 양식 골격 (NOTICE_VIEW 템플릿, TipTap JSON) — contentJson 채울 때 사용]\n{{input.noticeViewTemplate}}\n\n[작업장]\n- `description.txt`(공고 본문) 와 `attachments/`(첨부 원본) 를 직접 열어 대조하세요. 파일 종류에 맞는 읽기 방법은 알아서 선택하고, 필요하면 키워드로 검색해 해당 부분을 정독합니다.\n\n[수행]\n1. 충실성 검증: 각 fact 의 sourceQuote 가 해당 sourceFile 에 실제로 존재하는지 grep 으로 확인. 원문에 없는데 value 가 채워진 fact = 환각 → 표시.\n2. 누락 점검(Gap Check): USFK 공고 필수 항목 체크리스트로 빠진 게 없는지 확인 — 마감일/제출방법(PIEE 등)/평가기준/제출서류 볼륨·페이지제한/FACTOR 구조/POC/현장설명회 유무. 작업장 원문엔 있는데 추출에서 빠진 항목 = 누락 → 표시.\n3. 충족주체 재확인: CLIENT_UPLOAD 여야 할(트럭·인력·실적) 항목이 PLATFORM_GENERATED 로 잘못 분류됐는지 점검.\n\n[출력]\n{ verifiedFacts: [...정정·확정된 fact 목록...], hallucinations: [환각으로 판단해 제거/수정한 항목], gaps: [원문에 있으나 누락된 항목 — 가능하면 작업장에서 값 보강], notes: 검증 요약 }. 정정된 최종 fact 목록과 분석을 다음 STEP 이 쓸 수 있게 정리하세요.\n★필수★ verifiedFacts 의 각 항목은 검증 마크(✓/정확/일치 등)만 남기지 말고 반드시 실제 값(value)을 그대로 포함하라. 각 항목은 { key, value(실제 추출값 — 절대 생략 금지), sourceFile, sourceQuote, page, confidence } 형태여야 한다. 값이 맞다고 판단했으면 그 값을 그대로 실어라(예: key='공고번호' value='W912xx-25-R-0001', key='발행일' value='2026-03-01'). value 를 비우거나 '정확함' 같은 검증 표현으로 대체하면 다음 STEP 이 실제 값을 잃는다.\n\n[★최종 출력 — 구조화 (필수)★]\n위 검증을 마친 뒤, 그 결과를 아래 response_schema 에 맞춰 structured_output 으로 제출하라. 자유 텍스트나 ```json 코드블록이 아니라 structured_output 도구 호출로 낸다. - verifiedFacts(정정·확정 fact, hallucinations 제외)를 facts[] 로 그대로 싣는다(각 {key,value,sourceFile,sourceQuote,page,confidence}, value 절대 비우지 말 것). - koreanTitle/summary/requiredDocuments(documents+factors+eligibility)/contentJson 까지 schema 대로 채운다. - ★contentJson★ 은 입력으로 받은 NOTICE_VIEW 골격(noticeViewTemplate)의 모든 heading 노드를 하나도 빠짐없이 유지하고 {{변수}} 자리에만 실제값을 치환한다(kvTable.rows/dataTable.rows/groupedList.groups/calloutList.items). 정보 없는 섹션도 heading 은 남기고 본문만 비운다. 골격이 비어 있으면 null. - 본문에 없는 값은 빈 문자열·빈 배열로 두되 섹션 골격은 삭제하지 않는다. 추측으로 채우지 않는다.",
         "response_schema": {
           "type": "object",
           "required": [
@@ -349,7 +335,6 @@
         }
       },
       "depends_on": [
-        "verify_and_gapcheck",
         "extract_facts"
       ]
     },
@@ -361,17 +346,17 @@
         "tool": "save_opportunity_analysis",
         "input": {
           "noticeId": "{{input.noticeId}}",
-          "koreanTitle": "{{structure_output.structured_data.koreanTitle}}",
-          "summary": "{{structure_output.structured_data.summary}}",
-          "documentFormats": "{{structure_output.structured_data.documentFormats}}",
-          "llmPromptPreset": "{{structure_output.structured_data.llmPromptPreset}}",
-          "requiredDocuments": "{{structure_output.structured_data.requiredDocuments}}",
-          "contentJson": "{{structure_output.structured_data.contentJson}}",
-          "facts": "{{structure_output.structured_data.facts}}"
+          "koreanTitle": "{{verify_and_gapcheck.structured_data.koreanTitle}}",
+          "summary": "{{verify_and_gapcheck.structured_data.summary}}",
+          "documentFormats": "{{verify_and_gapcheck.structured_data.documentFormats}}",
+          "llmPromptPreset": "{{verify_and_gapcheck.structured_data.llmPromptPreset}}",
+          "requiredDocuments": "{{verify_and_gapcheck.structured_data.requiredDocuments}}",
+          "contentJson": "{{verify_and_gapcheck.structured_data.contentJson}}",
+          "facts": "{{verify_and_gapcheck.structured_data.facts}}"
         }
       },
       "depends_on": [
-        "structure_output"
+        "verify_and_gapcheck"
       ]
     }
   ],
