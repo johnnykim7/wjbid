@@ -1,20 +1,16 @@
 /**
- * NoticeDocumentView — CR-021
+ * NoticeDocumentView — CR-021 / CR-114 재설계
  *
- * 공고문(Notice)의 TipTap JSON 본문을 PDF 양식 그대로 렌더링.
- * Aimbase 한글화 워크플로우가 NOTICE_VIEW 템플릿 골격을 채워 반환한 contentJson을 받음.
+ * 공고문(Notice) 본문을 PDF 양식 계열로 렌더링.
  *
- * 지원 노드:
- *  - 표준: doc / heading(level) / paragraph(tone?) / bulletList(items)
- *  - 커스텀: noticeHeader / metaGrid / kvTable / dataTable / groupedList / calloutList
+ * CR-114: contentJson(LLM이 골격을 채운 TipTap JSON) 의존 제거.
+ *  - contentJson 에 들어갈 값은 전부 summary/requiredDocuments 의 재배열일 뿐(새 정보 0).
+ *  - LLM 에게 골격 치환을 시키면 무거워서 null 로 회피(실측) → 화면이 데이터로 직접 그린다.
+ *  - 노드 컴포넌트(KvTable/DataTable/CalloutList/GroupedList/Heading...)는 그대로 재사용,
+ *    메인이 summary/requiredDocuments 로 섹션을 결정론적으로 조립.
  *
- * 디자인: 네이비 마스키 정부문서 계열. 첨부 PDF(W90VN926QA034) 양식 재현.
- *
- * contentJson 미존재 시(양식 미등록 / LLM 미생성) summaryJson fallback 렌더 — 옛 화면.
+ * 디자인: 네이비 정부문서 계열.
  */
-
-import { Fragment } from 'react'
-import type { ReactNode } from 'react'
 
 type Node = {
   type: string
@@ -33,86 +29,171 @@ export interface EligibilityItem {
   sourceRef?: string
 }
 
+// CR-114: 화면이 직접 받는 분석 데이터 (contentJson 대체)
+export interface NoticeSummary {
+  overview?: string
+  scope?: string
+  eligibility?: string
+  evaluationCriteria?: string
+  budgetInfo?: string
+  keyDates?: { label?: string; date?: string; note?: string }[]
+  specialNotes?: string[]
+  contactInfo?: { name?: string; role?: string; email?: string; phone?: string; organization?: string }[]
+}
+
+export interface RequiredDocumentItem {
+  name: string
+  description?: string
+  mandatory?: boolean
+  format?: string
+  pageLimit?: string
+  notes?: string
+}
+
 interface Props {
-  contentJson?: Record<string, unknown> | null
-  // CR-033: 정밀추출 자격요건 — 본문 "자격 요건" 섹션 자리에 인라인 렌더(중복 방지)
+  // CR-114: 데이터 직접 렌더 (주 경로)
+  koreanTitle?: string | null
+  summary?: NoticeSummary | null
+  documents?: RequiredDocumentItem[]
+  solicitationNumber?: string | null
+  organizationName?: string | null
+  // CR-033: 정밀추출 자격요건 — "참여 자격요건" 섹션
   eligibility?: EligibilityItem[]
-  // 공고 게시일(SAM 수집 확정값). LLM이 채운 issuedDate("2026" 등)보다 우선하여 "공고일"로 표시.
+  // 공고 게시일(SAM 수집 확정값)
   postedDate?: string | null
 }
 
 const NAVY = 'bg-slate-800 text-white'
 const NAVY_DARK = 'bg-slate-900 text-white'
-const NAVY_BORDER = 'border-slate-700'
 const SECTION_BORDER = 'border-slate-200'
 
-export default function NoticeDocumentView({ contentJson, eligibility, postedDate }: Props) {
-  if (!contentJson) {
+export default function NoticeDocumentView({
+  koreanTitle,
+  summary,
+  documents,
+  solicitationNumber,
+  organizationName,
+  eligibility,
+  postedDate,
+}: Props) {
+  // CR-114: 분석 데이터가 전혀 없으면 안내 (COMPLETED 인데 summary 빈 경우)
+  if (!summary && (!documents || documents.length === 0) && (!eligibility || eligibility.length === 0)) {
     return (
       <div className="rounded-lg bg-yellow-50 border border-yellow-200 px-4 py-3 text-sm text-yellow-800">
-        공고문 본문(contentJson)이 아직 생성되지 않았습니다. NOTICE_VIEW 양식 등록 후 한글화 재생성이 필요합니다.
+        공고문 분석 결과가 아직 없습니다. 한글화/분석을 다시 실행해 주세요.
       </div>
     )
   }
 
-  const doc = contentJson as unknown as Node
-  if (doc.type !== 'doc' || !Array.isArray(doc.content)) {
-    return <div className="text-sm text-red-600">올바르지 않은 본문 형식입니다.</div>
-  }
-
-  // CR-033: 본문에 "자격 요건"/"Qualifications" heading 이 있는지 — 있으면 그 직후에 정밀추출 블록을 끼운다.
   const hasElig = !!eligibility && eligibility.length > 0
-  const isEligHeading = (node: Node) =>
-    node.type === 'heading' &&
-    (node.content || []).some((c) => {
-      const t = String(c.text || '')
-      return t.includes('자격') || /qualif/i.test(t)
-    })
-  const eligHeadingRendered = hasElig && doc.content.some(isEligHeading)
+  const issuedDate = fmtDateKo(postedDate) || str(postedDate)
 
-  // CR-033: 중복/발행일은 데이터(contentJson) 재생성 없이 "그릴 때"만 처리한다.
-  //  - 중복: 파란 박스 아래 metaGrid(6칸)와 "1. 공고 기본 정보" kvTable 이 같은 6항목 → metaGrid 를 렌더 스킵(주제표=기본정보 표를 남긴다).
-  //  - 발행일: noticeHeader.issuedDate 를 "공고 기본 정보" kvTable 의 한 행으로 끌어올려 표시(회색 줄에 묻히던 것).
-  const headerNode = doc.content.find((n) => n.type === 'noticeHeader')
-  // 공고일: 실제 게시일(postedDate) 우선 — LLM이 채운 issuedDate("2026" 등)는 부정확하므로 폴백으로만.
-  const issuedDate = fmtDateKo(postedDate) || fmtDateKo(str(headerNode?.attrs?.issuedDate)) || str(headerNode?.attrs?.issuedDate)
+  // CR-114: 기본 정보 kvTable 행 — summary/메타에서 직접 구성 (발행일 끼움)
+  const basicRows = withIssuedDate(
+    [
+      solicitationNumber ? { label: '공고번호', value: str(solicitationNumber) } : null,
+      summary?.budgetInfo ? { label: '예상 금액', value: str(summary.budgetInfo) } : null,
+      summary?.evaluationCriteria ? { label: '평가 방식', value: str(summary.evaluationCriteria) } : null,
+    ].filter(Boolean) as { label: string; value: string }[],
+    issuedDate,
+  )
 
-  const isBasicInfoHeading = (node: Node) =>
-    node.type === 'heading' &&
-    (node.content || []).some((c) => String(c.text || '').includes('공고 기본 정보') || /general information/i.test(String(c.text || '')))
+  // 주요 일정 dataTable (label/date/note → 행)
+  const timelineRows = (summary?.keyDates ?? [])
+    .map((d) => [str(d.label), [str(d.date), str(d.note)].filter(Boolean).join(' / ')])
+    .filter((r) => r[0] || r[1])
 
-  // "공고 기본 정보" heading 바로 다음 kvTable 인덱스(발행일 행을 끼울 대상)
-  const basicInfoIdx = doc.content.findIndex(isBasicInfoHeading)
-  const basicKvIdx = basicInfoIdx >= 0 && doc.content[basicInfoIdx + 1]?.type === 'kvTable'
-    ? basicInfoIdx + 1 : -1
+  // 연락처 kvTable
+  const contactRows = (summary?.contactInfo ?? [])
+    .map((c) => ({
+      label: [str(c.name), str(c.role)].filter(Boolean).join(' · ') || '담당자',
+      value: [str(c.email), str(c.phone), str(c.organization)].filter(Boolean).join(' / '),
+    }))
+    .filter((r) => r.value)
+
+  // 제출 서류 dataTable
+  const docHeaders = ['서류', '필수', '형식', '비고']
+  const docRows = (documents ?? []).map((d) => [
+    str(d.name),
+    d.mandatory ? '필수' : '선택',
+    str(d.format),
+    [str(d.description), str(d.notes)].filter(Boolean).join(' / '),
+  ])
 
   return (
     <article className="bg-white">
-      {doc.content.map((node, i) => {
-        // 중복 스킵: 파란 박스 아래 metaGrid(6칸) — "1. 공고 기본 정보" 표와 동일 내용
-        if (node.type === 'metaGrid') return null
-        // "공고 기본 정보" kvTable 에는 발행일 행을 끼워 렌더
-        if (i === basicKvIdx) {
-          return (
-            <Fragment key={i}>
-              <KvTable rows={withIssuedDate(asKvRows(node.attrs?.rows), issuedDate)} />
-            </Fragment>
-          )
-        }
-        return (
-          <Fragment key={i}>
-            <NodeRenderer node={node} />
-            {/* 본문 "자격 요건" heading 직후에 정밀추출 자격요건 인라인 */}
-            {hasElig && isEligHeading(node) && <EligibilityBlock items={eligibility!} />}
-          </Fragment>
-        )
-      })}
-      {/* 본문에 자격요건 heading 이 없으면(양식 차이) 맨 끝에라도 노출 */}
-      {hasElig && !eligHeadingRendered && (
-        <section className="mt-6">
-          <h2 className="text-base font-bold text-slate-900 mb-3 pb-1.5 border-b-2 border-slate-800">참여 자격요건</h2>
+      {/* 헤더 */}
+      <NoticeHeader
+        attrs={{
+          title: str(koreanTitle),
+          organization: str(organizationName),
+          solicitationNumber: str(solicitationNumber),
+          issuedDate,
+        }}
+      />
+
+      {/* 1. 공고 기본 정보 */}
+      {basicRows.length > 0 && (
+        <>
+          <Heading level={2} content={[{ type: 'text', text: '공고 기본 정보' }]} />
+          <KvTable rows={basicRows} />
+        </>
+      )}
+
+      {/* 2. 개요 */}
+      {summary?.overview && (
+        <>
+          <Heading level={2} content={[{ type: 'text', text: '개요' }]} />
+          <Paragraph content={[{ type: 'text', text: str(summary.overview) }]} />
+        </>
+      )}
+
+      {/* 3. 작업 범위 */}
+      {summary?.scope && (
+        <>
+          <Heading level={2} content={[{ type: 'text', text: '작업 범위' }]} />
+          <Paragraph content={[{ type: 'text', text: str(summary.scope) }]} />
+        </>
+      )}
+
+      {/* 4. 주요 일정 */}
+      {timelineRows.length > 0 && (
+        <>
+          <Heading level={2} content={[{ type: 'text', text: '주요 일정' }]} />
+          <DataTable headers={['구분', '일정']} rows={timelineRows} />
+        </>
+      )}
+
+      {/* 5. 참여 자격요건 (CR-033 정밀추출) */}
+      {hasElig && (
+        <>
+          <Heading level={2} content={[{ type: 'text', text: '참여 자격요건' }]} />
           <EligibilityBlock items={eligibility!} />
-        </section>
+        </>
+      )}
+
+      {/* 6. 제출 서류 */}
+      {docRows.length > 0 && (
+        <>
+          <Heading level={2} content={[{ type: 'text', text: '제출 서류' }]} />
+          <DataTable headers={docHeaders} rows={docRows} />
+        </>
+      )}
+
+      {/* 7. 담당자 */}
+      {contactRows.length > 0 && (
+        <>
+          <Heading level={2} content={[{ type: 'text', text: '담당자 (POC)' }]} />
+          <KvTable rows={contactRows} />
+        </>
+      )}
+
+      {/* 8. 특이사항 */}
+      {summary?.specialNotes && summary.specialNotes.length > 0 && (
+        <>
+          <Heading level={2} content={[{ type: 'text', text: '특이사항' }]} />
+          <CalloutList items={summary.specialNotes} tone="warning" />
+        </>
       )}
     </article>
   )
@@ -149,40 +230,7 @@ function EligibilityBlock({ items }: { items: EligibilityItem[] }) {
   )
 }
 
-function NodeRenderer({ node }: { node: Node }): ReactNode {
-  switch (node.type) {
-    case 'noticeHeader':
-      return <NoticeHeader attrs={node.attrs || {}} />
-    case 'metaGrid':
-      return <MetaGrid content={node.content || []} />
-    case 'heading':
-      return <Heading level={Number(node.attrs?.level) || 2} content={node.content || []} />
-    case 'paragraph':
-      return <Paragraph tone={(node.attrs?.tone as string) || undefined} content={node.content || []} />
-    case 'bulletList':
-      return <BulletList items={asStringArray(node.attrs?.items)} />
-    case 'kvTable':
-      return <KvTable rows={asKvRows(node.attrs?.rows)} />
-    case 'dataTable':
-      return (
-        <DataTable
-          headers={asStringArray(node.attrs?.headers)}
-          rows={asMatrix(node.attrs?.rows)}
-          footer={node.attrs?.footer as string | undefined}
-        />
-      )
-    case 'groupedList':
-      return <GroupedList groups={asGroups(node.attrs?.groups ?? node.attrs?.items)} />
-    case 'calloutList':
-      return <CalloutList items={asCalloutItems(node.attrs?.items)} tone={(node.attrs?.tone as string) || 'info'} />
-    case 'text':
-      return <>{String(node.text || '')}</>
-    default:
-      return null
-  }
-}
-
-// ── 커스텀 노드 렌더러 ─────────────────────────────────────
+// ── 커스텀 노드 렌더러 (CR-114: 메인이 데이터로 직접 조립해 호출) ──────────
 
 function NoticeHeader({ attrs }: { attrs: Record<string, unknown> }) {
   const title = str(attrs.title)
@@ -200,28 +248,6 @@ function NoticeHeader({ attrs }: { attrs: Record<string, unknown> }) {
         {solNo && <span>Solicitation: <span className="font-mono">{solNo}</span></span>}
         {issuedDate && <span>발행일: {issuedDate}</span>}
       </div>
-    </div>
-  )
-}
-
-function MetaGrid({ content }: { content: Node[] }) {
-  const cells = content.filter((n) => n.type === 'metaCell')
-  if (cells.length === 0) return null
-  return (
-    <div className={`grid grid-cols-3 md:grid-cols-6 ${NAVY} rounded-b-lg mb-6`}>
-      {cells.map((cell, i) => {
-        const label = str(cell.attrs?.label)
-        const value = str(cell.attrs?.value)
-        return (
-          <div
-            key={i}
-            className={`px-3 py-2 ${i < cells.length - 1 ? 'border-r ' + NAVY_BORDER : ''} text-center`}
-          >
-            <div className="text-[10px] text-slate-300 uppercase tracking-wide">{label}</div>
-            <div className="text-sm font-semibold mt-0.5 break-keep">{value || '-'}</div>
-          </div>
-        )
-      })}
     </div>
   )
 }
@@ -245,17 +271,6 @@ function Paragraph({ tone, content }: { tone?: string; content: Node[] }) {
   const text = collectText(content)
   const cls = tone === 'muted' ? 'text-xs text-slate-500 mb-2' : 'text-sm text-slate-700 leading-relaxed mb-3'
   return <p className={cls}>{text}</p>
-}
-
-function BulletList({ items }: { items: string[] }) {
-  if (items.length === 0) return null
-  return (
-    <ul className="list-disc pl-5 space-y-1 text-sm text-slate-700 mb-3">
-      {items.map((item, i) => (
-        <li key={i}>{item}</li>
-      ))}
-    </ul>
-  )
 }
 
 function KvTable({ rows }: { rows: { label: string; value: string }[] }) {
@@ -315,29 +330,6 @@ function DataTable({
   )
 }
 
-function GroupedList({ groups }: { groups: { label: string; items: string[]; required?: boolean }[] }) {
-  if (groups.length === 0) return null
-  return (
-    <div className="space-y-3 mb-3">
-      {groups.map((g, i) => (
-        <div key={i} className={`border ${SECTION_BORDER} rounded-md overflow-hidden`}>
-          <div className="bg-slate-100 px-3 py-1.5 text-sm font-semibold text-slate-800 flex items-center justify-between">
-            <span>{g.label}</span>
-            {g.required && (
-              <span className="text-[10px] px-1.5 py-0.5 bg-red-100 text-red-700 rounded">필수</span>
-            )}
-          </div>
-          <ul className="list-disc pl-8 py-2 space-y-1 text-sm text-slate-700">
-            {g.items.map((item, j) => (
-              <li key={j}>{item}</li>
-            ))}
-          </ul>
-        </div>
-      ))}
-    </div>
-  )
-}
-
 type CalloutItem = string | { title?: string; content?: string }
 
 function CalloutList({ items, tone }: { items: CalloutItem[]; tone: string }) {
@@ -381,21 +373,6 @@ function collectText(content: Node[]): string {
     .join('')
 }
 
-function asStringArray(v: unknown): string[] {
-  if (Array.isArray(v)) return v.map(String)
-  return []
-}
-
-function asKvRows(v: unknown): { label: string; value: string }[] {
-  if (!Array.isArray(v)) return []
-  return v
-    .filter((r) => r && typeof r === 'object')
-    .map((r) => ({
-      label: str((r as Record<string, unknown>).label),
-      value: str((r as Record<string, unknown>).value),
-    }))
-}
-
 // 날짜 문자열/ISO 를 "YYYY년 M월 D일" 로 변환. 시·분·KST 제거. 파싱 실패 시 빈 문자열.
 // "2026" 처럼 연도만 있는 값은 정확한 날짜로 못 보므로 변환 실패 처리(폴백은 호출부에서).
 function fmtDateKo(v?: string | null): string {
@@ -436,40 +413,4 @@ function withIssuedDate(
   return out
 }
 
-function asMatrix(v: unknown): string[][] {
-  if (!Array.isArray(v)) return []
-  return v.filter(Array.isArray).map((row) => (row as unknown[]).map(String))
-}
-
-function asGroups(v: unknown): { label: string; items: string[]; required?: boolean }[] {
-  if (!Array.isArray(v)) return []
-  return v
-    .filter((g) => g && typeof g === 'object')
-    .map((g) => {
-      const o = g as Record<string, unknown>
-      return {
-        // LLM이 label/title/name 중 무엇으로 채워도 받기
-        label: str(o.label ?? o.title ?? o.name),
-        items: asStringArray(o.items),
-        required: o.required === true,
-      }
-    })
-}
-
-function asCalloutItems(v: unknown): CalloutItem[] {
-  if (!Array.isArray(v)) return []
-  return v
-    .filter((it) => it != null)
-    .map((it) => {
-      if (typeof it === 'string') return it
-      if (typeof it === 'object') {
-        const o = it as Record<string, unknown>
-        return {
-          title: o.title != null ? str(o.title) : undefined,
-          content: o.content != null ? str(o.content) : (o.text != null ? str(o.text) : undefined),
-        }
-      }
-      return String(it)
-    })
-}
 

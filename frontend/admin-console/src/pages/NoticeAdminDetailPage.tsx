@@ -9,7 +9,7 @@ import {
   deleteNotice,
 } from '../api/client'
 import NoticeDocumentView from '../components/NoticeDocumentView'
-import type { EligibilityItem } from '../components/NoticeDocumentView'
+import type { EligibilityItem, NoticeSummary, RequiredDocumentItem } from '../components/NoticeDocumentView'
 import NoticeCorrectionChat from '../components/NoticeCorrectionChat'
 
 interface AnalysisResult {
@@ -207,8 +207,12 @@ export default function NoticeAdminDetailPage() {
             {/* CR-021: TipTap JSON 본문 — PDF 양식 풍부도.
                 CR-033: 자격요건 정밀추출은 본문 "자격 요건"(§6) 자리에 인라인 렌더(중복·하단분리 방지) */}
             <NoticeDocumentView
-              contentJson={a?.contentJson}
-              eligibility={a?.requiredDocuments?.eligibility as EligibilityItem[] | undefined}
+              koreanTitle={notice.koreanTitle}
+              summary={a?.summary as NoticeSummary | undefined}
+              documents={(a?.requiredDocuments as Record<string, unknown> | undefined)?.documents as RequiredDocumentItem[] | undefined}
+              solicitationNumber={notice.solicitationNumber}
+              organizationName={notice.organizationName}
+              eligibility={(a?.requiredDocuments as Record<string, unknown> | undefined)?.eligibility as EligibilityItem[] | undefined}
               postedDate={notice.postedDate}
             />
 

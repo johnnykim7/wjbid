@@ -642,4 +642,9 @@
   3. **방어**: verify 출력이 혹시 ```json 펜스로 오면 BE가 벗겨 파싱(stripCodeFence fallback) — 어떤 모델이든 받아냄.
 - **규모**: 중규모(WF STEP 제거 + verify 출력 계약 변경 + BE 신규 매핑/치환 로직). 데이터 모델·화면 무변경(save 스키마·notice_extracted_fact 동일). 캐스케이드 = 본 CR 이력 + workflows JSON + BE 매퍼.
 - **선행 관계**: CR-112(3층 value유실 수정, verify에 value필수)·4층(CLI 단절 둔갑, aimbase 수정완료) 이미 해소 → 이번 run에서 extract/verify는 완주·value 정상 확인됨. 남은 단일 차단요인이 본 CR(5층).
-- **상태**: **설계 시작(2026-06-16)**. 본질 B 방향 확정. 다음: verify 출력 JSON 계약 확정 + NOTICE_VIEW 템플릿 실변수 확인 → BE 매퍼 구현(승인 후).
+- **상태**: **구현 완료(2026-06-16)**. 진행 경과:
+  1. **5층 1차 해소 (structure_output 제거)**: structure_output(LLM_CALL)을 verify_and_gapcheck(AGENT_CALL)에 response_schema로 흡수. AGENT_CALL은 structured_output 가상tool 호출(CR-088)이라 ```json 펜스 원천소멸. 운영 PUT 완료. → E2E run(b0a690f8/f13393e4)에서 save COMPLETED, facts 37개 정상. (별도 [[cr114-structure-output-removed-into-verify]] 메모리)
+  2. **contentJson 추가 발견·제거 (본 CR 본질)**: verify가 facts/summary/requiredDocuments는 다 채우는데 contentJson만 null로 회피(실측). 원인=response_schema가 contentJson을 `["object","null"]`로 null허용 → 무거운 골격 29노드 치환을 모델이 생략. **본질 판단**: contentJson에 들어갈 값은 전부 facts/summary/requiredDocuments의 재배열(새 정보 0) → LLM이 아니라 화면이 데이터로 직접 그릴 일.
+  3. **구현**: ①WF — verify response_schema·프롬프트·save input에서 contentJson 전면 제거(extract/verify 프롬프트의 noticeViewTemplate 골격 입력도 제거). 운영 PUT v7 완료(connection_id 덮어쓰기 없음 검증). ②FE admin — `NoticeDocumentView`를 contentJson(TipTap) 렌더러 → summary/requiredDocuments 데이터 직접 렌더러로 교체. 노드 컴포넌트(KvTable/DataTable/CalloutList/Heading/NoticeHeader/EligibilityBlock) 재사용, 메인이 8섹션 결정론 조립. 빌드 성공. ③FE customer — 무변경(BidDetailPage는 contentJson 조건부+summary 자체렌더라 안 깨짐, Proposal*의 contentJson은 제안서 도메인 별개).
+- **규모 정정**: BE 매퍼 불필요(화면이 직접 렌더). 변경 = WF 정의 + FE admin 컴포넌트. 데이터 모델·API 무변경.
+- **남음**: 사용자 E2E 테스트(새 렌더러로 공고문 화면 표시 확인). NOTICE_VIEW 양식(DocumentTemplate)·notice.content_json 컬럼은 이제 미사용 → 추후 정리 가능(당장은 무해).
