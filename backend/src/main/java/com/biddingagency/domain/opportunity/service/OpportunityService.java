@@ -63,6 +63,31 @@ public class OpportunityService {
     }
 
     /**
+     * CR-118: 관리자 목록 검색/필터. 파라미터 모두 nullable(빈 문자열은 null 취급) → 미지정 시 전체.
+     */
+    public Page<Opportunity> searchAdminFiltered(String keyword, String type, Boolean hasAttachment, Pageable pageable) {
+        String kw = (keyword != null && !keyword.isBlank()) ? keyword.trim() : null;
+        String tp = (type != null && !type.isBlank()) ? type.trim() : null;
+        return opportunityRepository.searchAdminFiltered(kw, tp, hasAttachment, pageable);
+    }
+
+    /**
+     * CR-118: 공고유형 셀렉트 옵션 — [{type, typeKo}] DISTINCT.
+     */
+    public List<java.util.Map<String, String>> findDistinctTypes() {
+        return opportunityRepository.findDistinctTypes().stream()
+                .map(row -> {
+                    String type = (String) row[0];
+                    String typeKo = (String) row[1];
+                    java.util.Map<String, String> m = new java.util.LinkedHashMap<>();
+                    m.put("type", type);
+                    m.put("typeKo", typeKo != null ? typeKo : type);
+                    return m;
+                })
+                .toList();
+    }
+
+    /**
      * Search opportunities by keyword
      */
     public Page<Opportunity> searchByKeyword(String keyword, Pageable pageable) {

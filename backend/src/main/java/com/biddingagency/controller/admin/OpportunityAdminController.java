@@ -50,11 +50,16 @@ public class OpportunityAdminController {
     private final com.biddingagency.domain.opportunity.service.OpportunityTranslationService translationService;
 
     @GetMapping
-    @Operation(summary = "원본 공고 목록 (관리자)", description = "SAM 수집 원본 + 첨부파일 수 + 공고문 생성 여부")
+    @Operation(summary = "원본 공고 목록 (관리자)",
+            description = "SAM 수집 원본 + 첨부파일 수 + 공고문 생성 여부. CR-118: keyword/type/hasAttachment 검색·필터.")
     public ResponseEntity<Page<OpportunityAdminDto>> listOpportunities(
-            // 정렬은 Repository 메서드에 고정(게시일 DESC, 2차 수집순 DESC) — Pageable sort 미지정
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) Boolean hasAttachment,
+            // 정렬은 쿼리에 고정(게시일 DESC, 2차 수집순 DESC) — Pageable sort 미지정
             @PageableDefault(size = 20) Pageable pageable) {
-        Page<OpportunityAdminDto> page = opportunityService.findAllActive(pageable)
+        Page<OpportunityAdminDto> page = opportunityService
+                .searchAdminFiltered(keyword, type, hasAttachment, pageable)
                 .map(opp -> {
                     long attachmentCount = attachmentRepository.countByOpportunityId(opp.getId());
                     long manualFetchCount = attachmentRepository.countByOpportunityIdAndDownloadStatus(
@@ -63,6 +68,12 @@ public class OpportunityAdminController {
                     return OpportunityAdminDto.fromList(opp, attachmentCount, manualFetchCount, noticeCount);
                 });
         return ResponseEntity.ok(page);
+    }
+
+    @GetMapping("/types")
+    @Operation(summary = "공고유형 목록 (CR-118)", description = "검색 셀렉트 옵션용 — 수집된 type/typeKo DISTINCT")
+    public ResponseEntity<List<Map<String, String>>> listTypes() {
+        return ResponseEntity.ok(opportunityService.findDistinctTypes());
     }
 
     @GetMapping("/{id}")

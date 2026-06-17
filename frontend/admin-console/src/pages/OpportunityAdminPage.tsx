@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getAdminOpportunities } from '../api/client'
+import { getAdminOpportunities, getAdminOpportunityTypes } from '../api/client'
 
 interface OpportunityAdmin {
   id: string
@@ -25,10 +25,21 @@ export default function OpportunityAdminPage() {
   const [totalPages, setTotalPages] = useState(0)
   const [loading, setLoading] = useState(true)
 
+  // CR-118: 검색·필터
+  const [keywordInput, setKeywordInput] = useState('')   // 입력 중(엔터/버튼으로 확정)
+  const [keyword, setKeyword] = useState('')             // 실제 조회에 쓰는 확정 값
+  const [type, setType] = useState('')                   // '' = 전체
+  const [hasAttachment, setHasAttachment] = useState<'' | 'true' | 'false'>('') // '' = 전체
+  const [types, setTypes] = useState<Array<{ type: string; typeKo: string }>>([])
+
   const fetchData = async () => {
     setLoading(true)
     try {
-      const { data } = await getAdminOpportunities(page)
+      const { data } = await getAdminOpportunities(page, {
+        keyword: keyword || undefined,
+        type: type || undefined,
+        hasAttachment: hasAttachment === '' ? undefined : hasAttachment === 'true',
+      })
       setOpportunities(data.content || [])
       setTotalPages(data.totalPages || 0)
     } catch (err) {
@@ -38,7 +49,20 @@ export default function OpportunityAdminPage() {
     }
   }
 
-  useEffect(() => { fetchData() }, [page])
+  // 공고유형 셀렉트 옵션 1회 로드
+  useEffect(() => {
+    getAdminOpportunityTypes()
+      .then(({ data }) => setTypes(data || []))
+      .catch((err) => console.error('공고유형 목록 조회 실패:', err))
+  }, [])
+
+  // 필터/페이지 변경 시 재조회 (keyword는 확정 값 기준)
+  useEffect(() => { fetchData() }, [page, keyword, type, hasAttachment])
+
+  // 필터(유형/첨부) 또는 키워드 확정 시 첫 페이지로
+  const applyKeyword = () => { setPage(0); setKeyword(keywordInput.trim()) }
+  const onTypeChange = (v: string) => { setPage(0); setType(v) }
+  const onAttachmentChange = (v: '' | 'true' | 'false') => { setPage(0); setHasAttachment(v) }
 
   return (
     <div className="p-6 space-y-5">
@@ -53,6 +77,55 @@ export default function OpportunityAdminPage() {
         >
           공고문 리스트 →
         </button>
+      </div>
+
+      {/* CR-118: 검색·필터 — 키워드(제목·본문·공고번호) / 공고유형 / 첨부유무 */}
+      <div className="bg-white rounded-xl border border-gray-200 p-3 flex flex-wrap items-center gap-2">
+        <div className="relative flex-1 min-w-[220px]">
+          <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm" />
+          <input
+            value={keywordInput}
+            onChange={(e) => setKeywordInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') applyKeyword() }}
+            placeholder="제목·본문·공고번호 검색"
+            className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-secondary/40"
+          />
+        </div>
+        <select
+          value={type}
+          onChange={(e) => onTypeChange(e.target.value)}
+          className="px-3 py-2 text-sm rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-secondary/40"
+        >
+          <option value="">공고유형 전체</option>
+          {types.map((t) => (
+            <option key={t.type} value={t.type}>{t.typeKo}</option>
+          ))}
+        </select>
+        <select
+          value={hasAttachment}
+          onChange={(e) => onAttachmentChange(e.target.value as '' | 'true' | 'false')}
+          className="px-3 py-2 text-sm rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-secondary/40"
+        >
+          <option value="">첨부 전체</option>
+          <option value="true">첨부 있음</option>
+          <option value="false">첨부 없음</option>
+        </select>
+        <button
+          onClick={applyKeyword}
+          className="px-4 py-2 text-sm rounded-lg bg-secondary text-white hover:bg-blue-600"
+        >
+          검색
+        </button>
+        {(keyword || type || hasAttachment) && (
+          <button
+            onClick={() => {
+              setKeywordInput(''); setKeyword(''); setType(''); setHasAttachment(''); setPage(0)
+            }}
+            className="px-3 py-2 text-sm rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50"
+          >
+            초기화
+          </button>
+        )}
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">

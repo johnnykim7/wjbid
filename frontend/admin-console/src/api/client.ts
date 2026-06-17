@@ -154,8 +154,26 @@ export const getCollectionRuns = (page = 0) =>
   api.get('/admin/collection/runs', { params: { page, size: 20 } })
 
 // 원본 공고 Admin — 선별 풀 (CR-016)
-export const getAdminOpportunities = (page = 0, q = '') =>
-  api.get('/admin/opportunities', { params: { page, size: 20, ...(q ? { q } : {}) } })
+// CR-118: keyword(제목·본문·공고번호) / type(공고유형) / hasAttachment(첨부유무) 검색·필터
+export interface OpportunitySearchParams {
+  keyword?: string
+  type?: string
+  hasAttachment?: boolean
+}
+export const getAdminOpportunities = (page = 0, filters: OpportunitySearchParams = {}) =>
+  api.get('/admin/opportunities', {
+    params: {
+      page,
+      size: 20,
+      ...(filters.keyword ? { keyword: filters.keyword } : {}),
+      ...(filters.type ? { type: filters.type } : {}),
+      ...(filters.hasAttachment !== undefined ? { hasAttachment: filters.hasAttachment } : {}),
+    },
+  })
+
+// CR-118: 공고유형 셀렉트 옵션
+export const getAdminOpportunityTypes = () =>
+  api.get<Array<{ type: string; typeKo: string }>>('/admin/opportunities/types')
 
 export const getAdminOpportunityDetail = (id: string) =>
   api.get(`/admin/opportunities/${id}`)

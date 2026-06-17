@@ -696,3 +696,20 @@
   3. **FE([NoticeDocumentView.tsx](../frontend/admin-console/src/components/NoticeDocumentView.tsx))**: NoticeSummary에 contractPeriod·siteVisit, Props에 noticeTypeKo·naicsLabelKo·responseDeadline 추가. 렌더를 10섹션 고정 번호 골격으로 재작성(EmptySection "해당 없음"). basicRows를 옛 6행(값 있는 행만)으로 재구성. 죽은 withIssuedDate 헬퍼 삭제. [NoticeAdminDetailPage.tsx](../frontend/admin-console/src/pages/NoticeAdminDetailPage.tsx) 호출부 새 필드 전달 + NoticeDetail 타입 확장.
 - **규모**: 중규모(화면 구조 + 응답포맷 schema + DTO 변경). 데이터 모델·이벤트·FSM 무변경. 사용자 합의로 설계 캐스케이드(T1~T3) 생략, 본 CR 이력 + workflows JSON으로 갈음.
 - **상태**: **구현·운영 배포 완료(2026-06-18)** — WF PUT(v8) + `./deploy.sh all`(BE jar 교체·컨테이너 재기동 health 200 + FE 2종). BE compileJava·FE admin tsc 통과. **남음**: ①사용자 운영 화면 확인(1번 표 6행·10섹션 번호) ②`contractPeriod`/`siteVisit` 채우려면 공고 재분석 1건 E2E(기존본은 "해당 없음").
+
+---
+
+### CR-118: 원본 공고 목록 검색·필터 (제목·본문 키워드 + 공고유형 + 첨부유무) (2026-06-18)
+
+- **배경(사용자 요청)**: 원본 공고 목록(`OpportunityAdminPage`)에 검색 기능이 전혀 없어 공고가 쌓이면 찾기 어려움. 제목·내용 키워드 검색, 공고유형(셀렉트박스), 첨부유무 필터 요청.
+- **결정(사용자 합의)**:
+  - "내용" 검색 범위 = **원문 본문(descriptionBody) + 한글 본문(descriptionSummaryKo)** 둘 다(미수집 공고는 본문이 비어 검색 안 됨 — 설계상 정상).
+  - 공고유형 셀렉트 옵션 = **DB DISTINCT 동적**(실제 수집된 type/typeKo, 새 유형 자동 반영).
+- **변경 사항**:
+  1. **BE [OpportunityRepository.java](../backend/src/main/java/com/biddingagency/domain/opportunity/repository/OpportunityRepository.java)** — `searchAdminFiltered(keyword,type,hasAttachment,pageable)` 통합 쿼리(모든 파라미터 nullable, null이면 조건 무시). keyword = title/titleKo/descriptionBody/descriptionSummaryKo/solicitationNumber/noticeId LIKE. type = 정확 일치. hasAttachment = `OpportunityAttachment` EXISTS/NOT EXISTS 서브쿼리. 정렬은 기존과 동일(postedDate DESC, createdAt DESC). + `findDistinctTypes()`(type/typeKo DISTINCT).
+  2. **BE [OpportunityService.java](../backend/src/main/java/com/biddingagency/domain/opportunity/service/OpportunityService.java)** — 위임 메서드 + 빈 문자열 → null 정규화 + 유형 목록 [{type,typeKo}] 매핑.
+  3. **BE [OpportunityAdminController.java](../backend/src/main/java/com/biddingagency/controller/admin/OpportunityAdminController.java)** — `GET /admin/opportunities`에 `keyword`/`type`/`hasAttachment` 쿼리파라미터 추가(기존 `findAllActive` → `searchAdminFiltered` 교체). + `GET /admin/opportunities/types`(셀렉트 옵션).
+  4. **FE [client.ts](../frontend/admin-console/src/api/client.ts)** — `getAdminOpportunities(page, filters)` 시그니처 변경(옛 `q` 폐기, BE 미수신이라 무동작이었음) + `getAdminOpportunityTypes()`.
+  5. **FE [OpportunityAdminPage.tsx](../frontend/admin-console/src/pages/OpportunityAdminPage.tsx)** — 검색바: 키워드 입력(엔터·버튼 확정), 공고유형 셀렉트(동적), 첨부유무 셀렉트(전체/있음/없음), 초기화 버튼. 필터·키워드 확정 시 첫 페이지로 리셋.
+- **규모**: 중규모(조회 API 파라미터 확장 + 신규 types API + FE 검색바). 데이터 모델·이벤트·FSM·마이그레이션 무변경. 사용자 승인 후 설계 캐스케이드 생략, 본 CR 이력으로 갈음.
+- **상태**: **구현·운영 배포 완료(2026-06-18)** — `./deploy.sh all`(BE 재기동 health 200, /types 라우팅 401=정상 + FE 2종). BE compileJava·FE admin tsc 통과.
