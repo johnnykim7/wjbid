@@ -360,6 +360,32 @@ public class LLMPlatformClient {
     }
 
     /**
+     * 워크플로우 run 단건 조회 (진행 STEP 표시용 — 폴링 아님, 단발 GET).
+     *
+     * Aimbase `GET /api/v1/workflows/runs/{runId}` (횡단 조회)를 1회 호출해 현재 상태를 반환한다.
+     * 합의(2026-06-18): Aimbase 가 응답에 currentStep / currentStepName / steps[] 를 함께 내려준다.
+     * 화면(공고분석 진행바)이 ANALYZING 동안 주기 폴링으로 호출 → 가벼운 단발 조회라야 함.
+     *
+     * @param runId Notice.workflowRunId
+     * @return run 상태(없거나 조회 실패면 null — 호출자가 graceful 처리)
+     */
+    public WorkflowRunResponse getRun(String runId) {
+        if (runId == null || runId.isBlank()) {
+            return null;
+        }
+        String url = baseUrl + "/api/v1/workflows/runs/" + runId;
+        try {
+            ResponseEntity<AimbaseApiResponse<WorkflowRunResponse>> resp =
+                llmPlatformRestTemplate.exchange(url, HttpMethod.GET, null, WORKFLOW_RESPONSE_TYPE);
+            return resp.getBody() != null ? resp.getBody().getData() : null;
+        } catch (RestClientException e) {
+            // 진행 조회는 부가 정보 — 실패해도 화면은 ANALYZING 스피너로 폴백, 흐름 무해
+            log.warn("Aimbase: run 진행 조회 실패(무시) runId={}, reason={}", runId, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
      * CR-039 / CR-105: 실행 중인 워크플로우 run 협조적 중지 — best-effort, 비동기.
      *
      * Aimbase `POST /api/v1/workflows/runs/{runId}/cancel` (CR-105, v3.10.0 신설)을 호출한다.

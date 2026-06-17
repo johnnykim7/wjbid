@@ -95,6 +95,28 @@ public class NoticeService {
         return com.biddingagency.domain.notice.dto.NoticeAdminDto.from(findById(noticeId));
     }
 
+    /**
+     * 공고분석 진행 STEP 조회 — 화면(공고문 상세, ANALYZING 동안)이 "지금 몇 번째 단계인지" 표시용.
+     *
+     * - ANALYZING + workflowRunId 있으면 Aimbase run 을 단발 조회해 currentStep/steps[] 합성.
+     * - ANALYZING 아니거나(이미 종료) runId 없으면 run 조회 생략 — 단계 골격만(전부 pending) 반환.
+     * - run 조회 실패는 무해(화면은 ANALYZING 스피너 폴백) — DTO 가 graceful 처리.
+     */
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public com.biddingagency.domain.notice.dto.NoticeAnalysisProgressDto getAnalysisProgress(UUID noticeId) {
+        Notice notice = findById(noticeId);
+        String status = notice.getGenerationStatus().name();
+
+        boolean shouldQuery = notice.getGenerationStatus()
+                == com.biddingagency.domain.notice.entity.NoticeGenerationStatus.ANALYZING
+                && notice.getWorkflowRunId() != null;
+
+        com.biddingagency.integration.llmplatform.dto.WorkflowRunResponse run =
+                shouldQuery ? llmPlatformClient.getRun(notice.getWorkflowRunId()) : null;
+
+        return com.biddingagency.domain.notice.dto.NoticeAnalysisProgressDto.of(status, run);
+    }
+
     /** 고객 노출 공고문 목록 (VISIBLE). CR-009: includeExpired=false(기본)면 마감 지난 공고 제외 */
     public Page<Notice> findVisible(boolean includeExpired, Pageable pageable) {
         return noticeRepository.findVisible(

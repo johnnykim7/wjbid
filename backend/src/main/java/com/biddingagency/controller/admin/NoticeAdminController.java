@@ -47,6 +47,13 @@ public class NoticeAdminController {
         return ResponseEntity.ok(noticeService.findByIdAsDto(id));
     }
 
+    @GetMapping("/{id}/progress")
+    @Operation(summary = "공고분석 진행 STEP 조회",
+            description = "ANALYZING 동안 현재 단계(사람 라벨)와 전체 단계 진행여부를 반환. 화면이 주기 폴링.")
+    public ResponseEntity<com.biddingagency.domain.notice.dto.NoticeAnalysisProgressDto> getProgress(@PathVariable UUID id) {
+        return ResponseEntity.ok(noticeService.getAnalysisProgress(id));
+    }
+
     @PostMapping("/{id}/publish")
     @Operation(summary = "공고문 노출 (게이트②, 검수 완료 → 고객 노출)")
     public ResponseEntity<Map<String, String>> publish(@PathVariable UUID id) {

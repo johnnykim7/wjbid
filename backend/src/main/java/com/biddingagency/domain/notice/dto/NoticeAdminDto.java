@@ -22,6 +22,8 @@ public class NoticeAdminDto {
     private String originTitle;          // 원본 영문 제목
     private String solicitationNumber;
     private String organizationName;
+    private String noticeTypeKo;          // CR-117: 공고유형(한글) — 옛 NOTICE_VIEW "1.공고 기본정보" 행 복원
+    private String naicsLabelKo;          // CR-117: NAICS 코드/라벨(한글)
     private LocalDateTime postedDate;     // 공고 게시일 (SAM 수집 확정값 — 화면 "공고일" 표시용)
     private LocalDateTime responseDeadline;
     private String koreanTitle;          // 한글화 제목
@@ -41,6 +43,8 @@ public class NoticeAdminDto {
                 .originTitle(opp.getTitle())
                 .solicitationNumber(opp.getSolicitationNumber())
                 .organizationName(opp.getOrganizationName())
+                .noticeTypeKo(opp.getTypeKo() != null ? opp.getTypeKo() : opp.getType())
+                .naicsLabelKo(opp.getNaicsLabelKo())
                 .postedDate(opp.getPostedDate())
                 .responseDeadline(opp.getResponseDeadline())
                 .koreanTitle(notice.getKoreanTitle())

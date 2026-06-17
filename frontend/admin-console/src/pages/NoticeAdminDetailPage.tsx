@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   getAdminNoticeDetail,
+  getNoticeAnalysisProgress,
   publishNotice,
   hideNotice,
   regenerateNotice,
@@ -27,6 +28,8 @@ interface NoticeDetail {
   originTitle: string
   solicitationNumber?: string
   organizationName?: string
+  noticeTypeKo?: string
+  naicsLabelKo?: string
   postedDate?: string
   responseDeadline?: string
   koreanTitle?: string
@@ -41,12 +44,27 @@ const GEN_LABELS: Record<string, string> = {
   PENDING: '대기', ANALYZING: '분석 중', COMPLETED: '완료', FAILED: '실패',
 }
 
+// 공고분석 진행 STEP (BE /progress 응답)
+interface StepProgress {
+  id: string
+  name: string
+  status: 'completed' | 'running' | 'pending' | 'failed'
+}
+interface AnalysisProgress {
+  generationStatus: string
+  currentStepId?: string | null
+  currentStepName?: string | null
+  steps: StepProgress[]
+}
+
 export default function NoticeAdminDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [notice, setNotice] = useState<NoticeDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
+  const [progress, setProgress] = useState<AnalysisProgress | null>(null)
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const fetchData = async () => {
     if (!id) return
@@ -62,6 +80,41 @@ export default function NoticeAdminDetailPage() {
   }
 
   useEffect(() => { fetchData() }, [id])
+
+  // 공고분석 진행 폴링 — ANALYZING 동안만 4초 간격으로 현재 STEP 갱신.
+  // 종료(COMPLETED/FAILED)로 바뀌면 폴링 중단 + fetchData()로 본문 자동 로드
+  // → 이전엔 분석이 끝나도 화면이 ANALYZING 스피너에 멈춰 새로고침해야 했던 문제 해결.
+  useEffect(() => {
+    const stopPolling = () => {
+      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
+    }
+
+    if (!id || notice?.generationStatus !== 'ANALYZING') {
+      stopPolling()
+      if (notice?.generationStatus !== 'ANALYZING') setProgress(null)
+      return
+    }
+
+    let cancelled = false
+    const poll = async () => {
+      try {
+        const { data } = await getNoticeAnalysisProgress(id)
+        if (cancelled) return
+        setProgress(data)
+        // 서버 기준 상태가 더 이상 ANALYZING이 아니면(종료) 본문 다시 로드 → 자동 전환
+        if (data.generationStatus && data.generationStatus !== 'ANALYZING') {
+          stopPolling()
+          fetchData()
+        }
+      } catch (err) {
+        console.error('공고분석 진행 조회 실패:', err)
+      }
+    }
+
+    poll() // 즉시 1회
+    pollRef.current = setInterval(poll, 4000)
+    return () => { cancelled = true; stopPolling() }
+  }, [id, notice?.generationStatus])
 
   const run = async (fn: (id: string) => Promise<unknown>) => {
     if (!id) return
@@ -188,9 +241,48 @@ export default function NoticeAdminDetailPage() {
           <div className="text-sm text-gray-400 py-8 text-center">한글화 대기 중입니다.</div>
         )}
         {notice.generationStatus === 'ANALYZING' && (
-          <div className="flex items-center gap-3 py-8 justify-center text-purple-600">
-            <div className="w-5 h-5 border-2 border-purple-200 border-t-purple-600 rounded-full animate-spin" />
-            <span className="text-sm">LLM이 공고를 한글화/요약하고 있습니다...</span>
+          <div className="py-6">
+            <div className="flex items-center gap-2 mb-4 text-purple-600">
+              <div className="w-4 h-4 border-2 border-purple-200 border-t-purple-600 rounded-full animate-spin" />
+              <span className="text-sm font-medium">
+                {progress?.currentStepName
+                  ? `${progress.currentStepName}…`
+                  : '공고를 한글화/분석하고 있습니다…'}
+              </span>
+            </div>
+            <ol className="space-y-2 max-w-md">
+              {(progress?.steps ?? []).map((s) => (
+                <li key={s.id} className="flex items-center gap-2.5 text-sm">
+                  {s.status === 'completed' ? (
+                    <span className="w-5 h-5 flex items-center justify-center rounded-full bg-green-100 text-green-600 text-xs">
+                      <i className="fa-solid fa-check" />
+                    </span>
+                  ) : s.status === 'running' ? (
+                    <span className="w-5 h-5 flex items-center justify-center">
+                      <span className="w-3.5 h-3.5 border-2 border-purple-200 border-t-purple-600 rounded-full animate-spin" />
+                    </span>
+                  ) : s.status === 'failed' ? (
+                    <span className="w-5 h-5 flex items-center justify-center rounded-full bg-red-100 text-red-600 text-xs">
+                      <i className="fa-solid fa-xmark" />
+                    </span>
+                  ) : (
+                    <span className="w-5 h-5 flex items-center justify-center rounded-full border border-gray-300 text-gray-300 text-[10px]">
+                      <i className="fa-solid fa-circle" />
+                    </span>
+                  )}
+                  <span
+                    className={
+                      s.status === 'completed' ? 'text-gray-500'
+                      : s.status === 'running' ? 'text-purple-700 font-medium'
+                      : s.status === 'failed' ? 'text-red-600 font-medium'
+                      : 'text-gray-400'
+                    }
+                  >
+                    {s.name}
+                  </span>
+                </li>
+              ))}
+            </ol>
           </div>
         )}
         {notice.generationStatus === 'FAILED' && (
@@ -212,6 +304,9 @@ export default function NoticeAdminDetailPage() {
               documents={(a?.requiredDocuments as Record<string, unknown> | undefined)?.documents as RequiredDocumentItem[] | undefined}
               solicitationNumber={notice.solicitationNumber}
               organizationName={notice.organizationName}
+              noticeTypeKo={notice.noticeTypeKo}
+              naicsLabelKo={notice.naicsLabelKo}
+              responseDeadline={notice.responseDeadline}
               eligibility={(a?.requiredDocuments as Record<string, unknown> | undefined)?.eligibility as EligibilityItem[] | undefined}
               postedDate={notice.postedDate}
             />

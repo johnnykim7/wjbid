@@ -648,3 +648,51 @@
   3. **구현**: ①WF — verify response_schema·프롬프트·save input에서 contentJson 전면 제거(extract/verify 프롬프트의 noticeViewTemplate 골격 입력도 제거). 운영 PUT v7 완료(connection_id 덮어쓰기 없음 검증). ②FE admin — `NoticeDocumentView`를 contentJson(TipTap) 렌더러 → summary/requiredDocuments 데이터 직접 렌더러로 교체. 노드 컴포넌트(KvTable/DataTable/CalloutList/Heading/NoticeHeader/EligibilityBlock) 재사용, 메인이 8섹션 결정론 조립. 빌드 성공. ③FE customer — 무변경(BidDetailPage는 contentJson 조건부+summary 자체렌더라 안 깨짐, Proposal*의 contentJson은 제안서 도메인 별개).
 - **규모 정정**: BE 매퍼 불필요(화면이 직접 렌더). 변경 = WF 정의 + FE admin 컴포넌트. 데이터 모델·API 무변경.
 - **남음**: 사용자 E2E 테스트(새 렌더러로 공고문 화면 표시 확인). NOTICE_VIEW 양식(DocumentTemplate)·notice.content_json 컬럼은 이제 미사용 → 추후 정리 가능(당장은 무해).
+
+---
+
+### CR-115: 공고분석 진행 STEP 실시간 표시 + 분석 완료 자동 전환 (2026-06-18)
+
+- **배경**: 공고문 상세 화면이 한글화/분석 중(ANALYZING)일 때 "LLM이 공고를 한글화/요약하고 있습니다…" 스피너 한 줄만 무한히 돌아 답답함. 게다가 **전 STEP이 끝나(COMPLETED) 본문이 준비됐어도 화면은 ANALYZING 스피너에 멈춰** 새로고침을 해야만 정상 노출됨(실측). 화면이 단계 진행 상황을 전혀 모름.
+- **원인(실측)**:
+  1. FE `NoticeAdminDetailPage`가 `useEffect(()=>{fetchData()},[id])`로 **1회만 조회**, 폴링 없음 → ANALYZING→COMPLETED 전이를 화면이 감지 못함(새로고침 버그).
+  2. 진행 STEP을 화면에 줄 경로 자체가 없었음. (Aimbase run 응답에 `currentStep`(id)·`stepResults`는 있으나 소비앱이 안 씀, BE 폴링은 동기 블로킹이라 화면 노출 경로 없음.)
+  3. 운영 WF step.name에 개발용어(`(탈-LLM, CR-041)`, `opportunityText를 description.txt로`, `fact↔작업장 근거 일치`)가 섞여 사람이 읽을 라벨로 부적합. **step.name이 본래 사람 라벨용**인데 디버깅 주석처럼 쓰였음(사용자 지적).
+- **변경 사항**:
+  1. **WF 정의(소비앱 소유)**: `opportunity-analysis` 6개 step의 `name`을 사용자 라벨로 교체 — 공고 정보 불러오는 중 / 공고 본문 준비 중 / 첨부파일 받는 중 / 공고 내용 분석 중 / 분석 결과 검증 중 / 저장 중. **로직(config/depends_on/connection_id) 무손실** — 운영 현행 정의를 받아 name만 교체해 PUT.
+  2. **BE**: `WorkflowRunResponse`에 `currentStep`/`currentStepName`/`steps[]` 수신 필드 추가(Aimbase 합의 계약, 2026-06-18). `LLMPlatformClient.getRun(runId)` 단발 GET(폴링 아님). `NoticeAnalysisProgressDto` — Aimbase가 steps[] 미반영이어도 BE가 `stepResults`+`currentStep`으로 status 합성하는 **fallback 내장**(Aimbase 완성 전에도 동작). `NoticeService.getAnalysisProgress()` + `GET /admin/notices/{id}/progress`.
+  3. **FE(admin)**: ANALYZING 동안 4초 폴링 → 스피너 1줄을 **6단계 체크리스트**(완료 ✓/진행 ⟳/대기 ○/실패 ✗)+현재 단계명 헤더로 교체. 폴링 중 상태가 ANALYZING이 아니게 되면 폴링 중단 + `fetchData()` 자동 호출 → **새로고침 버그 해결**(완료 시 본문 자동 노출).
+- **Aimbase 합의(별도 작업)**: run 단건 조회(`/{id}/runs/{runId}`, `/runs/{runId}`) 응답에 `currentStepName`(WF 정의 step.name lookup) + `steps[]`(`{id,name,status}`) 추가. WorkflowController에 `WorkflowRunDetail` record 추가, 빌더가 run+WF정의로 status 도출. 소비앱은 이 필드를 그대로 역직렬화 → 미반영 기간엔 BE fallback 합성으로 동작.
+- **규모**: 중규모(신규 조회 API 1개 + FE 폴링 + WF name 정리). 데이터 모델·이벤트·FSM 무변경. 캐스케이드 = 본 CR 이력 + workflows JSON 동기화 + (필요 시 T3 API/화면 갱신).
+- **상태**: **구현 완료(2026-06-18)** — WF name 운영 PUT 완료(허용 8필드만 전송, connection_id 무손실 검증). BE compileJava 통과 + FE admin tsc 통과. **남음**: ①빌드/재기동·운영 배포(별도 승인) ②Aimbase API 완성 후 실제 응답 필드명 맞춤 + 폴링 E2E 검증 ③(선택) T3 캐스케이드.
+
+---
+
+### CR-116: 원본 공고 목록 첨부 표시 + 수동 업로드 ZIP 파일명 오업로드 경고 (2026-06-18)
+
+- **배경(사용자 요청)**:
+  1. 원본 공고 목록(`OpportunityAdminPage`)의 "기관" 컬럼이 전부 동일(411th CSB 등)해 식별 정보가 안 됨 → 목록에서 제거(상세에서만 표시).
+  2. 첨부파일 유무를 목록에서 바로 알 수 없음 → **첨부 없는 공고 표시** 요청.
+  3. PIEE에서 입찰서류를 받으면 `W91QVN26QA030.zip`처럼 **공고번호.zip** 형태로 저장됨(중복 다운로드 시 `W91QVN26QA022 (1).zip`). 관리자가 무의식적으로 그대로 올리는데, 다운로드 폴더에 섞인 **다른 공고의 zip을 잘못 올리는 사고**를 막을 장치 요청.
+- **변경 사항(FE only — BE는 이미 `attachmentCount` 제공, 변경 없음)**:
+  1. [OpportunityAdminPage.tsx](../frontend/admin-console/src/pages/OpportunityAdminPage.tsx) — "기관" 컬럼 제거 + "첨부" 컬럼 추가: `attachmentCount>0`이면 📎 개수, `0`이면 노란 `없음` 배지.
+  2. [OpportunityAdminDetailPage.tsx `handleFileUpload`](../frontend/admin-console/src/pages/OpportunityAdminDetailPage.tsx#L137) — 업로드 파일명이 **공고번호 패턴**(`.zip`·`(n)`·공백 제거 후 `^[A-Z0-9]{10,}$`)인데 현재 공고 `solicitationNumber`와 다르면 `confirm` 경고. 취소 시 업로드 중단, 확인 시 진행. **일반 파일명(report.zip 등)은 경고 안 함**(PIEE 산출물이 아니므로). 업로드 자체는 막지 않음(경고만).
+- **규모**: 소규모(단일 화면 2개 UI, 새 API·테이블·FSM 없음). BE 무변경.
+- **상태**: **구현·운영 배포 완료(2026-06-18)** — `./deploy.sh fe`, FE tsc 통과, 사용자 운영 화면 확인 완료.
+
+---
+
+### CR-117: 공고문 분석 화면 — 옛 NOTICE_VIEW 10섹션 골격 + 고정 번호 복원 (2026-06-18)
+
+- **배경(사용자 지적)**: CR-114에서 contentJson(LLM이 NOTICE_VIEW 템플릿 골격을 채운 TipTap JSON) 렌더를 폐기하고 화면이 summary/requiredDocuments로 직접 8섹션을 조립하게 바꿨는데, 이 과정에서 ①섹션이 10→8개로 줄고 ②번호 매김이 사라지고 ③"1.공고 기본 정보" 표 행 구성이 바뀜(옛 6행→공고번호/예상금액/평가방식 3행). 사용자가 "예전엔 10개·번호 있었음", "6번이 자격요건이었음", "기본정보가 과거와 다름"을 지적.
+- **실측 근거(운영 DB document_templates, active=1 NOTICE_VIEW)**: 옛 골격 = 10개 H2 섹션(1.공고 기본 정보 / 2.내용(Scope) / 3.계약 기간 / 4.현장 설명회 / 5.담당자 / **6.자격 요건** / 7.낙찰 기준 / 8.참고 사항 / 9.특별 유의 사항 / 10.타임라인). 1번 표 kvTable = 6행 고정 골격(공고번호/공고유형/조달방식/발주기관/마감일/NAICS), LLM은 `{{meta.*}}` 변수 자리에 값만 치환(표 구조는 공고 무관 고정). → 사용자 기억 정확.
+- **결정(사용자 합의)**: ①화면 섹션 골격만 복원(CR-114의 FE 직접조립 구조 유지, LLM 골격치환은 부활 안 함). ②**고정 번호 1~10**, 데이터 없는 섹션도 골격 유지("해당 없음"). ③옛 8.참고사항+9.특별유의사항은 하나로 합침(특이사항=specialNotes). ④1번 표는 옛 골격 복원하되 **값 있는 행만 동적 노출**(조달방식은 전용 컬럼 없어 제거, 평가방식은 1번 표에서 빼 8.낙찰기준 전용 섹션으로 이관).
+- **소급 문제(사용자 질문 "다시 생성해야 하나")**: 둘로 나뉨.
+  - `contractPeriod`/`siteVisit`(4·5번 신규 섹션 값) = LLM 추출 필드라 **기존 분석본엔 없음 → 재분석해야 채워짐**(실측: 완료 8건 전부 0). 미재분석 시 "해당 없음" 표시.
+  - 1번 표 6행 값(공고유형/NAICS 등) = **opportunity 메타라 재분석 불필요**, 기존 8건도 즉시 채워짐.
+- **변경 사항**:
+  1. **WF 정의([opportunity-analysis.steps.v2.json](workflows/opportunity-analysis.steps.v2.json))**: verify `response_schema.summary`에 `contractPeriod`/`siteVisit`(string) 추가. extract_facts 프롬프트 분석 항목에 계약기간(contractPeriod)·현장설명회(siteVisit) 명시. verify Gap Check 체크리스트에 계약기간 추가. _meta version v8. **운영 PUT 완료**(허용 필드만, connection_id·adapter 무손실 diff 검증 — summary 필드 추가 2개/제거 0, AGENT_CALL connection/timeout 무변경).
+  2. **BE([NoticeAdminDto.java](../backend/src/main/java/com/biddingagency/domain/notice/dto/NoticeAdminDto.java))**: `noticeTypeKo`(opp.typeKo ?? opp.type)·`naicsLabelKo`(opp.naicsLabelKo) 2필드 추가. opportunity 직접 매핑(LLM 무관) → 소급 즉시 반영.
+  3. **FE([NoticeDocumentView.tsx](../frontend/admin-console/src/components/NoticeDocumentView.tsx))**: NoticeSummary에 contractPeriod·siteVisit, Props에 noticeTypeKo·naicsLabelKo·responseDeadline 추가. 렌더를 10섹션 고정 번호 골격으로 재작성(EmptySection "해당 없음"). basicRows를 옛 6행(값 있는 행만)으로 재구성. 죽은 withIssuedDate 헬퍼 삭제. [NoticeAdminDetailPage.tsx](../frontend/admin-console/src/pages/NoticeAdminDetailPage.tsx) 호출부 새 필드 전달 + NoticeDetail 타입 확장.
+- **규모**: 중규모(화면 구조 + 응답포맷 schema + DTO 변경). 데이터 모델·이벤트·FSM 무변경. 사용자 합의로 설계 캐스케이드(T1~T3) 생략, 본 CR 이력 + workflows JSON으로 갈음.
+- **상태**: **구현·운영 배포 완료(2026-06-18)** — WF PUT(v8) + `./deploy.sh all`(BE jar 교체·컨테이너 재기동 health 200 + FE 2종). BE compileJava·FE admin tsc 통과. **남음**: ①사용자 운영 화면 확인(1번 표 6행·10섹션 번호) ②`contractPeriod`/`siteVisit` 채우려면 공고 재분석 1건 E2E(기존본은 "해당 없음").

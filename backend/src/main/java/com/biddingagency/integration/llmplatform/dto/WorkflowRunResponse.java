@@ -31,6 +31,26 @@ public class WorkflowRunResponse {
     private Map<String, Object> stepResults;
 
     /**
+     * 현재 진행 중인 step id (Aimbase WorkflowRunEntity.current_step).
+     * 진행 STEP 표시(공고분석 진행바)용. run 이 terminal 이면 마지막 step id 또는 null.
+     */
+    private String currentStep;
+
+    /**
+     * 현재 진행 중인 step 의 사람이 읽는 이름.
+     * Aimbase 가 WF 정의 step.name 을 lookup 해서 채워주기로 합의(2026-06-18).
+     * Aimbase 미반영 시 null → 소비앱이 currentStep(id)로 폴백 매핑.
+     */
+    private String currentStepName;
+
+    /**
+     * 전체 step 순서 + 완료여부 (진행바용, Aimbase 가 함께 내려주기로 합의).
+     * 각 원소 = { id, name, status(completed|running|pending) }.
+     * Aimbase 미반영 시 null → 소비앱이 stepResults + currentStep 으로 합성.
+     */
+    private java.util.List<Map<String, Object>> steps;
+
+    /**
      * 오류 정보 (status=failed 일 때 채워짐).
      * Aimbase는 문자열 또는 {step, message, ...} 객체 양쪽으로 보냄 — Object로 받아 호환.
      * (String 고정 시 객체 응답에서 Jackson 역직렬화 실패 → 폴링이 매번 깨져 무한 재시도)

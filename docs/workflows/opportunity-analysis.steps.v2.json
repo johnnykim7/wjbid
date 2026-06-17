@@ -1,7 +1,7 @@
 {
   "_meta": {
     "wfId": "opportunity-analysis",
-    "version": "v7 (CR-114 후속: contentJson을 verify response_schema·save에서 제거. 화면이 summary/requiredDocuments로 직접 렌더 — LLM 골격치환 폐기)",
+    "version": "v8 (CR-117: 옛 NOTICE_VIEW 10섹션 골격 복원 위해 summary에 contractPeriod·siteVisit 추가 + extract/verify 프롬프트에 계약기간·현장설명회 추출 지시)",
     "purpose": "공고문 한글화 + 정형 추출 + contentJson 생성을 'Claude Code 구조'로 재설계: 작업장 구성 → 작업장 grep/read 추출 → 검증·누락점검 → JSON → fact 영속화",
     "callbackTool": "save_opportunity_analysis (BE MCP) — notice_extracted_fact 동반 저장(BE 콜백 확장 필요)",
     "designNotes": [
@@ -26,7 +26,7 @@
   "steps": [
     {
       "id": "fetch_opportunity",
-      "name": "공고 메타 조회",
+      "name": "공고 정보 불러오는 중",
       "type": "TOOL_CALL",
       "config": {
         "tool": "get_opportunity",
@@ -38,7 +38,7 @@
     },
     {
       "id": "write_description",
-      "name": "본문 적재 — opportunityText를 description.txt로 작업장에 저장",
+      "name": "공고 본문 준비 중",
       "type": "TOOL_CALL",
       "config": {
         "tool": "file_write",
@@ -54,7 +54,7 @@
     },
     {
       "id": "download_attachments",
-      "name": "첨부 적재 — 각 첨부를 원본 그대로 작업장에 다운로드 (탈-LLM, CR-041)",
+      "name": "첨부파일 받는 중",
       "type": "FOREACH",
       "config": {
         "items": "{{input.attachmentFiles}}",
@@ -82,13 +82,13 @@
     },
     {
       "id": "extract_facts",
-      "name": "작업장 자율 탐색 → 근거 부착 fact 추출 + 한국어 분석",
+      "name": "공고 내용 분석 중",
       "type": "AGENT_CALL",
       "config": {
         "description": "USFK 정부조달 공고 분석 에이전트 (작업장 grep/read 기반, 근거 부착)",
         "connection_id": "cli-runner-bidding-001",
         "timeout_ms": 600000,
-        "prompt": "당신은 미군(USFK) 정부조달 RFP 분석 전문가입니다. 작업장(workspace)에 공고 본문과 첨부 원본 파일들이 이미 적재돼 있습니다. 이 자료를 직접 읽어 분석하세요.\n\n[작업장 구조]\n- `description.txt` = 공고 원문 본문(영문).\n- `attachments/` = 각 첨부 파일의 원본(PDF/DOCX/XLSX/이미지 등). 목록을 확인하고 각 파일을 열어 내용을 파악하세요(파일 종류에 맞는 읽기 방법은 알아서 선택).\n- 첨부 메타(원본 fileName / contentType / downloadUrl):\n{{input.attachmentFiles}}\n- 어떤 첨부가 비어 있거나 읽히지 않으면 그 자료는 정보원으로 쓰지 말고, 빈칸은 빈칸으로 두세요(추측 금지). 필요하면 'FACTOR'/'Subfactor'/'page limit'/'due date'/'KOLAS' 같은 키워드로 작업장을 검색해 해당 부분을 정독하세요.\n\n[공고 메타]\n{{fetch_opportunity.output}}\n\n[수행]\n1. 한국 PM/영업이 이해할 한국어로 공고 핵심을 분석. 항목: 한국어 제목 / 핵심요약 / 작업범위(PWS기반) / 참여자격 / 평가기준(LPTA·BestValue) / 주요일정(라벨·날짜·비고) / 예산 / 특이사항 / 제출서류 / 양식 / 담당자(POC).\n2. 정부조달 골격대로 제출서류를 FACTOR>Subfactor 계층으로 추출. 각 Subfactor 의 충족주체(fulfillmentParty)를 판단: 트럭/장비/인력/과거실적 증빙=CLIENT_UPLOAD, 플랫폼이 작성하는 기술·가격 제안=PLATFORM_GENERATED, 정부양식=SYSTEM_FORM. (Sub-Factor 가 트럭·인력 보유를 요구하면 반드시 CLIENT_UPLOAD)\n3. 자격요건(eligibility)을 별도 추출: title/description/mandatory/evidenceBy/isGate.\n4. ★근거 부착(핵심)★: 위에서 추출한 모든 사실(fact)에 대해, 그 근거가 된 작업장 파일과 원문 인용을 함께 남기세요. 각 fact = { key(항목명), value(추출값), sourceFile(작업장 파일명, 예: 'description.txt' 또는 'attachments/<파일명>'), sourceQuote(원문 1~2문장 그대로), page(있으면), confidence(HIGH/MEDIUM/LOW) }.\n   - 작업장에서 근거를 못 찾은 항목은 value 를 비우고 confidence=LOW, sourceQuote='' 로 두세요. 절대 추측으로 채우지 마세요.\n\n[금지]\n- structured_output tool 호출 금지(다음 STEP 담당).\n- 작업장 근거 없는 사실 생성 금지. 빈칸은 빈칸으로.\n\n[출력]\n위 분석을 자유 텍스트로, 그리고 fact 목록(key/value/sourceFile/sourceQuote/page/confidence)을 빠짐없이."
+        "prompt": "당신은 미군(USFK) 정부조달 RFP 분석 전문가입니다. 작업장(workspace)에 공고 본문과 첨부 원본 파일들이 이미 적재돼 있습니다. 이 자료를 직접 읽어 분석하세요.\n\n[작업장 구조]\n- `description.txt` = 공고 원문 본문(영문).\n- `attachments/` = 각 첨부 파일의 원본(PDF/DOCX/XLSX/이미지 등). 목록을 확인하고 각 파일을 열어 내용을 파악하세요(파일 종류에 맞는 읽기 방법은 알아서 선택).\n- 첨부 메타(원본 fileName / contentType / downloadUrl):\n{{input.attachmentFiles}}\n- 어떤 첨부가 비어 있거나 읽히지 않으면 그 자료는 정보원으로 쓰지 말고, 빈칸은 빈칸으로 두세요(추측 금지). 필요하면 'FACTOR'/'Subfactor'/'page limit'/'due date'/'KOLAS' 같은 키워드로 작업장을 검색해 해당 부분을 정독하세요.\n\n[공고 메타]\n{{fetch_opportunity.output}}\n\n[수행]\n1. 한국 PM/영업이 이해할 한국어로 공고 핵심을 분석. 항목: 한국어 제목 / 핵심요약(overview) / 작업범위(scope, PWS기반) / 계약기간(contractPeriod: 수행기간·기초/옵션연차 등) / 현장설명회(siteVisit: 일시·장소·필수여부, 없으면 빈칸) / 참여자격(eligibility) / 평가기준(evaluationCriteria, LPTA·BestValue) / 주요일정(keyDates: 라벨·날짜·비고) / 예산(budgetInfo) / 특이사항(specialNotes) / 제출서류 / 양식 / 담당자(contactInfo, POC).\n2. 정부조달 골격대로 제출서류를 FACTOR>Subfactor 계층으로 추출. 각 Subfactor 의 충족주체(fulfillmentParty)를 판단: 트럭/장비/인력/과거실적 증빙=CLIENT_UPLOAD, 플랫폼이 작성하는 기술·가격 제안=PLATFORM_GENERATED, 정부양식=SYSTEM_FORM. (Sub-Factor 가 트럭·인력 보유를 요구하면 반드시 CLIENT_UPLOAD)\n3. 자격요건(eligibility)을 별도 추출: title/description/mandatory/evidenceBy/isGate.\n4. ★근거 부착(핵심)★: 위에서 추출한 모든 사실(fact)에 대해, 그 근거가 된 작업장 파일과 원문 인용을 함께 남기세요. 각 fact = { key(항목명), value(추출값), sourceFile(작업장 파일명, 예: 'description.txt' 또는 'attachments/<파일명>'), sourceQuote(원문 1~2문장 그대로), page(있으면), confidence(HIGH/MEDIUM/LOW) }.\n   - 작업장에서 근거를 못 찾은 항목은 value 를 비우고 confidence=LOW, sourceQuote='' 로 두세요. 절대 추측으로 채우지 마세요.\n\n[금지]\n- structured_output tool 호출 금지(다음 STEP 담당).\n- 작업장 근거 없는 사실 생성 금지. 빈칸은 빈칸으로.\n\n[출력]\n위 분석을 자유 텍스트로, 그리고 fact 목록(key/value/sourceFile/sourceQuote/page/confidence)을 빠짐없이."
       },
       "depends_on": [
         "write_description",
@@ -97,13 +97,13 @@
     },
     {
       "id": "verify_and_gapcheck",
-      "name": "검증·누락점검 — fact↔작업장 근거 일치 + 필수항목 누락 점검",
+      "name": "분석 결과 검증 중",
       "type": "AGENT_CALL",
       "config": {
         "description": "추출 결과를 작업장 원문과 대조 검증하는 Verifier/GapChecker",
         "connection_id": "cli-runner-bidding-001",
         "timeout_ms": 600000,
-        "prompt": "당신은 공고 분석 결과를 검증하는 감사자입니다. 이전 단계가 추출한 분석과 fact 목록이 작업장(workspace) 원문과 실제로 일치하는지, 그리고 빠진 필수 항목이 없는지 점검합니다.\n\n[검증 대상 (이전 STEP 산출물)]\n{{extract_facts.output}}\n\n\n\n[작업장]\n- `description.txt`(공고 본문) 와 `attachments/`(첨부 원본) 를 직접 열어 대조하세요. 파일 종류에 맞는 읽기 방법은 알아서 선택하고, 필요하면 키워드로 검색해 해당 부분을 정독합니다.\n\n[수행]\n1. 충실성 검증: 각 fact 의 sourceQuote 가 해당 sourceFile 에 실제로 존재하는지 grep 으로 확인. 원문에 없는데 value 가 채워진 fact = 환각 → 표시.\n2. 누락 점검(Gap Check): USFK 공고 필수 항목 체크리스트로 빠진 게 없는지 확인 — 마감일/제출방법(PIEE 등)/평가기준/제출서류 볼륨·페이지제한/FACTOR 구조/POC/현장설명회 유무. 작업장 원문엔 있는데 추출에서 빠진 항목 = 누락 → 표시.\n3. 충족주체 재확인: CLIENT_UPLOAD 여야 할(트럭·인력·실적) 항목이 PLATFORM_GENERATED 로 잘못 분류됐는지 점검.\n\n[출력]\n{ verifiedFacts: [...정정·확정된 fact 목록...], hallucinations: [환각으로 판단해 제거/수정한 항목], gaps: [원문에 있으나 누락된 항목 — 가능하면 작업장에서 값 보강], notes: 검증 요약 }. 정정된 최종 fact 목록과 분석을 다음 STEP 이 쓸 수 있게 정리하세요.\n★필수★ verifiedFacts 의 각 항목은 검증 마크(✓/정확/일치 등)만 남기지 말고 반드시 실제 값(value)을 그대로 포함하라. 각 항목은 { key, value(실제 추출값 — 절대 생략 금지), sourceFile, sourceQuote, page, confidence } 형태여야 한다. 값이 맞다고 판단했으면 그 값을 그대로 실어라(예: key='공고번호' value='W912xx-25-R-0001', key='발행일' value='2026-03-01'). value 를 비우거나 '정확함' 같은 검증 표현으로 대체하면 다음 STEP 이 실제 값을 잃는다.\n\n[★최종 출력 — 구조화 (필수)★]\n위 검증을 마친 뒤, 그 결과를 아래 response_schema 에 맞춰 structured_output 으로 제출하라. 자유 텍스트나 ```json 코드블록이 아니라 structured_output 도구 호출로 낸다. - verifiedFacts(정정·확정 fact, hallucinations 제외)를 facts[] 로 그대로 싣는다(각 {key,value,sourceFile,sourceQuote,page,confidence}, value 절대 비우지 말 것). - koreanTitle/summary/requiredDocuments(documents+factors+eligibility) 까지 schema 대로 채운다. - 본문에 없는 값은 빈 문자열·빈 배열로 두되 섹션 골격은 삭제하지 않는다. 추측으로 채우지 않는다.",
+        "prompt": "당신은 공고 분석 결과를 검증하는 감사자입니다. 이전 단계가 추출한 분석과 fact 목록이 작업장(workspace) 원문과 실제로 일치하는지, 그리고 빠진 필수 항목이 없는지 점검합니다.\n\n[검증 대상 (이전 STEP 산출물)]\n{{extract_facts.output}}\n\n\n\n[작업장]\n- `description.txt`(공고 본문) 와 `attachments/`(첨부 원본) 를 직접 열어 대조하세요. 파일 종류에 맞는 읽기 방법은 알아서 선택하고, 필요하면 키워드로 검색해 해당 부분을 정독합니다.\n\n[수행]\n1. 충실성 검증: 각 fact 의 sourceQuote 가 해당 sourceFile 에 실제로 존재하는지 grep 으로 확인. 원문에 없는데 value 가 채워진 fact = 환각 → 표시.\n2. 누락 점검(Gap Check): USFK 공고 필수 항목 체크리스트로 빠진 게 없는지 확인 — 마감일/제출방법(PIEE 등)/계약기간(수행기간·옵션연차)/평가기준/제출서류 볼륨·페이지제한/FACTOR 구조/POC/현장설명회 유무. 작업장 원문엔 있는데 추출에서 빠진 항목 = 누락 → 표시.\n3. 충족주체 재확인: CLIENT_UPLOAD 여야 할(트럭·인력·실적) 항목이 PLATFORM_GENERATED 로 잘못 분류됐는지 점검.\n\n[출력]\n{ verifiedFacts: [...정정·확정된 fact 목록...], hallucinations: [환각으로 판단해 제거/수정한 항목], gaps: [원문에 있으나 누락된 항목 — 가능하면 작업장에서 값 보강], notes: 검증 요약 }. 정정된 최종 fact 목록과 분석을 다음 STEP 이 쓸 수 있게 정리하세요.\n★필수★ verifiedFacts 의 각 항목은 검증 마크(✓/정확/일치 등)만 남기지 말고 반드시 실제 값(value)을 그대로 포함하라. 각 항목은 { key, value(실제 추출값 — 절대 생략 금지), sourceFile, sourceQuote, page, confidence } 형태여야 한다. 값이 맞다고 판단했으면 그 값을 그대로 실어라(예: key='공고번호' value='W912xx-25-R-0001', key='발행일' value='2026-03-01'). value 를 비우거나 '정확함' 같은 검증 표현으로 대체하면 다음 STEP 이 실제 값을 잃는다.\n\n[★최종 출력 — 구조화 (필수)★]\n위 검증을 마친 뒤, 그 결과를 아래 response_schema 에 맞춰 structured_output 으로 제출하라. 자유 텍스트나 ```json 코드블록이 아니라 structured_output 도구 호출로 낸다. - verifiedFacts(정정·확정 fact, hallucinations 제외)를 facts[] 로 그대로 싣는다(각 {key,value,sourceFile,sourceQuote,page,confidence}, value 절대 비우지 말 것). - koreanTitle/summary/requiredDocuments(documents+factors+eligibility) 까지 schema 대로 채운다. - 본문에 없는 값은 빈 문자열·빈 배열로 두되 섹션 골격은 삭제하지 않는다. 추측으로 채우지 않는다.",
         "response_schema": {
           "type": "object",
           "required": [
@@ -134,6 +134,12 @@
                   "type": "string"
                 },
                 "budgetInfo": {
+                  "type": "string"
+                },
+                "contractPeriod": {
+                  "type": "string"
+                },
+                "siteVisit": {
                   "type": "string"
                 },
                 "keyDates": {
@@ -332,7 +338,7 @@
     },
     {
       "id": "save",
-      "name": "결과 저장 콜백 (Notice + notice_extracted_fact)",
+      "name": "저장 중",
       "type": "TOOL_CALL",
       "config": {
         "tool": "save_opportunity_analysis",

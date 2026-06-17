@@ -39,6 +39,9 @@ export interface NoticeSummary {
   keyDates?: { label?: string; date?: string; note?: string }[]
   specialNotes?: string[]
   contactInfo?: { name?: string; role?: string; email?: string; phone?: string; organization?: string }[]
+  // CR-117: 옛 NOTICE_VIEW 10섹션 골격 복원 — 계약 기간 / 현장 설명회 전용 섹션
+  contractPeriod?: string
+  siteVisit?: string
 }
 
 export interface RequiredDocumentItem {
@@ -57,6 +60,10 @@ interface Props {
   documents?: RequiredDocumentItem[]
   solicitationNumber?: string | null
   organizationName?: string | null
+  // CR-117: 옛 NOTICE_VIEW "1.공고 기본정보" 행 복원 — opportunity 메타 직접 공급(LLM 무관)
+  noticeTypeKo?: string | null
+  naicsLabelKo?: string | null
+  responseDeadline?: string | null
   // CR-033: 정밀추출 자격요건 — "참여 자격요건" 섹션
   eligibility?: EligibilityItem[]
   // 공고 게시일(SAM 수집 확정값)
@@ -73,6 +80,9 @@ export default function NoticeDocumentView({
   documents,
   solicitationNumber,
   organizationName,
+  noticeTypeKo,
+  naicsLabelKo,
+  responseDeadline,
   eligibility,
   postedDate,
 }: Props) {
@@ -88,14 +98,18 @@ export default function NoticeDocumentView({
   const hasElig = !!eligibility && eligibility.length > 0
   const issuedDate = fmtDateKo(postedDate) || str(postedDate)
 
-  // CR-114: 기본 정보 kvTable 행 — summary/메타에서 직접 구성 (발행일 끼움)
-  const basicRows = withIssuedDate(
+  // CR-117: 기본 정보 kvTable — 옛 NOTICE_VIEW 골격 복원(공고번호/공고유형/발주기관/공고일/마감일/NAICS).
+  //         값 있는 행만 동적 노출(조달방식은 데이터 없어 제거, 평가방식은 8.낙찰기준 전용 섹션으로 이관).
+  const deadlineKo = fmtDateKo(responseDeadline) || str(responseDeadline)
+  const basicRows = (
     [
       solicitationNumber ? { label: '공고번호', value: str(solicitationNumber) } : null,
-      summary?.budgetInfo ? { label: '예상 금액', value: str(summary.budgetInfo) } : null,
-      summary?.evaluationCriteria ? { label: '평가 방식', value: str(summary.evaluationCriteria) } : null,
-    ].filter(Boolean) as { label: string; value: string }[],
-    issuedDate,
+      noticeTypeKo ? { label: '공고유형', value: str(noticeTypeKo) } : null,
+      organizationName ? { label: '발주기관', value: str(organizationName) } : null,
+      issuedDate ? { label: '공고일', value: issuedDate } : null,
+      deadlineKo ? { label: '마감일', value: deadlineKo } : null,
+      naicsLabelKo ? { label: 'NAICS 코드', value: str(naicsLabelKo) } : null,
+    ].filter(Boolean) as { label: string; value: string }[]
   )
 
   // 주요 일정 dataTable (label/date/note → 행)
@@ -120,6 +134,8 @@ export default function NoticeDocumentView({
     [str(d.description), str(d.notes)].filter(Boolean).join(' / '),
   ])
 
+  const hasSpecialNotes = !!summary?.specialNotes && summary.specialNotes.length > 0
+
   return (
     <article className="bg-white">
       {/* 헤더 */}
@@ -132,71 +148,87 @@ export default function NoticeDocumentView({
         }}
       />
 
+      {/* CR-117: 옛 NOTICE_VIEW 10섹션 골격 복원 — 고정 번호 1~10, 데이터 없어도 골격 유지("해당 없음") */}
+
       {/* 1. 공고 기본 정보 */}
-      {basicRows.length > 0 && (
-        <>
-          <Heading level={2} content={[{ type: 'text', text: '공고 기본 정보' }]} />
-          <KvTable rows={basicRows} />
-        </>
-      )}
+      <Heading level={2} content={[{ type: 'text', text: '1. 공고 기본 정보' }]} />
+      {basicRows.length > 0 ? <KvTable rows={basicRows} /> : <EmptySection />}
 
       {/* 2. 개요 */}
-      {summary?.overview && (
-        <>
-          <Heading level={2} content={[{ type: 'text', text: '개요' }]} />
-          <Paragraph content={[{ type: 'text', text: str(summary.overview) }]} />
-        </>
+      <Heading level={2} content={[{ type: 'text', text: '2. 개요' }]} />
+      {summary?.overview ? (
+        <Paragraph content={[{ type: 'text', text: str(summary.overview) }]} />
+      ) : (
+        <EmptySection />
       )}
 
       {/* 3. 작업 범위 */}
-      {summary?.scope && (
-        <>
-          <Heading level={2} content={[{ type: 'text', text: '작업 범위' }]} />
-          <Paragraph content={[{ type: 'text', text: str(summary.scope) }]} />
-        </>
+      <Heading level={2} content={[{ type: 'text', text: '3. 작업 범위' }]} />
+      {summary?.scope ? (
+        <Paragraph content={[{ type: 'text', text: str(summary.scope) }]} />
+      ) : (
+        <EmptySection />
       )}
 
-      {/* 4. 주요 일정 */}
-      {timelineRows.length > 0 && (
-        <>
-          <Heading level={2} content={[{ type: 'text', text: '주요 일정' }]} />
-          <DataTable headers={['구분', '일정']} rows={timelineRows} />
-        </>
+      {/* 4. 계약 기간 */}
+      <Heading level={2} content={[{ type: 'text', text: '4. 계약 기간' }]} />
+      {summary?.contractPeriod ? (
+        <Paragraph content={[{ type: 'text', text: str(summary.contractPeriod) }]} />
+      ) : (
+        <EmptySection />
       )}
 
-      {/* 5. 참여 자격요건 (CR-033 정밀추출) */}
-      {hasElig && (
-        <>
-          <Heading level={2} content={[{ type: 'text', text: '참여 자격요건' }]} />
-          <EligibilityBlock items={eligibility!} />
-        </>
+      {/* 5. 현장 설명회 */}
+      <Heading level={2} content={[{ type: 'text', text: '5. 현장 설명회' }]} />
+      {summary?.siteVisit ? (
+        <Paragraph content={[{ type: 'text', text: str(summary.siteVisit) }]} />
+      ) : (
+        <EmptySection />
       )}
 
-      {/* 6. 제출 서류 */}
-      {docRows.length > 0 && (
-        <>
-          <Heading level={2} content={[{ type: 'text', text: '제출 서류' }]} />
-          <DataTable headers={docHeaders} rows={docRows} />
-        </>
+      {/* 6. 참여 자격요건 (CR-033 정밀추출) */}
+      <Heading level={2} content={[{ type: 'text', text: '6. 참여 자격요건' }]} />
+      {hasElig ? <EligibilityBlock items={eligibility!} /> : <EmptySection />}
+
+      {/* 7. 제출 서류 */}
+      <Heading level={2} content={[{ type: 'text', text: '7. 제출 서류' }]} />
+      {docRows.length > 0 ? (
+        <DataTable headers={docHeaders} rows={docRows} />
+      ) : (
+        <EmptySection />
       )}
 
-      {/* 7. 담당자 */}
-      {contactRows.length > 0 && (
-        <>
-          <Heading level={2} content={[{ type: 'text', text: '담당자 (POC)' }]} />
-          <KvTable rows={contactRows} />
-        </>
+      {/* 8. 낙찰 기준 */}
+      <Heading level={2} content={[{ type: 'text', text: '8. 낙찰 기준' }]} />
+      {summary?.evaluationCriteria ? (
+        <Paragraph content={[{ type: 'text', text: str(summary.evaluationCriteria) }]} />
+      ) : (
+        <EmptySection />
       )}
 
-      {/* 8. 특이사항 */}
-      {summary?.specialNotes && summary.specialNotes.length > 0 && (
-        <>
-          <Heading level={2} content={[{ type: 'text', text: '특이사항' }]} />
-          <CalloutList items={summary.specialNotes} tone="warning" />
-        </>
+      {/* 9. 담당자 (POC) */}
+      <Heading level={2} content={[{ type: 'text', text: '9. 담당자 (POC)' }]} />
+      {contactRows.length > 0 ? <KvTable rows={contactRows} /> : <EmptySection />}
+
+      {/* 10. 주요 일정 (옛 타임라인 + 특이사항 흡수) */}
+      <Heading level={2} content={[{ type: 'text', text: '10. 주요 일정' }]} />
+      {timelineRows.length > 0 ? (
+        <DataTable headers={['구분', '일정']} rows={timelineRows} />
+      ) : (
+        !hasSpecialNotes && <EmptySection />
+      )}
+      {hasSpecialNotes && (
+        <div className="mt-3">
+          <CalloutList items={summary!.specialNotes!} tone="warning" />
+        </div>
       )}
     </article>
   )
+}
+
+// CR-117: 데이터 없는 섹션의 골격 유지용 — "해당 없음" 플레이스홀더
+function EmptySection() {
+  return <p className="text-sm text-slate-400 italic mb-4">해당 없음</p>
 }
 
 // CR-033: 자격요건 정밀추출 렌더 (본문 §자격요건 자리에 인라인)
@@ -388,29 +420,4 @@ function fmtDateKo(v?: string | null): string {
   }
   return `${Number(m[1])}년 ${Number(m[2])}월 ${Number(m[3])}일`
 }
-
-// CR-033: "공고 기본 정보" 표에 공고일 행을 끼운다(데이터 재생성 없이 렌더에서). 마감일 행 다음에, 이미 있으면 중복 추가 안 함.
-// + 마감일 행 value 도 "YYYY년 M월 D일" 로 포맷(시·분·KST 제거).
-function withIssuedDate(
-  rows: { label: string; value: string }[],
-  issuedDate?: string,
-): { label: string; value: string }[] {
-  // 마감일 행 value 포맷팅 (issuedDate 유무와 무관하게 항상)
-  const formatted = rows.map((r) => {
-    if (r.label.includes('마감일') || /deadline/i.test(r.label)) {
-      const f = fmtDateKo(r.value)
-      return f ? { ...r, value: f } : r
-    }
-    return r
-  })
-  if (!issuedDate) return formatted
-  if (formatted.some((r) => r.label.includes('발행일') || r.label.includes('공고일'))) return formatted
-  const out = [...formatted]
-  const deadlineIdx = out.findIndex((r) => r.label.includes('마감일') || /deadline/i.test(r.label))
-  const issuedRow = { label: '공고일', value: issuedDate }
-  if (deadlineIdx >= 0) out.splice(deadlineIdx + 1, 0, issuedRow)
-  else out.push(issuedRow)
-  return out
-}
-
 

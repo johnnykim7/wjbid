@@ -198,6 +198,10 @@ export const getAdminNotices = (page = 0) =>
 export const getAdminNoticeDetail = (id: string) =>
   api.get(`/admin/notices/${id}`)
 
+// 공고분석 진행 STEP 조회 — ANALYZING 동안 화면이 주기 폴링
+export const getNoticeAnalysisProgress = (id: string) =>
+  api.get(`/admin/notices/${id}/progress`)
+
 // 게이트②: 검수 후 노출/비노출
 export const publishNotice = (id: string) =>
   api.post(`/admin/notices/${id}/publish`)
