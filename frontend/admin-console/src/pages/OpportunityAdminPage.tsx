@@ -65,20 +65,20 @@ export default function OpportunityAdminPage() {
         ) : (
           <table className="w-full text-sm table-fixed">
             <colgroup>
-              <col className="w-[38%]" />
-              <col />
+              <col className="w-[44%]" />
               <col className="w-28" />
               <col className="w-28" />
               <col className="w-28" />
+              <col className="w-24" />
               <col className="w-24" />
             </colgroup>
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">공고 (원문)</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">기관</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">공고유형</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">공고일</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">마감일</th>
+                <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">첨부</th>
                 <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">생성여부</th>
               </tr>
             </thead>
@@ -102,9 +102,6 @@ export default function OpportunityAdminPage() {
                     </div>
                   </td>
                   <td className="px-4 py-3 text-gray-600">
-                    <div className="truncate" title={opp.organizationName || ''}>{opp.organizationName || '-'}</div>
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">
                     <div className="truncate" title={opp.typeKo || ''}>{opp.typeKo || '-'}</div>
                   </td>
                   <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
@@ -112,6 +109,17 @@ export default function OpportunityAdminPage() {
                   </td>
                   <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
                     {opp.responseDeadline ? new Date(opp.responseDeadline).toLocaleDateString('ko') : '-'}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    {opp.attachmentCount > 0 ? (
+                      <span className="inline-flex items-center gap-1 text-gray-600 text-xs" title={`첨부 ${opp.attachmentCount}건`}>
+                        <i className="fa-solid fa-paperclip" />{opp.attachmentCount}
+                      </span>
+                    ) : (
+                      <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-600" title="첨부파일 없음">
+                        없음
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-center">
                     <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${

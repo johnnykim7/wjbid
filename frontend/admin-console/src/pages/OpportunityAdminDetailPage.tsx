@@ -134,9 +134,40 @@ export default function OpportunityAdminDetailPage() {
     }
   }
 
+  // PIEE에서 받은 zip은 "공고번호.zip"(예: W91QVN26QA030.zip, W91QVN26QA022 (1).zip) 형태로 떨어진다.
+  // 다운로드 폴더에 섞인 '다른 공고'의 zip을 무의식적으로 잘못 올리는 사고를 막기 위해,
+  // 파일명이 공고번호 패턴인데 현재 공고번호와 다르면 경고(업로드 자체는 막지 않음, 확인 시 진행).
+  // 일반 파일명(report.zip 등)은 PIEE 산출물이 아니므로 경고하지 않는다.
+  const SOLNO_PATTERN = /^[A-Z0-9]{10,}$/
+  const fileBaseAsSolNo = (name: string): string | null => {
+    const base = name
+      .replace(/\.zip$/i, '')      // 확장자 제거
+      .replace(/\s*\(\d+\)\s*$/, '') // 브라우저 중복 다운로드 표식 "(1)" 제거
+      .trim()
+      .toUpperCase()
+    return SOLNO_PATTERN.test(base) ? base : null
+  }
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!id || !e.target.files?.length) return
     const files = Array.from(e.target.files)
+
+    // 공고번호 패턴 zip인데 현재 공고번호와 불일치하는 파일 검출
+    const currentSolNo = opp?.solicitationNumber?.trim().toUpperCase()
+    if (currentSolNo) {
+      const mismatched = files
+        .map((f) => ({ name: f.name, solNo: fileBaseAsSolNo(f.name) }))
+        .filter((f) => f.solNo && f.solNo !== currentSolNo)
+      if (mismatched.length > 0) {
+        const list = mismatched.map((f) => `· ${f.name} → ${f.solNo}`).join('\n')
+        const ok = window.confirm(
+          `다음 파일명이 현재 공고번호(${opp?.solicitationNumber})와 다릅니다.\n` +
+          `다른 공고의 입찰서류를 잘못 올린 것은 아닌지 확인하세요.\n\n${list}\n\n그대로 업로드할까요?`
+        )
+        if (!ok) { e.target.value = ''; return }
+      }
+    }
+
     setUploadLoading(true)
     try {
       await uploadOpportunityAttachment(id, files)
