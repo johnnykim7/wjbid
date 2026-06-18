@@ -300,9 +300,27 @@ function Heading({ level, content }: { level: number; content: Node[] }) {
 }
 
 function Paragraph({ tone, content }: { tone?: string; content: Node[] }) {
-  const text = collectText(content)
+  const text = splitEnumerations(collectText(content))
   const cls = tone === 'muted' ? 'text-xs text-slate-500 mb-2' : 'text-sm text-slate-700 leading-relaxed mb-3'
-  return <p className={cls}>{text}</p>
+  // CR-119: 열거 항목이 한 줄로 붙어오는 평문을 항목 단위로 줄바꿈 표시
+  return <p className={`${cls} whitespace-pre-line`}>{text}</p>
+}
+
+// CR-119: LLM 요약이 줄바꿈 없이 (1)/(2)·Phase One:/Phase Two:·일시:/장소: 등을
+// 한 줄로 이어 출력하는 경우, 열거·라벨 패턴 앞에 줄바꿈을 삽입해 가독성 복원.
+// 보수적 패턴만(정상 문장 오분할 방지): 문장 중간의 "(숫자)", "Phase/단계 + 서수:",
+// 한글 라벨("일시:/장소:/POC:/필수 여부:") 앞.
+function splitEnumerations(s: string): string {
+  if (!s) return s
+  return s
+    // " (1) " / " (2) " 처럼 앞에 공백이 있는 괄호 숫자 열거 → 줄바꿈
+    .replace(/\s+(\(\d+\))/g, '\n$1')
+    // "Phase One:" "Phase Two:" 등 (앞에 공백) → 줄바꿈
+    .replace(/\s+(Phase\s+(?:One|Two|Three|Four|1|2|3|4)\b)/gi, '\n$1')
+    // 한글 라벨 열거(현장설명회 등): "장소:" "POC:" "필수 여부:" 앞 공백 → 줄바꿈
+    .replace(/\s+(장소:|POC:|일시:|필수\s*여부:|연락처:)/g, '\n$1')
+    .replace(/^\n+/, '')
+    .trim()
 }
 
 function KvTable({ rows }: { rows: { label: string; value: string }[] }) {
