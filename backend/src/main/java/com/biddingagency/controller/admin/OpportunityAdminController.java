@@ -311,6 +311,34 @@ public class OpportunityAdminController {
         ));
     }
 
+    @PostMapping("/{id}/translate-title")
+    @Operation(summary = "제목만 한글 번역 (리스트 일괄 번역용)",
+            description = "원본 공고 제목만 LLM으로 번역. 본문(noticedesc) fetch를 하지 않아 SAM 쿼터를 소진하지 않는다. " +
+                    "리스트 화면의 '현재 페이지 미번역분 일괄 번역' 버튼이 호출. 동기 실행. 이미 번역된 제목은 skip.")
+    public ResponseEntity<Map<String, Object>> translateTitle(@PathVariable UUID id) {
+        translationService.translateTitle(id);
+        Opportunity opp = opportunityService.findById(id);
+        boolean translated = opp.getTranslatedAt() != null;
+        log.info("[CR-022] 제목 번역 요청: opportunityId={}, translated={}", id, translated);
+        return ResponseEntity.ok(Map.of(
+                "status", translated ? "TRANSLATED" : "FAILED_OR_EMPTY",
+                "titleKo", opp.getTitleKo() != null ? opp.getTitleKo() : "",
+                "translatedAt", opp.getTranslatedAt() != null ? opp.getTranslatedAt().toString() : ""
+        ));
+    }
+
+    @PatchMapping("/{id}/piee-link-broken")
+    @Operation(summary = "PIEE 링크 오류 표식 토글 (CR-043)",
+            description = "이 공고의 PIEE solNo 직링크가 오류(메인으로 리다이렉트 등)일 때 관리자가 수동으로 표시. " +
+                    "목록·상세에 경고를 노출해 관리자 헛클릭을 막는다. 우리 코드/사용자 PC 문제가 아니라 해당 공고의 PIEE 게시 상태 문제.")
+    public ResponseEntity<Map<String, Object>> setPieeLinkBroken(
+            @PathVariable UUID id,
+            @RequestBody Map<String, Boolean> body) {
+        boolean broken = Boolean.TRUE.equals(body.get("broken"));
+        boolean result = opportunityService.setPieeLinkBroken(id, broken);
+        return ResponseEntity.ok(Map.of("pieeLinkBroken", result));
+    }
+
     @GetMapping("/{id}/attachments")
     @Operation(summary = "원본 공고 첨부 목록 (관리자, CR-019)",
             description = "각 첨부의 다운로드 상태(SUCCESS/MANUAL_FETCH_REQUIRED 등)와 외부 원본 링크 포함")

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getAdminOpportunities, getAdminOpportunityTypes } from '../api/client'
+import { getAdminOpportunities, getAdminOpportunityTypes, deleteOpportunity, translateOpportunityTitle } from '../api/client'
 
 interface OpportunityAdmin {
   id: string
@@ -16,6 +16,7 @@ interface OpportunityAdmin {
   attachmentCount: number
   manualFetchRequiredCount: number
   noticeCount: number
+  pieeLinkBroken?: boolean   // CR-043: PIEE 링크 오류 표식
 }
 
 export default function OpportunityAdminPage() {
@@ -24,12 +25,15 @@ export default function OpportunityAdminPage() {
   const [page, setPage] = useState(0)
   const [totalPages, setTotalPages] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [batchTranslating, setBatchTranslating] = useState(false)
+  const [batchProgress, setBatchProgress] = useState({ done: 0, total: 0 })
 
   // CR-118: 검색·필터
   const [keywordInput, setKeywordInput] = useState('')   // 입력 중(엔터/버튼으로 확정)
   const [keyword, setKeyword] = useState('')             // 실제 조회에 쓰는 확정 값
   const [type, setType] = useState('')                   // '' = 전체
   const [hasAttachment, setHasAttachment] = useState<'' | 'true' | 'false'>('') // '' = 전체
+  const [hasNotice, setHasNotice] = useState<'' | 'true' | 'false'>('')         // '' = 전체(생성여부)
   const [types, setTypes] = useState<Array<{ type: string; typeKo: string }>>([])
 
   const fetchData = async () => {
@@ -39,6 +43,7 @@ export default function OpportunityAdminPage() {
         keyword: keyword || undefined,
         type: type || undefined,
         hasAttachment: hasAttachment === '' ? undefined : hasAttachment === 'true',
+        hasNotice: hasNotice === '' ? undefined : hasNotice === 'true',
       })
       setOpportunities(data.content || [])
       setTotalPages(data.totalPages || 0)
@@ -57,12 +62,91 @@ export default function OpportunityAdminPage() {
   }, [])
 
   // 필터/페이지 변경 시 재조회 (keyword는 확정 값 기준)
-  useEffect(() => { fetchData() }, [page, keyword, type, hasAttachment])
+  useEffect(() => { fetchData() }, [page, keyword, type, hasAttachment, hasNotice])
 
-  // 필터(유형/첨부) 또는 키워드 확정 시 첫 페이지로
+  // 필터(유형/첨부/생성여부) 또는 키워드 확정 시 첫 페이지로
   const applyKeyword = () => { setPage(0); setKeyword(keywordInput.trim()) }
   const onTypeChange = (v: string) => { setPage(0); setType(v) }
   const onAttachmentChange = (v: '' | 'true' | 'false') => { setPage(0); setHasAttachment(v) }
+  const onNoticeChange = (v: '' | 'true' | 'false') => { setPage(0); setHasNotice(v) }
+
+  // 현재 페이지 미번역분(제목 한글화 미완료) 일괄 번역.
+  // 제목만 번역하므로 SAM 쿼터를 소진하지 않는다(본문 fetch 없음).
+  //
+  // ⚠️ 직렬(1건씩) 처리한다. 백엔드 제목 번역은 Aimbase CLI 러너(anthropic-cli)를 타는데,
+  //    동시 호출을 던지면 러너 세션이 꼬여 모든 호출이 멈추는 사고가 있었다.
+  //    한 건 끝나야 다음 건을 보낸다.
+  const handleBatchTranslate = async () => {
+    const targets = opportunities.filter((o) => !o.translatedAt)
+    if (targets.length === 0) {
+      window.alert('현재 페이지에 미번역 공고가 없습니다.')
+      return
+    }
+    if (!window.confirm(`현재 페이지의 미번역 ${targets.length}건 제목을 1건씩 순차 번역합니다.\n(SAM 쿼터는 소진하지 않으며, 건당 수십 초가 걸립니다)`)) {
+      return
+    }
+    setBatchTranslating(true)
+    setBatchProgress({ done: 0, total: targets.length })
+
+    let done = 0
+    let failed = 0
+    for (const opp of targets) {
+      try {
+        const { data } = await translateOpportunityTitle(opp.id)
+        // 성공(status=TRANSLATED)일 때만 해당 행을 즉시 갱신 — 실시간으로 미번역 배지가 사라진다.
+        if (data?.status === 'TRANSLATED') {
+          setOpportunities((prev) =>
+            prev.map((o) =>
+              o.id === opp.id
+                ? { ...o, titleKo: data.titleKo || o.titleKo, translatedAt: data.translatedAt || new Date().toISOString() }
+                : o,
+            ),
+          )
+        } else {
+          failed += 1
+        }
+      } catch (err) {
+        // 타임아웃·에러는 실패로 집계하고 다음 건으로 진행(best-effort).
+        console.error('제목 번역 실패:', opp.id, err)
+        failed += 1
+      } finally {
+        done += 1
+        setBatchProgress({ done, total: targets.length })
+      }
+    }
+    setBatchTranslating(false)
+    const ok = targets.length - failed
+    if (failed > 0) {
+      window.alert(`일괄 번역 완료 — 성공 ${ok}건 / 실패 ${failed}건.\n실패 건은 잠시 후 다시 시도해 주세요.`)
+    }
+    // 최종 동기화(혹시 모를 누락 보정)
+    fetchData()
+  }
+
+  // CR-042: 원본 공고 소프트 삭제. 행 클릭(상세 이동)과 분리하기 위해 stopPropagation.
+  const handleDelete = async (e: React.MouseEvent, opp: OpportunityAdmin) => {
+    e.stopPropagation()
+    const label = opp.titleKo || opp.title
+    if (!window.confirm(`이 공고를 목록에서 삭제하시겠습니까?\n\n${label}\n\n(소프트 삭제 — 원본 데이터는 보존되며 목록·검색·고객 노출에서만 제외됩니다)`)) {
+      return
+    }
+    try {
+      await deleteOpportunity(opp.id)
+      // 현재 페이지가 마지막 1건이었으면 이전 페이지로, 아니면 재조회
+      if (opportunities.length === 1 && page > 0) {
+        setPage((p) => p - 1)
+      } else {
+        fetchData()
+      }
+    } catch (err: any) {
+      if (err?.response?.status === 409) {
+        window.alert(err.response.data?.reason || '노출 중·분석 중인 공고문이 연결돼 있어 삭제할 수 없습니다.')
+      } else {
+        window.alert('삭제에 실패했습니다.')
+        console.error('원본 공고 삭제 실패:', err)
+      }
+    }
+  }
 
   return (
     <div className="p-6 space-y-5">
@@ -71,12 +155,31 @@ export default function OpportunityAdminPage() {
           <h1 className="text-xl font-bold text-gray-900">원본 공고 (선별 풀)</h1>
           <p className="text-sm text-gray-500 mt-1">SAM.gov 수집 원본. "공고문 만들기"로 선별 → 한글화</p>
         </div>
-        <button
-          onClick={() => navigate('/notices')}
-          className="px-4 py-2 text-sm rounded-lg bg-secondary text-white hover:bg-blue-600"
-        >
-          공고문 리스트 →
-        </button>
+        <div className="flex items-center gap-2">
+          {(() => {
+            const untranslated = opportunities.filter((o) => !o.translatedAt).length
+            return (
+              <button
+                onClick={handleBatchTranslate}
+                disabled={batchTranslating || untranslated === 0}
+                title="현재 페이지의 미번역 공고 제목을 일괄 번역 (SAM 쿼터 미소진)"
+                className="px-4 py-2 text-sm rounded-lg border border-secondary text-secondary hover:bg-blue-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {batchTranslating ? (
+                  <><i className="fa-solid fa-spinner fa-spin mr-1.5" />번역 중 {batchProgress.done}/{batchProgress.total}</>
+                ) : (
+                  <><i className="fa-solid fa-language mr-1.5" />이 페이지 일괄 번역{untranslated > 0 ? ` (${untranslated})` : ''}</>
+                )}
+              </button>
+            )
+          })()}
+          <button
+            onClick={() => navigate('/notices')}
+            className="px-4 py-2 text-sm rounded-lg bg-secondary text-white hover:bg-blue-600"
+          >
+            공고문 리스트 →
+          </button>
+        </div>
       </div>
 
       {/* CR-118: 검색·필터 — 키워드(제목·본문·공고번호) / 공고유형 / 첨부유무 */}
@@ -110,16 +213,25 @@ export default function OpportunityAdminPage() {
           <option value="true">첨부 있음</option>
           <option value="false">첨부 없음</option>
         </select>
+        <select
+          value={hasNotice}
+          onChange={(e) => onNoticeChange(e.target.value as '' | 'true' | 'false')}
+          className="px-3 py-2 text-sm rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-secondary/40"
+        >
+          <option value="">생성여부 전체</option>
+          <option value="true">생성됨</option>
+          <option value="false">미생성</option>
+        </select>
         <button
           onClick={applyKeyword}
           className="px-4 py-2 text-sm rounded-lg bg-secondary text-white hover:bg-blue-600"
         >
           검색
         </button>
-        {(keyword || type || hasAttachment) && (
+        {(keyword || type || hasAttachment || hasNotice) && (
           <button
             onClick={() => {
-              setKeywordInput(''); setKeyword(''); setType(''); setHasAttachment(''); setPage(0)
+              setKeywordInput(''); setKeyword(''); setType(''); setHasAttachment(''); setHasNotice(''); setPage(0)
             }}
             className="px-3 py-2 text-sm rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50"
           >
@@ -138,12 +250,13 @@ export default function OpportunityAdminPage() {
         ) : (
           <table className="w-full text-sm table-fixed">
             <colgroup>
-              <col className="w-[44%]" />
+              <col className="w-[40%]" />
               <col className="w-28" />
               <col className="w-28" />
               <col className="w-28" />
               <col className="w-24" />
               <col className="w-24" />
+              <col className="w-16" />
             </colgroup>
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
@@ -153,6 +266,7 @@ export default function OpportunityAdminPage() {
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">마감일</th>
                 <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">첨부</th>
                 <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">생성여부</th>
+                <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase whitespace-nowrap"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -171,6 +285,11 @@ export default function OpportunityAdminPage() {
                       <span>{opp.solicitationNumber || opp.noticeId}</span>
                       {!opp.translatedAt && (
                         <span className="inline-flex px-1.5 py-0.5 rounded bg-amber-50 text-amber-600 text-[10px]" title="제목 한글화 미완료 — 영문 표시">미번역</span>
+                      )}
+                      {opp.pieeLinkBroken && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-red-50 text-red-600 text-[10px] font-semibold" title="PIEE 링크 오류로 표시됨 — 직링크가 안 열릴 수 있음">
+                          <i className="fa-solid fa-triangle-exclamation" />PIEE 오류
+                        </span>
                       )}
                     </div>
                   </td>
@@ -200,6 +319,15 @@ export default function OpportunityAdminPage() {
                     }`}>
                       {opp.noticeCount > 0 ? '생성' : '미생성'}
                     </span>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <button
+                      onClick={(e) => handleDelete(e, opp)}
+                      title="공고 삭제(소프트)"
+                      className="text-gray-300 hover:text-red-500 transition-colors"
+                    >
+                      <i className="fa-solid fa-trash-can text-sm" />
+                    </button>
                   </td>
                 </tr>
               ))}

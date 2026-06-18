@@ -154,11 +154,12 @@ export const getCollectionRuns = (page = 0) =>
   api.get('/admin/collection/runs', { params: { page, size: 20 } })
 
 // 원본 공고 Admin — 선별 풀 (CR-016)
-// CR-118: keyword(제목·본문·공고번호) / type(공고유형) / hasAttachment(첨부유무) 검색·필터
+// CR-118: keyword(제목·본문·공고번호) / type(공고유형) / hasAttachment(첨부유무) / hasNotice(생성여부) 검색·필터
 export interface OpportunitySearchParams {
   keyword?: string
   type?: string
   hasAttachment?: boolean
+  hasNotice?: boolean
 }
 export const getAdminOpportunities = (page = 0, filters: OpportunitySearchParams = {}) =>
   api.get('/admin/opportunities', {
@@ -168,6 +169,7 @@ export const getAdminOpportunities = (page = 0, filters: OpportunitySearchParams
       ...(filters.keyword ? { keyword: filters.keyword } : {}),
       ...(filters.type ? { type: filters.type } : {}),
       ...(filters.hasAttachment !== undefined ? { hasAttachment: filters.hasAttachment } : {}),
+      ...(filters.hasNotice !== undefined ? { hasNotice: filters.hasNotice } : {}),
     },
   })
 
@@ -208,6 +210,18 @@ export const deleteOpportunityAttachment = (id: string, attachmentId: string) =>
 // CR-022 (재구현): 본문 한글 번역 수동 트리거
 export const retranslateOpportunityDescription = (id: string) =>
   api.post(`/admin/opportunities/${id}/retranslate-description`)
+
+// 제목만 번역 (리스트 일괄 번역용 — SAM 쿼터 미소진)
+export const translateOpportunityTitle = (id: string) =>
+  api.post(`/admin/opportunities/${id}/translate-title`)
+
+// CR-042: 원본 공고 소프트 삭제. 연결 공고문이 노출/분석 중이면 서버가 409 거부.
+export const deleteOpportunity = (id: string) =>
+  api.delete(`/admin/opportunities/${id}`)
+
+// CR-043: PIEE 링크 오류 표식 토글. 관리자가 수동으로 "이 공고 PIEE 링크 오류" 표시/해제.
+export const setOpportunityPieeLinkBroken = (id: string, broken: boolean) =>
+  api.patch(`/admin/opportunities/${id}/piee-link-broken`, { broken })
 
 // 공고문(Notice) Admin (CR-016)
 export const getAdminNotices = (page = 0) =>

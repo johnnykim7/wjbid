@@ -8,6 +8,7 @@ import {
   downloadOpportunityAttachment,
   deleteOpportunityAttachment,
   retranslateOpportunityDescription,
+  setOpportunityPieeLinkBroken,
 } from '../api/client'
 import OpportunityMetaPanel from '../components/OpportunityMetaPanel'
 
@@ -47,6 +48,7 @@ interface OpportunityDetail {
   attachmentCount: number
   manualFetchRequiredCount: number
   noticeCount: number
+  pieeLinkBroken?: boolean          // CR-043: PIEE 링크 오류 표식
 }
 
 interface Attachment {
@@ -127,8 +129,12 @@ export default function OpportunityAdminDetailPage() {
       }
       fetchData()
     } catch (err) {
-      console.error('본문 번역 실패:', err)
-      alert('본문 번역 요청에 실패했습니다.')
+      // 번역 LLM이 길면 프록시(nginx proxy_read_timeout)가 응답을 끊지만,
+      // BE는 동기 트랜잭션으로 끝까지 돌아 DB에 저장된다. 에러여도 한 번 더 조회해
+      // 저장된 번역을 반영한다(저장이 아직이면 빈손이라 안내).
+      console.error('본문 번역 응답 수신 실패(번역은 백그라운드 진행 중일 수 있음):', err)
+      alert('번역에 시간이 걸려 응답이 지연됐습니다. 화면을 갱신합니다 — 아직 반영 안 됐으면 잠시 후 다시 눌러주세요.')
+      fetchData()
     } finally {
       setTranslateLoading(false)
     }
@@ -146,6 +152,22 @@ export default function OpportunityAdminDetailPage() {
       .trim()
       .toUpperCase()
     return SOLNO_PATTERN.test(base) ? base : null
+  }
+
+  // CR-043: PIEE 링크 오류 표식 토글. 낙관적 업데이트 후 서버 반영.
+  const handleTogglePieeLinkBroken = async () => {
+    if (!id || !opp) return
+    const next = !opp.pieeLinkBroken
+    setActionLoading(true)
+    try {
+      await setOpportunityPieeLinkBroken(id, next)
+      setOpp({ ...opp, pieeLinkBroken: next })
+    } catch (err) {
+      console.error('PIEE 링크 오류 표식 변경 실패:', err)
+      alert('표식 변경에 실패했습니다. 잠시 후 다시 시도해 주세요.')
+    } finally {
+      setActionLoading(false)
+    }
   }
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -332,22 +354,48 @@ export default function OpportunityAdminDetailPage() {
             </label>
           </div>
           {/* CR-034: PIEE 입찰서류 안내 — 첨부 유무와 무관하게 항상 노출. 입찰서류 정본/추가본이 PIEE에 있을 수 있음 */}
+          {/* CR-043: pieeLinkBroken=true면 빨강 경고로 전환. 일부 공고는 PIEE에 직링크로 안 열려(메인 리다이렉트) 헛클릭 방지 */}
           {opp.solicitationNumber && (
-            <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2.5">
-              <p className="text-xs text-amber-800 mb-2 leading-relaxed">
+            <div className={`rounded-lg border px-3 py-2.5 ${
+              opp.pieeLinkBroken ? 'border-red-300 bg-red-50' : 'border-amber-300 bg-amber-50'
+            }`}>
+              {opp.pieeLinkBroken && (
+                <p className="text-xs font-semibold text-red-700 mb-2 flex items-center gap-1.5">
+                  <i className="fa-solid fa-triangle-exclamation" />
+                  이 공고의 PIEE 링크는 오류로 표시됨 — 직링크가 PIEE 메인으로 튕길 수 있습니다. 클릭 전 확인.
+                </p>
+              )}
+              <p className={`text-xs mb-2 leading-relaxed ${opp.pieeLinkBroken ? 'text-red-800' : 'text-amber-800'}`}>
                 입찰서류 정본(본 공고서·수정본·추가서류)은 PIEE에도 게시될 수 있습니다.
                 아래에서 공고번호 <span className="font-semibold">{opp.solicitationNumber}</span>로 확인 후,
                 필요한 파일을 받아 "수동 업로드" 하세요.
               </p>
-              <a
-                href={`https://piee.eb.mil/sol/xhtml/unauth/search/oppMgmtLink.xhtml?solNo=${encodeURIComponent(opp.solicitationNumber)}`}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-md bg-amber-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-amber-700"
-              >
-                <i className="fa-solid fa-up-right-from-square" />
-                PIEE 입찰서류 보기
-              </a>
+              <div className="flex items-center gap-2 flex-wrap">
+                <a
+                  href={`https://piee.eb.mil/sol/xhtml/unauth/search/oppMgmtLink.xhtml?solNo=${encodeURIComponent(opp.solicitationNumber)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-white ${
+                    opp.pieeLinkBroken ? 'bg-red-600 hover:bg-red-700' : 'bg-amber-600 hover:bg-amber-700'
+                  }`}
+                >
+                  <i className="fa-solid fa-up-right-from-square" />
+                  PIEE 입찰서류 보기
+                </a>
+                <button
+                  type="button"
+                  onClick={handleTogglePieeLinkBroken}
+                  disabled={actionLoading}
+                  className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium disabled:opacity-50 ${
+                    opp.pieeLinkBroken
+                      ? 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                      : 'border-red-300 bg-white text-red-700 hover:bg-red-50'
+                  }`}
+                >
+                  <i className={`fa-solid ${opp.pieeLinkBroken ? 'fa-rotate-left' : 'fa-flag'}`} />
+                  {opp.pieeLinkBroken ? '오류 표식 해제' : 'PIEE 링크 오류로 표시'}
+                </button>
+              </div>
             </div>
           )}
           {opp.manualFetchRequiredCount > 0 && (
