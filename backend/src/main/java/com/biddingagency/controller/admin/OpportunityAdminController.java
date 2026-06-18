@@ -56,10 +56,11 @@ public class OpportunityAdminController {
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String type,
             @RequestParam(required = false) Boolean hasAttachment,
+            @RequestParam(required = false) Boolean hasNotice,
             // 정렬은 쿼리에 고정(게시일 DESC, 2차 수집순 DESC) — Pageable sort 미지정
             @PageableDefault(size = 20) Pageable pageable) {
         Page<OpportunityAdminDto> page = opportunityService
-                .searchAdminFiltered(keyword, type, hasAttachment, pageable)
+                .searchAdminFiltered(keyword, type, hasAttachment, hasNotice, pageable)
                 .map(opp -> {
                     long attachmentCount = attachmentRepository.countByOpportunityId(opp.getId());
                     long manualFetchCount = attachmentRepository.countByOpportunityIdAndDownloadStatus(
@@ -100,6 +101,23 @@ public class OpportunityAdminController {
                 "opportunityId", id.toString(),
                 "noticeId", noticeId.toString()
         ));
+    }
+
+    @DeleteMapping("/{id}")
+    @Operation(summary = "원본 공고 소프트 삭제 (CR-042)",
+            description = "목록·검색·고객 노출에서 제외(soft delete, 원본 row 보존). " +
+                    "연결된 공고문이 노출 중(VISIBLE)·분석 중(ANALYZING)이면 409 거부. " +
+                    "재수집 시 동일 noticeId는 다시 들어오지 않음(삭제 상태 유지).")
+    public ResponseEntity<Map<String, String>> deleteOpportunity(@PathVariable UUID id) {
+        try {
+            opportunityService.softDelete(id);
+            log.info("[CR-042] 원본 공고 소프트 삭제: opportunityId={}", id);
+            return ResponseEntity.ok(Map.of("status", "DELETED", "opportunityId", id.toString()));
+        } catch (IllegalStateException e) {
+            log.warn("[CR-042] 원본 공고 삭제 거부: opportunityId={}, reason={}", id, e.getMessage());
+            return ResponseEntity.status(org.springframework.http.HttpStatus.CONFLICT)
+                    .body(Map.of("status", "REJECTED", "reason", e.getMessage(), "opportunityId", id.toString()));
+        }
     }
 
     @PostMapping("/{id}/attachments")

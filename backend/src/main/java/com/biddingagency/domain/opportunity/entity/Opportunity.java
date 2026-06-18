@@ -118,6 +118,18 @@ public class Opportunity extends BaseEntity {
     @Column(name = "raw_json", columnDefinition = "JSON")
     private Map<String, Object> rawJson;
 
+    /** CR-042: 소프트 삭제 시각. null = 정상, 값 있음 = 삭제됨(목록·검색·고객 노출에서 제외). */
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
+    /**
+     * CR-043: PIEE 입찰서류 링크 오류 표식. true = 이 공고의 PIEE solNo 직링크가 오류(메인으로 리다이렉트 등).
+     * 관리자가 수동으로 토글. 목록·상세에서 경고를 노출해 헛클릭을 막는다.
+     */
+    @Column(name = "piee_link_broken", nullable = false)
+    @Builder.Default
+    private Boolean pieeLinkBroken = false;
+
     // Business methods
 
     public void updateContent(String title, String type, String organizationName,
@@ -139,6 +151,28 @@ public class Opportunity extends BaseEntity {
     public void markAsInactive() {
         this.active = false;
         this.lastModifiedAt = LocalDateTime.now();
+    }
+
+    /** CR-042: 소프트 삭제. 이미 삭제된 건은 무시(멱등). */
+    public void softDelete() {
+        if (this.deletedAt == null) {
+            this.deletedAt = LocalDateTime.now();
+        }
+    }
+
+    /** CR-042: 삭제 여부. */
+    public boolean isDeleted() {
+        return this.deletedAt != null;
+    }
+
+    /** CR-043: PIEE 링크 오류 표식 설정. null 방어 포함. */
+    public void setPieeLinkBroken(boolean broken) {
+        this.pieeLinkBroken = broken;
+    }
+
+    /** CR-043: PIEE 링크 오류 표식 여부. null = false. */
+    public boolean isPieeLinkBroken() {
+        return Boolean.TRUE.equals(this.pieeLinkBroken);
     }
 
     /** 자동분류 결과 반영 (CR-014). null이면 미분류로 둔다 */

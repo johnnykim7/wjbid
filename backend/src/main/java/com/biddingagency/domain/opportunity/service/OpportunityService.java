@@ -31,6 +31,7 @@ public class OpportunityService {
     private final OpportunityRepository opportunityRepository;
     private final OpportunityAttachmentRepository attachmentRepository;
     private final AttachmentAutoDownloadService attachmentAutoDownloadService;
+    private final com.biddingagency.domain.notice.repository.NoticeRepository noticeRepository;
 
     /**
      * Find opportunity by ID
@@ -56,19 +57,29 @@ public class OpportunityService {
     }
 
     /**
-     * Find all active opportunities
+     * CR-042: 같은 content_hash가 살아있는 공고에 이미 있는지(중복 재게시 차단).
+     */
+    public boolean existsLiveByContentHash(String contentHash) {
+        return opportunityRepository.existsByContentHashAndDeletedAtIsNull(contentHash);
+    }
+
+    /**
+     * Find all active opportunities.
+     * CR-042: 소프트 삭제분 제외.
      */
     public Page<Opportunity> findAllActive(Pageable pageable) {
-        return opportunityRepository.findByActiveTrueOrderByPostedDateDescCreatedAtDesc(pageable);
+        return opportunityRepository.findByActiveTrueAndDeletedAtIsNullOrderByPostedDateDescCreatedAtDesc(pageable);
     }
 
     /**
      * CR-118: 관리자 목록 검색/필터. 파라미터 모두 nullable(빈 문자열은 null 취급) → 미지정 시 전체.
+     * hasNotice: 공고문 생성여부(TRUE=생성됨, FALSE=미생성, null=전체).
      */
-    public Page<Opportunity> searchAdminFiltered(String keyword, String type, Boolean hasAttachment, Pageable pageable) {
+    public Page<Opportunity> searchAdminFiltered(String keyword, String type, Boolean hasAttachment,
+                                                 Boolean hasNotice, Pageable pageable) {
         String kw = (keyword != null && !keyword.isBlank()) ? keyword.trim() : null;
         String tp = (type != null && !type.isBlank()) ? type.trim() : null;
-        return opportunityRepository.searchAdminFiltered(kw, tp, hasAttachment, pageable);
+        return opportunityRepository.searchAdminFiltered(kw, tp, hasAttachment, hasNotice, pageable);
     }
 
     /**
@@ -230,8 +241,9 @@ public class OpportunityService {
     /**
      * CR-009: 수집 시 upsert 결과 분류.
      * NEW=신규 생성, CHANGED=기존이지만 contentHash 변경, UNCHANGED=변동 없음.
+     * CR-042: DUPLICATE=신규 noticeId지만 동일 content_hash 재게시라 INSERT 생략.
      */
-    public enum UpsertResult { NEW, CHANGED, UNCHANGED }
+    public enum UpsertResult { NEW, CHANGED, UNCHANGED, DUPLICATE }
 
     public record UpsertOutcome(Opportunity opportunity, UpsertResult result) {
     }
@@ -244,6 +256,40 @@ public class OpportunityService {
         Opportunity opportunity = findById(id);
         opportunity.markAsInactive();
         log.info("Opportunity marked as inactive: {}", opportunity.getNoticeId());
+    }
+
+    /**
+     * CR-042: 원본 공고 소프트 삭제(목록·검색·고객 노출에서 제외, hard delete 아님 — 원본 보존).
+     * 가드: 연결된 공고문(Notice)이 노출 중(VISIBLE)이거나 분석 중(ANALYZING)이면 거부
+     *      — 고객이 보는 건·진행 중인 건의 원본을 실수로 숨기지 않도록(CR-040 deleteNotice 패턴 차용).
+     *
+     * @throws IllegalStateException 연결 공고문이 노출 중/분석 중인 경우 (Controller가 409로 매핑)
+     */
+    @Transactional
+    public void softDelete(UUID id) {
+        Opportunity opportunity = findById(id);
+        boolean hasVisible = noticeRepository.findByOpportunityId(id).stream()
+                .anyMatch(com.biddingagency.domain.notice.entity.Notice::isVisible);
+        if (hasVisible) {
+            throw new IllegalStateException("노출 중인 공고문이 연결돼 있어 삭제할 수 없습니다. 먼저 공고문을 비노출 처리하세요.");
+        }
+        boolean hasAnalyzing = noticeRepository.findByOpportunityId(id).stream()
+                .anyMatch(com.biddingagency.domain.notice.entity.Notice::isAnalyzing);
+        if (hasAnalyzing) {
+            throw new IllegalStateException("분석 중인 공고문이 연결돼 있어 삭제할 수 없습니다. 먼저 강제 중단하세요.");
+        }
+        opportunity.softDelete();
+        log.info("[CR-042] 원본 공고 소프트 삭제: id={}, noticeId={}", id, opportunity.getNoticeId());
+    }
+
+    /** CR-043: PIEE 링크 오류 표식 토글. 관리자가 수동으로 설정/해제. */
+    @Transactional
+    public boolean setPieeLinkBroken(UUID id, boolean broken) {
+        Opportunity opportunity = findById(id);
+        opportunity.setPieeLinkBroken(broken);
+        log.info("[CR-043] PIEE 링크 오류 표식 변경: id={}, noticeId={}, broken={}",
+                id, opportunity.getNoticeId(), broken);
+        return broken;
     }
 
 }

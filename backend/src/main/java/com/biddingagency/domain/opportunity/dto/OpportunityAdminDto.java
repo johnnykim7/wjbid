@@ -72,6 +72,9 @@ public class OpportunityAdminDto {
     /** NAICS top-level 한글 라벨. null = 미매핑 */
     private String naicsLabelKo;
 
+    /** CR-043: PIEE 입찰서류 링크 오류 표식. true = 관리자가 'PIEE 링크 오류'로 표시(목록 뱃지·상세 경고) */
+    private Boolean pieeLinkBroken;
+
     @SuppressWarnings("unchecked")
     public static OpportunityAdminDto from(Opportunity opp, long attachmentCount,
                                            long manualFetchRequiredCount, int noticeCount) {
@@ -128,6 +131,7 @@ public class OpportunityAdminDto {
                 .placeOfPerformanceShort(opp.getPlaceOfPerformanceShort())
                 .setAsideKo(opp.getSetAsideKo())
                 .naicsLabelKo(opp.getNaicsLabelKo())
+                .pieeLinkBroken(opp.isPieeLinkBroken())
                 .build();
     }
 
@@ -153,6 +157,7 @@ public class OpportunityAdminDto {
                 .manualFetchRequiredCount(manualFetchRequiredCount)
                 .noticeCount(noticeCount)
                 .translatedAt(opp.getTranslatedAt())
+                .pieeLinkBroken(opp.isPieeLinkBroken())
                 .build();
     }
 }
