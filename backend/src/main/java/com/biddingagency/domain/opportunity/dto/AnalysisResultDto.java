@@ -52,7 +52,10 @@ public record AnalysisResultDto(
             String evaluationCriteria,
             List<KeyDateDto> keyDates,
             String budgetInfo,
-            List<String> specialNotes
+            List<String> specialNotes,
+            String contractPeriod,                  // CR-119: 4.계약 기간 (FE 4번 섹션 — DB엔 있으나 DTO 누락이라 화면에서 빈칸이던 것 보정)
+            String siteVisit,                        // CR-119: 5.현장 설명회
+            List<Map<String, Object>> contactInfo    // CR-119: 9.담당자(POC) — [{name,role,email,phone,organization}]
     ) {
         @SuppressWarnings("unchecked")
         public static SummaryDto from(Map<String, Object> map) {
@@ -70,6 +73,14 @@ public record AnalysisResultDto(
             if (rawNotes instanceof List<?> list) {
                 notes = list.stream().map(Object::toString).toList();
             }
+            List<Map<String, Object>> contacts = null;
+            Object rawContacts = map.get("contactInfo");
+            if (rawContacts instanceof List<?> list) {
+                contacts = list.stream()
+                        .filter(e -> e instanceof Map)
+                        .map(e -> (Map<String, Object>) e)
+                        .toList();
+            }
             return new SummaryDto(
                     str(map, "overview"),
                     str(map, "scope"),
@@ -77,7 +88,10 @@ public record AnalysisResultDto(
                     str(map, "evaluationCriteria"),
                     dates,
                     str(map, "budgetInfo"),
-                    notes
+                    notes,
+                    str(map, "contractPeriod"),
+                    str(map, "siteVisit"),
+                    contacts
             );
         }
     }
