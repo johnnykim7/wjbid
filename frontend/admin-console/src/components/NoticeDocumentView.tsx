@@ -148,79 +148,85 @@ export default function NoticeDocumentView({
         }}
       />
 
-      {/* CR-117: 옛 NOTICE_VIEW 10섹션 골격 복원 — 고정 번호 1~10, 데이터 없어도 골격 유지("해당 없음") */}
+      {/* CR-119: 최초 요구사항 10항목 순서로 섹션 재배치 + 제출서류는 11번 별도. 데이터 없어도 골격 유지("해당 없음") */}
 
-      {/* 1. 공고 기본 정보 */}
-      <Heading level={2} content={[{ type: 'text', text: '1. 공고 기본 정보' }]} />
+      {/* 1. 입찰 번호 (공고 기본 정보) */}
+      <Heading level={2} content={[{ type: 'text', text: '1. 입찰 번호' }]} />
       {basicRows.length > 0 ? <KvTable rows={basicRows} /> : <EmptySection />}
 
-      {/* 2. 개요 */}
-      <Heading level={2} content={[{ type: 'text', text: '2. 개요' }]} />
-      {summary?.overview ? (
-        <Paragraph content={[{ type: 'text', text: str(summary.overview) }]} />
+      {/* 2. 내용 (개요 + 작업 범위 통합) */}
+      <Heading level={2} content={[{ type: 'text', text: '2. 내용' }]} />
+      {summary?.overview || summary?.scope ? (
+        <>
+          {summary?.overview && (
+            <Paragraph content={[{ type: 'text', text: str(summary.overview) }]} />
+          )}
+          {summary?.scope && (
+            <Paragraph content={[{ type: 'text', text: str(summary.scope) }]} />
+          )}
+        </>
       ) : (
         <EmptySection />
       )}
 
-      {/* 3. 작업 범위 */}
-      <Heading level={2} content={[{ type: 'text', text: '3. 작업 범위' }]} />
-      {summary?.scope ? (
-        <Paragraph content={[{ type: 'text', text: str(summary.scope) }]} />
-      ) : (
-        <EmptySection />
-      )}
-
-      {/* 4. 계약 기간 */}
-      <Heading level={2} content={[{ type: 'text', text: '4. 계약 기간' }]} />
+      {/* 3. 계약 기간 */}
+      <Heading level={2} content={[{ type: 'text', text: '3. 계약 기간' }]} />
       {summary?.contractPeriod ? (
         <Paragraph content={[{ type: 'text', text: str(summary.contractPeriod) }]} />
       ) : (
         <EmptySection />
       )}
 
-      {/* 5. 현장 설명회 */}
-      <Heading level={2} content={[{ type: 'text', text: '5. 현장 설명회' }]} />
+      {/* 4. 현장 설명회 */}
+      <Heading level={2} content={[{ type: 'text', text: '4. 현장 설명회' }]} />
       {summary?.siteVisit ? (
         <Paragraph content={[{ type: 'text', text: str(summary.siteVisit) }]} />
       ) : (
         <EmptySection />
       )}
 
-      {/* 6. 참여 자격요건 (CR-033 정밀추출) */}
-      <Heading level={2} content={[{ type: 'text', text: '6. 참여 자격요건' }]} />
+      {/* 5. 담당자 (POC) */}
+      <Heading level={2} content={[{ type: 'text', text: '5. 담당자 (POC)' }]} />
+      {contactRows.length > 0 ? <KvTable rows={contactRows} /> : <EmptySection />}
+
+      {/* 6. 자격 요건 (CR-033 정밀추출) */}
+      <Heading level={2} content={[{ type: 'text', text: '6. 자격 요건' }]} />
       {hasElig ? <EligibilityBlock items={eligibility!} /> : <EmptySection />}
 
-      {/* 7. 제출 서류 */}
-      <Heading level={2} content={[{ type: 'text', text: '7. 제출 서류' }]} />
-      {docRows.length > 0 ? (
-        <DataTable headers={docHeaders} rows={docRows} />
-      ) : (
-        <EmptySection />
-      )}
-
-      {/* 8. 낙찰 기준 */}
-      <Heading level={2} content={[{ type: 'text', text: '8. 낙찰 기준' }]} />
+      {/* 7. 낙찰 기준 */}
+      <Heading level={2} content={[{ type: 'text', text: '7. 낙찰 기준' }]} />
       {summary?.evaluationCriteria ? (
         <Paragraph content={[{ type: 'text', text: str(summary.evaluationCriteria) }]} />
       ) : (
         <EmptySection />
       )}
 
-      {/* 9. 담당자 (POC) */}
-      <Heading level={2} content={[{ type: 'text', text: '9. 담당자 (POC)' }]} />
-      {contactRows.length > 0 ? <KvTable rows={contactRows} /> : <EmptySection />}
+      {/* 8. 참고 사항 (현재 전용 데이터 없음 — 골격 유지) */}
+      <Heading level={2} content={[{ type: 'text', text: '8. 참고 사항' }]} />
+      <EmptySection />
 
-      {/* 10. 주요 일정 (옛 타임라인 + 특이사항 흡수) */}
-      <Heading level={2} content={[{ type: 'text', text: '10. 주요 일정' }]} />
+      {/* 9. 특별 유의 사항 (specialNotes) */}
+      <Heading level={2} content={[{ type: 'text', text: '9. 특별 유의 사항' }]} />
+      {hasSpecialNotes ? (
+        <CalloutList items={summary!.specialNotes!} tone="warning" />
+      ) : (
+        <EmptySection />
+      )}
+
+      {/* 10. 타임라인 */}
+      <Heading level={2} content={[{ type: 'text', text: '10. 타임라인' }]} />
       {timelineRows.length > 0 ? (
         <DataTable headers={['구분', '일정']} rows={timelineRows} />
       ) : (
-        !hasSpecialNotes && <EmptySection />
+        <EmptySection />
       )}
-      {hasSpecialNotes && (
-        <div className="mt-3">
-          <CalloutList items={summary!.specialNotes!} tone="warning" />
-        </div>
+
+      {/* 11. 제출 서류 (요구사항 10항목 밖 부가 정보 — 별도 섹션) */}
+      <Heading level={2} content={[{ type: 'text', text: '11. 제출 서류' }]} />
+      {docRows.length > 0 ? (
+        <DataTable headers={docHeaders} rows={docRows} />
+      ) : (
+        <EmptySection />
       )}
     </article>
   )
