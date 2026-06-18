@@ -664,7 +664,14 @@
   3. **FE(admin)**: ANALYZING 동안 4초 폴링 → 스피너 1줄을 **6단계 체크리스트**(완료 ✓/진행 ⟳/대기 ○/실패 ✗)+현재 단계명 헤더로 교체. 폴링 중 상태가 ANALYZING이 아니게 되면 폴링 중단 + `fetchData()` 자동 호출 → **새로고침 버그 해결**(완료 시 본문 자동 노출).
 - **Aimbase 합의(별도 작업)**: run 단건 조회(`/{id}/runs/{runId}`, `/runs/{runId}`) 응답에 `currentStepName`(WF 정의 step.name lookup) + `steps[]`(`{id,name,status}`) 추가. WorkflowController에 `WorkflowRunDetail` record 추가, 빌더가 run+WF정의로 status 도출. 소비앱은 이 필드를 그대로 역직렬화 → 미반영 기간엔 BE fallback 합성으로 동작.
 - **규모**: 중규모(신규 조회 API 1개 + FE 폴링 + WF name 정리). 데이터 모델·이벤트·FSM 무변경. 캐스케이드 = 본 CR 이력 + workflows JSON 동기화 + (필요 시 T3 API/화면 갱신).
-- **상태**: **구현 완료(2026-06-18)** — WF name 운영 PUT 완료(허용 8필드만 전송, connection_id 무손실 검증). BE compileJava 통과 + FE admin tsc 통과. **남음**: ①빌드/재기동·운영 배포(별도 승인) ②Aimbase API 완성 후 실제 응답 필드명 맞춤 + 폴링 E2E 검증 ③(선택) T3 캐스케이드.
+  4. **BE(runId 저장 — 진행조회 전제)**: `markAnalyzing(null)` + 동기 폴링 구조라 ANALYZING 중 `workflow_run_id`가 NULL → progress가 run 조회를 못 해 단계가 안 떴음. `analyzeOpportunity(input, onRunStarted)` 오버로드로 run POST 성공(runId 확보) 직후 콜백 → `NoticeService.saveWorkflowRunId`(REQUIRES_NEW 즉시 커밋) + `Notice.attachWorkflowRunId`(상태·시작시각 불변).
+- **상태**: **구현·운영배포·검증 완료(2026-06-18)**. 진행 경과:
+  1. WF name 운영 PUT(허용 8필드만 — `projectId/graphMode/active` 섞이면 400, 제거 후 200. connection_id 무손실 검증).
+  2. Aimbase API 배포 확인 — 단건 조회에 `currentStepName`+`steps[]` 정상, 소비앱 필드명과 일치(코드 수정 불필요).
+  3. **함정①(FE/BE 배포 비대칭)**: 첫 `./deploy.sh be`가 운영 jar(6/14자)를 실제 갱신 못한 채 FE만 배포돼, 새 FE의 `/progress`를 구 BE가 401 거부 → 인터셉터 로그아웃. BE 재배포로 해소. **교훈**: 배포 후 jar 시각·컨테이너 기동시각 실측 필수.
+  4. **함정②(runId NULL → 단계 안 뜸)**: 위 경과 4의 수정. 운영 검증 완료(W91QVN26QA022, 08:09 시작 → runId e1926069 저장 로그·DB 확인).
+  5. **부수 해결**: 분석 완료 후 ANALYZING 스피너에 멈춰 새로고침해야 했던 문제 — FE 폴링이 종료 감지 시 `fetchData()` 자동 호출로 해소.
+- **남음**: (선택) T3 캐스케이드 — WF 내부 재구성+조회 API라 기능요구사항/화면 본질 불변, 우선순위 낮음.
 
 ---
 
@@ -713,3 +720,22 @@
   5. **FE [OpportunityAdminPage.tsx](../frontend/admin-console/src/pages/OpportunityAdminPage.tsx)** — 검색바: 키워드 입력(엔터·버튼 확정), 공고유형 셀렉트(동적), 첨부유무 셀렉트(전체/있음/없음), 초기화 버튼. 필터·키워드 확정 시 첫 페이지로 리셋.
 - **규모**: 중규모(조회 API 파라미터 확장 + 신규 types API + FE 검색바). 데이터 모델·이벤트·FSM·마이그레이션 무변경. 사용자 승인 후 설계 캐스케이드 생략, 본 CR 이력으로 갈음.
 - **상태**: **구현·운영 배포 완료(2026-06-18)** — `./deploy.sh all`(BE 재기동 health 200, /types 라우팅 401=정상 + FE 2종). BE compileJava·FE admin tsc 통과.
+
+---
+
+### CR-119: 공고분석 — 계약기간(contractPeriod) 빈칸 보정 (키 생략 차단 + PWS 원문 추출 원칙) (2026-06-18)
+
+- **배경(사용자 지적)**: CR-117에서 4번 "계약 기간" 섹션(contractPeriod) 골격을 복원했는데, 실제 분석본(W91QVN26QA022 — Purchase NTVs for DLA)에서 계약기간이 빈칸으로 표시됨. 사용자 "계약기간이 누락된 것 같다".
+- **실측 진단(소스+운영DB+Aimbase WF 직접 확인)**:
+  - WF·FE·BE 모두 contractPeriod **구조는 정상**. 운영 `opportunity-analysis` WF verify `response_schema.summary`에 contractPeriod 정의됨(CR-117 v8 PUT 반영, updatedAt 06-17). FE [NoticeDocumentView.tsx:175](../frontend/admin-console/src/components/NoticeDocumentView.tsx#L175) 4번 섹션이 `summary.contractPeriod` 렌더. BE는 summaryJson Map 통째 저장(검증은 overview만 필수).
+  - **진범 = verify step structured_output이 contractPeriod/siteVisit 키 자체를 생략**. 해당 run summaryJson 키 8개뿐(2개 누락). `summary.required:['overview']`라 누락돼도 스키마 통과 → FE None → 빈칸.
+  - 이 공고 원문 사실: 별도 period of performance 없음(물품구매). 실질 기간=납품 후 90일(`No Later Than 90 calendar days after receipt of purchase order`, p46)이나 이는 keyDates에 존재. 모델이 contractPeriod를 비운 판단 자체는 원문과 일치.
+- **결정(사용자 합의)**:
+  - **계약기간은 PWS/원문에 있는 그대로** — 납품기한 등 다른 항목에서 끌어와 변환·매핑하지 않는다(사용자 "계약기간은 그냥 PWS 있는 그대로"). 원문에 PoP 문구 없으면 빈 문자열, 단 **키는 반드시 출력**.
+  - "전체 1년씩 표기"(용역 가정)는 적용 안 함 — 사용자가 무시 지시.
+  - required 강제 범위 = **summary 10개 전체**(어떤 공고든 10섹션 골격이 항상 동일하게 채워지도록 근본 고정).
+- **변경 사항(운영 Aimbase WF만, BE/FE 코드 무변경)**:
+  1. **WF 정의([opportunity-analysis.steps.v2.json](workflows/opportunity-analysis.steps.v2.json))** — verify `response_schema.summary.required`: `[overview]` → **10개 전체**(키 생략 원천 차단). extract_facts·verify 프롬프트에 "★계약기간 추출 원칙★: PWS/원문 문구 그대로 추출, 변환·추측 금지, 없으면 빈 문자열이되 키 생략 금지" 추가. _meta version v9. **운영 PUT 완료**(HTTP 200, updatedAt 06-18 05:25). domain·connection_id(cli-runner-bidding-001) 무손실 검증.
+- **함정 교훈(CR-112 갱신)**: WF PUT 400의 실제 원인 규명. `/api/v1/workflows`는 `WorkflowController`(DTO 8필드: id/name/**domain**/triggerConfig/steps/errorHandling/outputSchema/inputSchema)이지 PlatformWorkflowController(category/description)가 아님. **GET 응답을 그대로 PUT하면 GET 전용 추가필드(_meta/projectId/graphMode/active/category/description/updatedAt)가 unknown property로 400**. DTO 8필드만 추려 보내야 통과.
+- **규모**: 소~중(WF 프롬프트·스키마 보정, CR-117 후속 버그보정). BE/FE/데이터모델/마이그레이션 무변경. 설계 캐스케이드 생략, 본 CR 이력 + workflows JSON으로 갈음.
+- **상태**: **WF 수정·검증 완료(2026-06-18)**. 사용자 결정으로 이 공고 재분석(E2E)은 **보류** — 다음 분석되는 공고부터 자동 적용. 기존 분석본 contractPeriod는 재분석 시 채워짐(원문에 PoP 있으면 값, 없으면 빈 문자열+키 유지).
