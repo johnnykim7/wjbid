@@ -312,19 +312,22 @@ function Paragraph({ tone, content }: { tone?: string; content: Node[] }) {
   return <p className={`${cls} whitespace-pre-line`}>{text}</p>
 }
 
-// CR-119: LLM 요약이 줄바꿈 없이 (1)/(2)·Phase One:/Phase Two:·일시:/장소: 등을
+// CR-119: LLM 요약이 줄바꿈 없이 (1)/(2)·Phase One:/Phase Two:·일시:/장소:·" | " 등을
 // 한 줄로 이어 출력하는 경우, 열거·라벨 패턴 앞에 줄바꿈을 삽입해 가독성 복원.
 // 보수적 패턴만(정상 문장 오분할 방지): 문장 중간의 "(숫자)", "Phase/단계 + 서수:",
-// 한글 라벨("일시:/장소:/POC:/필수 여부:") 앞.
+// 한글 라벨("일시:/장소:/POC:/필수 여부:") 앞, 양쪽에 공백이 있는 파이프 구분자.
 function splitEnumerations(s: string): string {
   if (!s) return s
   return s
+    // "항목 A | 항목 B" / "항목 A / 항목 B"처럼 LLM이 구분자로 이어 쓴 열거 → 항목별 줄바꿈.
+    // 양쪽 공백이 있는 "|" "/" 만 처리해 식별자·URL(a/b, http://)·날짜(7/1)는 보존한다.
+    .replace(/[ \t]+[|/][ \t]+/g, '\n')
     // " (1) " / " (2) " 처럼 앞에 공백이 있는 괄호 숫자 열거 → 줄바꿈
     .replace(/\s+(\(\d+\))/g, '\n$1')
     // "Phase One:" "Phase Two:" 등 (앞에 공백) → 줄바꿈
     .replace(/\s+(Phase\s+(?:One|Two|Three|Four|1|2|3|4)\b)/gi, '\n$1')
-    // 한글 라벨 열거(현장설명회 등): "장소:" "POC:" "필수 여부:" 앞 공백 → 줄바꿈
-    .replace(/\s+(장소:|POC:|일시:|필수\s*여부:|연락처:)/g, '\n$1')
+    // 한글 라벨 열거(현장설명회·제출서류 비고 등): 라벨 앞 공백 → 줄바꿈
+    .replace(/\s+(장소:|POC:|일시:|비고:|형식:|필수\s*여부:|연락처:)/g, '\n$1')
     .replace(/^\n+/, '')
     .trim()
 }
@@ -339,7 +342,7 @@ function KvTable({ rows }: { rows: { label: string; value: string }[] }) {
             <th className="w-1/3 bg-slate-50 px-3 py-2 text-left font-semibold text-slate-700 align-top">
               {r.label}
             </th>
-            <td className="px-3 py-2 text-slate-700">{r.value}</td>
+            <td className="px-3 py-2 text-slate-700 whitespace-pre-line">{splitEnumerations(r.value)}</td>
           </tr>
         ))}
       </tbody>
@@ -373,8 +376,8 @@ function DataTable({
           {rows.map((row, i) => (
             <tr key={i} className={`border-b ${SECTION_BORDER} last:border-0 ${i % 2 === 1 ? 'bg-slate-50' : ''}`}>
               {row.map((cell, j) => (
-                <td key={j} className="px-3 py-2 text-slate-700 align-top">
-                  {cell}
+                <td key={j} className="px-3 py-2 text-slate-700 align-top whitespace-pre-line">
+                  {splitEnumerations(cell)}
                 </td>
               ))}
             </tr>
@@ -444,4 +447,3 @@ function fmtDateKo(v?: string | null): string {
   }
   return `${Number(m[1])}년 ${Number(m[2])}월 ${Number(m[3])}일`
 }
-
