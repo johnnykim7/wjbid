@@ -45,13 +45,42 @@ export default function NoticeDocumentView({ contentJson }: Props) {
     return <div className="text-sm text-red-600">올바르지 않은 본문 형식입니다.</div>
   }
 
+  // CR-044: 고객 화면은 "필요 서류 체크리스트"(별도 액션 영역)로 서류를 안내하므로
+  // 본문 내 "제출 서류" 섹션(heading + 직후 dataTable)을 제거해 중복을 없앤다.
+  // 관리자 콘솔(동명 컴포넌트)·저장된 contentJson 원본은 무영향.
+  const visibleContent = stripSubmissionDocsSection(doc.content)
+
   return (
     <article className="bg-white">
-      {doc.content.map((node, i) => (
+      {visibleContent.map((node, i) => (
         <NodeRenderer key={i} node={node} />
       ))}
     </article>
   )
+}
+
+// CR-044: "제출 서류" heading과 그 직후의 dataTable을 본문 노드 목록에서 제외
+function stripSubmissionDocsSection(nodes: Node[]): Node[] {
+  const result: Node[] = []
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i]
+    if (node.type === 'heading' && isSubmissionDocsHeading(node)) {
+      // 직후 노드가 dataTable이면 그 표까지 함께 건너뛴다
+      if (nodes[i + 1]?.type === 'dataTable') i++
+      continue
+    }
+    result.push(node)
+  }
+  return result
+}
+
+function isSubmissionDocsHeading(node: Node): boolean {
+  const text = (node.content || [])
+    .filter((c) => c.type === 'text')
+    .map((c) => String(c.text || ''))
+    .join('')
+  // "11. 제출 서류" 등 번호 prefix 변동에 대응 — "제출 서류" 포함 여부로 판정
+  return text.includes('제출 서류')
 }
 
 function NodeRenderer({ node }: { node: Node }): ReactNode {

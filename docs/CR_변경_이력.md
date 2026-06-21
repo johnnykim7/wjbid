@@ -744,3 +744,33 @@
 - **후속(3-1차 — ` | ` 구분 열거 줄바꿈)**: 계약기간·현장설명회 분석값이 `Base Period: ... | 1st Option Year: ...`, `필수여부: ... | 신청방법: ... | 출처: ...` 형태로 저장되는 사례는 기존 `splitEnumerations()` 패턴에 해당하지 않아 여전히 한 줄로 표시됨. [NoticeDocumentView.tsx](../frontend/admin-console/src/components/NoticeDocumentView.tsx)의 분할 규칙에 **양쪽 공백이 있는 파이프(` | `)**를 줄바꿈으로 변환하는 처리를 추가. 코드·식별자 내부의 공백 없는 `|`는 건드리지 않으며, 기존 분석본도 재분석 없이 즉시 적용. **운영 FE 배포 완료(2026-06-19)** — 관리자 번들 `index-KW6Bb24w.js`, 서버 배치 파일과 로컬 빌드 SHA-256 일치, 서버 내부 nginx/BE health HTTP 200 확인.
 - **후속(4차 — 최초 요구사항 10항목 순서 정렬)**: 사용자가 최초 요구사항(1.입찰번호 2.내용 3.계약기간 4.현장설명회 5.담당자 6.자격요건 7.낙찰기준 8.참고사항 9.특별유의사항 10.타임라인) 재확인. 기존 CR-117 골격은 순서·제목이 어긋나 있었음(개요/작업범위 분리, 담당자 9번, 낙찰 8번, 제출서류 7번 끼어듦, 참고사항 누락). **FE만 재배치**(데이터 소스 그대로): 2.내용=overview+scope 통합, 5.담당자(POC)↑, 7.낙찰기준, 8.참고사항=골격만(전용 데이터 없음, 향후 WF notes 추가 시), 9.특별유의사항=specialNotes(옛 10번에 흡수돼있던 것 분리), 10.타임라인, **11.제출서류=요구사항 밖 부가정보로 별도 섹션**(데이터 보존, 사용자 합의). tsc 통과 → `./deploy.sh fe`(번들 index-DRpGeUkj.js·"11.제출 서류" 서버 반영 확인). **미착수**: 3번 "1년씩 표기"(사용자 무시 지시), 6번 "국내 인허가 명칭 포함"(WF/LLM 수정 필요, 별도).
 - **후속(5차 — `/` 구분자 + 테이블 셀 줄바꿈 + LLM 근본 지시)**: 사용자 지적 — 현장설명회(`일시: ... / 장소: ... / 비고: ...`)와 제출서류 테이블 **비고 컬럼**(`... / Attachment #4로 제공됨.`, `(1)...(2)...(3)`)이 여전히 한 줄. 실측 2건 진단: ① `splitEnumerations()`가 ` | `만 처리하고 ` / ` 미처리 + `비고:`/`형식:` 라벨 누락. ② **`DataTable`/`KvTable` 셀은 `splitEnumerations`도 `whitespace-pre-line`도 안 거침**(`Paragraph`만 변환) → 테이블 비고는 LLM이 `\n`을 넣어줘도 화면에서 뭉개짐. 사용자 결정(질문)=**LLM 지시 + FE 안전망 둘 다**. **변경**: (FE) [NoticeDocumentView.tsx](../frontend/admin-console/src/components/NoticeDocumentView.tsx) — `splitEnumerations` 구분자 `[|/]`(양쪽 공백 슬래시 추가, URL `a/b`·날짜 `7/1`은 공백 없어 보존)·`비고:`/`형식:` 라벨 추가 + `DataTable`/`KvTable` 셀에 `splitEnumerations`+`whitespace-pre-line` 적용. (LLM) 운영 `opportunity-analysis` WF `extract_facts` 프롬프트에 ★줄바꿈 규칙★ 추가 — string 필드에 여러 정보 담을 때 `/`·`|`·` - ` 대신 실제 `\n`으로 분리(예: siteVisit 일시/장소/비고). _meta v10. **운영 PUT 완료**(HTTP 200, 8필드 DTO `id/name/domain/triggerConfig/steps/errorHandling/outputSchema/inputSchema`, connection_id=cli-runner-bidding-001·6 STEP 무손실 검증). tsc 통과 → `./deploy.sh fe`(admin 번들 index-CUq9hB2r.js 서버 반영). FE 안전망=기존 DB 공고 즉시 적용, LLM 지시=신규 공고 근본 해결.
+
+### CR-120: 테스트용 수동 공고 등록 (SAM 수집 없이 PWS 기반 제안서 시뮬레이션) (2026-06-21)
+
+- **배경(사용자 요청)**: 손에 있는 과거 자료(PIEE에서 다운받은 SAM 공고 첨부 PWS + 실제 고객이 그때 제출했던 각종 서류)로 "공고문 분석 → 제안서 생성" 파이프라인을 끝까지 시뮬레이션하고 싶다. SAM API 메타(공고번호 등)는 없을 수 있어 PWS 기반 또는 수동 입력.
+- **실측 진단(소스 직접 확인)**: 첨부 업로드([OpportunityAdminController.java:123](../backend/src/main/java/com/biddingagency/controller/admin/OpportunityAdminController.java#L123))·공고문 분석이 첨부를 입력으로 사용([NoticeService.java:284](../backend/src/main/java/com/biddingagency/domain/notice/service/NoticeService.java#L284), SAM rawJson 미사용)·고객서류 업로드([ClientDocumentController.java](../backend/src/main/java/com/biddingagency/controller/ClientDocumentController.java))·제안서 생성이 고객서류를 입력으로 사용([AIWorkflowService.java:426](../backend/src/main/java/com/biddingagency/domain/bid/service/AIWorkflowService.java#L426)) — **이미 다 존재**. 유일한 갭 = **SAM 수집 없이 Opportunity 1건을 만드는 수동 생성 경로가 없음**(Opportunity는 OpportunityCollectorService 단일 INSERT 경로).
+- **결정(사용자 합의)**: ① 입력 형태=**관리자 화면 버튼+폼**(공고번호 자동 기본값 제공·제목 입력). ② 공고번호는 PWS 자동추출까지 안 가고 수동/자동기본값으로 충분(제안서 본문은 첨부 PWS에서 Aimbase가 읽음). ③ 절차=경량(본 CR 이력 + 바로 구현, T1/T3/spec 캐스케이드 생략 — 운영기능 아닌 테스트 전용).
+- **변경 사항**:
+  1. **BE 신규 API** `POST /admin/opportunities/manual` ([OpportunityAdminController.java](../backend/src/main/java/com/biddingagency/controller/admin/OpportunityAdminController.java)) — body `{noticeId?, title}`. noticeId 미입력 시 `TEST-{epochMillis}` 자동 생성. 중복 noticeId면 409.
+  2. **BE 서비스** `OpportunityService.createManual(noticeId, title)` — 필수 4필드(noticeId/title/firstSeenAt/lastModifiedAt)+active=true 채워 INSERT. rawJson에 `{"source":"MANUAL_TEST"}` 표식(운영 수집분과 구분).
+  3. **FE** admin-console 원본공고 리스트 상단 "테스트 공고 추가" 버튼+모달(공고번호 기본값·제목 입력) + services API 함수.
+- **이후 흐름**: 생성된 Opportunity에 기존 화면으로 PWS 첨부 업로드 → 공고문 만들기/한글화 → (노출) → 고객 신청 → 고객서류 업로드 → 제안서 생성. **전부 기존 화면·API 재사용**.
+- **규모**: 중(신규 API 1 + 신규 화면 1). 데이터모델/마이그레이션 무변경. 설계 캐스케이드는 사용자 합의로 경량 처리(본 CR 이력 갈음).
+- **상태**: 구현 진행.
+
+### CR-121: 고객 화면 — "제출 서류" 본문 중복 제거 (체크리스트 한 곳으로 통합) (2026-06-21)
+
+- **배경(사용자 지적)**: 고객이 보는 입찰 상세 화면에서 같은 서류 목록이 **두 번** 노출됨 — ① 공고문 본문(`NoticeDocumentView`) 안의 "11. 제출 서류" 표 + ② 하단 별도 "필요 서류 체크리스트". 고객 입장에서 중복·혼란. "고객은 자기가 제출해야 할 서류만 정확히 알면 된다."
+- **실측 진단(소스 직접 확인)**:
+  - 고객 [BidDetailPage.tsx:175](../frontend/customer-portal/src/pages/BidDetailPage.tsx#L175)가 `NoticeDocumentView`로 본문 contentJson 렌더 — 그 안에 `heading`("11. 제출 서류") + `dataTable` 노드가 박혀 표로 표시됨.
+  - 같은 페이지 [BidDetailPage.tsx:261-289](../frontend/customer-portal/src/pages/BidDetailPage.tsx#L261-L289)가 `requiredDocuments.documents[]`를 "필요 서류 체크리스트"(체크박스/필수배지/페이지제한 포함)로 별도 렌더.
+  - 두 곳이 같은 서류를 다른 데이터 소스로 보여주는 중복. 체크리스트가 정보가 더 풍부(고객이 "내가 올릴 것" 보기 좋음).
+  - 고객/관리자 `NoticeDocumentView`는 **별도 파일**(공유 컴포넌트 아님) — 고객 파일만 고치면 관리자 무영향.
+- **결정(사용자 합의)**:
+  - 고객 화면은 **하단 "필요 서류 체크리스트" 한 곳만** 유지. 본문 내 "11. 제출 서류" 표는 제거.
+  - FACTOR 정밀추출(`factors[]`)·충족주체·SOW 출처 등 **근거는 관리자 화면에만**. 고객은 평면 `documents[]` 체크리스트만.
+  - 관리자 콘솔은 현행 유지(11번 표 + FACTOR 정밀추출 + 근거).
+- **변경 사항(고객 FE 1파일만)**:
+  1. **FE** [NoticeDocumentView.tsx](../frontend/customer-portal/src/components/NoticeDocumentView.tsx) (customer-portal) — 렌더 단계에서 `stripSubmissionDocsSection()`으로 "제출 서류" heading(번호 prefix 변동 대응: "제출 서류" 포함 판정) + 그 직후 `dataTable`을 본문 노드 목록에서 제외. **저장된 contentJson 원본·관리자 화면 무영향**(렌더 시점 필터링).
+- **규모**: 소(고객 FE 1파일, 본문 섹션 1개 렌더 제외). 데이터모델/API/마이그레이션 무변경. 설계 캐스케이드는 사용자 합의로 경량 처리(본 CR 이력 갈음).
+- **상태**: 구현 완료. 빌드/배포 별도 승인 대기.
