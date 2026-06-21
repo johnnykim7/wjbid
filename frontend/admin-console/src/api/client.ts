@@ -223,6 +223,11 @@ export const deleteOpportunity = (id: string) =>
 export const setOpportunityPieeLinkBroken = (id: string, broken: boolean) =>
   api.patch(`/admin/opportunities/${id}/piee-link-broken`, { broken })
 
+// CR-120: 테스트용 수동 공고 등록. SAM 수집 없이 빈 원본 공고 1건 생성.
+// noticeId 미입력 시 서버가 TEST-{timestamp} 자동 생성, 중복이면 409.
+export const createManualOpportunity = (noticeId: string, title: string) =>
+  api.post('/admin/opportunities/manual', { noticeId, title })
+
 // 공고문(Notice) Admin (CR-016)
 export const getAdminNotices = (page = 0) =>
   api.get('/admin/notices', { params: { page, size: 20 } })

@@ -88,6 +88,28 @@ public class OpportunityAdminController {
         return ResponseEntity.ok(OpportunityAdminDto.from(opp, attachmentCount, manualFetchCount, noticeCount));
     }
 
+    @PostMapping("/manual")
+    @Operation(summary = "테스트용 수동 공고 등록 (CR-120)",
+            description = "SAM 수집 없이 빈 원본 공고 1건을 생성한다. 이후 첨부(PWS) 업로드 → 공고문 분석 → 제안서 생성 " +
+                    "파이프라인을 시뮬레이션하기 위한 테스트 전용. noticeId 미입력 시 TEST-{timestamp} 자동 생성, 중복이면 409.")
+    public ResponseEntity<Map<String, String>> createManual(@RequestBody Map<String, String> body) {
+        try {
+            Opportunity opp = opportunityService.createManual(
+                    body.get("noticeId"), body.get("title"));
+            log.info("[CR-120] 테스트용 수동 공고 등록: opportunityId={}, noticeId={}",
+                    opp.getId(), opp.getNoticeId());
+            return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED).body(Map.of(
+                    "status", "CREATED",
+                    "opportunityId", opp.getId().toString(),
+                    "noticeId", opp.getNoticeId()
+            ));
+        } catch (IllegalArgumentException e) {
+            log.warn("[CR-120] 수동 공고 등록 거부: reason={}", e.getMessage());
+            return ResponseEntity.status(org.springframework.http.HttpStatus.CONFLICT)
+                    .body(Map.of("status", "REJECTED", "reason", e.getMessage()));
+        }
+    }
+
     @PostMapping("/{id}/create-notice")
     @Operation(summary = "공고문 만들기 (게이트①)", description = "원본을 선별해 공고문 생성 + 한글화/요약 트리거")
     public ResponseEntity<Map<String, String>> createNotice(

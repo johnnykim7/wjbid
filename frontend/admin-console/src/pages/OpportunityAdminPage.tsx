@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getAdminOpportunities, getAdminOpportunityTypes, deleteOpportunity, translateOpportunityTitle } from '../api/client'
+import { getAdminOpportunities, getAdminOpportunityTypes, deleteOpportunity, translateOpportunityTitle, createManualOpportunity } from '../api/client'
 
 interface OpportunityAdmin {
   id: string
@@ -27,6 +27,12 @@ export default function OpportunityAdminPage() {
   const [loading, setLoading] = useState(true)
   const [batchTranslating, setBatchTranslating] = useState(false)
   const [batchProgress, setBatchProgress] = useState({ done: 0, total: 0 })
+
+  // CR-120: 테스트용 수동 공고 등록 모달
+  const [manualOpen, setManualOpen] = useState(false)
+  const [manualNoticeId, setManualNoticeId] = useState('')
+  const [manualTitle, setManualTitle] = useState('')
+  const [manualSaving, setManualSaving] = useState(false)
 
   // CR-118: 검색·필터
   const [keywordInput, setKeywordInput] = useState('')   // 입력 중(엔터/버튼으로 확정)
@@ -123,6 +129,36 @@ export default function OpportunityAdminPage() {
     fetchData()
   }
 
+  // CR-120: 테스트용 수동 공고 등록 모달 열기 — 공고번호 기본값(TEST-{timestamp}) 미리 채움.
+  const openManual = () => {
+    setManualNoticeId(`TEST-${Date.now()}`)
+    setManualTitle('')
+    setManualOpen(true)
+  }
+
+  // CR-120: 수동 공고 생성 후 상세로 이동(바로 첨부 업로드 가능).
+  const handleCreateManual = async () => {
+    if (!manualTitle.trim()) {
+      window.alert('제목을 입력해 주세요.')
+      return
+    }
+    setManualSaving(true)
+    try {
+      const { data } = await createManualOpportunity(manualNoticeId.trim(), manualTitle.trim())
+      setManualOpen(false)
+      navigate(`/opportunities/${data.opportunityId}`)
+    } catch (err: any) {
+      if (err?.response?.status === 409) {
+        window.alert(err.response.data?.reason || '이미 존재하는 공고번호입니다.')
+      } else {
+        window.alert('테스트 공고 생성에 실패했습니다.')
+        console.error('수동 공고 생성 실패:', err)
+      }
+    } finally {
+      setManualSaving(false)
+    }
+  }
+
   // CR-042: 원본 공고 소프트 삭제. 행 클릭(상세 이동)과 분리하기 위해 stopPropagation.
   const handleDelete = async (e: React.MouseEvent, opp: OpportunityAdmin) => {
     e.stopPropagation()
@@ -156,6 +192,14 @@ export default function OpportunityAdminPage() {
           <p className="text-sm text-gray-500 mt-1">SAM.gov 수집 원본. "공고문 만들기"로 선별 → 한글화</p>
         </div>
         <div className="flex items-center gap-2">
+          {/* CR-120: SAM 수집 없이 테스트용 공고 1건 수동 등록 (PWS 기반 제안서 시뮬레이션 진입점) */}
+          <button
+            onClick={openManual}
+            title="SAM 수집 없이 테스트용 공고를 만든다 (이후 PWS 첨부 업로드 → 분석 → 제안서 시뮬레이션)"
+            className="px-4 py-2 text-sm rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+          >
+            <i className="fa-solid fa-plus mr-1.5" />테스트 공고 추가
+          </button>
           {(() => {
             const untranslated = opportunities.filter((o) => !o.translatedAt).length
             return (
@@ -349,6 +393,67 @@ export default function OpportunityAdminPage() {
           </div>
         )}
       </div>
+
+      {/* CR-120: 테스트용 수동 공고 등록 모달 */}
+      {manualOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          onClick={() => !manualSaving && setManualOpen(false)}
+        >
+          <div
+            className="bg-white rounded-xl w-full max-w-md p-6 space-y-4 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div>
+              <h2 className="text-lg font-bold text-gray-900">테스트 공고 추가</h2>
+              <p className="text-xs text-gray-500 mt-1">
+                SAM 수집 없이 빈 공고를 만듭니다. 생성 후 상세 화면에서 PWS 첨부를 올려 분석·제안서 생성을 시뮬레이션하세요.
+              </p>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">공고번호</label>
+                <input
+                  value={manualNoticeId}
+                  onChange={(e) => setManualNoticeId(e.target.value)}
+                  placeholder="비워두면 자동 생성"
+                  className="w-full px-3 py-2 text-sm font-mono rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-secondary/40"
+                />
+                <p className="text-[11px] text-gray-400 mt-1">기본값(TEST-…)을 그대로 써도 됩니다. 중복이면 거부됩니다.</p>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">제목 <span className="text-red-500">*</span></label>
+                <input
+                  value={manualTitle}
+                  onChange={(e) => setManualTitle(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleCreateManual() }}
+                  placeholder="예: 411th CSB — NTV 구매 (테스트)"
+                  className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-secondary/40"
+                  autoFocus
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                onClick={() => setManualOpen(false)}
+                disabled={manualSaving}
+                className="px-4 py-2 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleCreateManual}
+                disabled={manualSaving || !manualTitle.trim()}
+                className="px-4 py-2 text-sm rounded-lg bg-secondary text-white hover:bg-blue-600 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {manualSaving ? (
+                  <><i className="fa-solid fa-spinner fa-spin mr-1.5" />생성 중…</>
+                ) : '생성하고 상세로 이동'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

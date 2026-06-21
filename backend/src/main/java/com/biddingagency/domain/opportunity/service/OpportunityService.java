@@ -137,6 +137,42 @@ public class OpportunityService {
     }
 
     /**
+     * CR-120: 테스트용 수동 공고 등록. SAM 수집 없이 빈 Opportunity 1건을 생성한다.
+     * <p>이후 기존 화면으로 PWS 첨부 업로드 → 공고문 분석 → 제안서 생성 파이프라인을 시뮬레이션한다.
+     * 필수 필드(noticeId/title/firstSeenAt/lastModifiedAt/active)만 채우고, 본문·메타는 첨부에서 읽으므로 비워둔다.
+     * rawJson에 {"source":"MANUAL_TEST"} 표식을 남겨 운영 수집분과 구분한다.
+     *
+     * @param noticeId 공고번호. null/blank면 TEST-{epochMillis}로 자동 생성.
+     * @param title    공고 제목(필수).
+     * @return 생성된 Opportunity
+     * @throws IllegalArgumentException title 누락 또는 noticeId 중복 시
+     */
+    @Transactional
+    public Opportunity createManual(String noticeId, String title) {
+        if (title == null || title.isBlank()) {
+            throw new IllegalArgumentException("title은 필수입니다.");
+        }
+        String resolvedNoticeId = (noticeId == null || noticeId.isBlank())
+                ? "TEST-" + System.currentTimeMillis()
+                : noticeId.trim();
+        if (opportunityRepository.existsByNoticeId(resolvedNoticeId)) {
+            throw new IllegalArgumentException("이미 존재하는 공고번호입니다: " + resolvedNoticeId);
+        }
+        LocalDateTime now = LocalDateTime.now();
+        Opportunity opportunity = Opportunity.builder()
+                .noticeId(resolvedNoticeId)
+                .title(title.trim())
+                .active(true)
+                .firstSeenAt(now)
+                .lastModifiedAt(now)
+                .rawJson(Map.of("source", "MANUAL_TEST"))
+                .build();
+        Opportunity saved = opportunityRepository.save(opportunity);
+        log.info("[CR-120] 테스트용 수동 공고 생성: noticeId={}, title={}", resolvedNoticeId, title);
+        return saved;
+    }
+
+    /**
      * Create or update opportunity.
      * CR-009: 반환을 UpsertOutcome으로 감싸 NEW/CHANGED/UNCHANGED를 구분한다.
      */
