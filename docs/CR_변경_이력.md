@@ -774,3 +774,18 @@
   1. **FE** [NoticeDocumentView.tsx](../frontend/customer-portal/src/components/NoticeDocumentView.tsx) (customer-portal) — 렌더 단계에서 `stripSubmissionDocsSection()`으로 "제출 서류" heading(번호 prefix 변동 대응: "제출 서류" 포함 판정) + 그 직후 `dataTable`을 본문 노드 목록에서 제외. **저장된 contentJson 원본·관리자 화면 무영향**(렌더 시점 필터링).
 - **규모**: 소(고객 FE 1파일, 본문 섹션 1개 렌더 제외). 데이터모델/API/마이그레이션 무변경. 설계 캐스케이드는 사용자 합의로 경량 처리(본 CR 이력 갈음).
 - **상태**: 구현 완료. 빌드/배포 별도 승인 대기.
+
+---
+
+### CR-122: 공고분석 extract_facts 분리 — 단일 컨텍스트 1M 초과 대응(파일별 FOREACH) (2026-06-27)
+
+- **배경(실측)**: `opportunity-analysis` STEP3 `extract_facts`가 단일 AGENT_CALL(Claude CLI 자율주행)로 첨부 전체를 순차 Read하는 구조. 대용량 공고에서 **단일 컨텍스트 1M 토큰 한계 초과** → 압축으로 앞부분 디테일 손실/타임아웃. 실측: opp `9E97ECE1...`(11첨부 73.3MB) 핵심 첨부만 추출 토큰 합산 ~1,147K(645p 전기사양 ~443K + 35MB 도면 ~605K + …) → 이미 1M 초과. 작은 공고(P-6120 ~8K)는 여유라 분리는 "정확도 개선"이 아니라 **대용량 처리 필수 구조**.
+- **폐기된 오판(재발방지)**: ①"공고는 토큰 여유"=작은 공고만 보고 일반화한 오류 ②"extract_facts 네이티브도구 봉인"=틀림. Claude CLI **자율주행**이라 Read/Grep 열려있음, 프롬프트가 "전체 순차 Read"로 몰아넣었을 뿐.
+- **책임 경계**: 분할 제어 메커니즘(CLI subagent 옵션)은 **Aimbase 플랫폼이 처리**(어댑터 옵션 따라 동작하도록 정리 완료). bidding-agency는 그 위에서 WF 정의 분리 + input 구성만.
+- **결정(분리 축 A — 자료/파일축)**: 첨부+본문을 파일별로 FOREACH 분할, 각 에이전트가 **10항목 전원 공유 + 자기 파일 1개만 Read**. 파일 수만큼 1M씩 분산 → 안 터짐. 단일 파일 1M 초과는 운영에 없음(최대 33.8MB 도면도 ~600K). 항목축(B)·단계분리(C)는 기각/보류.
+- **변경 사항**:
+  1. **WF 정의 v3** [opportunity-analysis.steps.v3.json](workflows/opportunity-analysis.steps.v3.json) — STEP3 단일 AGENT_CALL→**FOREACH(`items={{input.analysisTargets}}`, parallel, collect=append)**, body 에이전트는 `{{item.targetPath}}` 한 파일만 분석. STEP4 verify 프롬프트에 **①배열 입력 안내**(FOREACH append 출력=파일별 결과 List, ForeachStepExecutor 실측) **②항목(key)별 머지 지시**(중복 통합·근거 보존·충돌 시 권위원문 채택). STEP5 save 무변경(verify.structured_data만 참조). PUT용 WorkflowController 8필드만(CR-112 함정 회피).
+  2. **BE** [NoticeService.java](../backend/src/main/java/com/biddingagency/domain/notice/service/NoticeService.java) — analyze input 에 `analysisTargets` 추가 + `buildAnalysisTargets()`(description.txt + attachments/<fileName>, 작업장 적재 경로와 일치). 기존 attachmentFiles/opportunityText 유지. compileJava 통과.
+  3. **백업** [opportunity-analysis.backup.json](../backend/docs/aimbase-workflows/backup/opportunity-analysis.backup.json) — 운영 현행(updatedAt 06-20) 롤백용 보존.
+- **규모**: 중(WF 구조 변경). 새 화면/API/테이블 없음, 데이터모델/마이그레이션 무변경. 설계서 [CR-122_extract_facts_분리_설계.md](workflows/CR-122_extract_facts_분리_설계.md).
+- **상태**: 설계·v3·BE코드 완료(compileJava 통과). **미착수**: ①Aimbase WF v3 PUT ②BE 배포 ③E2E 실측(대용량 공고로 1M 안 터지는지·verify 머지·save 단일구조 검증). 운영 PUT/배포는 사용자 승인 대기.

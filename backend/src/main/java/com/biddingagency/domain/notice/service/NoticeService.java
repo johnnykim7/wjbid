@@ -102,6 +102,20 @@ public class NoticeService {
      * - ANALYZING 아니거나(이미 종료) runId 없으면 run 조회 생략 — 단계 골격만(전부 pending) 반환.
      * - run 조회 실패는 무해(화면은 ANALYZING 스피너 폴백) — DTO 가 graceful 처리.
      */
+    /**
+     * CR-115: run 시작 직후 runId 만 즉시 커밋(REQUIRES_NEW) — 부모 트랜잭션은 폴링 완료까지 안 끝나므로,
+     * 별도 트랜잭션으로 먼저 커밋해야 ANALYZING 동안 진행 조회가 runId 를 읽을 수 있다.
+     */
+    @org.springframework.transaction.annotation.Transactional(
+            propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
+    public void saveWorkflowRunId(UUID noticeId, String runId) {
+        noticeRepository.findById(noticeId).ifPresent(n -> {
+            n.attachWorkflowRunId(runId);
+            noticeRepository.save(n);
+            log.info("[공고문] workflowRunId 저장: noticeId={}, runId={}", noticeId, runId);
+        });
+    }
+
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public com.biddingagency.domain.notice.dto.NoticeAnalysisProgressDto getAnalysisProgress(UUID noticeId) {
         Notice notice = findById(noticeId);
@@ -266,13 +280,19 @@ public class NoticeService {
             input.put("opportunityId", opportunityId.toString());
             input.put("noticeId", noticeId.toString());
             input.put("opportunityText", buildOpportunityText(opp));
-            // CR-019: 실제 수집된(SUCCESS) 첨부의 다운로드 URL을 전달 → Aimbase가 parse_document로 발췌
+            // CR-019: 실제 수집된(SUCCESS) 첨부의 다운로드 URL을 전달 → STEP2 download_attachments가 작업장에 적재
             input.put("attachmentFiles", buildAttachmentFiles(opportunityId));
+            // CR-122: extract_facts FOREACH 분리 — 파일별 분석 대상 경로 목록(작업장 적재 경로 기준).
+            //         description.txt(STEP1 적재) + attachments/<fileName>(STEP2 적재). 각 파일당 에이전트 1개.
+            input.put("analysisTargets", buildAnalysisTargets(opportunityId));
             // CR-021: NOTICE_VIEW 양식(TipTap JSON 골격)을 함께 입력 → LLM이 이 골격을 채워 contentJson 반환
             //         양식 미등록 시 input에 noticeViewTemplate 키 없음 → Aimbase는 contentJson 생략 가능
             buildNoticeViewTemplate().ifPresent(t -> input.put("noticeViewTemplate", t));
 
-            WorkflowRunResponse response = llmPlatformClient.analyzeOpportunity(input);
+            // CR-115: run 시작 직후 runId 를 Notice 에 저장 → 진행 STEP 조회(getAnalysisProgress)가
+            // ANALYZING 동안 Aimbase run 을 찾을 수 있게 한다(없으면 skeleton 만 떠 단계가 안 보임).
+            WorkflowRunResponse response = llmPlatformClient.analyzeOpportunity(
+                    input, runId -> self.saveWorkflowRunId(noticeId, runId));
 
             // Aimbase 워크플로우가 MCP save_opportunity_analysis를 콜백하여 결과 저장
             log.info("[공고문] 한글화/요약 완료 (Aimbase MCP 콜백으로 저장됨): noticeId={}, run={}",
@@ -497,6 +517,30 @@ public class NoticeService {
             files.add(f);
         }
         return files;
+    }
+
+    /**
+     * CR-122: extract_facts FOREACH 분리용 — 파일별 분석 대상 경로 목록.
+     * 각 원소 {targetPath} 는 작업장에 실제 적재되는 경로와 일치해야 한다:
+     *   - description.txt        : STEP1 write_description 이 file_write 로 적재
+     *   - attachments/<fileName> : STEP2 download_attachments(FOREACH) 가 적재
+     * FOREACH body 에이전트는 {{item.targetPath}} 한 파일만 읽고 10항목 fact 를 추출한다.
+     */
+    private List<Map<String, Object>> buildAnalysisTargets(UUID opportunityId) {
+        List<Map<String, Object>> targets = new ArrayList<>();
+        // 공고 본문 (STEP1 적재) — 항상 포함
+        Map<String, Object> desc = new LinkedHashMap<>();
+        desc.put("targetPath", "description.txt");
+        targets.add(desc);
+        // 첨부 (STEP2 적재) — SUCCESS 한 것만, download 의 attachments/{{item.fileName}} 와 동일 경로
+        List<OpportunityAttachment> success = attachmentRepository
+                .findByOpportunityIdAndDownloadStatus(opportunityId, AttachmentDownloadStatus.SUCCESS);
+        for (OpportunityAttachment a : success) {
+            Map<String, Object> t = new LinkedHashMap<>();
+            t.put("targetPath", "attachments/" + a.getFileName());
+            targets.add(t);
+        }
+        return targets;
     }
 
     /**
