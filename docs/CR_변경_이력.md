@@ -789,3 +789,13 @@
   3. **백업** [opportunity-analysis.backup.json](../backend/docs/aimbase-workflows/backup/opportunity-analysis.backup.json) — 운영 현행(updatedAt 06-20) 롤백용 보존.
 - **규모**: 중(WF 구조 변경). 새 화면/API/테이블 없음, 데이터모델/마이그레이션 무변경. 설계서 [CR-122_extract_facts_분리_설계.md](workflows/CR-122_extract_facts_분리_설계.md).
 - **상태**: 설계·v3·BE코드 완료(compileJava 통과). **미착수**: ①Aimbase WF v3 PUT ②BE 배포 ③E2E 실측(대용량 공고로 1M 안 터지는지·verify 머지·save 단일구조 검증). 운영 PUT/배포는 사용자 승인 대기.
+
+### CR-123: 공고분석 verify anchor 기반 grep 재설계 (2026-06-28)
+
+- **선행 조치(완료)**: 11c2ce7 — verify 입력을 `{{extract_facts.output}}`(플랫폼이 200자 프리뷰로 축소) → `{{extract_facts.structured_data}}`(fact 본체)로 교체. context 238% 초과 해소. E2E(SMYU 26-1050, run 6102b7eb): 직전 동일 공고 failed였으나 verify 391s 정상 완료·run completed.
+- **배경(실측, run 6102b7eb)**: verify_and_gapcheck(AGENT_CALL) **검증 방식이 비효율·불완전**. extract 원본 fact 1,840개 전부 `sourceFile`(1840/1840)·`page`(1840/1840) 채워졌으나 `sourceQuote`는 0/1840(extract 출력단축 원칙으로 의도적 비움). 그런데 verify는 이 좌표 메타를 안 쓰고 ①`ls`/`find` 맨땅 탐색 ②큰 파일 통째 Read ③12파일 일부만 열람(샘플링) ④1,840→12 과도축소. 원인=verify 프롬프트가 "원문 직접 열어 대조" 자율 지시만 하고 좌표·grep 미명시.
+- **핵심 통찰**: extract는 fragment 원문을 보며 fact를 뽑으므로 그 순간 근거가 눈앞에 있음. 그때 fact에 **anchor(원문 영어 5~10단어)** 를 남기면 verify는 "그 anchor가 그 파일에 있나" 단순 기계 grep으로 축소. anchor가 영어라 영어 원문에 그대로 grep(한↔영 매칭 문제 소멸), extract가 본 걸 받아쓰는 거라 extra 비용 거의 없음. → 사용자가 제시한 "코드 grep 정석"이 비로소 성립(이전엔 grep 대상 sourceQuote가 비어 불가능).
+- **결정(2-track)**: ①extract: 각 fact에 `anchor`(원문 영어 짧은 구절, 통째인용 금지) 추가. ②verify Track1=환각검증을 코드(기계) grep으로 — anchor를 sourceFile에 `grep -F`, 1,840개 전수, 샘플링·축소 없음, LLM 불필요. ③verify Track2=gap-check만 경량 LLM 유지(원문엔 있는데 빠진 항목 점검 + 최종 summary/requiredDocuments 통합).
+- **grep 수행 위치(실측)**: 작업장(description.txt/attachments/)은 Aimbase 컨테이너 내부, BE는 작업장 파일 미접근(LLMPlatformClient는 실행/폴링만) → **anchor grep은 WF 안(Aimbase 도구)에서 수행**. BE 무변경.
+- **규모**: 중(WF 정의 + extract/verify 프롬프트 재설계). 새 화면/API/테이블 없음, 데이터모델/마이그레이션 무변경, BE 무변경(예상). 설계서 [CR-123_verify_anchor_grep_재설계.md](workflows/CR-123_verify_anchor_grep_재설계.md).
+- **상태**: 선행 조치(11c2ce7) 완료·E2E 통과. 재설계 설계 문서 작성 완료. **미착수**: ①extract anchor 추가 ②verify grep 전환(STEP 구조는 Aimbase 도구 역량 실측 후 확정) ③WF v4 PUT ④E2E 검증. 구현은 사용자 승인 대기.
