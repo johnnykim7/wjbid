@@ -403,3 +403,20 @@ app.aimbase:
 | MCP SSE 엔드포인트 | 2 | CR-002 |
 | Aimbase 워크플로우 호출 | 2 | CR-002 |
 | **합계** | **REST 77 + MCP 13 + SSE 2 + Aimbase 2** | |
+
+---
+
+## N. 회사 공통 서류함 (CR-125)
+
+> member 종속 공통 서류 보관 + 제안서 슬롯 자동채움. 인증=본인 member(CUSTOMER).
+
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| GET | `/member-documents` | 내 서류함 — 고정 카테고리 6슬롯 + 기타 목록(MemberDocumentVaultResponse) |
+| POST | `/member-documents` (multipart) | 업로드 — `file`, `category`, `displayName?`, `description?`(기타) |
+| PUT | `/member-documents/{id}` (multipart) | 교체(파일 재업로드, displayName/description 갱신) |
+| DELETE | `/member-documents/{id}` | 삭제(StorageService 파일도 삭제) |
+| POST | `/bid-requests/{bidRequestId}/required-document-slots/auto-fill` | 서류함에서 같은 카테고리 서류를 미충족 슬롯에 일괄 자동매칭(CR-125 2단계) |
+
+- 응답 DTO: `MemberDocumentDto`(LAZY 폭발 방지) / `MemberDocumentVaultResponse`(fixedSlots[] + others[]).
+- 소유 검증: 타 member 문서 접근 시 403/404. auto-fill은 미충족(PENDING/MISSING) 슬롯만 대상, 이미 충족 슬롯 미덮어씀.

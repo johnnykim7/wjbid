@@ -809,3 +809,21 @@
 - **법적 페이지**: 4개 개별. 면책 핵심문구="낙찰 보장 안 함 / 입찰서 최종 제출·서명은 고객 책임". 환불=건당 과금 단계별 기준. 푸터 사업자정보(전상법 표기). ⚠️ 문구 원문은 운영/법무 확정 필요(설계는 골격+플레이스홀더).
 - **규모**: **대규모**(전 화면 + DS 도입 + member 데이터모델 변경 + 빌드/설치 설정). 설계서 [CR-124_UI전면개편_DS도입_설계.md](CR-124_UI전면개편_DS도입_설계.md).
 - **상태**: **설계** 작성 완료(본 문서+마스터 설계서). T3-3 화면구조·T3-1 데이터모델(member uei/cage) 갱신 예정. **미착수**: Phase1 DS셋업 → Phase2 공개화면 → Phase3 로그인후 → Phase4 법적 → Phase5 검증. 구현은 설계 커밋 + 사용자 승인 후 착수.
+
+### CR-125: 회사 공통 서류함 — Member 종속 보관함 + 제안서 슬롯 자동채움 (2026-06-30)
+
+- **배경(사용자)**: 사업자등록증·CAGE 증빙 등 **회사 공통 서류는 매 공고마다 다시 올리기 귀찮다.** 한 번 넣어두고 재사용하고 싶다.
+- **현황 실측**:
+  - 현 `/documents` [DocumentsPage.tsx](../frontend/customer-portal/src/pages/DocumentsPage.tsx) = `DUMMY_SLOTS` 하드코딩 + **BE 미연동 껍데기**(버튼 다 죽음, "시연용 더미" 자인).
+  - `ClientDocument` = **공고/입찰 종속**(`@ManyToOne BidRequest nullable=false`). "이 공고에 제출할 서류"이지 회사 공통 보관함 아님. **공통 서류함(member 종속)은 BE에 없음** → 신규 엔티티 필요.
+  - 슬롯 매칭은 CR-010 `ComplianceService.uploadToSlot` / `RequirementFulfillmentMap`(`client_document_id` FK 보유)에 존재 → 2단계가 이 경로 재사용.
+- **결정(확정 정책)**:
+  - **범위 = 1+2단계 둘 다.** 1단계=`MemberDocument`(member 종속 보관함) CRUD + `/documents` 실연동. 2단계=제안서 슬롯에 서류함 같은 카테고리 자동채움.
+  - **카테고리 = 고정 + 자유 병행.** 고정 6종(사업자등록증·CAGE·회사소개서·재무제표·SAM등록증·과거실적, 자동매칭 대상) + `OTHER`(기타, 자동매칭 제외).
+  - **고정 카드** = 제목 고정, 파일만 업로드/교체/삭제(모달 없음). **기타** = 등록 모달(문서제목 필수 / 파일 필수 / 설명 선택), 다건 누적.
+- **데이터 모델**: 신규 테이블 `member_documents`(V39) — member_id FK / category / file_name / file_size / content_type / storage_url / display_name / description. 고정=member당 1건(교체), OTHER=다건. **기존 모델(ClientDocument·RequirementFulfillmentMap·member) 무변경.**
+- **API(신규 5)**: GET/POST/PUT/DELETE `/member-documents` + POST `/bid-requests/{id}/required-document-slots/auto-fill`.
+- **자동채움 동작**: 미충족 슬롯의 category ↔ 서류함 고정 category 매칭 → MemberDocument를 ClientDocument로 **복제**(원본 보존) + `fulfillWithClientDocument`. 이미 충족 슬롯 미덮어씀(BIZ-125-4).
+- **FSM/이벤트**: 무변경. 서류함은 상태기계 밖, 자동채움은 기존 슬롯 충족 경로(BIZ-015) 그대로.
+- **규모**: 중(신규 테이블1·API5·화면2). 설계서 [CR-125_회사공통서류함_설계.md](CR-125_회사공통서류함_설계.md). T3-1/T3-2/T3-3 갱신.
+- **상태**: 설계 완료 → 구현 진행. FlowGuard 등록은 사용자 결정 보류.
