@@ -73,8 +73,8 @@ export default function PricingPage() {
         <p className="mt-2 text-slate-500">무료로 시작하고, 필요할 때 Pro로 업그레이드하세요. 약정 없이 언제든 해지 가능합니다.</p>
       </div>
 
-      {/* 플랜 비교 표 (메트로닉 plans 디자인) */}
-      <div className="overflow-x-auto">
+      {/* 플랜 비교 표 (메트로닉 plans 디자인) — 뱃지가 카드 위로 떠서 상단 여백 확보 */}
+      <div className="overflow-x-auto pt-4">
         <Table className="table-fixed border-separate border-spacing-0 min-w-[640px] w-full">
           <TableBody>
             {/* 플랜 헤더 행 */}
@@ -84,7 +84,7 @@ export default function PricingPage() {
                 <TableCell
                   key={p.key}
                   className={
-                    'relative align-bottom p-5 border-t border-l border-slate-200 ' +
+                    'relative align-bottom px-5 pb-5 pt-8 border-t border-l border-slate-200 ' +
                     (p.highlight ? 'bg-[#eef3fb] rounded-t-xl border-[#1b3a72]' : 'rounded-t-xl') +
                     (p.key === 'pro' ? ' border-r' : '')
                   }
