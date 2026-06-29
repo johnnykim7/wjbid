@@ -1,3 +1,5 @@
+// CR-124 — 로컬 Input 어댑터: 내부를 DS Input으로 위임. InputWrapper/hasIcon API 보존.
+import { Input as DsInput } from '@therecommerce-develop/ds-ui'
 import { cn } from '../../lib/utils'
 
 interface InputWrapperProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -27,14 +29,8 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 
 export function Input({ className, hasIcon, ...props }: InputProps) {
   return (
-    <input
-      data-slot="input"
-      className={cn(
-        'w-full bg-gray-50 border border-gray-200 rounded-lg py-2 text-sm text-gray-800',
-        'focus:outline-none focus:ring-2 focus:ring-secondary focus:bg-white transition',
-        hasIcon ? 'pl-10 pr-4' : 'px-4',
-        className
-      )}
+    <DsInput
+      className={cn('w-full', hasIcon && 'pl-10', className)}
       {...props}
     />
   )

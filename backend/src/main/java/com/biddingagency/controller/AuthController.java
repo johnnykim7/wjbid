@@ -83,7 +83,11 @@ public class AuthController {
                 request.getPassword(),
                 request.getCompanyName(),
                 request.getContactPerson(),
-                request.getPhone()
+                request.getPhone(),
+                request.getBusinessRegistrationNumber(),
+                request.isAgreeTerms(),
+                request.isAgreePrivacy(),
+                request.isAgreeMarketing()
         );
 
         // Generate tokens

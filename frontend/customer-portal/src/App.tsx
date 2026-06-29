@@ -12,7 +12,18 @@ import PricingPage from './pages/PricingPage'
 import ProfilePage from './pages/ProfilePage'
 import ProposalDetailPage from './pages/ProposalDetailPage'
 import GuidePage from './pages/GuidePage'
+import NoticesPage from './pages/NoticesPage'
+import FaqPage from './pages/FaqPage'
+import SupportPage from './pages/SupportPage'
 import NotificationsPage from './pages/NotificationsPage'
+import TermsPage from './pages/TermsPage'
+import PrivacyPage from './pages/PrivacyPage'
+import RefundPage from './pages/RefundPage'
+import DisclaimerPage from './pages/DisclaimerPage'
+import CalendarPage from './pages/CalendarPage'
+import SavedSearchesPage from './pages/SavedSearchesPage'
+import BillingPage from './pages/BillingPage'
+import DocumentsPage from './pages/DocumentsPage'
 
 function ProtectedRoute() {
   const { isAuthenticated } = useAuth()
@@ -28,6 +39,14 @@ function AppRoutes() {
         <Route index element={<HomePage />} />
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/guide" element={<GuidePage />} />
+        <Route path="/notices" element={<NoticesPage />} />
+        <Route path="/faq" element={<FaqPage />} />
+        <Route path="/support" element={<SupportPage />} />
+        {/* 법적·정책 (CR-124) */}
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/refund" element={<RefundPage />} />
+        <Route path="/disclaimer" element={<DisclaimerPage />} />
       </Route>
 
       {/* 로그인 / 회원가입 (GNB 없음) */}
@@ -41,7 +60,11 @@ function AppRoutes() {
         <Route path="/proposals" element={<ProposalsPage />} />
         <Route path="/proposals/:id" element={<ProposalDetailPage />} />
         <Route path="/bookmarks" element={<BookmarksPage />} />
+        <Route path="/calendar" element={<CalendarPage />} />
+        <Route path="/saved-searches" element={<SavedSearchesPage />} />
+        <Route path="/documents" element={<DocumentsPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
+        <Route path="/billing" element={<BillingPage />} />
         <Route path="/profile" element={<ProfilePage />} />
       </Route>
 

@@ -1,0 +1,49 @@
+/**
+ * WJbid Theme — 미군·연방 조달 입찰 대행 (풀 밀리터리 네이비)
+ *
+ * DS globals.css(Metronic 기본)에서 브랜드 색상만 교체한 테마.
+ * banpoom.css 패턴을 따른다. main.tsx에서 DS style.css 다음에 import.
+ *
+ * @example
+ *   import '@therecommerce-develop/ds-ui/dist/style.css';
+ *   import './wjbid-theme.css';
+ *
+ * 컨셉 정본: docs/ui-mockup/customer-portal-military-poc.html
+ *   navy #13294f · gnb #1b3a72 · accent #2b50b4 · soft #eef3fb · Noto Sans KR
+ */
+
+:root {
+  /* 브랜드 primary: 밀리터리 네이비 */
+  --primary: #13294f;
+  --primary-foreground: #ffffff;
+
+  /* 포커스 링: 액센트 블루 */
+  --ring: #2b50b4;
+
+  /* 연한 블루 정보 박스(나라장터식 유의사항) */
+  --accent: #eef3fb;
+  --accent-foreground: #1b3a72;
+
+  /* 사이드바(로그인 후 일부 화면 — 서류/제안서 섹션 트리 등) */
+  --sidebar: #ffffff;
+  --sidebar-foreground: #1f2937;
+  --sidebar-accent: #eef3fb;
+  --sidebar-accent-foreground: #1b3a72;
+  --sidebar-border: #e2e8f0;
+  --sidebar-ring: #2b50b4;
+
+  /* 모서리: poc의 절제된 라운드 */
+  --radius: 0.5rem;
+}
+
+.dark {
+  --primary: #24447d;
+  --primary-foreground: #ffffff;
+  --ring: #4a73c4;
+}
+
+/* 폰트 — 나라장터식 둥근 안정감 (Noto Sans KR) */
+body {
+  font-family: 'Noto Sans KR', system-ui, -apple-system, sans-serif;
+  letter-spacing: -0.01em;
+}

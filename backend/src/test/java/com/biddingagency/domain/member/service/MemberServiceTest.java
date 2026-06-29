@@ -1,6 +1,8 @@
 package com.biddingagency.domain.member.service;
 
 import com.biddingagency.domain.member.entity.Member;
+import com.biddingagency.domain.member.entity.MemberConsent;
+import com.biddingagency.domain.member.repository.MemberConsentRepository;
 import com.biddingagency.domain.member.repository.MemberRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -28,6 +30,9 @@ class MemberServiceTest {
     private MemberRepository memberRepository;
 
     @Mock
+    private MemberConsentRepository memberConsentRepository;
+
+    @Mock
     private PasswordEncoder passwordEncoder;
 
     @InjectMocks
@@ -38,6 +43,7 @@ class MemberServiceTest {
     private static final String TEST_COMPANY = "Test Corp";
     private static final String TEST_CONTACT = "John Doe";
     private static final String TEST_PHONE = "010-1234-5678";
+    private static final String TEST_BRN = "123-45-67890";
 
     // TC-AUTH-001: 정상 회원가입
     @Test
@@ -49,13 +55,32 @@ class MemberServiceTest {
         given(memberRepository.save(any(Member.class))).willAnswer(inv -> inv.getArgument(0));
 
         // when
-        Member result = memberService.register(TEST_EMAIL, TEST_PASSWORD, TEST_COMPANY, TEST_CONTACT, TEST_PHONE);
+        Member result = memberService.register(TEST_EMAIL, TEST_PASSWORD, TEST_COMPANY, TEST_CONTACT, TEST_PHONE,
+                TEST_BRN, true, true, false);
 
         // then
         assertThat(result.getEmail()).isEqualTo(TEST_EMAIL);
         assertThat(result.getRole()).isEqualTo(Member.Role.CUSTOMER);
         assertThat(result.getCompanyName()).isEqualTo(TEST_COMPANY);
         then(memberRepository).should().save(any(Member.class));
+        then(memberConsentRepository).should().save(any(MemberConsent.class));
+    }
+
+    // CR-124: 필수 동의 미체크 시 가입 거부
+    @Test
+    @DisplayName("개인정보_미동의_회원가입_예외발생")
+    void 필수동의_미체크_회원가입_IllegalArgumentException() {
+        // given
+        given(memberRepository.existsByEmail(TEST_EMAIL)).willReturn(false);
+
+        // when & then (약관은 동의했으나 개인정보 미동의)
+        assertThatThrownBy(() -> memberService.register(TEST_EMAIL, TEST_PASSWORD, TEST_COMPANY, TEST_CONTACT, TEST_PHONE,
+                TEST_BRN, true, false, false))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("동의");
+
+        then(memberRepository).should(never()).save(any());
+        then(memberConsentRepository).should(never()).save(any());
     }
 
     // TC-AUTH-002: 중복 이메일 가입 시도
@@ -66,7 +91,8 @@ class MemberServiceTest {
         given(memberRepository.existsByEmail(TEST_EMAIL)).willReturn(true);
 
         // when & then
-        assertThatThrownBy(() -> memberService.register(TEST_EMAIL, TEST_PASSWORD, TEST_COMPANY, TEST_CONTACT, TEST_PHONE))
+        assertThatThrownBy(() -> memberService.register(TEST_EMAIL, TEST_PASSWORD, TEST_COMPANY, TEST_CONTACT, TEST_PHONE,
+                TEST_BRN, true, true, false))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Email already exists");
 

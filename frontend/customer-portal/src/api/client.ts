@@ -40,7 +40,10 @@ export const login = (email: string, password: string) =>
 
 export const register = (data: {
   email: string; password: string; companyName: string
-  contactPerson: string; phone: string; address: string
+  contactPerson: string; phone: string
+  businessRegistrationNumber: string
+  address?: string
+  agreeTerms: boolean; agreePrivacy: boolean; agreeMarketing: boolean
 }) => api.post('/auth/register', data)
 
 // Opportunities

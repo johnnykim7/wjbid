@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Button } from '../components/ui/button'
+import { Button, Input, Label } from '@therecommerce-develop/ds-ui'
 import { LoadingSpinner } from '../components/ui/loading-spinner'
 import { getMyProfile, updateMyProfile } from '../api/client'
 import type { MemberProfile } from '../types'
@@ -107,21 +107,19 @@ export default function ProfilePage() {
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">이메일</label>
-                <input
+                <Label className="block text-sm font-medium text-gray-700 mb-1">이메일</Label>
+                <Input
                   type="email"
                   value={profile?.email ?? ''}
                   disabled
-                  className="w-full px-4 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm text-gray-500 cursor-not-allowed"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">역할</label>
-                <input
+                <Label className="block text-sm font-medium text-gray-700 mb-1">역할</Label>
+                <Input
                   type="text"
                   value={profile?.role ?? ''}
                   disabled
-                  className="w-full px-4 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm text-gray-500 cursor-not-allowed"
                 />
               </div>
             </div>
@@ -134,36 +132,34 @@ export default function ProfilePage() {
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <Label className="block text-sm font-medium text-gray-700 mb-1">
                   회사명 <span className="text-red-500">*</span>
-                </label>
-                <input
+                </Label>
+                <Input
                   type="text"
                   value={form.companyName}
                   onChange={(e) => handleChange('companyName', e.target.value)}
-                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary focus:bg-white transition text-sm"
                   placeholder="예: VOOMERANG Co., Ltd."
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <Label className="block text-sm font-medium text-gray-700 mb-1">
                   사업자 등록번호
-                </label>
-                <input
+                </Label>
+                <Input
                   type="text"
                   value={form.businessRegistrationNumber}
                   onChange={(e) => handleChange('businessRegistrationNumber', e.target.value)}
-                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary focus:bg-white transition text-sm font-mono"
+                  className="font-mono"
                   placeholder="000-00-00000"
                 />
               </div>
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">주소</label>
-                <input
+                <Label className="block text-sm font-medium text-gray-700 mb-1">주소</Label>
+                <Input
                   type="text"
                   value={form.address}
                   onChange={(e) => handleChange('address', e.target.value)}
-                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary focus:bg-white transition text-sm"
                   placeholder="예: 서울특별시 강남구 ..."
                 />
               </div>
@@ -177,22 +173,20 @@ export default function ProfilePage() {
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">담당자명</label>
-                <input
+                <Label className="block text-sm font-medium text-gray-700 mb-1">담당자명</Label>
+                <Input
                   type="text"
                   value={form.contactPerson}
                   onChange={(e) => handleChange('contactPerson', e.target.value)}
-                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary focus:bg-white transition text-sm"
                   placeholder="예: 김철수"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">전화번호</label>
-                <input
+                <Label className="block text-sm font-medium text-gray-700 mb-1">전화번호</Label>
+                <Input
                   type="tel"
                   value={form.phone}
                   onChange={(e) => handleChange('phone', e.target.value)}
-                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary focus:bg-white transition text-sm"
                   placeholder="예: 010-1234-5678"
                 />
               </div>

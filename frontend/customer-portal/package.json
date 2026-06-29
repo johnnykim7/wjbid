@@ -10,16 +10,22 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@headless-tree/core": "^1.7.0",
+    "@headless-tree/react": "^1.7.0",
     "@radix-ui/react-dialog": "^1.1.15",
     "@tailwindcss/postcss": "^4.1.18",
     "@tanstack/react-table": "^8.21.3",
+    "@therecommerce-develop/ds-ui": "file:../../../../bp-platform/design-system/packages/ui",
     "axios": "^1.13.5",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.575.0",
+    "radix-ui": "^1.6.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "react-hook-form": "^7.80.0",
     "react-router-dom": "^7.13.0",
+    "recharts": "^2.15.4",
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {

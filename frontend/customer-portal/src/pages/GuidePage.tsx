@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@therecommerce-develop/ds-ui'
 import { Button } from '../components/ui/button'
 
 const STEPS = [
@@ -114,17 +115,19 @@ export default function GuidePage() {
       <div className="bg-gray-50 px-6 py-16">
         <div className="max-w-3xl mx-auto">
           <h2 className="text-2xl font-extrabold text-gray-900 text-center mb-10">자주 묻는 질문</h2>
-          <div className="space-y-4">
+          <Accordion type="single" collapsible className="space-y-4">
             {FAQS.map((faq, idx) => (
-              <div key={idx} className="bg-white rounded-xl border border-gray-200 p-5">
-                <h3 className="text-sm font-bold text-gray-900 flex items-start gap-2">
-                  <i className="fa-solid fa-circle-question text-secondary mt-0.5" />
-                  {faq.q}
-                </h3>
-                <p className="text-sm text-gray-600 mt-2 ml-6 leading-relaxed">{faq.a}</p>
-              </div>
+              <AccordionItem key={idx} value={`faq-${idx}`} className="bg-white rounded-xl border border-gray-200 px-5">
+                <AccordionTrigger className="text-sm font-bold text-gray-900 gap-2">
+                  <span className="flex items-start gap-2 text-left">
+                    <i className="fa-solid fa-circle-question text-secondary mt-0.5" />
+                    {faq.q}
+                  </span>
+                </AccordionTrigger>
+                <AccordionContent className="text-sm text-gray-600 ml-6 leading-relaxed">{faq.a}</AccordionContent>
+              </AccordionItem>
             ))}
-          </div>
+          </Accordion>
         </div>
       </div>
 

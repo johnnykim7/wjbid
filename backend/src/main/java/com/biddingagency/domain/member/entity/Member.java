@@ -39,6 +39,14 @@ public class Member extends BaseEntity {
     @Column(name = "address", columnDefinition = "TEXT")
     private String address;
 
+    /** SAM.gov Unique Entity ID — 가입 후 프로필에서 입력 (CR-124) */
+    @Column(name = "uei", length = 20)
+    private String uei;
+
+    /** CAGE (Commercial and Government Entity) 코드 — 가입 후 프로필에서 입력 (CR-124) */
+    @Column(name = "cage_code", length = 10)
+    private String cageCode;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false, length = 20)
     @Builder.Default
@@ -58,6 +66,12 @@ public class Member extends BaseEntity {
         this.contactPerson = contactPerson;
         this.phone = phone;
         this.address = address;
+    }
+
+    /** SAM.gov 식별자 갱신 (프로필 화면, CR-124) */
+    public void updateSamIdentifiers(String uei, String cageCode) {
+        this.uei = uei;
+        this.cageCode = cageCode;
     }
 
     public void updateLastLogin() {

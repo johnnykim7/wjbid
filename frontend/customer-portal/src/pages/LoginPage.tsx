@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import { Input, Label, Button } from '@therecommerce-develop/ds-ui'
 import { useAuth } from '../context/AuthContext'
 import { login } from '../api/client'
 
@@ -92,30 +93,18 @@ export default function LoginPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">이메일</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                placeholder="name@company.com"
-                className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:border-[#1a56db] transition-colors"
-              />
+            <div className="space-y-1.5">
+              <Label>이메일</Label>
+              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                required placeholder="name@company.com" />
             </div>
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-sm font-medium text-gray-700">비밀번호</label>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label>비밀번호</Label>
                 <a href="#" className="text-xs text-[#1a56db] hover:underline">비밀번호 찾기</a>
               </div>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                placeholder="••••••••"
-                className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:border-[#1a56db] transition-colors"
-              />
+              <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+                required placeholder="••••••••" />
             </div>
 
             {error && (
@@ -125,20 +114,9 @@ export default function LoginPage() {
               </div>
             )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-2.5 text-sm font-semibold text-white rounded-lg transition-opacity disabled:opacity-60 mt-2"
-              style={{ background: '#0c1e3d' }}
-              onMouseEnter={(e) => !loading && (e.currentTarget.style.background = '#162d57')}
-              onMouseLeave={(e) => !loading && (e.currentTarget.style.background = '#0c1e3d')}
-            >
-              {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <i className="fa-solid fa-spinner fa-spin text-xs" /> 로그인 중...
-                </span>
-              ) : '로그인'}
-            </button>
+            <Button type="submit" disabled={loading} className="w-full mt-2" size="lg">
+              {loading ? '로그인 중...' : '로그인'}
+            </Button>
           </form>
 
           <div className="mt-6 text-center">

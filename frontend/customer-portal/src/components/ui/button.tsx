@@ -1,42 +1,40 @@
-import { cva, type VariantProps } from 'class-variance-authority'
+/**
+ * CR-124 — 로컬 Button 어댑터. 내부 구현을 DS(@therecommerce-develop/ds-ui) Button으로 위임.
+ * 화면들은 기존 variant(primary/accent/dark/...)를 그대로 쓰고, 여기서 DS variant로 매핑한다.
+ * → 화면 코드 변경 없이 전 버튼이 DS로 전환됨.
+ */
+import { Button as DsButton } from '@therecommerce-develop/ds-ui'
 import { cn } from '../../lib/utils'
 
-const buttonVariants = cva(
-  'inline-flex items-center justify-center font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary disabled:pointer-events-none disabled:opacity-50',
-  {
-    variants: {
-      variant: {
-        primary: 'bg-secondary text-white hover:bg-blue-600 shadow-sm',
-        brandBlue: 'bg-brandBlue text-white hover:bg-blue-800 shadow-sm',
-        accent: 'bg-accent text-white hover:bg-emerald-600 shadow-sm',
-        outline: 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50',
-        ghost: 'text-gray-500 hover:text-gray-700 hover:bg-gray-100',
-        dark: 'bg-primary text-white hover:bg-slate-800',
-        destructive: 'bg-red-500 text-white hover:bg-red-600',
-      },
-      size: {
-        lg: 'h-11 px-6 rounded-lg text-sm',
-        md: 'h-9 px-4 rounded-lg text-sm',
-        sm: 'h-7 px-3 rounded-md text-xs',
-        icon: 'h-9 w-9 rounded-lg',
-      },
-    },
-    defaultVariants: {
-      variant: 'primary',
-      size: 'md',
-    },
-  }
-)
+type LocalVariant =
+  | 'primary' | 'brandBlue' | 'accent' | 'outline' | 'ghost' | 'dark' | 'destructive'
+type LocalSize = 'lg' | 'md' | 'sm' | 'icon'
 
-interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {}
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: LocalVariant
+  size?: LocalSize
+}
 
-export function Button({ className, variant, size, ...props }: ButtonProps) {
+// 로컬 variant → DS variant (+ 보존용 className)
+const VARIANT_MAP: Record<LocalVariant, { ds: string; cls?: string }> = {
+  primary:     { ds: 'primary' },
+  brandBlue:   { ds: 'primary', cls: 'bg-brandBlue hover:bg-brandBlue/90 text-white' },
+  accent:      { ds: 'primary', cls: 'bg-accent hover:bg-accent/90 text-white' },
+  outline:     { ds: 'outline' },
+  ghost:       { ds: 'ghost' },
+  dark:        { ds: 'mono' },
+  destructive: { ds: 'destructive' },
+}
+const SIZE_MAP: Record<LocalSize, string> = { lg: 'lg', md: 'md', sm: 'sm', icon: 'icon' }
+
+export function Button({ className, variant = 'primary', size = 'md', ...props }: ButtonProps) {
+  const m = VARIANT_MAP[variant]
   return (
-    <button
-      data-slot="button"
-      className={cn(buttonVariants({ variant, size }), className)}
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    <DsButton
+      variant={m.ds as any}
+      size={SIZE_MAP[size] as any}
+      className={cn(m.cls, className)}
       {...props}
     />
   )

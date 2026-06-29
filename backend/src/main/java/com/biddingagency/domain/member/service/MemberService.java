@@ -1,6 +1,8 @@
 package com.biddingagency.domain.member.service;
 
 import com.biddingagency.domain.member.entity.Member;
+import com.biddingagency.domain.member.entity.MemberConsent;
+import com.biddingagency.domain.member.repository.MemberConsentRepository;
 import com.biddingagency.domain.member.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -8,6 +10,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
@@ -20,27 +23,48 @@ import java.util.UUID;
 public class MemberService {
 
     private final MemberRepository memberRepository;
+    private final MemberConsentRepository memberConsentRepository;
     private final PasswordEncoder passwordEncoder;
 
+    /** 현재 약관 버전 (CR-124) — 약관 개정 시 갱신, 동의이력에 기록 */
+    private static final String CURRENT_TERMS_VERSION = "2026-06";
+
     /**
-     * Register new member (CUSTOMER role)
+     * Register new member (CUSTOMER role) — CR-124: 법인 필드(사업자번호) + 가입 동의이력 저장
      */
     @Transactional
-    public Member register(String email, String password, String companyName, String contactPerson, String phone) {
+    public Member register(String email, String password, String companyName, String contactPerson,
+                           String phone, String businessRegistrationNumber,
+                           boolean agreeTerms, boolean agreePrivacy, boolean agreeMarketing) {
         if (memberRepository.existsByEmail(email)) {
             throw new IllegalArgumentException("Email already exists: " + email);
+        }
+        if (!agreeTerms || !agreePrivacy) {
+            throw new IllegalArgumentException("이용약관 및 개인정보처리방침 동의가 필요합니다");
         }
 
         Member member = Member.builder()
                 .email(email)
                 .passwordHash(passwordEncoder.encode(password))
                 .companyName(companyName)
+                .businessRegistrationNumber(businessRegistrationNumber)
                 .contactPerson(contactPerson)
                 .phone(phone)
                 .role(Member.Role.CUSTOMER)
                 .build();
 
         Member saved = memberRepository.save(member);
+
+        // 동의 이력 저장 (법적 증거력 — 시점·항목·약관버전)
+        memberConsentRepository.save(MemberConsent.builder()
+                .memberId(saved.getId())
+                .termsAgreed(agreeTerms)
+                .privacyAgreed(agreePrivacy)
+                .marketingAgreed(agreeMarketing)
+                .termsVersion(CURRENT_TERMS_VERSION)
+                .agreedAt(LocalDateTime.now())
+                .build());
+
         log.info("New member registered: {}", saved.getEmail());
         return saved;
     }

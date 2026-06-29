@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Button, Card } from '@therecommerce-develop/ds-ui'
 import { getPricing } from '../api/client'
 
 interface PricingPlan {
@@ -40,9 +41,9 @@ export default function PricingPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {plans.map((plan) => (
-            <div
+            <Card
               key={plan.id}
-              className={`bg-white rounded-2xl shadow-sm border-2 p-8 relative ${
+              className={`rounded-2xl shadow-sm border-2 p-8 relative ${
                 plan.recommended ? 'border-secondary' : 'border-gray-200'
               }`}
             >
@@ -66,16 +67,13 @@ export default function PricingPage() {
                   </li>
                 ))}
               </ul>
-              <button
-                className={`w-full py-2.5 rounded-lg font-bold transition ${
-                  plan.recommended
-                    ? 'bg-secondary text-white hover:bg-blue-600'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+              <Button
+                variant={plan.recommended ? 'primary' : 'secondary'}
+                className="w-full"
               >
                 {plan.id === 'enterprise' ? 'Contact Sales' : 'Get Started'}
-              </button>
-            </div>
+              </Button>
+            </Card>
           ))}
         </div>
       </div>

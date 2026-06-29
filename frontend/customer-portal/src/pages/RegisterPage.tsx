@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import { Input, Label, Button, Checkbox } from '@therecommerce-develop/ds-ui'
 import { register } from '../api/client'
 
 export default function RegisterPage() {
@@ -9,15 +10,24 @@ export default function RegisterPage() {
     password: '',
     passwordConfirm: '',
     companyName: '',
+    businessRegistrationNumber: '',
     contactPerson: '',
     phone: '',
     address: '',
   })
+  // 가입 동의 (CR-124) — 약관·개인정보 필수, 마케팅 선택
+  const [agree, setAgree] = useState({ terms: false, privacy: false, marketing: false })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
   const update = (field: string, value: string) =>
     setForm((f) => ({ ...f, [field]: value }))
+  const toggleAgree = (field: 'terms' | 'privacy' | 'marketing') =>
+    setAgree((a) => ({ ...a, [field]: !a[field] }))
+  const toggleAll = () => {
+    const all = agree.terms && agree.privacy && agree.marketing
+    setAgree({ terms: !all, privacy: !all, marketing: !all })
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -31,6 +41,10 @@ export default function RegisterPage() {
       setError('비밀번호는 8자 이상이어야 합니다.')
       return
     }
+    if (!agree.terms || !agree.privacy) {
+      setError('이용약관 및 개인정보처리방침에 동의해 주세요.')
+      return
+    }
 
     setLoading(true)
     try {
@@ -38,9 +52,13 @@ export default function RegisterPage() {
         email: form.email,
         password: form.password,
         companyName: form.companyName,
+        businessRegistrationNumber: form.businessRegistrationNumber,
         contactPerson: form.contactPerson,
         phone: form.phone,
         address: form.address,
+        agreeTerms: agree.terms,
+        agreePrivacy: agree.privacy,
+        agreeMarketing: agree.marketing,
       })
       navigate('/login', { state: { registered: true } })
     } catch (err: unknown) {
@@ -50,9 +68,6 @@ export default function RegisterPage() {
       setLoading(false)
     }
   }
-
-  const inputClass =
-    'w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:border-[#1a56db] transition-colors'
 
   return (
     <div className="min-h-screen flex" style={{ background: '#f5f7fa' }}>
@@ -121,45 +136,36 @@ export default function RegisterPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* 계정 정보 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                이메일 <span className="text-red-500">*</span>
-              </label>
-              <input
+            <div className="space-y-1.5">
+              <Label>이메일 <span className="text-red-500">*</span></Label>
+              <Input
                 type="email"
                 value={form.email}
                 onChange={(e) => update('email', e.target.value)}
                 required
                 placeholder="name@company.com"
-                className={inputClass}
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  비밀번호 <span className="text-red-500">*</span>
-                </label>
-                <input
+              <div className="space-y-1.5">
+                <Label>비밀번호 <span className="text-red-500">*</span></Label>
+                <Input
                   type="password"
                   value={form.password}
                   onChange={(e) => update('password', e.target.value)}
                   required
                   placeholder="8자 이상"
-                  className={inputClass}
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  비밀번호 확인 <span className="text-red-500">*</span>
-                </label>
-                <input
+              <div className="space-y-1.5">
+                <Label>비밀번호 확인 <span className="text-red-500">*</span></Label>
+                <Input
                   type="password"
                   value={form.passwordConfirm}
                   onChange={(e) => update('passwordConfirm', e.target.value)}
                   required
                   placeholder="비밀번호 재입력"
-                  className={inputClass}
                 />
               </div>
             </div>
@@ -169,52 +175,69 @@ export default function RegisterPage() {
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">기업 정보</p>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                회사명 <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={form.companyName}
-                onChange={(e) => update('companyName', e.target.value)}
-                required
-                placeholder="예: VOOMERANG Co., Ltd."
-                className={inputClass}
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>회사명 <span className="text-red-500">*</span></Label>
+                <Input type="text" value={form.companyName}
+                  onChange={(e) => update('companyName', e.target.value)} required
+                  placeholder="예: VOOMERANG Co., Ltd." />
+              </div>
+              <div className="space-y-1.5">
+                <Label>사업자등록번호 <span className="text-red-500">*</span></Label>
+                <Input type="text" value={form.businessRegistrationNumber}
+                  onChange={(e) => update('businessRegistrationNumber', e.target.value)} required
+                  placeholder="123-45-67890" />
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">담당자명</label>
-                <input
-                  type="text"
-                  value={form.contactPerson}
-                  onChange={(e) => update('contactPerson', e.target.value)}
-                  placeholder="예: 김철수"
-                  className={inputClass}
-                />
+              <div className="space-y-1.5">
+                <Label>담당자명 <span className="text-red-500">*</span></Label>
+                <Input type="text" value={form.contactPerson}
+                  onChange={(e) => update('contactPerson', e.target.value)} required
+                  placeholder="예: 김철수" />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">전화번호</label>
-                <input
-                  type="tel"
-                  value={form.phone}
-                  onChange={(e) => update('phone', e.target.value)}
-                  placeholder="010-1234-5678"
-                  className={inputClass}
-                />
+              <div className="space-y-1.5">
+                <Label>전화번호 <span className="text-red-500">*</span></Label>
+                <Input type="tel" value={form.phone}
+                  onChange={(e) => update('phone', e.target.value)} required
+                  placeholder="010-1234-5678" />
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">주소</label>
-              <input
-                type="text"
-                value={form.address}
+            <div className="space-y-1.5">
+              <Label>주소</Label>
+              <Input type="text" value={form.address}
                 onChange={(e) => update('address', e.target.value)}
-                placeholder="예: 서울특별시 강남구 ..."
-                className={inputClass}
-              />
+                placeholder="예: 서울특별시 강남구 ... (가입 후 프로필에서 입력 가능)" />
+            </div>
+
+            {/* 약관 동의 (CR-124) */}
+            <div className="border-t border-gray-200 pt-4 space-y-2.5">
+              <label className="flex items-center gap-2.5 cursor-pointer pb-1 mb-1 border-b border-gray-100">
+                <Checkbox checked={agree.terms && agree.privacy && agree.marketing} onCheckedChange={toggleAll} />
+                <span className="text-sm font-semibold text-[#0c1e3d]">전체 동의</span>
+              </label>
+              <label className="flex items-center gap-2.5 cursor-pointer">
+                <Checkbox checked={agree.terms} onCheckedChange={() => toggleAgree('terms')} />
+                <span className="text-sm text-gray-600">
+                  <span className="text-red-500">[필수]</span>{' '}
+                  <Link to="/terms" target="_blank" className="text-[#1a56db] hover:underline">이용약관</Link>에 동의합니다
+                </span>
+              </label>
+              <label className="flex items-center gap-2.5 cursor-pointer">
+                <Checkbox checked={agree.privacy} onCheckedChange={() => toggleAgree('privacy')} />
+                <span className="text-sm text-gray-600">
+                  <span className="text-red-500">[필수]</span>{' '}
+                  <Link to="/privacy" target="_blank" className="text-[#1a56db] hover:underline">개인정보처리방침</Link>에 동의합니다
+                </span>
+              </label>
+              <label className="flex items-center gap-2.5 cursor-pointer">
+                <Checkbox checked={agree.marketing} onCheckedChange={() => toggleAgree('marketing')} />
+                <span className="text-sm text-gray-600">
+                  <span className="text-gray-400">[선택]</span> 마케팅 정보 수신에 동의합니다
+                </span>
+              </label>
             </div>
 
             {error && (
@@ -224,20 +247,9 @@ export default function RegisterPage() {
               </div>
             )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-2.5 text-sm font-semibold text-white rounded-lg transition-opacity disabled:opacity-60 mt-2"
-              style={{ background: '#0c1e3d' }}
-              onMouseEnter={(e) => !loading && (e.currentTarget.style.background = '#162d57')}
-              onMouseLeave={(e) => !loading && (e.currentTarget.style.background = '#0c1e3d')}
-            >
-              {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <i className="fa-solid fa-spinner fa-spin text-xs" /> 가입 처리 중...
-                </span>
-              ) : '회원가입'}
-            </button>
+            <Button type="submit" disabled={loading} className="w-full mt-2" size="lg">
+              {loading ? '가입 처리 중...' : '회원가입'}
+            </Button>
           </form>
 
           <div className="mt-6 text-center">

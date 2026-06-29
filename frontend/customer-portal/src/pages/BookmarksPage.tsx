@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Button } from '@therecommerce-develop/ds-ui'
 import { Badge } from '../components/ui/badge'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/table'
 import { LoadingSpinner } from '../components/ui/loading-spinner'
@@ -67,12 +68,14 @@ export default function BookmarksPage() {
           <i className="fa-regular fa-bookmark text-4xl mb-3 block" />
           <p className="font-medium">저장된 관심 공고가 없습니다.</p>
           <p className="text-sm mt-1">입찰 검색에서 관심 공고를 저장해보세요.</p>
-          <button
+          <Button
+            variant="primary"
+            size="sm"
             onClick={() => navigate('/search')}
-            className="mt-4 px-4 py-2 bg-secondary text-white rounded-lg text-sm hover:bg-blue-600 transition"
+            className="mt-4"
           >
             공고 검색하기
-          </button>
+          </Button>
         </div>
       ) : (
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
@@ -111,23 +114,27 @@ export default function BookmarksPage() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-center align-middle">
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       title="북마크 제거"
-                      className="text-secondary hover:text-red-500 transition mr-3 disabled:opacity-40"
+                      className="text-secondary hover:text-red-500 mr-3"
                       disabled={removingId === bid.id}
                       onClick={(e) => handleRemove(bid, e)}
                     >
                       {removingId === bid.id
                         ? <i className="fa-solid fa-spinner fa-spin text-lg" />
                         : <i className="fa-solid fa-bookmark text-lg" />}
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       title="제안서 작성"
-                      className="text-secondary hover:text-blue-700 transition"
+                      className="text-secondary hover:text-blue-700"
                       onClick={(e) => openAiModal(bid, e)}
                     >
                       <i className="fa-solid fa-wand-magic-sparkles text-lg" />
-                    </button>
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}

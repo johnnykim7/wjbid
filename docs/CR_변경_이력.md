@@ -799,3 +799,13 @@
 - **grep 수행 위치(실측)**: 작업장(description.txt/attachments/)은 Aimbase 컨테이너 내부, BE는 작업장 파일 미접근(LLMPlatformClient는 실행/폴링만) → **anchor grep은 WF 안(Aimbase 도구)에서 수행**. BE 무변경.
 - **규모**: 중(WF 정의 + extract/verify 프롬프트 재설계). 새 화면/API/테이블 없음, 데이터모델/마이그레이션 무변경, BE 무변경(예상). 설계서 [CR-123_verify_anchor_grep_재설계.md](workflows/CR-123_verify_anchor_grep_재설계.md).
 - **상태**: 선행 조치(11c2ce7) 완료·E2E 통과. 재설계 설계 문서 작성 완료. **미착수**: ①extract anchor 추가 ②verify grep 전환(STEP 구조는 Aimbase 도구 역량 실측 후 확정) ③WF v4 PUT ④E2E 검증. 구현은 사용자 승인 대기.
+
+### CR-124: Customer Portal UI 전면 개편 — Design System 도입 (2026-06-29)
+
+- **배경/목표**: customer-portal UI 전면 교체. 컨셉 정본 = [customer-portal-military-poc.html](ui-mockup/customer-portal-military-poc.html)(낙점) — **상단 GNB형 + 나라장터식 차분 톤 + Noto Sans KR + 풀 밀리터리(네이비) 리브랜딩**. 메인(랜딩)은 **현 운영 HomePage 유지**(poc 메인 폐기, 독수리 네이비 히어로 유지). 구현은 **Design System(`@therecommerce-develop/ds-ui` v0.3.0) 컴포넌트로 재구축** — 소비앱은 DS만 import(메트로닉 직접 복사 금지).
+- **DS 도입(실측)**: GitHub Packages(`.npmrc`+`GITHUB_TOKEN`), 설치 정본=`bp-backoffice2`. entry에 `dist/style.css` import + `@theme inline` CSS변수로 **WJbid 네이비 테마(wjbid.css)** 신규. 스택 호환 확인(React19/TW4.1/Radix/TanStack/lucide). 직결 컴포넌트: Header·**CategoryNav(horizontal=GNB)**·Footer·Breadcrumb / DataGrid·PageHeader·StatSummary·StatusFlow·Timeline·Pagination·Accordion(FAQ)·Calendar(입찰캘린더).
+- **IA 확정(약 30화면, 기존12+신규~18)**: 공개=홈/소개/프로세스/가이드/요금/**공지(/notices)**/**FAQ(/faq)**/**고객센터(/support)**/로그인/가입. 로그인후 GNB=공고검색(검색·상세·**마감임박**·관심·**캘린더**·**저장검색**)/내제안서(목록·상세·**진행현황FSM**)/**서류함(/documents)**/알림. 계정드롭다운=프로필·**결제내역(/billing)**·로그아웃. **법적⚖️=/terms·/privacy·/refund·/disclaimer**(4개 개별)+푸터 사업자정보.
+- **회원가입/회원 정책(확정)**: 가입 필수 = 이메일·비번 + **회사명·사업자등록번호·담당자명·연락처**(핵심4). 가입 후 프로필 = 주소·**UEI·CAGE**. BE Member 실측: company_name(필수)·business_registration_number/contact_person/phone(nullable) **이미 존재** → 가입 검증 레벨에서 필수화. **데이터모델 변경**: member에 `uei`(VARCHAR20)·`cage_code`(VARCHAR10) 컬럼 신규(Flyway). 가입 동의=이용약관(필수)·개인정보(필수)·마케팅(선택).
+- **법적 페이지**: 4개 개별. 면책 핵심문구="낙찰 보장 안 함 / 입찰서 최종 제출·서명은 고객 책임". 환불=건당 과금 단계별 기준. 푸터 사업자정보(전상법 표기). ⚠️ 문구 원문은 운영/법무 확정 필요(설계는 골격+플레이스홀더).
+- **규모**: **대규모**(전 화면 + DS 도입 + member 데이터모델 변경 + 빌드/설치 설정). 설계서 [CR-124_UI전면개편_DS도입_설계.md](CR-124_UI전면개편_DS도입_설계.md).
+- **상태**: **설계** 작성 완료(본 문서+마스터 설계서). T3-3 화면구조·T3-1 데이터모델(member uei/cage) 갱신 예정. **미착수**: Phase1 DS셋업 → Phase2 공개화면 → Phase3 로그인후 → Phase4 법적 → Phase5 검증. 구현은 설계 커밋 + 사용자 승인 후 착수.
