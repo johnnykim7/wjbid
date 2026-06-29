@@ -79,7 +79,7 @@ export default function PricingPage() {
           <TableBody>
             {/* 플랜 헤더 행 */}
             <TableRow className="hover:bg-transparent">
-              <TableCell className="align-bottom p-5 w-[40%]" />
+              <TableCell className="align-bottom p-5 w-[40%] border-t border-l border-slate-200 rounded-tl-xl" />
               {PLANS.map((p) => (
                 <TableCell
                   key={p.key}
@@ -91,11 +91,11 @@ export default function PricingPage() {
                 >
                   {p.current && (
                     <Badge variant="success" appearance="light"
-                      className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2">현재 플랜</Badge>
+                      className="absolute top-2.5 left-1/2 -translate-x-1/2">현재 플랜</Badge>
                   )}
                   {p.highlight && (
                     <Badge variant="primary"
-                      className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#1b3a72]">추천</Badge>
+                      className="absolute top-2.5 left-1/2 -translate-x-1/2 bg-[#1b3a72] text-white">추천</Badge>
                   )}
                   <h3 className="text-lg font-semibold text-[#0c1e3d] pb-1">{p.title}</h3>
                   <p className="text-sm text-slate-500 min-h-[40px]">{p.description}</p>
