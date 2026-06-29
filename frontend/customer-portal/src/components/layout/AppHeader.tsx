@@ -47,7 +47,7 @@ export function AppHeader() {
   const initials = (userEmail ?? 'WJ').slice(0, 2).toUpperCase()
 
   return (
-    <header className="bg-[#1b3a72] text-white shrink-0">
+    <header className="bg-[#1b3a72] text-white shrink-0 sticky top-0 z-50">
       <div className="max-w-[1280px] mx-auto px-6 h-[60px] flex items-center">
         {/* 로고 */}
         <div className="flex items-center gap-2.5 mr-10 cursor-pointer"

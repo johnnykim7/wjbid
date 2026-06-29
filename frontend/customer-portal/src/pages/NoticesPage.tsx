@@ -5,7 +5,7 @@
  */
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Badge } from '@therecommerce-develop/ds-ui'
+import { Badge, Button } from '@therecommerce-develop/ds-ui'
 
 interface Notice {
   id: number
@@ -88,10 +88,11 @@ export default function NoticesPage() {
             const open = openId === notice.id
             return (
               <div key={notice.id} className="border-b border-gray-100 last:border-b-0">
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
                   onClick={() => setOpenId(open ? null : notice.id)}
-                  className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-gray-50 transition"
+                  className="w-full h-auto flex items-center justify-start gap-3 px-5 py-4 text-left rounded-none"
                 >
                   <div className="flex gap-1.5 shrink-0">
                     {notice.important && (
@@ -110,7 +111,7 @@ export default function NoticesPage() {
                       open ? 'rotate-180' : ''
                     }`}
                   />
-                </button>
+                </Button>
                 {open && (
                   <div className="px-5 pb-5 pt-1 text-sm text-gray-600 leading-relaxed bg-gray-50">
                     {notice.body}

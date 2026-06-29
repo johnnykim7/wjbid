@@ -39,7 +39,7 @@ export default function BillingPage() {
   }, [rows])
 
   return (
-    <div className="p-6">
+    <div className="space-y-6">
       <div className="mb-6">
         <h2 className="text-xl font-bold text-gray-800">결제 내역</h2>
         <p className="text-sm text-gray-500 mt-1">건당 과금 · 구독 없음 — 사용한 만큼만 결제됩니다.</p>

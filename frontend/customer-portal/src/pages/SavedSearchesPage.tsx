@@ -64,7 +64,7 @@ export default function SavedSearchesPage() {
   }
 
   return (
-    <div className="p-6">
+    <div className="space-y-6">
       <div className="flex justify-between items-center mb-6">
         <div>
           <h2 className="text-xl font-bold text-gray-800">저장한 검색 / 알림 구독</h2>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { Button } from '../components/ui/button'
+import { Button as DsButton } from '@therecommerce-develop/ds-ui'
 import { Badge } from '../components/ui/badge'
 import { LoadingSpinner } from '../components/ui/loading-spinner'
 import {
@@ -227,14 +228,15 @@ export default function ProposalDetailPage() {
           </div>
           <div className="flex-shrink-0 flex items-center gap-1">
             {uploaded && (
-              <button
+              <DsButton
+                variant="ghost"
+                size="icon-sm"
                 onClick={() => handleRemove(uploaded.id)}
                 disabled={isUploading}
-                className="text-xs text-gray-400 hover:text-red-500 px-1.5 py-1"
                 title="삭제"
               >
                 <i className="fa-solid fa-xmark" />
-              </button>
+              </DsButton>
             )}
             <label className={`inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition ${
               isUploading
@@ -327,7 +329,7 @@ export default function ProposalDetailPage() {
     <div className="flex flex-col items-center justify-center h-full text-gray-500 gap-4 p-8">
       <i className="fa-solid fa-circle-exclamation text-4xl text-gray-300" />
       <p>제안서를 찾을 수 없습니다.</p>
-      <button onClick={() => navigate('/proposals')} className="text-secondary underline text-sm">목록으로</button>
+      <DsButton variant="ghost" mode="link" onClick={() => navigate('/proposals')}>목록으로</DsButton>
     </div>
   )
 
@@ -345,9 +347,9 @@ export default function ProposalDetailPage() {
       {/* Header */}
       <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center shadow-sm z-10">
         <div className="flex items-center gap-4">
-          <button onClick={() => navigate('/proposals')} className="text-gray-500 hover:text-gray-800">
+          <DsButton variant="ghost" size="icon" onClick={() => navigate('/proposals')}>
             <i className="fa-solid fa-arrow-left text-xl" />
-          </button>
+          </DsButton>
           <div>
             <h3 className="text-lg font-bold text-gray-800 line-clamp-1">{proposal.displayTitle || proposal.opportunityTitle}</h3>
             <div className="flex items-center gap-2 mt-0.5">
@@ -565,13 +567,14 @@ export default function ProposalDetailPage() {
                             <i className="fa-solid fa-paperclip text-gray-400 mr-1" />
                             {c.fileName}
                           </span>
-                          <button
+                          <DsButton
+                            variant="ghost"
+                            size="icon-sm"
                             onClick={() => handleRemove(c.id)}
-                            className="text-gray-400 hover:text-red-500 px-1.5"
                             title="삭제"
                           >
                             <i className="fa-solid fa-xmark" />
-                          </button>
+                          </DsButton>
                         </div>
                       ))}
                     </div>

@@ -78,7 +78,7 @@ export default function CalendarPage() {
   if (loading) return <LoadingSpinner fullPage />
 
   return (
-    <div className="p-6">
+    <div className="space-y-6">
       <div className="mb-6">
         <h2 className="text-xl font-bold text-gray-800">입찰 캘린더</h2>
         <p className="text-sm text-gray-500 mt-1">관심 공고의 마감일을 달력에서 한눈에 확인하세요.</p>

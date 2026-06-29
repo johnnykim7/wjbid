@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Button } from '@therecommerce-develop/ds-ui'
 import { LoadingSpinner } from '../components/ui/loading-spinner'
 import { getNotifications, markNotificationAsRead } from '../api/client'
 import type { Notification } from '../types'
@@ -51,7 +52,7 @@ export default function NotificationsPage() {
   if (loading) return <LoadingSpinner fullPage />
 
   return (
-    <div className="p-6">
+    <div className="space-y-6">
       <h2 className="text-xl font-bold text-gray-800 mb-6">
         알림
         {items.length > 0 && (
@@ -70,10 +71,11 @@ export default function NotificationsPage() {
           {items.map((n) => {
             const clickable = n.referenceType === 'Opportunity' && !!n.referenceId
             return (
-              <button
+              <Button
                 key={n.id}
+                variant="ghost"
                 onClick={() => handleClick(n)}
-                className={`block w-full text-left px-5 py-4 hover:bg-gray-50 transition-colors ${
+                className={`block w-full h-auto text-left px-5 py-4 rounded-none ${
                   clickable ? 'cursor-pointer' : 'cursor-default'
                 } ${n.read ? 'opacity-60' : ''}`}
               >
@@ -86,7 +88,7 @@ export default function NotificationsPage() {
                     <p className="text-xs text-gray-400 mt-1">{formatDateTime(n.sentAt)}</p>
                   </div>
                 </div>
-              </button>
+              </Button>
             )
           })}
         </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Button } from '../components/ui/button'
+import { Button as DsButton } from '@therecommerce-develop/ds-ui'
 import { Badge } from '../components/ui/badge'
 import { LoadingSpinner } from '../components/ui/loading-spinner'
 import { AiProposalModal } from '../components/modals/AiProposalModal'
@@ -57,9 +58,9 @@ export default function BidDetailPage() {
     <div className="flex flex-col items-center justify-center h-full text-gray-500 gap-4">
       <i className="fa-solid fa-circle-exclamation text-4xl text-gray-300" />
       <p className="text-lg font-semibold">공고 정보를 불러올 수 없습니다.</p>
-      <button onClick={() => navigate('/search')} className="text-secondary underline text-sm">
+      <DsButton variant="ghost" mode="link" onClick={() => navigate('/search')}>
         목록으로 돌아가기
-      </button>
+      </DsButton>
     </div>
   )
 
@@ -81,12 +82,9 @@ export default function BidDetailPage() {
       {/* Sticky Header */}
       <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center shadow-sm z-10">
         <div className="flex items-center gap-4">
-          <button
-            onClick={() => navigate('/search')}
-            className="text-gray-500 hover:text-gray-800 transition"
-          >
+          <DsButton variant="ghost" size="icon" onClick={() => navigate('/search')}>
             <i className="fa-solid fa-arrow-left text-xl" />
-          </button>
+          </DsButton>
           <div>
             <h3 className="text-lg font-bold text-gray-800">입찰 공고 상세 내역</h3>
           </div>

@@ -7,6 +7,15 @@ import { Pagination } from '../components/ui/pagination'
 import { LoadingSpinner } from '../components/ui/loading-spinner'
 import { EmptyState } from '../components/ui/empty-state'
 import {
+  Button,
+  Input,
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@therecommerce-develop/ds-ui'
+import {
   getOpportunities,
   searchOpportunities,
   addBookmark,
@@ -125,7 +134,7 @@ export default function SearchPage() {
   }
 
   return (
-    <div className="p-6">
+    <div className="space-y-6">
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <StatCard
@@ -151,12 +160,14 @@ export default function SearchPage() {
           value="→"
           unit="내 제안서"
           action={
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => navigate('/proposals')}
-              className="text-xs bg-white/20 hover:bg-white/30 px-2 py-1 rounded transition text-white"
+              className="text-xs bg-white/20 hover:bg-white/30 text-white"
             >
               보러가기
-            </button>
+            </Button>
           }
         />
       </div>
@@ -165,33 +176,38 @@ export default function SearchPage() {
       <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-4">
         <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-4 items-center">
           <div className="flex-1 w-full relative">
-            <i className="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm" />
-            <input
+            <i className="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm z-10" />
+            <Input
               type="text"
               placeholder="공고번호, 키워드(예: IT Support), 기관명 검색..."
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary focus:bg-white transition text-sm"
+              className="w-full pl-10"
             />
           </div>
           <div className="flex gap-2 w-full md:w-auto flex-wrap">
-            <select
-              className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-secondary"
-            >
-              {AGENCIES.map((a) => (
-                <option key={a}>{a}</option>
-              ))}
-            </select>
-            <select className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-secondary">
-              <option>Active (진행중)</option>
-              <option>Updated (수정됨)</option>
-            </select>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-secondary text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition"
-            >
+            <Select defaultValue={AGENCIES[0]}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="발주처 선택" />
+              </SelectTrigger>
+              <SelectContent>
+                {AGENCIES.map((a) => (
+                  <SelectItem key={a} value={a}>{a}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select defaultValue="active">
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="상태 선택" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">Active (진행중)</SelectItem>
+                <SelectItem value="updated">Updated (수정됨)</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button type="submit">
               <i className="fa-solid fa-search mr-1" /> 검색
-            </button>
+            </Button>
           </div>
         </form>
       </div>
@@ -252,13 +268,15 @@ export default function SearchPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-center align-middle">
-                        <button
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           title={bookmarkedIds.has(bid.id) ? '북마크 제거' : '관심 공고 저장'}
-                          className={`p-1.5 transition ${bookmarkedIds.has(bid.id) ? 'text-secondary' : 'text-gray-400 hover:text-secondary'}`}
+                          className={bookmarkedIds.has(bid.id) ? 'text-secondary' : 'text-gray-400 hover:text-secondary'}
                           onClick={(e) => toggleBookmark(bid, e)}
                         >
                           <i className={bookmarkedIds.has(bid.id) ? 'fa-solid fa-bookmark' : 'fa-regular fa-bookmark'} />
-                        </button>
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}

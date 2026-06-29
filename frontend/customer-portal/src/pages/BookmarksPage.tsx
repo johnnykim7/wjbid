@@ -55,7 +55,7 @@ export default function BookmarksPage() {
   if (loading) return <LoadingSpinner fullPage />
 
   return (
-    <div className="p-6">
+    <div className="space-y-6">
       <h2 className="text-xl font-bold text-gray-800 mb-6">
         관심 공고 (북마크)
         {bookmarks.length > 0 && (

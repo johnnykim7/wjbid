@@ -4,6 +4,7 @@ import { Badge } from '../components/ui/badge'
 import { LoadingSpinner } from '../components/ui/loading-spinner'
 import { EmptyState } from '../components/ui/empty-state'
 import { Button } from '../components/ui/button'
+import { Button as DsButton } from '@therecommerce-develop/ds-ui'
 import { getMyBidRequests, getBidRequestDocuments } from '../api/client'
 import { STATE_BADGE, STATE_LABEL } from '../types'
 import type { BidRequest } from '../types'
@@ -196,11 +197,14 @@ export default function ProposalsPage() {
             </div>
             <div className="flex-1 overflow-y-auto divide-y divide-gray-100">
               {proposals.map((p) => (
-                <button
+                <div
                   key={p.id}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => loadDocuments(p)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') loadDocuments(p) }}
                   className={cn(
-                    'w-full text-left px-4 py-4 hover:bg-blue-50/50 transition',
+                    'w-full text-left px-4 py-4 hover:bg-blue-50/50 transition cursor-pointer',
                     selected?.id === p.id && 'bg-blue-50 border-l-2 border-secondary'
                   )}
                 >
@@ -217,14 +221,16 @@ export default function ProposalsPage() {
                   </p>
                   <div className="flex items-center justify-between mt-1">
                     <p className="text-xs text-gray-400">{p.createdAt?.slice(0, 10)}</p>
-                    <button
+                    <DsButton
+                      variant="ghost"
+                      size="sm"
                       onClick={(e) => { e.stopPropagation(); navigate(`/proposals/${p.id}`) }}
-                      className="text-xs text-secondary hover:underline"
+                      className="h-auto px-0 py-0 text-xs text-secondary hover:underline hover:bg-transparent"
                     >
                       상세 &rarr;
-                    </button>
+                    </DsButton>
                   </div>
-                </button>
+                </div>
               ))}
             </div>
           </div>
@@ -270,18 +276,20 @@ export default function ProposalsPage() {
                 {documents.length > 1 && (
                   <div className="bg-white border-b border-gray-200 px-6 flex gap-1 flex-shrink-0 overflow-x-auto">
                     {documents.map((doc, idx) => (
-                      <button
+                      <DsButton
                         key={doc.id}
+                        variant="ghost"
+                        size="sm"
                         onClick={() => setActiveDocIdx(idx)}
                         className={cn(
-                          'px-3 py-2 text-xs font-medium whitespace-nowrap border-b-2 transition',
+                          'h-auto rounded-none px-3 py-2 text-xs font-medium whitespace-nowrap border-b-2 transition hover:bg-transparent',
                           idx === activeDocIdx
                             ? 'border-secondary text-secondary'
                             : 'border-transparent text-gray-500 hover:text-gray-700'
                         )}
                       >
                         {DOC_TYPE_LABELS[doc.documentType] ?? doc.documentType}
-                      </button>
+                      </DsButton>
                     ))}
                   </div>
                 )}

@@ -13,6 +13,11 @@ import {
   Input,
   Textarea,
   Label,
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
 } from '@therecommerce-develop/ds-ui'
 import { Button } from '../components/ui/button'
 
@@ -125,18 +130,21 @@ export default function SupportPage() {
 
             <div className="space-y-1.5">
               <Label htmlFor="type">문의 유형</Label>
-              <select
-                id="type"
+              <Select
                 value={form.type}
-                onChange={set('type')}
-                className="w-full h-10 rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1a56db]/40 focus:border-[#1a56db]"
+                onValueChange={(v) => setForm((prev) => ({ ...prev, type: v }))}
               >
-                {INQUIRY_TYPES.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger id="type" className="w-full">
+                  <SelectValue placeholder="문의 유형 선택" />
+                </SelectTrigger>
+                <SelectContent>
+                  {INQUIRY_TYPES.map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {t}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-1.5">

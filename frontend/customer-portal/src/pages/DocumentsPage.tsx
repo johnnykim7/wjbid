@@ -74,7 +74,7 @@ export default function DocumentsPage() {
   }, [slots])
 
   return (
-    <div className="p-6">
+    <div className="space-y-6">
       <div className="mb-6">
         <h2 className="text-xl font-bold text-gray-800">서류함</h2>
         <p className="text-sm text-gray-500 mt-1">
