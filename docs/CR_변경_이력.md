@@ -827,3 +827,18 @@
 - **FSM/이벤트**: 무변경. 서류함은 상태기계 밖, 자동채움은 기존 슬롯 충족 경로(BIZ-015) 그대로.
 - **규모**: 중(신규 테이블1·API5·화면2). 설계서 [CR-125_회사공통서류함_설계.md](CR-125_회사공통서류함_설계.md). T3-1/T3-2/T3-3 갱신.
 - **상태**: 설계 완료 → 구현 진행. FlowGuard 등록은 사용자 결정 보류.
+
+### CR-126: SAM 수집 실패 알림 — 키 만료 무경보 해소 (2026-08-13)
+
+- **배경(사건)**: SAM.gov API 키가 **2026-08-03 만료**되어 수집이 **9일간 401 전패**(하루 4콜 × 9일 = 36콜)했으나 **아무 알림도 없어 방치**됨. `sam_api_call_log` 실측: 8/2까지 200 정상 → 8/3 부분실패 → 8/4~8/12 전부 `401 {"code":"900901","message":"Invalid Credentials"}`.
+- **무경보 원인 3중(실측)**:
+  1. **실패 전용 알림 경로 부재** — 이벤트가 `OpportunitiesCollected`(성공) 하나뿐 ([OpportunityCollectionScheduler.java:77](../backend/src/main/java/com/biddingagency/integration/samgov/scheduler/OpportunityCollectionScheduler.java#L77)).
+  2. **0건 스킵이 실패를 삼킴** — CR-015가 넣은 `targetNewCount == 0` 스킵 ([NotificationEventListener.java:62](../backend/src/main/java/com/biddingagency/domain/notification/service/NotificationEventListener.java#L62))이 **"401로 0건"과 "원래 신규 없음"을 구분 못 함**.
+  3. **에러가 로그에만 남음** — `log.error` 후 종료([:80-82](../backend/src/main/java/com/biddingagency/integration/samgov/scheduler/OpportunityCollectionScheduler.java#L80-L82)). 아무도 로그를 보지 않음.
+  - 추가: 401은 [OpportunityCollectorService.java:145-148](../backend/src/main/java/com/biddingagency/integration/samgov/client/OpportunityCollectorService.java#L145-L148) 광범위 catch에서 `errors++`로만 집계되어 **HTTP status 유실** → errors 카운트만으로 키 만료 특정 불가.
+- **결정(설계)**: 실패를 **독립 이벤트 `CollectionFailed`**로 분리 발행(0건 스킵 분기를 타지 않음) + `NotificationType.COLLECTION_FAILED` 신설. status 유실은 **CR-036 자산 재사용**으로 우회 — `sam_api_call_log.last_status`(당일 UTC search 행)를 조회해 401/403이면 `authFailure=true`. 인증 실패 시 메일 문구를 **"키 만료 추정 + 재발급 절차"로 특정**한다(조치 비용 5분). 멱등키 `COLLECTION_FAIL_{keyword}_{yyyy-MM-dd}`로 **하루 1통**(BIZ-012 재사용) — 9일 지속 시 36통이 아니라 9통.
+- **영향 범위**: BE only — `domain/event/CollectionFailedEvent`(신규), `NotificationType`, `NotificationEventListener.onCollectionFailed`(신규), `OpportunityCollectionScheduler`(실패 발행), `SamApiCallLogRepository`(당일 status 조회). **마이그레이션·FE·MCP·FSM 무변경.**
+- **함께 처리된 운영 조치(본 CR 범위 밖, 완료)**: 키 교체(`SAM-2f62eafc…`, 89일) + **시크릿 `.env` 분리**(커밋 `ec42e63`) — compose 평문 → 서버 `.env` 주입(`${VAR:?}`, 미설정 시 기동 실패). 교체 절차가 ".env 한 줄 + 재기동"으로 단순화됨.
+- **백필**: **불필요**(실측). 스케줄러가 매회 최근 30일(`daysBack=30`)을 훑는 구조라 키 교체 직후 수집에서 공백기 **29건 소급 적재 완료**(`first_seen` 전부 2026-08-12 23:00:01). 단 **공백이 30일을 넘으면 영구 손실** — 본 CR의 알림이 그 방어선.
+- **규모**: 중(신규 이벤트1·알림타입1·리스너1, 마이그레이션 없음). 설계서 [CR-126_수집실패_알림_설계.md](CR-126_수집실패_알림_설계.md). T1-1(BID-OPP-009 신설)/T1-6(CollectionFailed 계약)/T3-5(TC-NOTI-004~008) 갱신.
+- **상태**: 설계 완료(2026-08-13) → 구현 대기.
