@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -53,4 +54,11 @@ public interface SamApiCallLogRepository extends JpaRepository<SamApiCallLog, UU
                 @Param("calledAt") LocalDateTime calledAt);
 
     List<SamApiCallLog> findByCallDateOrderByEndpoint(LocalDate callDate);
+
+    /**
+     * CR-126: 특정 일자(UTC)·엔드포인트의 계측 행. 수집 직후 last_status를 읽어 401/403(키 만료)을 판별한다.
+     * 수집 경로(OpportunityCollectorService)의 광범위 catch가 HTTP status를 유실하므로,
+     * 이미 적재된 계측(CR-036)을 status의 출처로 재사용한다.
+     */
+    Optional<SamApiCallLog> findByCallDateAndEndpoint(LocalDate callDate, String endpoint);
 }

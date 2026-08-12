@@ -5,6 +5,7 @@ import com.biddingagency.domain.bid.entity.BidRequestState;
 import com.biddingagency.domain.bid.repository.BidRequestRepository;
 import com.biddingagency.domain.event.BidRequestCreatedEvent;
 import com.biddingagency.domain.event.BidRequestStateChangedEvent;
+import com.biddingagency.domain.event.CollectionFailedEvent;
 import com.biddingagency.domain.event.DeadlineApproachingEvent;
 import com.biddingagency.domain.event.OpportunitiesCollectedEvent;
 import com.biddingagency.domain.member.entity.Member;
@@ -15,15 +16,18 @@ import com.biddingagency.domain.opportunity.repository.OpportunityRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.*;
 
@@ -86,6 +90,102 @@ class NotificationEventListenerTest {
         // then: ADMIN 조회조차 하지 않고 즉시 리턴, 알림 미발송
         then(memberRepository).shouldHaveNoInteractions();
         then(notificationService).shouldHaveNoInteractions();
+    }
+
+    // CR-126: 수집 실패 알림 — 성공 이벤트의 0건 스킵에 묻히지 않아야 한다
+
+    @Test
+    @DisplayName("수집중_401발생_실패알림발행됨")
+    void onCollectionFailed_401_실패알림발송() {
+        // given: 2026-08-03 키 만료 재현 — search 가 401 Invalid Credentials
+        Member admin = createAdmin();
+        given(memberRepository.findByRole(Member.Role.ADMIN)).willReturn(List.of(admin));
+
+        CollectionFailedEvent event = new CollectionFailedEvent(
+                "411TH CSB", 4, 401,
+                "{\"code\":\"900901\",\"message\":\"Invalid Credentials\"}", true);
+
+        // when
+        listener.onCollectionFailed(event);
+
+        // then: 키 확인이 필요하다는 제목으로 관리자에게 발송
+        then(notificationService).should().sendNotification(
+                eq(NotificationType.COLLECTION_FAILED),
+                eq("admin@test.com"), any(),
+                contains("API 키 확인 필요"),
+                any(),
+                any(), eq("CollectorRun"),
+                contains("COLLECTION_FAIL_411TH CSB_")
+        );
+    }
+
+    @Test
+    @DisplayName("수집중_401발생_키만료문구포함됨")
+    @SuppressWarnings("unchecked")
+    void onCollectionFailed_401_재발급절차_문구포함() {
+        // given
+        given(memberRepository.findByRole(Member.Role.ADMIN)).willReturn(List.of(createAdmin()));
+        CollectionFailedEvent event = new CollectionFailedEvent("411TH CSB", 4, 401, "body", true);
+
+        // when
+        listener.onCollectionFailed(event);
+
+        // then: 사람이 바로 조치할 수 있도록 재발급 절차가 변수에 담긴다
+        ArgumentCaptor<Map<String, Object>> varsCaptor = ArgumentCaptor.forClass(Map.class);
+        then(notificationService).should().sendNotification(
+                any(), anyString(), any(), anyString(), varsCaptor.capture(),
+                any(), anyString(), anyString());
+
+        Map<String, Object> vars = varsCaptor.getValue();
+        assertThat((String) vars.get("reason")).contains("만료");
+        assertThat((String) vars.get("actionGuide"))
+                .contains("SAM_GOV_API_KEY")
+                .contains(".env");
+        assertThat(vars.get("lastStatus")).isEqualTo("401");
+    }
+
+    @Test
+    @DisplayName("같은날_수집2회실패_알림1통만발송됨")
+    void onCollectionFailed_동일일자_멱등키동일() {
+        // given: 하루 4회 수집이 모두 실패해도 멱등키가 같아야 NotificationService(BIZ-012)가 2통째를 막는다
+        given(memberRepository.findByRole(Member.Role.ADMIN)).willReturn(List.of(createAdmin()));
+        CollectionFailedEvent first = new CollectionFailedEvent("411TH CSB", 4, 401, "body", true);
+        CollectionFailedEvent second = new CollectionFailedEvent("411TH CSB", 4, 401, "body", true);
+
+        // when
+        listener.onCollectionFailed(first);
+        listener.onCollectionFailed(second);
+
+        // then
+        ArgumentCaptor<String> keyCaptor = ArgumentCaptor.forClass(String.class);
+        then(notificationService).should(times(2)).sendNotification(
+                any(), anyString(), any(), anyString(), any(),
+                any(), anyString(), keyCaptor.capture());
+
+        List<String> keys = keyCaptor.getAllValues();
+        assertThat(keys.get(0)).isEqualTo(keys.get(1));
+    }
+
+    @Test
+    @DisplayName("수집중_네트워크오류_일반오류문구발송됨")
+    @SuppressWarnings("unchecked")
+    void onCollectionFailed_status없음_일반오류문구() {
+        // given: UnknownHostException 등 — 응답을 못 받아 status 가 null
+        given(memberRepository.findByRole(Member.Role.ADMIN)).willReturn(List.of(createAdmin()));
+        CollectionFailedEvent event = new CollectionFailedEvent("411TH CSB", 1, null, null, false);
+
+        // when
+        listener.onCollectionFailed(event);
+
+        // then: 키 만료로 오인시키지 않는다
+        ArgumentCaptor<Map<String, Object>> varsCaptor = ArgumentCaptor.forClass(Map.class);
+        then(notificationService).should().sendNotification(
+                any(), anyString(), any(), contains("수집 오류"), varsCaptor.capture(),
+                any(), anyString(), anyString());
+
+        Map<String, Object> vars = varsCaptor.getValue();
+        assertThat((String) vars.get("reason")).doesNotContain("만료");
+        assertThat(vars.get("lastStatus")).isEqualTo("-");
     }
 
     @Test

@@ -6,6 +6,8 @@ package com.biddingagency.domain.notification.entity;
 public enum NotificationType {
 
     COLLECTION_COMPLETE("BID_COLLECTION_DONE"),
+    // CR-126: 수집 실패(특히 API 키 만료) 관리자 통보. 전용 템플릿은 후속 운영작업 — 수집 템플릿 재사용.
+    COLLECTION_FAILED("BID_COLLECTION_DONE"),
     DOCUMENT_GENERATED("BID_DOC_GENERATED"),
     DEADLINE_D7("BID_DEADLINE_ALERT"),
     DEADLINE_D3("BID_DEADLINE_ALERT"),

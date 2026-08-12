@@ -4,6 +4,7 @@ import com.biddingagency.domain.bid.entity.BidRequest;
 import com.biddingagency.domain.bid.entity.BidRequestState;
 import com.biddingagency.domain.bid.repository.BidRequestRepository;
 import com.biddingagency.domain.event.BidRequestCreatedEvent;
+import com.biddingagency.domain.event.CollectionFailedEvent;
 import com.biddingagency.domain.event.BidRequestStateChangedEvent;
 import com.biddingagency.domain.event.DeadlineApproachingEvent;
 import com.biddingagency.domain.event.DocumentGeneratedEvent;
@@ -22,6 +23,8 @@ import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +41,8 @@ import java.util.Map;
 public class NotificationEventListener {
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    /** CR-126 멱등키 일자 기준. 관리자가 보는 날짜(KST)와 일치시킨다. */
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
     private final NotificationService notificationService;
     private final MemberRepository memberRepository;
@@ -76,6 +81,54 @@ public class NotificationEventListener {
                     "[Bidding Agency] 공고 수집 완료", vars,
                     event.getEntityId(), "CollectorRun",
                     "COLLECTION_" + event.getEntityId());
+        }
+    }
+
+    /**
+     * CR-126: 수집 실패 관리자 통보.
+     *
+     * <p>{@link #onOpportunitiesCollected}의 0건 스킵 분기를 타지 않는다 — 그 스킵이
+     * "인증 실패로 0건"을 "정상 0건"과 묶어 삼켜서 2026-08-03 키 만료가 9일간 방치됐다.
+     *
+     * <p>같은 날 4회 수집이 모두 실패해도 멱등키(BIZ-012)가 첫 1통만 통과시킨다.
+     */
+    @Async
+    @EventListener
+    public void onCollectionFailed(CollectionFailedEvent event) {
+        String reason = event.isAuthFailure()
+                ? "SAM.gov API 인증 실패(HTTP " + event.getLastStatus() + ") — API 키가 만료된 것으로 보입니다."
+                : "SAM.gov 수집 중 오류가 발생했습니다. (오류 " + event.getErrorCount() + "건)";
+
+        String actionGuide = event.isAuthFailure()
+                ? "SAM.gov > Account Details > Public API Keys 에서 키를 재발급받은 뒤, 운영 서버의 "
+                  + ".env 파일에서 SAM_GOV_API_KEY 를 교체하고 컨테이너를 재기동하세요. (키는 90일 만료)"
+                : "서버 로그의 [SAM-QUOTA] 항목과 sam_api_call_log 테이블을 확인하세요.";
+
+        String subject = event.isAuthFailure()
+                ? "[Bidding Agency] ⚠️ 공고 수집 실패 (API 키 확인 필요)"
+                : "[Bidding Agency] ⚠️ 공고 수집 오류";
+
+        Map<String, Object> vars = Map.of(
+                "keyword", String.valueOf(event.getKeyword()),
+                "errorCount", String.valueOf(event.getErrorCount()),
+                "lastStatus", event.getLastStatus() == null ? "-" : String.valueOf(event.getLastStatus()),
+                "reason", reason,
+                "actionGuide", actionGuide);
+
+        // 하루 1통. 시각은 KST 기준(전역 규칙: 타임존 명시) — 관리자가 보는 날짜와 일치시킨다.
+        String today = LocalDate.now(KST).format(DATE_FMT);
+        String idempotencyKey = "COLLECTION_FAIL_" + event.getKeyword() + "_" + today;
+
+        log.warn("CR-126 수집 실패 알림 발송: authFailure={} lastStatus={} errors={}",
+                event.isAuthFailure(), event.getLastStatus(), event.getErrorCount());
+
+        for (Member admin : memberRepository.findByRole(Member.Role.ADMIN)) {
+            notificationService.sendNotification(
+                    NotificationType.COLLECTION_FAILED,
+                    admin.getEmail(), admin.getId(),
+                    subject, vars,
+                    null, "CollectorRun",
+                    idempotencyKey + "_" + admin.getId());
         }
     }
 
