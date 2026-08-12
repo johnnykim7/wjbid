@@ -2,6 +2,7 @@ package com.biddingagency.mcp.tool;
 
 import com.biddingagency.domain.bid.entity.BidRequest;
 import com.biddingagency.domain.bid.entity.BidRequestState;
+import com.biddingagency.domain.bid.entity.StateTransition;
 import com.biddingagency.domain.bid.service.BidRequestService;
 import com.biddingagency.domain.document.entity.BidDocument;
 import com.biddingagency.domain.document.entity.BidDocumentVersion;
@@ -73,9 +74,12 @@ class DocumentMcpToolTest {
                 .changeSummary("LLM 생성 문서")
                 .build();
 
-        // findByBidRequestAndType throws → 신규 생성
-        given(bidDocumentService.findByBidRequestAndType(eq(bidRequestId), eq(DocumentType.COVER_LETTER)))
-                .willThrow(new IllegalArgumentException("not found"));
+        UUID adminId = UUID.randomUUID();
+        givenBidRequestWithGeneratingHistory(bidRequestId, adminId);
+
+        // 기존 문서 없음(Optional.empty) → 신규 생성 분기
+        given(bidDocumentService.findOptionalByBidRequestAndType(eq(bidRequestId), eq(DocumentType.COVER_LETTER)))
+                .willReturn(Optional.empty());
         given(documentVersionService.createDocument(eq(bidRequestId), eq(DocumentType.COVER_LETTER), any(), any()))
                 .willReturn(newDoc);
         given(documentVersionService.getLatestVersion(any())).willReturn(version);
@@ -101,6 +105,24 @@ class DocumentMcpToolTest {
         assertThat(event.getVersionNo()).isEqualTo(1);
     }
 
+    /**
+     * saveDocumentVersion은 edited_by를 state_history의 마지막 GENERATING 전이 트리거 관리자로 정한다
+     * (2026-05-31 합의: AI는 도구일 뿐 책임자는 관리자). 따라서 GENERATING 이력을 가진 BidRequest가 필요하다.
+     */
+    private BidRequest givenBidRequestWithGeneratingHistory(UUID bidRequestId, UUID adminId) {
+        List<StateTransition> history = new ArrayList<>();
+        history.add(StateTransition.builder()
+                .toState(BidRequestState.GENERATING)
+                .userId(adminId)
+                .build());
+        BidRequest bidRequest = TestHelper.withId(BidRequest.builder()
+                .state(BidRequestState.GENERATING)
+                .stateHistory(history)
+                .build(), bidRequestId);
+        given(bidRequestService.findByIdWithDetails(bidRequestId)).willReturn(bidRequest);
+        return bidRequest;
+    }
+
     // TC-MCP-DOC-002: save_document_version 추가 버전
     @Test
     @DisplayName("기존문서_saveDocumentVersion_새버전추가_기존불변_BIZ002")
@@ -123,8 +145,10 @@ class DocumentMcpToolTest {
                 .changeSummary("LLM 생성 문서")
                 .build();
 
-        given(bidDocumentService.findByBidRequestAndType(eq(bidRequestId), eq(DocumentType.TECHNICAL_PROPOSAL)))
-                .willReturn(existingDoc);
+        givenBidRequestWithGeneratingHistory(bidRequestId, UUID.randomUUID());
+
+        given(bidDocumentService.findOptionalByBidRequestAndType(eq(bidRequestId), eq(DocumentType.TECHNICAL_PROPOSAL)))
+                .willReturn(Optional.of(existingDoc));
         given(documentVersionService.saveVersion(any(), any(), anyString(), any()))
                 .willReturn(newVersion);
 
@@ -180,9 +204,12 @@ class DocumentMcpToolTest {
     @Test
     @DisplayName("잘못된documentType_saveDocumentVersion_예외")
     void 잘못된타입_saveDocumentVersion_예외() {
-        // given
+        // given: documentType 파싱은 bidRequest 조회 뒤에 오므로, 그 앞 단계를 통과시켜야 본 검증에 도달한다
+        UUID bidRequestId = UUID.randomUUID();
+        givenBidRequestWithGeneratingHistory(bidRequestId, UUID.randomUUID());
+
         Map<String, Object> args = new LinkedHashMap<>();
-        args.put("bidRequestId", UUID.randomUUID().toString());
+        args.put("bidRequestId", bidRequestId.toString());
         args.put("documentType", "INVALID_TYPE");
         args.put("contentJson", Map.of());
 

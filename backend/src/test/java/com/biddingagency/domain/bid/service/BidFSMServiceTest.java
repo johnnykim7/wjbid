@@ -104,7 +104,7 @@ class BidFSMServiceTest {
                 .state(BidRequestState.CREATED)
                 .stateHistory(new ArrayList<>())
                 .build();
-        given(bidRequestRepository.findById(bidRequestId)).willReturn(Optional.of(bidRequest));
+        given(bidRequestRepository.findByIdWithDetails(bidRequestId)).willReturn(Optional.of(bidRequest));
         given(bidRequestRepository.save(any(BidRequest.class))).willAnswer(inv -> inv.getArgument(0));
 
         // when
@@ -127,7 +127,7 @@ class BidFSMServiceTest {
                 .state(BidRequestState.CONFIRMED)
                 .stateHistory(new ArrayList<>())
                 .build();
-        given(bidRequestRepository.findById(bidRequestId)).willReturn(Optional.of(bidRequest));
+        given(bidRequestRepository.findByIdWithDetails(bidRequestId)).willReturn(Optional.of(bidRequest));
         given(bidRequestRepository.save(any(BidRequest.class))).willAnswer(inv -> inv.getArgument(0));
 
         // when
@@ -148,7 +148,7 @@ class BidFSMServiceTest {
                 .state(BidRequestState.SUBMITTED)
                 .stateHistory(new ArrayList<>())
                 .build();
-        given(bidRequestRepository.findById(bidRequestId)).willReturn(Optional.of(bidRequest));
+        given(bidRequestRepository.findByIdWithDetails(bidRequestId)).willReturn(Optional.of(bidRequest));
 
         // when & then
         assertThatThrownBy(() -> fsmService.transition(bidRequestId, BidRequestState.REVIEW, UUID.randomUUID(), "admin", ""))
@@ -166,7 +166,7 @@ class BidFSMServiceTest {
                 .state(BidRequestState.CLOSED)
                 .stateHistory(new ArrayList<>())
                 .build();
-        given(bidRequestRepository.findById(bidRequestId)).willReturn(Optional.of(bidRequest));
+        given(bidRequestRepository.findByIdWithDetails(bidRequestId)).willReturn(Optional.of(bidRequest));
 
         // when & then
         assertThatThrownBy(() -> fsmService.transition(bidRequestId, BidRequestState.CREATED, UUID.randomUUID(), "admin", ""))
@@ -186,7 +186,7 @@ class BidFSMServiceTest {
         OpportunityRequirementItem unfulfilledReq = OpportunityRequirementItem.builder()
                 .title("Business License").build();
         ReflectionTestUtils.setField(unfulfilledReq, "id", UUID.randomUUID());
-        given(bidRequestRepository.findById(bidRequestId)).willReturn(Optional.of(bidRequest));
+        given(bidRequestRepository.findByIdWithDetails(bidRequestId)).willReturn(Optional.of(bidRequest));
         given(complianceService.getUnfulfilledBlockerSlots(bidRequestId))
                 .willReturn(List.of(unfulfilledReq));
 
@@ -206,7 +206,7 @@ class BidFSMServiceTest {
                 .state(BidRequestState.DOCS_PENDING)
                 .stateHistory(new ArrayList<>())
                 .build();
-        given(bidRequestRepository.findById(bidRequestId)).willReturn(Optional.of(bidRequest));
+        given(bidRequestRepository.findByIdWithDetails(bidRequestId)).willReturn(Optional.of(bidRequest));
         given(bidRequestRepository.save(any(BidRequest.class))).willAnswer(inv -> inv.getArgument(0));
         given(complianceService.getUnfulfilledBlockerSlots(bidRequestId)).willReturn(List.of());
 
@@ -255,7 +255,7 @@ class BidFSMServiceTest {
                 .state(BidRequestState.SUBMITTED)
                 .stateHistory(new ArrayList<>())
                 .build();
-        given(bidRequestRepository.findById(bidRequestId)).willReturn(Optional.of(bidRequest));
+        given(bidRequestRepository.findByIdWithDetails(bidRequestId)).willReturn(Optional.of(bidRequest));
         given(bidRequestRepository.save(any(BidRequest.class))).willAnswer(inv -> inv.getArgument(0));
 
         // when
@@ -277,7 +277,7 @@ class BidFSMServiceTest {
                 .state(BidRequestState.SUBMITTED)
                 .stateHistory(new ArrayList<>())
                 .build();
-        given(bidRequestRepository.findById(bidRequestId)).willReturn(Optional.of(bidRequest));
+        given(bidRequestRepository.findByIdWithDetails(bidRequestId)).willReturn(Optional.of(bidRequest));
         given(bidRequestRepository.save(any(BidRequest.class))).willAnswer(inv -> inv.getArgument(0));
 
         // when
@@ -319,7 +319,7 @@ class BidFSMServiceTest {
                         .documentType(com.biddingagency.domain.document.entity.DocumentType.TECHNICAL_PROPOSAL)
                         .status(com.biddingagency.domain.document.entity.DocumentStatus.DRAFT)
                         .build();
-        given(bidRequestRepository.findById(bidRequestId)).willReturn(Optional.of(bidRequest));
+        given(bidRequestRepository.findByIdWithDetails(bidRequestId)).willReturn(Optional.of(bidRequest));
         given(bidDocumentService.findByBidRequestAndType(
                 bidRequestId, com.biddingagency.domain.document.entity.DocumentType.TECHNICAL_PROPOSAL))
                 .willReturn(doc);
@@ -343,7 +343,7 @@ class BidFSMServiceTest {
                 .state(BidRequestState.GENERATING)
                 .stateHistory(new ArrayList<>())
                 .build();
-        given(bidRequestRepository.findById(bidRequestId)).willReturn(Optional.of(bidRequest));
+        given(bidRequestRepository.findByIdWithDetails(bidRequestId)).willReturn(Optional.of(bidRequest));
 
         // when & then
         assertThatThrownBy(() -> fsmService.regenerateDocument(
@@ -367,7 +367,7 @@ class BidFSMServiceTest {
                         .documentType(com.biddingagency.domain.document.entity.DocumentType.COVER_LETTER)
                         .status(com.biddingagency.domain.document.entity.DocumentStatus.LOCKED)
                         .build();
-        given(bidRequestRepository.findById(bidRequestId)).willReturn(Optional.of(bidRequest));
+        given(bidRequestRepository.findByIdWithDetails(bidRequestId)).willReturn(Optional.of(bidRequest));
         given(bidDocumentService.findByBidRequestAndType(
                 bidRequestId, com.biddingagency.domain.document.entity.DocumentType.COVER_LETTER))
                 .willReturn(lockedDoc);
@@ -390,7 +390,7 @@ class BidFSMServiceTest {
                 .state(BidRequestState.DOCS_PENDING)
                 .stateHistory(new ArrayList<>())
                 .build();
-        given(bidRequestRepository.findById(bidRequestId)).willReturn(Optional.of(bidRequest));
+        given(bidRequestRepository.findByIdWithDetails(bidRequestId)).willReturn(Optional.of(bidRequest));
         given(bidRequestRepository.save(any(BidRequest.class))).willAnswer(inv -> inv.getArgument(0));
         given(complianceService.getUnfulfilledBlockerSlots(bidRequestId)).willReturn(List.of());
 

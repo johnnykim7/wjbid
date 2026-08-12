@@ -50,8 +50,8 @@ class BidRequestServiceTest {
 
     // TC-BID-001: 입찰 참여 신청
     @Test
-    @DisplayName("유효입력_입찰신청_CREATED상태_BidRequest생성")
-    void 유효입력_createBidRequest_CREATED() {
+    @DisplayName("유효입력_입찰신청_DOCS_PENDING상태로반환_BidRequest생성")
+    void 유효입력_createBidRequest_DOCS_PENDING() {
         // given
         UUID memberId = UUID.randomUUID();
         UUID opportunityId = UUID.randomUUID();
@@ -71,12 +71,22 @@ class BidRequestServiceTest {
             BidRequest br = inv.getArgument(0);
             return br;
         });
+        // 신청 즉시 CREATED → DOCS_PENDING 으로 전이하고 그 결과를 반환한다(고객이 바로 서류 업로드 가능하도록).
+        given(fsmService.transition(any(), eq(BidRequestState.DOCS_PENDING), any(), anyString(), anyString()))
+                .willAnswer(inv -> {
+                    BidRequest br = BidRequest.builder()
+                            .member(member)
+                            .opportunity(opportunity)
+                            .state(BidRequestState.DOCS_PENDING)
+                            .build();
+                    return br;
+                });
 
         // when
         BidRequest result = bidRequestService.createBidRequest(memberId, opportunityId, createdBy, "admin");
 
         // then
-        assertThat(result.getState()).isEqualTo(BidRequestState.CREATED);
+        assertThat(result.getState()).isEqualTo(BidRequestState.DOCS_PENDING);
         assertThat(result.getMember()).isEqualTo(member);
         assertThat(result.getOpportunity()).isEqualTo(opportunity);
         then(bidRequestRepository).should().save(any(BidRequest.class));
