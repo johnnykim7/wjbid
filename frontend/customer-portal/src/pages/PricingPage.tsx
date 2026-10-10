@@ -55,7 +55,7 @@ const SERVICE_ITEMS: { title: string; desc: string }[] = [
 
 function featureCell(included: boolean) {
   return included
-    ? <Check className="inline text-success w-4 h-4" />
+    ? <Check className="inline text-brand w-4 h-4" />
     : <Minus className="inline text-ink-faint w-4 h-4" />
 }
 
