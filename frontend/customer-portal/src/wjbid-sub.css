@@ -174,11 +174,35 @@
 .wj .faqs .a p { margin:4px 0 0; font-size:17px; line-height:1.75; color:color-mix(in srgb, var(--color-ink-sub) 54%, var(--color-ink)); }
 .wj .faqs .a p a { color:var(--color-brand); font-weight:800; }
 .wj .faqs > div.open .fq { color:var(--color-brand); }
+/* 1:1 문의 폼. 칸 모양은 로그인 화면(wjbid-auth.css 의 .au)과 같은 정본 규칙이고, ds-ui 칸의 wj-reset 을 이기도록 3단 선택자로 쓴다 */
 .wj .sup { display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:20px; align-items:start; }
-.wj .sel2 { display:flex; align-items:center; justify-content:space-between; height:56px; padding:0 18px; border:1.5px solid color-mix(in srgb, var(--color-line-strong) 75%, var(--color-line)); border-radius:8px; font-size:17.5px; background:white; }
-.wj .sel2 svg { width:18px; height:18px; color:var(--color-ink-mute); }
-.wj .ta { height:190px; align-items:flex-start; padding-top:16px; line-height:1.6; }
-.wj .in.fill { border-color:var(--color-brand); background:var(--color-brand-softer); }
+.wj .sup .fld { display:block; margin-top:22px; }
+.wj .sup .cols2 { display:grid; grid-template-columns:1fr 1fr; gap:0 20px; }
+.wj .sup .fl { display:flex; align-items:center; gap:4px; margin-bottom:8px; font-size:16.5px; font-weight:700; color:var(--color-ink); line-height:1.5; cursor:default; }
+.wj .sup .fl .rq { color:var(--color-danger); }
+.wj .sup .in { display:block; width:100%; height:56px; padding:0 18px; border:1.5px solid color-mix(in srgb, var(--color-line-strong) 75%, var(--color-line)); border-radius:8px; font-size:17.5px; color:var(--color-ink); background:white; cursor:text; }
+.wj .sup .in::placeholder { color:color-mix(in srgb, var(--color-ink-mute) 50%, var(--color-ink-faint)); opacity:1; }
+.wj .sup .in:focus-visible { outline:none; }
+.wj .sup .in:focus { border-color:var(--color-brand); box-shadow:0 0 0 3px var(--color-brand-soft); }
+.wj .sup .in.sel2 { display:flex; align-items:center; justify-content:space-between; cursor:pointer; }
+.wj .sup .in.sel2[data-placeholder] { color:color-mix(in srgb, var(--color-ink-mute) 50%, var(--color-ink-faint)); }
+.wj .sup .in.sel2[data-disabled] { cursor:default; background:var(--color-surface); }
+.wj .sup .sel2 svg { width:18px; height:18px; color:var(--color-ink-mute); }
+.wj .sup .in.ta { height:190px; padding-top:16px; padding-bottom:16px; line-height:1.6; resize:vertical; white-space:pre-wrap; }
+.wj .sup .in.fill { border-color:var(--color-brand); background:var(--color-brand-softer); }
+.wj .sup .msg { display:flex; align-items:flex-start; gap:10px; margin-top:22px; padding:14px 16px; border-radius:8px; font-size:16px; font-weight:600; line-height:1.5; }
+.wj .sup form > .msg:first-child { margin-top:0; }
+.wj .sup .msg svg { flex:none; width:20px; height:20px; stroke-width:2.4; margin-top:1px; }
+.wj .sup .msg.good { background:var(--color-success-soft); color:var(--color-success); border:1px solid color-mix(in srgb, var(--color-success) 20%, var(--color-success-soft)); }
+.wj .sup .msg.err { background:var(--color-danger-soft); color:color-mix(in srgb, var(--color-danger) 82%, black); border:1px solid color-mix(in srgb, var(--color-danger) 25%, var(--color-danger-soft)); }
+.wj .sup .bigb.w { display:flex; width:100%; height:60px; margin-top:28px; border-radius:8px; font-size:19px; cursor:pointer; }
+.wj .sup .bigb.w:disabled { opacity:.6; cursor:default; }
+.wj .sup .done { padding:48px 20px 44px; text-align:center; }
+.wj .sup .done .icn { width:64px; height:64px; margin:0 auto; border-radius:50%; background:var(--color-success-soft); color:var(--color-success); display:grid; place-items:center; }
+.wj .sup .done .icn svg { width:30px; height:30px; }
+.wj .sup .done b { display:block; margin-top:18px; font-size:21px; font-weight:800; letter-spacing:-.03em; }
+.wj .sup .done span { display:block; margin-top:6px; font-size:16.5px; color:var(--color-ink-sub); }
+.wj .sup .done .bigb { margin-top:24px; cursor:pointer; }
 .wj .sd .cbx { padding:24px 24px; }
 .wj .sd b.xtx { display:block; font-size:18px; font-weight:800; }
 .wj .sd p { margin:6px 0 0; font-size:15.5px; color:var(--color-ink-sub); line-height:1.6; }

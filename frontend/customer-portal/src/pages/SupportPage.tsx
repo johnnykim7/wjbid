@@ -1,16 +1,12 @@
 /**
- * CR-124 — 고객센터(Support) 페이지.
- * 상단: FAQ 요약 아코디언(3~4개) + 하단: 1:1 문의 폼.
- * FAQ_SUMMARY는 더미. 1:1 문의는 서버에 접수한다(CR-132).
- * 다른 화면이 /support?type=<유형코드>&title=<제목> 으로 유형과 제목을 채워 열 수 있다(CR-133).
+ * 1:1 문의. 문의는 서버에 접수한다(CR-132).
+ * 다른 화면이 /support?type=<유형코드>&title=<제목> 으로 유형과 제목을 채워 열 수 있다.
+ * 고객센터 속페이지 틀 안에 두고 오른쪽에 메일 안내와 바로가기를 둔다(CR-133, T3-3, 화면 정본 support).
  */
 import { useEffect, useRef, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import {
-  Accordion,
-  AccordionItem,
-  AccordionTrigger,
-  AccordionContent,
+  Button,
   Input,
   Textarea,
   Label,
@@ -20,33 +16,28 @@ import {
   SelectContent,
   SelectItem,
 } from '@therecommerce-develop/ds-ui'
-import { Button } from '../components/ui/button'
+import { Icon } from '../components/layout/Icon'
+import { findMenuItem } from '../components/layout/menu'
+import { COMPANY } from '../components/layout/siteContent'
+import { PageHead, SubPageFrame } from '../components/subpage/SubPageFrame'
+import { SubIcon } from '../components/subpage/SubIcon'
 import { useAuth } from '../context/AuthContext'
 import { getInquiryTypes, getMyProfile, submitInquiry, type InquiryTypeItem } from '../api/client'
+import { INQUIRY_MAX, INQUIRY_TEXT } from '../data/supportContent'
 
-// 더미 데이터 (BE 미연동)
-const FAQ_SUMMARY = [
-  {
-    q: 'SAM.gov 등록은 어떻게 하나요?',
-    a: 'SAM.gov에서 사업자 등록(Entity Registration)을 진행해야 입찰에 참여할 수 있습니다. UEI·CAGE 코드가 필요하며 WJbid가 절차를 안내합니다.',
-  },
-  {
-    q: '제안서 작성에는 얼마나 걸리나요?',
-    a: '분석·초안 작성 1~2일, 전문가 검토 1일이 소요됩니다. 마감 D-3 이전 신청을 권장합니다.',
-  },
-  {
-    q: '환불은 가능한가요?',
-    a: '제안서 작성 시작 전에는 전액 환불, 작성 진행 후에는 단계별 부분 환불이 적용됩니다.',
-  },
-  {
-    q: '입찰 결과는 어떻게 확인하나요?',
-    a: '제출 이후 진행 상황과 낙찰·미낙찰 결과를 마이페이지와 알림으로 실시간 확인할 수 있습니다.',
-  },
-]
-
-const TITLE_MAX = 200
+const PLACE = findMenuItem('support', 'inquiry')
 
 const EMPTY_FORM = { name: '', email: '', typeCode: '', title: '', content: '' }
+
+/** 주소로 채운 값. 고객이 고치면 그 칸은 채운 표시를 거둔다 */
+interface Prefilled {
+  typeCode?: string
+  title?: string
+}
+
+function FieldLabel({ htmlFor, children }: { htmlFor: string; children: string }) {
+  return <Label htmlFor={htmlFor} className="wj-reset fl">{children}<span className="rq">*</span></Label>
+}
 
 export default function SupportPage() {
   const { isAuthenticated } = useAuth()
@@ -55,6 +46,7 @@ export default function SupportPage() {
   const [types, setTypes] = useState<InquiryTypeItem[]>([])
   const [typesFailed, setTypesFailed] = useState(false)
   const [form, setForm] = useState(EMPTY_FORM)
+  const [prefilled, setPrefilled] = useState<Prefilled | null>(null)
   const [sending, setSending] = useState(false)
   const [sendFailed, setSendFailed] = useState(false)
   const [sentTo, setSentTo] = useState<string | null>(null)
@@ -70,13 +62,12 @@ export default function SupportPage() {
     const wantedTitle = params.get('title')
     getInquiryTypes()
       .then((res) => {
+        const title = wantedTitle ? wantedTitle.slice(0, INQUIRY_MAX.title) : undefined
+        const typeCode = res.data.some((t) => t.code === wantedType) ? wantedType ?? undefined : undefined
         setTypes(res.data)
-        setForm((prev) => ({
-          ...prev,
-          typeCode: defaultTypeCode(res.data),
-          title: wantedTitle ? wantedTitle.slice(0, TITLE_MAX) : prev.title,
-        }))
-        if (res.data.some((t) => t.code === wantedType) || wantedTitle) {
+        setForm((prev) => ({ ...prev, typeCode: defaultTypeCode(res.data), title: title ?? prev.title }))
+        if (typeCode || title) {
+          setPrefilled({ typeCode, title })
           formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
         }
       })
@@ -99,6 +90,10 @@ export default function SupportPage() {
       .catch(() => undefined)
   }, [isAuthenticated])
 
+  if (!PLACE) return <Navigate to="/" replace />
+  const { group, item } = PLACE
+  const t = INQUIRY_TEXT
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setSending(true)
@@ -111,151 +106,93 @@ export default function SupportPage() {
 
   const startNew = () => {
     setSentTo(null)
+    setPrefilled(null)
     setForm((prev) => ({ ...EMPTY_FORM, name: prev.name, email: prev.email, typeCode: types[0]?.code ?? '' }))
   }
 
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm((prev) => ({ ...prev, [k]: e.target.value }))
 
+  const filled = (k: keyof Prefilled) =>
+    prefilled?.[k] !== undefined && prefilled[k] === form[k] ? ' fill' : ''
+
   return (
-    <div className="flex-1 overflow-y-auto">
-      {/* 페이지 헤더 (제목 + 부제 — 전 페이지 통일) */}
-      <div className="text-center mb-10 pt-2">
-        <h1 className="text-2xl font-bold text-ink">고객센터</h1>
-        <p className="mt-2 text-ink-mute">
-          자주 묻는 질문을 먼저 확인하시고, 해결되지 않으면 1:1 문의를 남겨 주세요.
-        </p>
-      </div>
-
-      <div className="max-w-3xl mx-auto px-6 py-12 space-y-12">
-        {/* FAQ 요약 */}
-        <section>
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-lg font-extrabold text-ink">자주 묻는 질문</h2>
-            <Link to="/faq" className="text-sm text-brand font-medium hover:underline">
-              전체 FAQ 보기 <i className="fa-solid fa-arrow-right text-xs ml-0.5" />
-            </Link>
-          </div>
-          <Accordion type="single" collapsible className="space-y-4">
-            {FAQ_SUMMARY.map((faq, idx) => (
-              <AccordionItem
-                key={idx}
-                value={`sfaq-${idx}`}
-                className="bg-white rounded-xl border border-line px-5"
-              >
-                <AccordionTrigger className="text-sm font-bold text-ink gap-2">
-                  <span className="flex items-start gap-2 text-left">
-                    <i className="fa-solid fa-circle-question text-brand mt-0.5" />
-                    {faq.q}
-                  </span>
-                </AccordionTrigger>
-                <AccordionContent className="text-sm text-ink-sub ml-6 leading-relaxed">
-                  {faq.a}
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
-        </section>
-
-        {/* 1:1 문의 폼 */}
-        <section ref={formRef} className="scroll-mt-4">
-          <h2 className="text-lg font-extrabold text-ink mb-5">1:1 문의</h2>
+    <SubPageFrame group={group} item={item}>
+      <PageHead title={t.title} desc={t.desc} />
+      <div className="sup">
+        <section ref={formRef} className="cbx pad">
           {sentTo ? (
-            <div className="bg-white rounded-xl border border-line p-8 text-center space-y-2">
-              <i className="fa-solid fa-circle-check text-3xl text-success" />
-              <p className="text-base font-bold text-ink">문의가 접수되었습니다.</p>
-              <p className="text-sm text-ink-sub">답변은 {sentTo} 로 보내 드립니다.</p>
-              <div className="pt-3">
-                <Button type="button" variant="outline" onClick={startNew}>
-                  새 문의 쓰기
-                </Button>
-              </div>
+            <div className="done" role="status">
+              <div className="icn"><Icon name="okc" /></div>
+              <b>{t.doneTitle}</b>
+              <span>{t.doneDesc(sentTo)}</span>
+              <Button type="button" className="wj-reset bigb o" onClick={startNew}>{t.again}</Button>
             </div>
           ) : (
-          <form
-            onSubmit={handleSubmit}
-            className="bg-white rounded-xl border border-line p-6 space-y-5"
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="space-y-1.5">
-                <Label htmlFor="name">이름</Label>
-                <Input id="name" value={form.name} onChange={set('name')} placeholder="홍길동" maxLength={100} required />
+            <form onSubmit={handleSubmit}>
+              {prefilled && (
+                <div className="msg good" role="status"><Icon name="okc" />{t.prefilled}</div>
+              )}
+              <div className="cols2">
+                <div className="fld">
+                  <FieldLabel htmlFor="inq-name">{t.label.name}</FieldLabel>
+                  <Input id="inq-name" className="wj-reset in" value={form.name} onChange={set('name')} placeholder={t.placeholder.name} maxLength={INQUIRY_MAX.name} required />
+                </div>
+                <div className="fld">
+                  <FieldLabel htmlFor="inq-email">{t.label.email}</FieldLabel>
+                  <Input id="inq-email" className="wj-reset in" type="email" value={form.email} onChange={set('email')} placeholder={t.placeholder.email} maxLength={INQUIRY_MAX.email} required />
+                </div>
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="email">이메일</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={form.email}
-                  onChange={set('email')}
-                  placeholder="you@example.com"
-                  maxLength={255}
-                  required
-                />
+              <div className="fld">
+                <FieldLabel htmlFor="inq-type">{t.label.type}</FieldLabel>
+                {/* 폼 안의 고르기 칸은 숨은 select 에 값을 먼저 넣는데, 그때 유형 목록이 아직 없으면 빈 값으로 되돌린다.
+                    목록이 온 뒤 새로 그려 값과 목록을 한 번에 받게 한다 */}
+                <Select
+                  key={types.length > 0 ? 'loaded' : 'loading'}
+                  value={form.typeCode}
+                  onValueChange={(v) => setForm((prev) => ({ ...prev, typeCode: v }))}
+                  disabled={types.length === 0}
+                >
+                  <SelectTrigger id="inq-type" className={`wj-reset in sel2${filled('typeCode')}`}>
+                    <SelectValue placeholder={t.placeholder.type} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {types.map((ty) => <SelectItem key={ty.code} value={ty.code}>{ty.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="type">문의 유형</Label>
-              <Select
-                value={form.typeCode}
-                onValueChange={(v) => setForm((prev) => ({ ...prev, typeCode: v }))}
-                disabled={types.length === 0}
-              >
-                <SelectTrigger id="type" className="w-full">
-                  <SelectValue placeholder="문의 유형 선택" />
-                </SelectTrigger>
-                <SelectContent>
-                  {types.map((t) => (
-                    <SelectItem key={t.code} value={t.code}>
-                      {t.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="title">제목</Label>
-              <Input
-                id="title"
-                value={form.title}
-                onChange={set('title')}
-                placeholder="문의 제목을 입력해 주세요"
-                maxLength={TITLE_MAX}
-                required
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="content">내용</Label>
-              <Textarea
-                id="content"
-                value={form.content}
-                onChange={set('content')}
-                rows={6}
-                placeholder="문의 내용을 자세히 작성해 주세요"
-                maxLength={5000}
-                required
-              />
-            </div>
-
-            {typesFailed && (
-              <p className="text-sm text-danger">문의 유형을 불러오지 못했습니다. 잠시 뒤 다시 열어 주세요.</p>
-            )}
-            {sendFailed && (
-              <p className="text-sm text-danger">문의를 보내지 못했습니다. 잠시 뒤 다시 보내 주세요.</p>
-            )}
-
-            <div className="flex justify-end">
-              <Button type="submit" variant="accent" disabled={sending || !form.typeCode}>
-                <i className="fa-solid fa-paper-plane mr-2" /> {sending ? '보내는 중' : '문의 보내기'}
+              <div className="fld">
+                <FieldLabel htmlFor="inq-title">{t.label.title}</FieldLabel>
+                <Input id="inq-title" className={`wj-reset in${filled('title')}`} value={form.title} onChange={set('title')} placeholder={t.placeholder.title} maxLength={INQUIRY_MAX.title} required />
+              </div>
+              <div className="fld">
+                <FieldLabel htmlFor="inq-content">{t.label.content}</FieldLabel>
+                <Textarea id="inq-content" className="wj-reset in ta" value={form.content} onChange={set('content')} placeholder={t.placeholder.content} maxLength={INQUIRY_MAX.content} required />
+              </div>
+              {typesFailed && <div className="msg err" role="alert"><Icon name="alert" /><span>{t.typesFailed}</span></div>}
+              {sendFailed && <div className="msg err" role="alert"><Icon name="alert" /><span>{t.sendFailed}</span></div>}
+              <Button type="submit" className="wj-reset bigb w" disabled={sending || !form.typeCode}>
+                {sending ? t.sending : t.submit}
               </Button>
-            </div>
-          </form>
+            </form>
           )}
         </section>
+        <aside className="sd">
+          <div className="cbx">
+            <b className="xtx">{t.mailTitle}</b>
+            <p>{t.mailDesc}</p>
+            <a className="ml" href={`mailto:${COMPANY.email}`}><SubIcon name="mail" />{COMPANY.email}</a>
+          </div>
+          <div className="cbx">
+            <b className="xtx">{t.shortcutTitle}</b>
+            <ul>
+              {t.shortcuts.map((s) => (
+                <li key={s.to}><Link to={s.to}>{s.label}<Icon name="cr" /></Link></li>
+              ))}
+            </ul>
+          </div>
+        </aside>
       </div>
-    </div>
+    </SubPageFrame>
   )
 }

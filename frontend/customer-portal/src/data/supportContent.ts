@@ -106,3 +106,36 @@ export const FAQS: FaqItem[] = [
 
 /** 홈 도움 구역에 보이는 질문 수 */
 export const HOME_FAQ_COUNT = 6
+
+/** 1:1 문의 (CR-132 접수, CR-133 속페이지 틀). 접수 결과 문구는 CR-132 가 정한 그대로다 */
+export const INQUIRY_TEXT = {
+  title: '1:1 문의',
+  desc: '남겨 주시면 확인 뒤 이메일로 답변 드립니다',
+  prefilled: '문의 유형과 제목을 채워 두었습니다',
+  label: { name: '이름', email: '이메일', type: '문의 유형', title: '제목', content: '내용' },
+  placeholder: {
+    name: '예: 김민수',
+    email: 'name@company.com',
+    type: '문의 유형 선택',
+    title: '문의 제목을 입력해 주세요',
+    content: '회사 상황(업종, 지금 등록 상태, 입찰하려는 공고)을 적어 주시면 더 빨리 답변 드립니다',
+  },
+  submit: '문의 남기기',
+  sending: '보내는 중',
+  typesFailed: '문의 유형을 불러오지 못했습니다. 잠시 뒤 다시 열어 주세요.',
+  sendFailed: '문의를 보내지 못했습니다. 잠시 뒤 다시 보내 주세요.',
+  doneTitle: '문의가 접수되었습니다.',
+  doneDesc: (email: string) => `답변은 ${email} 로 보내 드립니다.`,
+  again: '새 문의 쓰기',
+  mailTitle: '메일로도 받습니다',
+  mailDesc: '파일을 함께 보내실 때는 메일이 편합니다',
+  shortcutTitle: '먼저 찾아보세요',
+  shortcuts: [
+    { label: '자주 묻는 질문', to: '/faq' },
+    { label: '요금 안내', to: '/pricing' },
+    { label: '용어 사전', to: academyHref('glossary') },
+  ],
+}
+
+/** 입력 길이 한도. 서버 접수 규칙(CR-132)과 같다 */
+export const INQUIRY_MAX = { name: 100, email: 255, title: 200, content: 5000 }
