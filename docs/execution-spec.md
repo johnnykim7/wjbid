@@ -1,6 +1,6 @@
 # 실행 지시서: SAM.gov Bidding Agency Platform
 
-> 설계 버전: 1.2 | 최종 수정: 2026-10-11 | 관련 CR: CR-003, CR-132
+> 설계 버전: 1.3 | 최종 수정: 2026-10-11 | 관련 CR: CR-003, CR-132, CR-133
 
 > **프로젝트:** bidding-agency-platform (미군 조달 입찰 AI 대행 서비스)
 > **프로젝트 유형:** 풀스택 (BE: Java 17 + Spring Boot 3.2 / FE: React 19 × 2)
@@ -110,7 +110,8 @@ SAM.gov에 올라오는 미군(USFK) 조달 입찰 공고를 자동 수집하고
 | L. 요금 | 2 | 요금 안내 | — |
 | M. 관리자 | 4 | 회원/입찰/수집/**공고** 관리 (CR-003) | — |
 | N. 인증 가이드 | 1 | 정적 가이드 페이지 | — |
-| O. 고객센터 | 3 | 1:1 문의 접수, 관리자 알림, 관리자 조회·답변 (CR-132) | bp-notification |
+| O. 고객센터 | 5 | 1:1 문의 접수, 관리자 알림, 관리자 조회·답변 (CR-132), 공지사항, 자주 묻는 질문 (CR-133) | bp-notification |
+| P. 메뉴 속 화면 | 7 | 속페이지 틀, 항목별 준비 안내, 등록·컨설팅 서비스 안내, 입찰 교실 4화면 (CR-133, T1-1 R 모듈). 고객 포털만 | O. 고객센터(상담 신청) |
 
 ---
 
@@ -518,6 +519,8 @@ sequenceDiagram
 | Admin 수집 관리 | `POST /admin/collection/trigger` | |
 | **Admin 공고 관리** | `GET/POST /admin/opportunities/*` | **CR-003**: 첨부 업로드, 분석, 승인 |
 | Admin 양식 관리 | `GET/POST/DELETE /admin/document-templates` | |
+| 메뉴 속 화면 (CR-133) | 없음 | 화면 정의 파일. 상담·참가 신청은 1:1 문의 화면으로 이동 |
+| 요금 안내 | `GET /pricing` | CR-129. CR-133 에서 속페이지 틀 안 |
 
 ### 8-4. 리뷰 체크리스트
 
