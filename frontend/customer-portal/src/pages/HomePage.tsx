@@ -5,7 +5,7 @@ import { getNearDeadline, getOpportunities } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import { MEMBER_PRICE_PENDING_LABEL, formatWon, usePricing } from '../hooks/usePricing'
 import { Icon } from '../components/layout/Icon'
-import { comingSoonHref } from '../components/layout/menu'
+import { comingSoonHref, serviceHref } from '../components/layout/menu'
 import type { MemberSummary } from '../components/layout/useMemberSummary'
 import { daysUntil, ddayLabel } from '../utils/dday'
 import type { Opportunity } from '../types'
@@ -13,13 +13,11 @@ import {
   BENEFIT_CALENDAR,
   BENEFIT_FIT,
   BENEFIT_TRANSLATE,
-  FAQ_TITLES,
   FLOW,
   FREE_BENEFITS,
   HELP_LINKS,
   IMAGES,
   LIST_ROWS,
-  NOTICE_TITLES,
   PLAN_CONSULT,
   PLAN_FREE,
   PLAN_MEMBER,
@@ -32,6 +30,11 @@ import {
   TIER_NOTE,
   type Tier,
 } from '../data/homeContent'
+import { FAQS, HOME_FAQ_COUNT, NOTICES, NOTICE_TEXT } from '../data/supportContent'
+
+/** 도움 구역은 자주 묻는 질문·공지사항 화면과 같은 목록을 읽는다 (CR-133) */
+const FAQ_TITLES = FAQS.slice(0, HOME_FAQ_COUNT).map((f) => f.q)
+const NOTICE_TITLES = NOTICES.map((n) => n.title)
 
 /*
  * 홈 (CR-127). 화면 정본 홈시안_파랑.html 의 #s0(공고 0건), #s1(공고 있음), #s2(회원)를 한 화면에서 상태로 가른다.
@@ -122,7 +125,7 @@ export default function HomePage() {
           <span className="tag">준비 중</span>
           <h3>마감 전 공고를<br />한글 공고문으로 정리하고 있습니다</h3>
           <p>올라오는 대로 이 자리에 마감순으로 보입니다.</p>
-          <Link className="smp" to={comingSoonHref('공고문 예시')}>
+          <Link className="smp" to={comingSoonHref('notice-sample')}>
             <small>{SAMPLE_NOTICE.caption}</small>
             <b>{SAMPLE_NOTICE.title}</b>
             <i className="mono">{SAMPLE_NOTICE.number}</i>
@@ -134,7 +137,7 @@ export default function HomePage() {
           </Link>
           <div className="lk">
             <Link to={isAuthenticated ? '/notifications' : '/register'}>새 공고 알림 받기<Icon name="cr" /></Link>
-            <Link to={comingSoonHref('공고문 예시')}>공고문 예시 전체 보기<Icon name="cr" /></Link>
+            <Link to={comingSoonHref('notice-sample')}>공고문 예시 전체 보기<Icon name="cr" /></Link>
           </div>
         </div>
         <img src={IMAGES.empty} alt="" />
@@ -192,7 +195,7 @@ export default function HomePage() {
       </div>
       <div className="qk">
         <Link to="/documents"><span className="fi"><Icon name="folder" /></span>서류함</Link>
-        <Link to={comingSoonHref('재발주 달력')}><span className="fi"><Icon name="cal" /></span>재발주 달력</Link>
+        <Link to={comingSoonHref('recompete-calendar')}><span className="fi"><Icon name="cal" /></span>재발주 달력</Link>
       </div>
     </div>
   ) : (
@@ -216,7 +219,7 @@ export default function HomePage() {
           <div className="sam">
             <Icon name="check" />
             <span>제출 때 SAM 등록이 필요할 수 있습니다</span>
-            <Link to={comingSoonHref('SAM 등록 대행')}>등록 대행<Icon name="cr" /></Link>
+            <Link to={serviceHref('sam-registration')}>등록 대행<Icon name="cr" /></Link>
           </div>
         </div>
       </div>
@@ -300,7 +303,7 @@ export default function HomePage() {
                   </div>
                 </div>
               </div>
-              <Link className="go" to={comingSoonHref('공고문 예시')}>{BENEFIT_TRANSLATE.link.label}<Icon name="cr" /></Link>
+              <Link className="go" to={comingSoonHref('notice-sample')}>{BENEFIT_TRANSLATE.link.label}<Icon name="cr" /></Link>
             </div>
             <div className="fc">
               <h3>{BENEFIT_FIT.title}</h3>
@@ -331,7 +334,7 @@ export default function HomePage() {
                 </div>
                 <p className="ex">{BENEFIT_CALENDAR.note}</p>
               </div>
-              <Link className="go" to={comingSoonHref('재발주 달력')}>{BENEFIT_CALENDAR.link.label}<Icon name="cr" /></Link>
+              <Link className="go" to={comingSoonHref('recompete-calendar')}>{BENEFIT_CALENDAR.link.label}<Icon name="cr" /></Link>
             </div>
           </div>
         </div>
@@ -370,7 +373,7 @@ export default function HomePage() {
           </div>
           <div className="promos3">
             {PROMOS.map((p) => (
-              <Link key={p.small} className={`promo ${p.tone}`} to={comingSoonHref(p.small)}>
+              <Link key={p.small} className={`promo ${p.tone}`} to={p.to}>
                 <img src={p.img} alt="" />
                 <div className="tx"><small>{p.small}</small><b>{p.title}</b><span>{p.desc}</span></div>
               </Link>
@@ -389,6 +392,9 @@ export default function HomePage() {
                 <Link className="more" to={helpTab === 'faq' ? '/faq' : '/notices'}>더 보기<Icon name="cr" /></Link>
               </div>
               <ul className="lst">
+                {helpTab === 'notice' && NOTICE_TITLES.length === 0 && (
+                  <li><span className="t">{NOTICE_TEXT.emptyTitle}</span></li>
+                )}
                 {(helpTab === 'faq' ? FAQ_TITLES : NOTICE_TITLES).map((t) => (
                   <li key={t}>
                     {helpTab === 'faq' && <span className="q">Q</span>}
@@ -399,7 +405,7 @@ export default function HomePage() {
             </div>
             <div className="help">
               {HELP_LINKS.map((h) => (
-                <Link key={h.title} to={'to' in h ? h.to : comingSoonHref(h.title)}>
+                <Link key={h.title} to={h.to}>
                   <span className="fi"><Icon name={h.icon} /></span>
                   <b>{h.title}<span>{h.desc}</span></b>
                   <Icon name="cr" />

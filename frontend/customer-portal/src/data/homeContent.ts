@@ -1,9 +1,11 @@
 /**
- * 홈 화면 정의 (CR-127). 홈의 문구, 서비스 목록, 예시, 자주 묻는 질문, 공지 제목을 이 한 곳에 둔다.
+ * 홈 화면 정의 (CR-127). 홈의 문구, 서비스 목록, 예시를 이 한 곳에 둔다.
+ * 자주 묻는 질문과 공지는 고객센터 화면과 같은 목록(data/supportContent)을 읽는다(CR-133).
  * 서비스 목록은 발주사가 서비스 후보를 고른 뒤 이 파일에서 바꾼다.
  * 회원 금액은 여기 두지 않는다. 요금 출처(hooks/usePricing)에서 읽는다.
- * to 가 없는 링크는 아직 화면이 없어 준비 중 안내로 보낸다.
+ * 화면이 아직 없는 곳은 메뉴 항목 key 로 항목별 준비 안내에 보낸다(CR-133).
  */
+import { academyHref, comingSoonHref, serviceHref } from '../components/layout/menu'
 
 /** 첫 화면 공고 목록 줄 수와 "N일 안 마감" 기준 */
 export const LIST_ROWS = 7
@@ -151,33 +153,15 @@ export const PLAN_CONSULT = {
 }
 
 export const PROMOS = [
-  { tone: 'a', img: '/img/army_71dae7c5.jpg', small: '등록 대행', title: 'SAM.gov·PIEE 등록, 맡기세요', desc: '처음 등록하는 회사도 순서대로' },
-  { tone: 'b', img: '/img/army_5decc7b0.jpg', small: '현장 지원', title: '설명회 동행과 기지 출입', desc: '출입 절차부터 통역까지' },
-  { tone: 'a', img: '/img/army_d68e5213.jpg', small: '무료 입찰 교실', title: '매달 한 번, 온라인으로', desc: '미군 입찰 기초를 한 시간에' },
-]
-
-export const FAQ_TITLES = [
-  'SAM.gov 등록이 꼭 있어야 입찰할 수 있나요?',
-  '무료와 회원은 무엇이 다른가요?',
-  '우리 회사 맞춤 판정은 어떻게 하나요?',
-  '재발주 예측은 얼마나 맞나요?',
-  '제안서는 누가 쓰나요?',
-  '마감된 공고도 볼 수 있나요?',
-]
-
-/** 공지를 내려 주는 기능이 아직 없어 공지사항 화면과 같은 제목을 둔다 */
-export const NOTICE_TITLES = [
-  'SAM.gov 등록 갱신 안내, 매년 갱신 필수',
-  'WJbid 제안서 작성 AI 엔진 v3 업데이트',
-  '서버 정기 점검 안내 (06/30 02:00~04:00 KST)',
-  'NAICS 코드 기반 공고 추천 기능 추가',
-  '요금제 개편 안내',
-  'WJbid 정식 서비스 오픈',
+  { tone: 'a', img: '/img/army_71dae7c5.jpg', small: '등록 대행', title: 'SAM.gov·PIEE 등록, 맡기세요', desc: '처음 등록하는 회사도 순서대로', to: serviceHref('sam-registration') },
+  { tone: 'b', img: '/img/army_5decc7b0.jpg', small: '현장 지원', title: '설명회 동행과 기지 출입', desc: '출입 절차부터 통역까지', to: serviceHref('site-visit') },
+  // 교실 일정은 정해지지 않아 무료 입찰 교실 안내와 같은 말을 쓴다
+  { tone: 'a', img: '/img/army_d68e5213.jpg', small: '무료 입찰 교실', title: '미군 입찰 기초를 온라인으로', desc: '일정은 정해지면 공지사항에 알립니다', to: academyHref('class') },
 ]
 
 export const HELP_LINKS = [
   { icon: 'headset', title: '1:1 문의', desc: '궁금한 점을 남겨 주시면 답변 드립니다', to: '/support' },
-  { icon: 'chat', title: '카카오톡 알림 받기', desc: '새 공고와 마감 3일 전을 카카오톡으로' },
+  { icon: 'chat', title: '카카오톡 알림 받기', desc: '새 공고와 마감 3일 전을 카카오톡으로', to: comingSoonHref('kakao') },
   { icon: 'book', title: '이용 안내', desc: '가입부터 입찰 신청까지 순서대로', to: '/guide' },
 ] as const
 

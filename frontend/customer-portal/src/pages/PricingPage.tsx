@@ -1,15 +1,20 @@
-import { Check, Minus } from 'lucide-react'
-import { Link } from 'react-router-dom'
-import { Badge, Button, Table, TableBody, TableRow, TableCell } from '@therecommerce-develop/ds-ui'
+import { Link, Navigate } from 'react-router-dom'
+import { Icon } from '../components/layout/Icon'
+import { comingSoonHref, findMenuItem, serviceHref } from '../components/layout/menu'
+import { PageHead, SubPageFrame } from '../components/subpage/SubPageFrame'
 import { useAuth } from '../context/AuthContext'
 import { MEMBER_PRICE_PENDING_LABEL, formatWon, usePricing } from '../hooks/usePricing'
+import { SUB_FRAME } from '../data/subpageContent'
 
 /**
  * 요금 안내 (CR-129, T3-3)
  * 월 구독은 무료와 회원 두 단계, 대행·컨설팅은 건별 견적으로 따로 안내한다.
  * 회원 월 금액은 요금 조회가 설정값에서 내주므로 화면에 쓰지 않는다(POL-010).
  * 단계 이름, 대상, 포함 항목은 홈 요금 구역(CR-127)과 같은 말을 쓴다.
+ * 고객센터 속페이지 틀 안에 두고, 대행 항목은 각 서비스 안내로 보낸다(CR-133, 화면 정본 pricing).
  */
+
+const PLACE = findMenuItem('support', 'pricing')
 
 interface PlanInfo {
   key: 'free' | 'member'
@@ -17,7 +22,7 @@ interface PlanInfo {
   audience: string
   cta: string
   ctaTo: string
-  highlight?: boolean
+  highlight?: string
 }
 
 interface FeatureRow {
@@ -26,11 +31,21 @@ interface FeatureRow {
   member: boolean
 }
 
+const HEAD = {
+  title: '요금 안내',
+  desc: '무료로 시작하고, 필요할 때 회원으로 넓히세요. 회원은 월 단위, 대행과 컨설팅은 건마다 상담합니다',
+}
+
 // 결제 연동 전이라 회원 신청은 1:1 문의로 받는다
 const PLANS: PlanInfo[] = [
   { key: 'free', title: '무료', audience: '처음 둘러보는 회사', cta: '무료로 시작', ctaTo: '/register' },
-  { key: 'member', title: '회원', audience: '입찰을 꾸준히 하는 회사', cta: '회원으로 시작', ctaTo: '/support', highlight: true },
+  { key: 'member', title: '회원', audience: '입찰을 꾸준히 하는 회사', cta: '회원으로 시작', ctaTo: '/support', highlight: '추천' },
 ]
+const FREE_PRICE = '0원'
+const CURRENT_PLAN = '현재 플랜'
+const PER_MONTH = '/ 월'
+
+const COMPARE = { title: '무엇이 다른가요', head: ['서비스', '무료', '회원'] }
 
 const FEATURES: FeatureRow[] = [
   { title: 'SAM.gov 공고 검색', free: true, member: true },
@@ -45,134 +60,87 @@ const FEATURES: FeatureRow[] = [
   { title: '서류함, 제출 전 검사', free: false, member: true },
 ]
 
-const SERVICE_ITEMS: { title: string; desc: string }[] = [
-  { title: 'SAM.gov·PIEE 등록 대행', desc: '처음 등록하는 회사도 순서대로. UEI·CAGE 발급부터 PIEE 계정까지' },
-  { title: '제안서 자문·검토', desc: '공고 요건 분석과 제안서 구성 검토. 최종 제출과 서명은 고객이 합니다' },
-  { title: '현장 설명회 동행, 기지 출입 지원', desc: '출입 절차부터 통역까지' },
-  { title: '대금 청구 대행', desc: '낙찰 이후 인보이스와 청구(WAWF) 절차' },
-  { title: '서류 영문 번역', desc: '제출 서류와 회사 소개 자료의 영문 번역' },
+const SERVICES_HEAD = { title: '대행·컨설팅', note: '건마다 상담 뒤 견적을 드립니다' }
+
+const SERVICE_ITEMS: { title: string; desc: string; to: string; pending?: boolean }[] = [
+  { title: 'SAM.gov·PIEE 등록 대행', desc: '처음 등록하는 회사도 순서대로', to: serviceHref('sam-registration') },
+  { title: '제안서 자문·검토', desc: '고객이 쓴 제안서를 전문가가 검토하고 보완점 안내', to: comingSoonHref('proposal-review'), pending: true },
+  { title: '현장 설명회 동행, 기지 출입 지원', desc: '출입 절차부터 통역까지', to: serviceHref('site-visit') },
+  { title: '대금 청구 대행', desc: '계약 서류 정리와 PIEE 대금 청구', to: serviceHref('invoicing') },
+  { title: '서류 영문 번역', desc: '등기부등본, 재무제표, 실적 증명을 영문으로', to: serviceHref('translation') },
 ]
 
+const FOOTNOTE = '금액은 부가세 별도입니다. 회원은 월 단위로 결제하며 약정 없이 해지할 수 있습니다. 대행·컨설팅은 상담 후 견적으로 안내합니다.'
+
 function featureCell(included: boolean) {
-  return included
-    ? <Check className="inline text-brand w-4 h-4" />
-    : <Minus className="inline text-ink-faint w-4 h-4" />
+  return included ? <Icon name="ok" /> : <span className="nn">-</span>
 }
 
 function MemberPrice() {
   const { memberMonthlyPrice, loading } = usePricing()
   if (loading) {
-    return <span className="inline-block h-6 w-28 rounded bg-line-soft animate-pulse" />
+    return <div className="prc2"><span className="inline-block h-9 w-36 rounded bg-line-soft animate-pulse align-middle" /></div>
   }
   if (memberMonthlyPrice === null) {
-    return <span className="text-lg font-semibold text-ink-sub leading-none">{MEMBER_PRICE_PENDING_LABEL}</span>
+    return <div className="prc2 pend">{MEMBER_PRICE_PENDING_LABEL}</div>
   }
-  return (
-    <>
-      <span className="text-2xl font-semibold text-ink leading-none">{formatWon(memberMonthlyPrice)}</span>
-      <span className="text-ink-mute text-xs">/ 월</span>
-    </>
-  )
+  return <div className="prc2">{formatWon(memberMonthlyPrice)}<small>{PER_MONTH}</small></div>
 }
 
 export default function PricingPage() {
   const { isAuthenticated } = useAuth()
+  if (!PLACE) return <Navigate to="/" replace />
+  const { group, item } = PLACE
+
   return (
-    <div className="max-w-4xl mx-auto">
-      {/* 머리 */}
-      <div className="text-center mb-10">
-        <h1 className="text-2xl font-bold text-ink">요금 안내</h1>
-        <p className="mt-2 text-ink-mute">
-          무료로 시작하고, 필요할 때 회원으로 넓히세요. 회원은 월 단위, 대행과 컨설팅은 건마다 상담합니다.
-        </p>
-      </div>
-
-      {/* 월 구독 비교 표 */}
-      <div className="rounded-2xl bg-white shadow-sm ring-1 ring-line p-4 sm:p-6 overflow-x-auto pt-8 sm:pt-10">
-        <Table className="table-fixed border-separate border-spacing-0 min-w-[600px] w-full">
-          <TableBody>
-            <TableRow className="hover:bg-transparent">
-              <TableCell className="align-bottom p-5 w-[40%] border-t border-l border-line rounded-tl-xl" />
-              {PLANS.map((p) => {
-                const isCurrent = p.key === 'free' && isAuthenticated
-                return (
-                  <TableCell
-                    key={p.key}
-                    className={
-                      'relative align-bottom px-5 pb-5 pt-8 border-t border-l border-r rounded-t-xl ' +
-                      (p.highlight ? 'bg-brand-soft border-brand-line' : 'bg-surface border-line')
-                    }
-                  >
-                    {isCurrent && (
-                      <Badge variant="success" appearance="light"
-                        className="absolute top-2.5 left-1/2 -translate-x-1/2">현재 플랜</Badge>
-                    )}
-                    {p.highlight && (
-                      <Badge variant="primary"
-                        className="absolute top-2.5 left-1/2 -translate-x-1/2 bg-brand-deep text-white">추천</Badge>
-                    )}
-                    <h3 className="text-lg font-semibold text-ink pb-1">{p.title}</h3>
-                    <p className="text-sm text-ink-mute min-h-[20px]">{p.audience}</p>
-                    <div className="py-4 flex items-end gap-1.5 min-h-[56px]">
-                      {p.key === 'free'
-                        ? <span className="text-2xl font-semibold text-ink leading-none">0원</span>
-                        : <MemberPrice />}
-                    </div>
-                    {!isCurrent && (
-                      <Button asChild variant={p.highlight ? 'primary' : 'outline'} className="w-full justify-center">
-                        <Link to={p.ctaTo}>{p.cta}</Link>
-                      </Button>
-                    )}
-                  </TableCell>
-                )
-              })}
-            </TableRow>
-
-            {FEATURES.map((f) => (
-              <TableRow key={f.title} className="hover:bg-transparent">
-                <TableCell className="border-l border-b border-line px-5 py-3.5">
-                  <span className="text-sm font-medium text-ink">{f.title}</span>
-                </TableCell>
-                <TableCell className="border-l border-b border-line px-5 py-3.5 text-center">
-                  {featureCell(f.free)}
-                </TableCell>
-                <TableCell className="border-l border-r border-b border-line px-5 py-3.5 text-center bg-brand-softer">
-                  {featureCell(f.member)}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-
-      {/* 대행·컨설팅 (건별 견적) */}
-      <div className="mt-14">
-        <div className="text-center mb-6">
-          <h2 className="text-xl font-bold text-ink">대행·컨설팅</h2>
-          <p className="mt-2 text-ink-mute">
-            맡기고 싶은 일이 있는 회사. 일마다 범위와 비용이 달라 상담 후 견적으로 안내합니다.
-          </p>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {SERVICE_ITEMS.map((item) => (
-            <div key={item.title} className="rounded-xl border border-line bg-white p-5">
-              <h3 className="text-sm font-semibold text-ink">{item.title}</h3>
-              <p className="mt-1.5 text-sm text-ink-mute leading-relaxed">{item.desc}</p>
+    <SubPageFrame group={group} item={item}>
+      <PageHead title={HEAD.title} desc={HEAD.desc} />
+      <div className="pls">
+        {PLANS.map((p) => {
+          const isCurrent = p.key === 'free' && isAuthenticated
+          return (
+            <div key={p.key} className={p.highlight ? 'plan rcm' : 'plan'}>
+              <div className="nm">{p.title}{p.highlight && <span>{p.highlight}</span>}</div>
+              <div className="au2">{p.audience}</div>
+              {p.key === 'free' ? <div className="prc2">{FREE_PRICE}</div> : <MemberPrice />}
+              {isCurrent
+                ? <span className="cur">{CURRENT_PLAN}</span>
+                : <Link className={p.highlight ? 'bigb' : 'bigb o'} to={p.ctaTo}>{p.cta}</Link>}
             </div>
-          ))}
-          <div className="rounded-xl border border-dashed border-line-strong bg-surface p-5 flex flex-col justify-center items-start">
-            <p className="text-sm text-ink-sub">맡기고 싶은 일을 알려 주세요.</p>
-            <Button asChild variant="outline" className="mt-3">
-              <Link to="/support">상담 신청</Link>
-            </Button>
-          </div>
-        </div>
+          )
+        })}
       </div>
 
-      <p className="text-xs text-ink-mute mt-10 text-center">
-        금액은 부가세 별도입니다. 회원은 월 단위로 결제하며 약정 없이 해지할 수 있습니다.
-        대행·컨설팅은 상담 후 견적으로 안내합니다.
-      </p>
-    </div>
+      <section className="cbx pad">
+        <h2 className="h2">{COMPARE.title}</h2>
+        <table className="cmpt">
+          <thead><tr>{COMPARE.head.map((h) => <th key={h}>{h}</th>)}</tr></thead>
+          <tbody>
+            {FEATURES.map((f) => (
+              <tr key={f.title}>
+                <td>{f.title}</td>
+                <td>{featureCell(f.free)}</td>
+                <td className="mm">{featureCell(f.member)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+
+      <section className="cbx pad">
+        <h2 className="h2">{SERVICES_HEAD.title} <small>{SERVICES_HEAD.note}</small></h2>
+        <ul className="svc">
+          {SERVICE_ITEMS.map((s) => (
+            <li key={s.title}>
+              <Link to={s.to}>
+                <b>{s.title}{s.pending && <small>{SUB_FRAME.pendingTag}</small>}</b>
+                <span>{s.desc}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+        <p className="prnote">{FOOTNOTE}</p>
+      </section>
+    </SubPageFrame>
   )
 }

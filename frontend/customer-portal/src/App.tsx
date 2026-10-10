@@ -25,6 +25,11 @@ import SavedSearchesPage from './pages/SavedSearchesPage'
 import BillingPage from './pages/BillingPage'
 import DocumentsPage from './pages/DocumentsPage'
 import ComingSoonPage from './pages/ComingSoonPage'
+import ServicePage from './pages/ServicePage'
+import AcademyClassPage from './pages/AcademyClassPage'
+import AcademyMaterialsPage from './pages/AcademyMaterialsPage'
+import AcademyGlossaryPage from './pages/AcademyGlossaryPage'
+import AcademyFormsPage from './pages/AcademyFormsPage'
 
 function ProtectedRoute() {
   const { isAuthenticated } = useAuth()
@@ -43,6 +48,13 @@ function AppRoutes() {
       {/* 공개 페이지 (GNB 포함) */}
       <Route element={<AppLayout />}>
         <Route path="/coming-soon" element={<ComingSoonPage />} />
+        {/* 메뉴 속 화면 (CR-133) */}
+        <Route path="/coming-soon/:key" element={<ComingSoonPage />} />
+        <Route path="/services/:key" element={<ServicePage />} />
+        <Route path="/academy/class" element={<AcademyClassPage />} />
+        <Route path="/academy/materials" element={<AcademyMaterialsPage />} />
+        <Route path="/academy/glossary" element={<AcademyGlossaryPage />} />
+        <Route path="/academy/forms" element={<AcademyFormsPage />} />
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/guide" element={<GuidePage />} />
         <Route path="/notices" element={<NoticesPage />} />
