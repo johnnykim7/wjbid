@@ -1,6 +1,6 @@
 # SAM.gov Bidding Agency Platform API 설계
 
-> 설계 버전: 1.4 | 최종 수정: 2026-04-05 | 관련 CR: CR-001, CR-002, CR-003, CR-003a
+> 설계 버전: 1.5 | 최종 수정: 2026-10-10 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129
 
 > 단계: 3. Detail Design | 실행스펙 섹션 3에 포함
 >
@@ -243,13 +243,23 @@
 
 ---
 
-## L. 요금 안내 (Pricing) — Sprint 7
+## L. 요금 안내 (Pricing) — Sprint 7, CR-129
 
 | 메서드 | 경로 | 설명 | 인증 | 기능 ID |
 |--------|------|------|------|---------|
-| GET | /pricing | 서비스 레벨별 요금 정보 | | BID-PRICE-001 |
+| GET | /pricing | 회원 월 금액 조회 | | BID-PRICE-001 |
 
-> MVP에서는 정적 데이터. 향후 관리자 설정 API 추가 가능.
+**응답** (CR-129)
+
+```json
+{ "memberMonthlyPrice": 50000 }
+```
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| memberMonthlyPrice | number 또는 null | 회원 월 요금(원, 부가세 별도). 설정 `PRICING_MEMBER_MONTHLY_KRW` 가 비었거나 정수로 읽을 수 없으면 null |
+
+> 단계 이름과 포함 항목은 화면 정의 파일에 두고, 바뀌는 금액만 이 API 가 내준다(POL-010). 고객 포털의 요금 안내와 홈 요금 구역이 같이 쓴다.
 
 ---
 
