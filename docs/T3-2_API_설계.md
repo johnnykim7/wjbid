@@ -1,6 +1,6 @@
 # SAM.gov Bidding Agency Platform API 설계
 
-> 설계 버전: 1.5 | 최종 수정: 2026-10-10 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129
+> 설계 버전: 1.6 | 최종 수정: 2026-10-10 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131
 
 > 단계: 3. Detail Design | 실행스펙 섹션 3에 포함
 >
@@ -39,7 +39,7 @@
 
 | 메서드 | 경로 | 설명 | 인증 | 기능 ID |
 |--------|------|------|------|---------|
-| POST | /auth/register | 이메일 회원가입 (CUSTOMER 역할) | | BID-AUTH-001 |
+| POST | /auth/register | 이메일 회원가입 (CUSTOMER 역할). 이미 가입된 이메일은 409, `error: EMAIL_ALREADY_EXISTS` (CR-131, BIZ-008) | | BID-AUTH-001 |
 | POST | /auth/login | 로그인 (JWT Access+Refresh 발급) | | BID-AUTH-002 |
 | POST | /auth/refresh | Refresh 토큰으로 Access 토큰 갱신 | | BID-AUTH-003 |
 | GET | /members/me | 내 정보 조회 | 🔒 | BID-AUTH-004 |
