@@ -1,0 +1,671 @@
+[
+ {
+  "name": "wjbid",
+  "url": "http://woojinusbid.com",
+  "status": 200,
+  "finalUrl": "http://woojinusbid.com/",
+  "data": {
+   "title": "WJbid.com - SAM.gov AI Bidding Platform",
+   "lang": "ko",
+   "bodyFont": "\"Noto Sans KR\", system-ui, -apple-system, sans-serif",
+   "bodyBg": "rgb(245, 247, 250)",
+   "bodyColor": "rgb(31, 41, 55)",
+   "h1": null,
+   "heads": [
+    "H2: WJbid 시작하기",
+    "H2: 입찰 공고문",
+    "H2: 공지사항"
+   ],
+   "nav": [
+    "서비스 소개",
+    "이용 안내",
+    "요금 안내",
+    "공지사항",
+    "고객센터",
+    "로그인",
+    "무료로 시작"
+   ],
+   "bands": [
+    "rgb(244, 246, 249)",
+    "rgb(19, 41, 79)",
+    "rgb(255, 255, 255)",
+    "rgb(27, 58, 114)"
+   ],
+   "buttons": [
+    "rgb(238, 243, 251) / rgb(27, 58, 114) / r0px :: 이용 안내 | 동영상 매뉴얼",
+    "rgb(75, 85, 99) / rgb(255, 255, 255) / r0px :: SAM.gov 등록 가이드 | 요금 안내",
+    "rgb(255, 255, 255) / rgb(31, 41, 55) / r0px :: 문의하기 입찰·서비스 관련 상담 | 자주 묻는 질문 FAQ에서 먼저 찾아보세요",
+    "rgb(255, 255, 255) / rgb(27, 58, 114) / r4px :: 무료로 시작",
+    "rgb(12, 30, 61) / rgb(255, 255, 255) / r0px :: 검색"
+   ],
+   "pageHeight": 1546
+  }
+ },
+ {
+  "name": "kbid",
+  "url": "https://www.kbid.co.kr",
+  "status": 200,
+  "finalUrl": "https://www.kbid.co.kr/",
+  "data": {
+   "title": "케이비드 - 대한민국 NO1. 입찰정보서비스",
+   "lang": "ko",
+   "bodyFont": "\"Nanum Gothic\", NanumGothic, dotum",
+   "bodyBg": "rgba(0, 0, 0, 0)",
+   "bodyColor": "rgb(85, 85, 85)",
+   "h1": {
+    "text": "베스트 입찰사이트 KBID",
+    "font": "\"Nanum Gothic\", NanumGothic, dotum",
+    "size": "13px",
+    "weight": "700",
+    "color": "rgb(85, 85, 85)"
+   },
+   "heads": [
+    "H1: 베스트 입찰사이트 KBID"
+   ],
+   "nav": [],
+   "bands": [
+    "rgb(64, 69, 76)",
+    "rgb(249, 249, 249)"
+   ],
+   "buttons": [
+    "rgb(243, 248, 251) / rgb(51, 51, 51) / r0px :: 세금계산서조회 | 카드매출전표 | 입금확인요청 (입금통보) | 서비스기간 연장하기",
+    "rgb(115, 115, 115) / rgb(255, 255, 255) / r2px :: 바로가기 | 이용안내",
+    "rgb(160, 160, 160) / rgb(255, 255, 255) / r0px :: 이동",
+    "rgb(0, 109, 183) / rgb(51, 51, 51) / r0px 23px 23px 0px :: 검색",
+    "rgb(67, 113, 148) / rgb(255, 255, 255) / r2px :: 로그인"
+   ],
+   "pageHeight": 1806
+  }
+ },
+ {
+  "name": "info21c",
+  "url": "https://www.info21c.net",
+  "status": 200,
+  "finalUrl": "https://www.info21c.net/",
+  "data": {
+   "title": "인포21C 입찰정보 - 최상의 정보를 최고의 고객에게",
+   "lang": "ko",
+   "bodyFont": "Dotum, 돋움, Roboto, \"Noto Sans KR\", \"Malgun Gothic\", \"맑은 고딕\", Dotum, 돋움, Arial, sans-serif",
+   "bodyBg": "rgb(255, 255, 255)",
+   "bodyColor": "rgb(51, 51, 51)",
+   "h1": null,
+   "heads": [],
+   "nav": [
+    "특별한혜택",
+    "결제센터",
+    "로그인",
+    "입찰정보",
+    "낙찰정보",
+    "파워분석",
+    "개인서류함",
+    "1:1분석",
+    "입찰자료실",
+    "입찰교육"
+   ],
+   "bands": [
+    "rgb(238, 242, 249)",
+    "rgb(255, 255, 255)"
+   ],
+   "buttons": [
+    "rgb(255, 255, 255) / rgb(51, 51, 51) / r50px :: 입찰관련 사이트 | 건설관련 사이트 | 중소기업 지원관련 | 다운로드 센터",
+    "rgb(255, 255, 255) / rgb(85, 85, 85) / r50px :: 자주하는 질문 | 문의하기 | 원격상담",
+    "rgb(245, 247, 249) / rgb(51, 51, 51) / r50px :: 공공조달 플랫폼 | MAS 컨설팅",
+    "rgb(255, 255, 255) / rgb(27, 27, 27) / r0px :: 특별한혜택",
+    "rgb(135, 137, 143) / rgb(255, 255, 255) / r6px :: INFO21C 로그인"
+   ],
+   "pageHeight": 4133
+  }
+ },
+ {
+  "name": "bidpro",
+  "url": "https://www.bidpro.co.kr",
+  "status": 200,
+  "finalUrl": "https://www.bidpro.co.kr/",
+  "data": {
+   "title": "비드프로(Since 2002)_공공입찰 빠른 낙찰!",
+   "lang": "",
+   "bodyFont": "Times",
+   "bodyBg": "rgba(0, 0, 0, 0)",
+   "bodyColor": "rgb(0, 0, 0)",
+   "h1": null,
+   "heads": [],
+   "nav": [],
+   "bands": [],
+   "buttons": [],
+   "pageHeight": 900
+  }
+ },
+ {
+  "name": "cliwant",
+  "url": "https://www.cliwant.com",
+  "status": 200,
+  "finalUrl": "https://www.cliwant.com/",
+  "data": {
+   "title": "CLIWANT — 수주의 모든 과정을 AI로",
+   "lang": "ko",
+   "bodyFont": "\"Google Sans Flex\", \"Pretendard Variable\", system-ui, sans-serif",
+   "bodyBg": "rgb(255, 255, 255)",
+   "bodyColor": "rgb(17, 24, 39)",
+   "h1": {
+    "text": "수주의 모든 과정을 AI로",
+    "font": "LINESeedKR, \"LINE Seed Sans KR\", sans-serif",
+    "size": "72px",
+    "weight": "700",
+    "color": "rgb(255, 255, 255)"
+   },
+   "heads": [
+    "H1: 수주의 모든 과정을 AI로",
+    "H2: 수주를 위한 3단계 AI",
+    "H2: 입찰 컨설팅",
+    "H2: 최근 소식",
+    "H2: 수주 경쟁력을 AI로 바꿔보세요"
+   ],
+   "nav": [
+    "Core Products",
+    "Consulting",
+    "Insights",
+    "Contact",
+    "문의하기"
+   ],
+   "bands": [
+    "rgb(5, 5, 16)",
+    "rgb(252, 252, 255)",
+    "rgb(255, 255, 255)",
+    "rgba(255, 255, 255, 0.12)"
+   ],
+   "buttons": [
+    "rgb(255, 255, 255) / rgb(107, 114, 128) / r9999px :: 엔터프라이즈 AX | 제안 PPT 자동화 | AI 입찰 솔루션 | 해외 입찰",
+    "rgb(104, 111, 232) / rgb(255, 255, 255) / r9999px :: 문의하기 | PoC 상담 요청",
+    "rgb(255, 255, 255) / rgb(15, 15, 26) / r9999px :: 문의하기",
+    "rgba(0, 0, 0, 0.6) / rgb(17, 24, 39) / r16px :: 바로가기 →",
+    "rgb(15, 15, 26) / rgb(255, 255, 255) / r9999px :: 전체"
+   ],
+   "pageHeight": 4749
+  }
+ },
+ {
+  "name": "g2b",
+  "url": "https://www.g2b.go.kr",
+  "status": 200,
+  "finalUrl": "https://www.g2b.go.kr/",
+  "data": {
+   "title": "나라장터",
+   "lang": "ko",
+   "bodyFont": "Roboto, NotoSansCJKkr, \"Malgun Gothic\", Dotum, sans-serif",
+   "bodyBg": "rgb(235, 236, 241)",
+   "bodyColor": "rgb(25, 25, 25)",
+   "h1": {
+    "text": "나라장터",
+    "font": "Roboto, NotoSansCJKkr, \"Malgun Gothic\", Dotum, sans-serif",
+    "size": "0px",
+    "weight": "700",
+    "color": "rgba(0, 0, 0, 0)"
+   },
+   "heads": [
+    "H1: 나라장터",
+    "H2: 나라장터 공지사항",
+    "H2: 나라장터 공지사항",
+    "H2: 나라장터 공지사항"
+   ],
+   "nav": [
+    "나라장터",
+    "쇼핑몰",
+    "조달데이터허브",
+    "누리장터",
+    "비축",
+    "로그인",
+    "인증센터",
+    "나라장터서비스",
+    "나라장터",
+    "검색영역 내용 화면 열고 닫기",
+    "e-고객센터",
+    "원격지원",
+    "발주",
+    "입찰",
+    "공통",
+    "이용자관리"
+   ],
+   "bands": [
+    "rgb(255, 255, 255)"
+   ],
+   "buttons": [
+    "rgb(249, 250, 251) / rgb(73, 80, 87) / r4px :: 수요기관의 불법,부당행위 신고센터 | 조달기업 등 불공정행위 신고센터 | 공공기관 사칭 사기피해사례 확인 및 신고",
+    "rgb(238, 245, 255) / rgb(72, 118, 239) / r25px :: e-고객센터 | 원격지원",
+    "rgb(255, 255, 255) / rgb(56, 61, 65) / r16px :: 더보기",
+    "rgb(255, 255, 255) / rgb(85, 85, 85) / r4px :: 미리보기",
+    "rgb(29, 164, 225) / rgb(255, 255, 255) / r20px :: 인증센터"
+   ],
+   "pageHeight": 1433
+  }
+ },
+ {
+  "name": "govdash",
+  "url": "https://www.govdash.com",
+  "status": 200,
+  "finalUrl": "https://www.govdash.com/",
+  "data": {
+   "title": "GovDash | Dash, the AI for Government Contractors",
+   "lang": "en",
+   "bodyFont": "Inter, \"Inter Fallback\", \"Helvetica Neue\", Arial, sans-serif",
+   "bodyBg": "rgb(255, 254, 250)",
+   "bodyColor": "rgb(11, 15, 28)",
+   "h1": {
+    "text": "Meet Dash, the AI that grows your government revenue",
+    "font": "Inter, \"Inter Fallback\", \"Helvetica Neue\", Arial, sans-serif",
+    "size": "60px",
+    "weight": "500",
+    "color": "rgb(11, 15, 28)"
+   },
+   "heads": [
+    "H1: Meet Dash, the AI that grows your government revenue",
+    "H2: Industry leaders choose to grow with Dash",
+    "H2: Use cases",
+    "H2: Your team's favorite teammate",
+    "H2: Give recurring work to agents",
+    "H2: Dash works with the tools you use.",
+    "H2: Customer results",
+    "H2: Built for CUI with government‑grade controls",
+    "H2: FAQs",
+    "H2: Find more bids. Win more of them. Grow government revenue faster."
+   ],
+   "nav": [
+    "Platform",
+    "Solutions",
+    "Customers",
+    "Resources",
+    "Security",
+    "Pricing"
+   ],
+   "bands": [
+    "rgb(255, 254, 250)",
+    "rgba(0, 0, 0, 0.7)",
+    "oklab(0.9673 0.000209421 0.00699037 / 0.6)",
+    "oklab(0.9673 0.000209421 0.00699037 / 0.5)"
+   ],
+   "buttons": [
+    "oklab(0.967299 0.000209421 0.00699037 / 0.8) / rgb(0, 0, 238) / r12px :: Case study",
+    "rgb(2, 79, 245) / rgb(255, 254, 250) / r99px :: Book a demo | Save your spot"
+   ],
+   "pageHeight": 16676
+  }
+ },
+ {
+  "name": "sweetspot",
+  "url": "https://www.sweetspot.so",
+  "status": 200,
+  "finalUrl": "https://www.sweetspot.so/",
+  "data": {
+   "title": "Sweetspot - AI for Government Contracting",
+   "lang": "en",
+   "bodyFont": "Aeonik, Inter, system-ui, -apple-system, \"system-ui\", \"Segoe UI\", Roboto, sans-serif",
+   "bodyBg": "rgb(255, 255, 255)",
+   "bodyColor": "rgb(15, 23, 42)",
+   "h1": {
+    "text": "AI for Government Contracting",
+    "font": "Aeonik, Inter, system-ui, -apple-system, \"system-ui\", \"Segoe UI\", Roboto, sans-serif",
+    "size": "72px",
+    "weight": "700",
+    "color": "oklch(0.21 0.034 264.665)"
+   },
+   "heads": [
+    "H1: AI for Government Contracting",
+    "H2: Everything you need to win",
+    "H2: Up and running in days, not months",
+    "H2: Real teams. Real wins.",
+    "H2: Frequently Asked Questions",
+    "H2: Your competitors are already using Sweetspot to win. Are you?"
+   ],
+   "nav": [
+    "Features",
+    "Opportunity Discovery",
+    "Federal Market Intellige",
+    "Agentic Monitors",
+    "Pipeline Management",
+    "Proposal Engine",
+    "Organization Library",
+    "Enterprise Security",
+    "Explore",
+    "Federal Contracts SAM.go",
+    "Federal Grants Grants.go",
+    "DIBBS Contracts Defense ",
+    "State & Local Contracts ",
+    "Award Analysis USAspendi",
+    "Teaming Partner Search F",
+    "Competitor Analysis Anal"
+   ],
+   "bands": [
+    "oklab(0.279 -0.00709772 -0.040381 / 0.3)"
+   ],
+   "buttons": [
+    "rgb(255, 255, 255) / rgb(15, 23, 42) / r3.35544e+07px :: ChatGPT | Claude | Perplexity | Grok",
+    "oklch(0.985 0.002 247.839) / rgb(15, 23, 42) / r3.35544e+07px :: CMMC L2 | SOC 2 Type II",
+    "oklch(0.967 0.003 264.542) / oklch(0.21 0.034 264.665) / r6px :: Opportunity Discovery"
+   ],
+   "pageHeight": 7301
+  }
+ },
+ {
+  "name": "govtribe",
+  "url": "https://govtribe.com",
+  "status": 200,
+  "finalUrl": "https://govtribe.com/",
+  "data": {
+   "title": "GovTribe | Grow Your Government Business",
+   "lang": "en",
+   "bodyFont": "system-ui, -apple-system, \"Segoe UI\", Roboto, \"Helvetica Neue\", \"Noto Sans\", \"Liberation Sans\", Arial, sans-serif, \"Appl",
+   "bodyBg": "rgb(248, 250, 252)",
+   "bodyColor": "rgb(51, 65, 85)",
+   "h1": {
+    "text": "Your AI-powered govcon assistant",
+    "font": "system-ui, -apple-system, \"Segoe UI\", Roboto, \"Helvetica Neue\", \"Noto Sans\", \"Liberation Sans\", Aria",
+    "size": "64px",
+    "weight": "700",
+    "color": "rgb(255, 255, 255)"
+   },
+   "heads": [
+    "H1: Your AI-powered govcon assistant",
+    "H2: Winning market intelligence",
+    "H2: Trusted by thousands.",
+    "H2: Ask Anything.",
+    "H2: Everything you need to win.",
+    "H2: Start your free trial today."
+   ],
+   "nav": [
+    "Skip to main content",
+    "Pricing",
+    "Login",
+    "Contact sales",
+    "Try for free",
+    "Federal Agencies",
+    "Federal Contract Vehicle",
+    "Federal Grant Programs",
+    "Major Defense Acquisitio",
+    "NAICS Categories",
+    "PSC Categories",
+    "States",
+    "Jurisdictions",
+    "NIGP Categories",
+    "UNSPSC Categories",
+    "Vendors"
+   ],
+   "bands": [
+    "rgb(0, 7, 14)",
+    "rgb(255, 255, 255)",
+    "rgba(3, 198, 252, 0.15)"
+   ],
+   "buttons": [
+    "rgb(15, 23, 42) / rgb(255, 255, 255) / r8px :: Learn More",
+    "rgb(111, 207, 230) / rgb(0, 0, 0) / r8px :: Try for free | Try GovTribe Free → | Explore GovTribe AI →",
+    "rgb(18, 84, 117) / rgb(255, 255, 255) / r8px :: Contact sales | Get a Demo",
+    "rgb(111, 207, 230) / rgb(0, 0, 0) / r6px :: See More"
+   ],
+   "pageHeight": 7376
+  }
+ },
+ {
+  "name": "highergov",
+  "url": "https://www.highergov.com",
+  "status": 200,
+  "finalUrl": "https://www.highergov.com/",
+  "data": {
+   "title": "HigherGov: Government Market Intel and Capture",
+   "lang": "en",
+   "bodyFont": "Poppins, sans-serif",
+   "bodyBg": "rgb(255, 255, 255)",
+   "bodyColor": "rgb(22, 28, 45)",
+   "h1": {
+    "text": "Tools to Win. Insights to Lead.",
+    "font": "Poppins, sans-serif",
+    "size": "70px",
+    "weight": "600",
+    "color": "rgb(41, 48, 66)"
+   },
+   "heads": [
+    "H1: Tools to Win. Insights to Lead.",
+    "H2: Data and Insights You Will Only Find Here.",
+    "H2: M+",
+    "H2: M+",
+    "H2: M+",
+    "H2: M+",
+    "H2: M+",
+    "H2: K+",
+    "H2: K+",
+    "H2: K+"
+   ],
+   "nav": [
+    "Solutions For",
+    "Features",
+    "Explore",
+    "Pricing",
+    "Demo",
+    "Sign In",
+    "Free Trial"
+   ],
+   "bands": [],
+   "buttons": [
+    "rgb(141, 79, 207) / rgb(255, 255, 255) / r6px :: Free Trial",
+    "rgb(255, 255, 255) / rgb(22, 28, 45) / r6px :: Contractors Learn more | Government Learn more",
+    "rgb(156, 193, 248) / rgb(255, 255, 255) / r6px :: Schedule Demo",
+    "rgb(67, 146, 241) / rgb(255, 255, 255) / r6px :: Free Trial",
+    "rgb(255, 255, 255) / rgb(67, 146, 241) / r6px :: Schedule Demo"
+   ],
+   "pageHeight": 3962
+  }
+ },
+ {
+  "name": "samsearch",
+  "url": "https://samsearch.co",
+  "status": 200,
+  "finalUrl": "https://samsearch.co/",
+  "data": {
+   "title": "The Complete AI Platform for Government Contracting",
+   "lang": "en",
+   "bodyFont": "Inter, \"Inter Fallback\", sans-serif",
+   "bodyBg": "rgba(0, 0, 0, 0)",
+   "bodyColor": "rgb(255, 255, 255)",
+   "h1": {
+    "text": "The Complete AI Platform for Government Contracting",
+    "font": "\"Instrument Serif\", \"Instrument Serif Fallback\", \"Instrument Serif\", \"Iowan Old Style\", Georgia, ser",
+    "size": "76px",
+    "weight": "400",
+    "color": "rgb(255, 255, 255)"
+   },
+   "heads": [
+    "H1: The Complete AI Platform for Government Contracting",
+    "H2: Trusted by the nation’s most ambitious contractors.",
+    "H2: The operating system for government contracting.",
+    "H2: Plugs into the stack you already run.",
+    "H2: Enterprise onboarding without the enterprise wait.",
+    "H2: Accuracy and security, built in.",
+    "H2: Winning starts here.",
+    "H2: Questions GovCon teams ask us first."
+   ],
+   "nav": [
+    "samsearch",
+    "Platform",
+    "Solutions",
+    "Customers",
+    "Pricing",
+    "Resources NEW",
+    "Sign in",
+    "Request a demo",
+    "Product",
+    "Pricing",
+    "ROI calculator",
+    "Integrations",
+    "Changelog",
+    "Solutions",
+    "Customers",
+    "Comparisons"
+   ],
+   "bands": [
+    "rgb(255, 255, 255)",
+    "rgb(201, 206, 214)",
+    "rgb(222, 226, 231)"
+   ],
+   "buttons": [
+    "rgb(29, 78, 216) / rgb(255, 255, 255) / r6px :: Request a demo | Book a demo"
+   ],
+   "pageHeight": 14695
+  }
+ },
+ {
+  "name": "govwin",
+  "url": "https://www.deltek.com/en/government-contracting/govwin",
+  "status": 200,
+  "finalUrl": "https://www.deltek.com/products/govwin/",
+  "data": {
+   "title": "GovWin IQ: Find Leads First, Win More Contracts | Deltek",
+   "lang": "en",
+   "bodyFont": "figtree, sans-serif",
+   "bodyBg": "rgb(245, 246, 250)",
+   "bodyColor": "rgb(60, 69, 78)",
+   "h1": {
+    "text": "Deltek GovWin IQ",
+    "font": "figtree, sans-serif",
+    "size": "16px",
+    "weight": "600",
+    "color": "rgb(255, 255, 255)"
+   },
+   "heads": [
+    "H1: Deltek GovWin IQ",
+    "H2: More Bids Won't Fix a Bad Pipeline. Better Intelligence Will.",
+    "H2: Intelligence Sourced by Analysts, Not Algorithms",
+    "H2: Why Government Contractors Choose GovWin IQ",
+    "H2: GovWin IQ Features",
+    "H2: Available Market Intelligence Solutions",
+    "H2: Insights to Help You Win Government Contracts",
+    "H2: Get Answers to Your GovWin IQ Questions",
+    "H2: What is Deltek GovWin IQ?",
+    "H2: What markets does GovWin IQ cover?"
+   ],
+   "nav": [
+    "Why Deltek Menu Toggle",
+    "Products Menu Toggle",
+    "Industries Menu Toggle",
+    "Partners Menu Toggle",
+    "Resources Menu Toggle",
+    "Company Menu Toggle",
+    "Toggle search panel",
+    "Contact",
+    "Product Login",
+    "Products",
+    "Overview",
+    "Benefits",
+    "Features",
+    "Market Intelligence Solu",
+    "Resources",
+    "FAQs"
+   ],
+   "bands": [
+    "rgb(255, 255, 255)",
+    "rgba(99, 107, 129, 0.5)",
+    "rgb(245, 246, 250)",
+    "rgb(7, 13, 99)"
+   ],
+   "buttons": [
+    "rgb(0, 182, 195) / rgb(255, 255, 255) / r20px :: Accept only necessary | Accept All",
+    "rgb(23, 66, 245) / rgb(255, 255, 255) / r32px :: Contact",
+    "rgb(255, 93, 242) / rgb(7, 13, 99) / r32px :: Try GovWin IQ",
+    "rgb(23, 66, 245) / rgb(255, 255, 255) / r60px :: Try GovWin IQ",
+    "rgb(255, 255, 255) / rgb(0, 182, 195) / r20px :: Adjust my preference"
+   ],
+   "pageHeight": 9641
+  }
+ },
+ {
+  "name": "govly",
+  "url": "https://www.govly.com",
+  "status": 200,
+  "finalUrl": "https://www.govly.com/",
+  "data": {
+   "title": "Govly: The #1 Market Network for Government Contractors",
+   "lang": "en",
+   "bodyFont": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvet",
+   "bodyBg": "rgb(244, 244, 244)",
+   "bodyColor": "rgb(26, 27, 31)",
+   "h1": {
+    "text": "Automate capture, win more awards",
+    "font": "system-ui, -apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"",
+    "size": "50px",
+    "weight": "600",
+    "color": "rgb(28, 33, 39)"
+   },
+   "heads": [
+    "H1: Automate capture, win more awards",
+    "H2: Expand your pipeline — across Federal and SLED markets",
+    "H1: All wrapped in a modern, user-friendly platform",
+    "H2: AI-powered assistants",
+    "H1: \"Govly is easy to use and very intuitive. The tool allows you to create searches that prov",
+    "H2: Andres Sierra, Executive Vice President",
+    "H1: \"Govly has been remarkably responsive to understanding the unique needs of our company. Th",
+    "H2: Tara Hodgkins, Product Manager",
+    "H1: Why teams trust Govly",
+    "H1: Federal Account Executives choose Govly to uncover more opportunities"
+   ],
+   "nav": [
+    "Pricing"
+   ],
+   "bands": [
+    "rgba(255, 255, 255, 0)",
+    "rgba(245, 246, 244, 0)"
+   ],
+   "buttons": [
+    "rgb(37, 42, 49) / rgb(255, 255, 255) / r4px :: Sign up free | Get a demo",
+    "rgba(255, 255, 255, 0) / rgb(28, 33, 39) / r3px :: Log in | Get a demo",
+    "rgb(246, 247, 249) / rgb(28, 33, 39) / r4px :: Sign up free"
+   ],
+   "pageHeight": 7373
+  }
+ },
+ {
+  "name": "govsignals",
+  "url": "https://www.govsignals.ai",
+  "status": 200,
+  "finalUrl": "https://www.govsignals.ai/",
+  "data": {
+   "title": "GovSignals: Next-Generation AI Acquisition",
+   "lang": "en",
+   "bodyFont": "\"Helvetica Neue\", Inter, -apple-system, \"system-ui\", \"Segoe UI\", Roboto, sans-serif",
+   "bodyBg": "rgb(255, 255, 255)",
+   "bodyColor": "rgb(17, 21, 25)",
+   "h1": {
+    "text": "Next-generation acquisition for the Department of War.",
+    "font": "Archivo, \"Helvetica Neue\", Inter, sans-serif",
+    "size": "106.56px",
+    "weight": "500",
+    "color": "rgb(245, 241, 237)"
+   },
+   "heads": [
+    "H1: Next-generation acquisition for the Department of War.",
+    "H2: Speed is now the requirement.",
+    "H2: Acquisitions and contracting, on one screen.",
+    "H2: GovSignals Network.",
+    "H2: Cleared to run. Staffed to deliver.",
+    "H2: Customer results.",
+    "H2: Upgrade acquisition and contracting."
+   ],
+   "nav": [
+    "Skip to content",
+    "Government",
+    "Industry",
+    "Customers",
+    "Security",
+    "Network",
+    "Sign in",
+    "Request demo"
+   ],
+   "bands": [
+    "rgb(11, 14, 18)",
+    "rgb(245, 241, 237)"
+   ],
+   "buttons": [
+    "rgb(245, 241, 237) / rgb(17, 21, 25) / r4px :: Request demo | Request a demo | See More",
+    "rgb(245, 241, 237) / rgb(17, 21, 25) / r0px :: Skip to content",
+    "rgb(17, 21, 25) / rgb(245, 241, 237) / r4px :: Request demo",
+    "rgba(245, 241, 237, 0.03) / rgb(245, 241, 237) / r4px :: SOF RACER Live USSOCOM"
+   ],
+   "pageHeight": 8399
+  }
+ }
+]

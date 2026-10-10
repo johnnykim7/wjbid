@@ -1,0 +1,46 @@
+# 운영 DB 읽기 조회 결과 (bidding_agency, 2026-10-10 KST)
+
+공고번호(solicitation_number) 중복 제거 기준. 낙찰 공지(Award Notice)는 새 공고 수에서 뺐다.
+
+## q_cnt
+```
+NOW ((datetime.datetime(2026, 10, 10, 11, 25, 5),),)
+NEW30_DISTINCT_NONAWARD ((22,),)
+DUE7_DISTINCT ((8,),)
+OPEN_DISTINCT ((13,),)
+AWARD_DISTINCT ((100, 99),)
+DUE_BY_DAY (('10-13', 2), ('10-14', 1), ('10-15', 3), ('10-16', 2), ('10-26', 1), ('10-30', 1), ('11-02', 1), ('11-03', 1), ('11-15', 1), ('12-30', 1))
+```
+
+## q_sum
+```
+award rows 100 distinct with amt 88 sum distinct 61910091
+sum all rows 62450376
+((datetime.datetime(2026, 3, 30, 0, 0), datetime.datetime(2026, 9, 30, 9, 0)),)
+distinct non-award ((169,),)
+```
+
+## q_base2
+```
+total distinct 242
+Humphreys all 44 open 2 awards 11 amt 4927926
+Osan all 25 open 3 awards 5 amt 1104184
+Carroll all 23 open 0 awards 20 amt 9004324
+Kunsan all 22 open 1 awards 10 amt 8017682
+Daegu all 21 open 2 awards 12 amt 6570887
+Dongducheon all 16 open 1 awards 7 amt 6443167
+Seongnam all 6 open 1 awards 2 amt 420844
+Pohang all 5 open 0 awards 5 amt 4064735
+Busan all 3 open 0 awards 1 amt 8510870
+Chinhae all 3 open 0 awards 1 amt 0
+Yongsan all 1 open 1 awards 0 amt 0
+OPEN_NOTICES ()
+NOTICES ((45, Decimal('38')),)
+```
+
+## 읽는 법
+- OPEN_DISTINCT: 지금 마감 전 공고 수. DUE7_DISTINCT: 7일 안 마감. NEW30_DISTINCT_NONAWARD: 최근 30일 새 공고(낙찰 공지 제외)
+- AWARD_DISTINCT: 낙찰 공지 수. sum distinct: 금액 있는 낙찰 공지의 금액 합(달러)
+- 기지별 줄: 전체 / 마감 전 / 낙찰 공지 / 낙찰 금액 합(달러)
+- OPEN_NOTICES: 마감 전 공고 중 한글 공고문(분석)이 붙은 것. 빈 값이면 0건
+- NOTICES: 한글 공고문 전체 수, 그중 분석 완료 수

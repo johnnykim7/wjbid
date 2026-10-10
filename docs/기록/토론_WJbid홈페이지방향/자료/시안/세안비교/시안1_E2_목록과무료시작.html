@@ -1,0 +1,954 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WJbid 시안 1 목록과 무료로 시작</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --navy:#0c1e3d; --blue:#1a56db; --blue-d:#1546b3; --blue-l:#edf3ff; --blue-ll:#f5f8ff;
+  --ink:#141d30; --sub:#4b5568; --mute:#8a93a3; --line:#e1e5ec; --line-l:#eef1f5;
+  --surface:#f6f7f9; --bg:#ffffff; --red:#d93838; --red-l:#fdeeee; --green:#12805c; --green-l:#e8f6ef;
+  --amber:#b45309; --amber-l:#fff4e5; --new:#e8890c;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:"Pretendard Variable",Pretendard,system-ui,sans-serif;font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;letter-spacing:-.01em}
+a{color:inherit;text-decoration:none}
+svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.wrap{width:1200px;margin:0 auto;position:relative}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace}
+
+/* 유틸 띠 */
+.util{height:36px;border-bottom:1px solid var(--line-l);font-size:13px;color:var(--mute)}
+.util .wrap{display:flex;align-items:center;justify-content:space-between;height:36px}
+.util nav{display:flex;gap:18px;color:var(--sub)}
+.util nav a.b{color:var(--blue);font-weight:600}
+
+/* 헤더 */
+.hd > .wrap{height:92px;display:flex;align-items:center;gap:40px}
+.logo{display:flex;flex-direction:column;gap:3px;flex:none}
+.logo small{font-size:12px;color:var(--mute);letter-spacing:0}
+.logo .mk{display:flex;align-items:center;gap:8px}
+.logo .sq{width:32px;height:32px;border-radius:8px;background:var(--navy);display:grid;place-items:center}
+.logo b{font-size:27px;font-weight:800;letter-spacing:-.03em;color:var(--navy);line-height:1}
+.logo b em{font-style:normal;color:var(--blue)}
+.sch{flex:1;max-width:560px}
+.sch .box{height:48px;border:2px solid var(--blue);border-radius:999px;display:flex;align-items:center;padding:0 6px 0 18px}
+.sch .sel{display:flex;align-items:center;gap:4px;font-size:14.5px;font-weight:600;padding-right:14px;margin-right:14px;border-right:1px solid var(--line)}
+.sch .sel svg{width:15px;height:15px;color:var(--mute)}
+.sch .phd{flex:1;color:var(--mute);font-size:15px;white-space:nowrap}
+.sch .go{width:38px;height:38px;border-radius:50%;background:var(--blue);color:#fff;display:grid;place-items:center}
+.sch .go svg{width:19px;height:19px;stroke-width:2.2}
+.sch .kw{display:flex;gap:12px;margin-top:7px;padding-left:18px;font-size:13px;color:var(--mute)}
+.sch .kw a{color:var(--sub)}
+.sch .kw .adv{margin-left:auto;padding-right:8px;color:var(--blue);font-weight:600}
+.hico{margin-left:auto;display:flex;gap:22px}
+.hico a{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12.5px;color:var(--sub)}
+.hico svg{width:25px;height:25px;color:var(--ink);stroke-width:1.6}
+.hico .n{position:absolute;top:-5px;right:2px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:var(--red);color:#fff;font-size:10.5px;font-weight:700;display:grid;place-items:center}
+
+/* 메뉴 띠 */
+.gnb{background:var(--blue);height:54px;position:relative;z-index:5}
+.gnb .wrap{display:flex;align-items:center;height:54px}
+.gnb .all{height:54px;width:132px;background:var(--blue-d);color:#fff;display:flex;align-items:center;justify-content:center;gap:8px;font-size:15.5px;font-weight:700}
+.gnb nav{flex:1;display:flex;justify-content:space-between;padding:0 6px 0 26px}
+.gnb nav a{color:#fff;font-size:16.5px;font-weight:600;position:relative}
+.gnb .price{height:32px;padding:0 14px;border-radius:999px;background:rgba(255,255,255,.16);color:#fff;font-size:14px;font-weight:600;display:flex;align-items:center;margin-left:18px}
+
+/* 전체 메뉴 */
+.mega{display:none;position:absolute;left:0;right:0;top:182px;z-index:4;background:#fff;border-bottom:1px solid var(--line);box-shadow:0 18px 30px rgba(16,24,40,.10)}
+.menu-open .mega{display:block}
+.mega .wrap{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:0;padding:26px 0 30px}
+.mega .col{padding:0 12px;border-left:1px solid var(--line-l)}
+.mega .col:first-child{border-left:0;padding-left:0}
+.mega h5{margin:0 0 12px;font-size:15.5px;font-weight:800;color:var(--blue)}
+.mega ul{list-style:none;margin:0;padding:0;display:grid;gap:9px}
+.mega li{font-size:14px;line-height:1.45;word-break:keep-all;color:var(--sub);position:relative;padding-right:8px}
+
+/* 첫 단 */
+.top{display:grid;grid-template-columns:1fr 372px;gap:28px;margin-top:24px}
+.banner{position:relative;height:300px;border-radius:14px;overflow:hidden;background:#cfe0f2}
+.banner img{position:absolute;left:0;top:0;width:124%;height:100%;object-fit:cover;object-position:left 36%}
+.banner .shade{position:absolute;inset:0;background:linear-gradient(90deg,rgba(240,246,252,.95) 0%,rgba(240,246,252,.8) 38%,rgba(240,246,252,0) 64%)}
+.banner .txt{position:absolute;left:52px;top:44px;width:460px}
+.tag{display:inline-flex;align-items:center;height:28px;padding:0 12px;border-radius:999px;background:var(--navy);color:#fff;font-size:13px;font-weight:600}
+.banner h2{margin:16px 0 10px;font-size:30px;line-height:1.3;font-weight:800;letter-spacing:-.035em;color:var(--navy)}
+.banner h2 em{font-style:normal;color:var(--blue)}
+.banner p{margin:0;font-size:15.5px;color:#34405a}
+.banner .cta{display:inline-flex;align-items:center;gap:6px;margin-top:20px;height:44px;padding:0 20px 0 22px;border-radius:999px;background:var(--blue);color:#fff;font-weight:700;font-size:15px}
+.banner .cta svg{width:16px;height:16px;stroke-width:2.4}
+.banner .ctl{position:absolute;right:18px;bottom:16px;display:flex;align-items:center;gap:6px}
+.banner .ctl span{height:28px;padding:0 11px;border-radius:999px;background:rgba(12,30,61,.62);color:#fff;font-size:12.5px;display:flex;align-items:center}
+.banner .ctl a{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.9);display:grid;place-items:center}
+.banner .ctl a svg{width:15px;height:15px}
+.tick{margin-top:14px;height:54px;border:1px solid var(--line);border-radius:10px;display:flex;align-items:center;padding:0 18px;gap:14px}
+.tick b{font-size:15px;font-weight:800;white-space:nowrap}
+.tick .d{color:var(--mute);font-size:13.5px}
+.tick .t{flex:1;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tick .amt{font-weight:700;color:var(--blue);font-size:14.5px}
+.tick .ud{display:flex;color:var(--mute)}
+.tick .ud svg{width:17px;height:17px}
+
+.side{display:flex;flex-direction:column;gap:14px}
+.login{border:1px solid var(--line);border-radius:12px;padding:18px}
+.login .btn{height:54px;border-radius:8px;background:var(--navy);color:#fff;font-size:16.5px;font-weight:700;display:grid;place-items:center}
+.login .lk{display:flex;justify-content:space-between;margin-top:12px;font-size:13.5px;color:var(--sub)}
+.login .lk span{display:flex;gap:12px}
+.today{border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+.today h4{margin:0 0 12px;font-size:15px;font-weight:800;display:flex;justify-content:space-between}
+.today h4 span{font-size:12.5px;font-weight:500;color:var(--mute)}
+.today .g{display:grid;grid-template-columns:repeat(3,1fr)}
+.today .g a{text-align:center}
+.today .g a+a{border-left:1px solid var(--line-l)}
+.today .g b{display:block;font-size:26px;font-weight:800;letter-spacing:-.02em;color:var(--navy)}
+.today .g b.r{color:var(--red)}
+.today .g span{font-size:13px;color:var(--sub)}
+.qual{position:relative;border-radius:12px;background:var(--blue-l);padding:18px 20px;height:104px;overflow:hidden}
+.qual b{display:block;font-size:18px;font-weight:800;color:var(--blue);letter-spacing:-.03em}
+.qual span{display:block;margin-top:3px;font-size:13.5px;color:var(--sub);width:200px}
+.qual img{position:absolute;right:14px;top:14px;width:106px;height:76px;object-fit:cover;border-radius:8px}
+
+/* 바로가기 아이콘 줄 */
+.quick{margin-top:26px;border:1px solid var(--line);border-radius:14px;display:grid;grid-template-columns:repeat(10,1fr);padding:20px 8px}
+.quick a{display:flex;flex-direction:column;align-items:center;gap:9px;font-size:14px;font-weight:600;position:relative}
+.quick .ic{width:54px;height:54px;border-radius:16px;background:var(--surface);display:grid;place-items:center;color:var(--navy)}
+.quick .ic svg{width:26px;height:26px;stroke-width:1.6}
+
+/* 공통 패널 */
+.row{display:grid;gap:28px;margin-top:40px}
+.r2{grid-template-columns:1fr 372px}
+.r22{grid-template-columns:1fr 1fr}
+.r3{grid-template-columns:repeat(3,1fr)}
+.ph{display:flex;align-items:center;gap:14px;height:46px;border-bottom:2px solid var(--ink)}
+.ph h3{margin:0;font-size:20px;font-weight:800;letter-spacing:-.035em;position:relative}
+.ph .tabs{display:flex;gap:4px;margin-left:8px}
+.ph .tabs a{height:32px;padding:0 12px;border-radius:999px;font-size:14px;font-weight:600;color:var(--mute);display:flex;align-items:center;position:relative}
+.ph .tabs a.on{background:var(--navy);color:#fff}
+.ph .more{margin-left:auto;display:flex;align-items:center;gap:2px;font-size:13.5px;color:var(--sub)}
+.ph .more svg{width:15px;height:15px}
+
+/* 공고 표 */
+.bids{list-style:none;margin:0;padding:0}
+.bids li{display:grid;grid-template-columns:56px 1fr 108px 104px 84px;align-items:center;gap:14px;min-height:62px;padding:8px 0;border-bottom:1px solid var(--line-l)}
+.dd{height:26px;border-radius:6px;font-size:13px;font-weight:800;display:grid;place-items:center}
+.dd.u{background:var(--red-l);color:var(--red)}
+.dd.s{background:var(--amber-l);color:var(--amber)}
+.dd.n{background:var(--surface);color:var(--sub)}
+.bids .t b{display:block;font-size:15.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bids .t span{display:block;font-size:12.5px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.bids .t span i{font-style:normal;margin-right:8px}
+.bd{display:inline-flex;height:24px;padding:0 9px;border-radius:5px;font-size:12.5px;font-weight:700;align-items:center;white-space:nowrap}
+.bd.s{background:var(--blue-l);color:var(--blue)}
+.bd.r{background:var(--green-l);color:var(--green)}
+.bd.p{background:#f3effc;color:#6b46c1}
+.bids .loc{font-size:13.5px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bids .dl{text-align:right;font-size:14px;font-weight:700}
+.bids .dl small{display:block;font-size:12px;font-weight:500;color:var(--mute)}
+
+/* 캘린더 */
+.cal{border:1px solid var(--line);border-radius:12px;padding:16px 18px 14px;margin-top:14px}
+.cal .mh{display:flex;align-items:center;justify-content:space-between;font-size:16px;font-weight:800;margin-bottom:10px}
+.cal .mh span{display:flex;gap:6px;color:var(--mute)}
+.cal .mh svg{width:18px;height:18px}
+.cal table{width:100%;border-collapse:collapse;text-align:center}
+.cal th{font-size:12px;font-weight:600;color:var(--mute);height:26px}
+.cal th:first-child{color:var(--red)}
+.cal td{height:36px;font-size:13.5px;position:relative;color:var(--ink)}
+.cal td.o{color:#c4c9d2}
+.cal td.su{color:var(--red)}
+.cal td.now span{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--navy);color:#fff;font-weight:700}
+.cal td.dot::after{content:"";position:absolute;left:50%;bottom:2px;width:5px;height:5px;margin-left:-2.5px;border-radius:50%;background:var(--red)}
+.cal .ls{border-top:1px solid var(--line-l);margin-top:6px;padding-top:10px;display:grid;gap:7px}
+.cal .ls div{display:flex;gap:10px;font-size:13.5px}
+.cal .ls b{flex:none;width:68px;color:var(--red);font-weight:700}
+.cal .ls span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--sub)}
+
+/* 낙찰 표 */
+.aw{width:100%;border-collapse:collapse}
+.aw td{height:50px;border-bottom:1px solid var(--line-l);font-size:14.5px}
+.aw td.d{width:64px;color:var(--mute);font-size:13.5px}
+.aw td.t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:330px;padding-right:12px}
+.aw td.t small{display:block;font-size:12px;color:var(--mute)}
+.aw td.a{text-align:right;font-weight:800;color:var(--navy);white-space:nowrap}
+
+/* 발주 동향 */
+.trend{display:grid;grid-template-columns:1fr 230px;gap:26px;padding-top:16px}
+.trend h6{margin:0 0 10px;font-size:13.5px;font-weight:700;color:var(--sub)}
+.cols{height:170px;display:flex;align-items:flex-end;gap:12px;border-bottom:1px solid var(--line);padding:0 4px;position:relative}
+.cols .c{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
+.cols .c b{font-size:12.5px;font-weight:700;color:var(--sub);margin-bottom:4px}
+.cols .c i{display:block;width:30px;background:var(--blue);border-radius:4px 4px 0 0}
+.cols .c i.part{background:repeating-linear-gradient(135deg,var(--blue) 0 3px,#8fb0f0 3px 6px)}
+.xl{display:flex;gap:12px;padding:6px 4px 0}
+.xl span{flex:1;text-align:center;font-size:12px;color:var(--mute)}
+.hb{display:grid;gap:9px}
+.hb div{display:grid;grid-template-columns:88px 1fr 28px;align-items:center;gap:8px;font-size:13px}
+.hb div span{color:var(--sub);white-space:nowrap}
+.hb div i{display:block;height:10px;border-radius:0 4px 4px 0;background:var(--blue)}
+.hb div b{font-size:12.5px;text-align:right;color:var(--sub)}
+.note{margin-top:10px;font-size:12px;color:var(--mute)}
+
+/* 3단 목록 */
+.lst{list-style:none;margin:0;padding:6px 0 0}
+.lst li{display:flex;align-items:center;gap:10px;height:42px;font-size:14.5px}
+.lst li .t{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lst li .d{color:var(--mute);font-size:13px}
+.imp{flex:none;height:21px;padding:0 6px;border-radius:4px;background:var(--red-l);color:var(--red);font-size:11.5px;font-weight:700;display:flex;align-items:center}
+.bul{flex:none;width:4px;height:4px;border-radius:50%;background:#9aa3b2;margin:0 8px 0 3px}
+.fi{flex:none;width:30px;height:30px;border-radius:8px;background:var(--surface);display:grid;place-items:center;color:var(--navy)}
+.fi svg{width:17px;height:17px}
+.ext{flex:none;font-size:12px;font-weight:700;color:var(--mute)}
+
+/* 홍보 두 장 */
+.promo{position:relative;height:150px;border-radius:14px;overflow:hidden;display:flex;align-items:center;padding:0 32px}
+.promo img{position:absolute;right:0;top:0;width:46%;height:100%;object-fit:cover}
+.promo::before{content:"";position:absolute;right:0;top:0;width:46%;height:100%;background:linear-gradient(90deg,var(--pbg) 0%,rgba(255,255,255,0) 40%);z-index:1}
+.promo .tx{position:relative;z-index:2;width:56%}
+.promo small{font-size:13px;font-weight:700;color:var(--blue)}
+.promo b{display:block;margin:4px 0 6px;font-size:21px;font-weight:800;letter-spacing:-.035em}
+.promo span{font-size:14px;color:var(--sub)}
+.promo.a{background:var(--blue-ll);--pbg:var(--blue-ll)}
+.promo.b{background:#f7f5f1;--pbg:#f7f5f1}
+
+/* 관련 사이트 */
+.rel{margin-top:40px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);display:flex;align-items:center;height:64px;gap:8px}
+.rel h4{margin:0 22px 0 0;font-size:14.5px;font-weight:800;white-space:nowrap}
+.rel a{display:flex;align-items:center;gap:6px;height:34px;padding:0 14px;border:1px solid var(--line);border-radius:999px;font-size:13.5px;font-weight:600;color:var(--sub)}
+.rel a svg{width:14px;height:14px;color:var(--mute)}
+
+/* 떠 있는 바로가기 */
+.float{position:absolute;right:-104px;top:24px;width:82px;display:flex;flex-direction:column;gap:8px}
+.float .box{border:1px solid var(--line);border-radius:10px;background:#fff;overflow:hidden;position:relative}
+.float .box > a{display:flex;flex-direction:column;align-items:center;gap:5px;padding:12px 4px;font-size:12px;font-weight:600;text-align:center;line-height:1.3}
+.float .box > a+a{border-top:1px solid var(--line-l)}
+.float .box svg{width:22px;height:22px;color:var(--navy)}
+.float .recent{padding:10px 8px 12px;border-bottom:1px solid var(--line-l);position:relative}
+.float .recent p{margin:0 0 7px;font-size:12px;font-weight:700;text-align:center}
+.float .recent i{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;border-radius:6px;background:var(--surface);margin-top:6px;font-style:normal;font-size:10.5px;color:var(--sub);padding:5px 6px;line-height:1.35;overflow:hidden}
+.float .tp{height:38px;border:1px solid var(--line);border-radius:10px;background:#fff;display:grid;place-items:center;color:var(--sub)}
+
+footer{margin-top:48px;background:#2b313c;color:#aeb6c3;padding:28px 0 40px;font-size:13.5px}
+footer .lk{display:flex;gap:22px;color:#fff;font-weight:600;padding-bottom:16px;border-bottom:1px solid #424a57}
+footer .lk a:nth-child(2){color:#8fb3ff}
+footer .info{margin-top:16px;line-height:1.85}
+footer .info span+span:before{content:"";display:inline-block;width:1px;height:11px;background:#59616e;margin:0 12px;vertical-align:-1px}
+
+/* 입찰 준비 단계 */
+.ready{margin-top:18px;border:1px solid var(--line);border-radius:14px;display:grid;grid-template-columns:230px 1fr 170px;align-items:center;gap:24px;padding:20px 26px;position:relative}
+.ready h4{margin:0;font-size:18px;font-weight:800;letter-spacing:-.035em;line-height:1.35}
+.ready p{margin:5px 0 0;font-size:13.5px;color:var(--sub)}
+.steps{display:grid;grid-template-columns:repeat(6,1fr);position:relative}
+.steps:before{content:"";position:absolute;left:8%;right:8%;top:16px;height:2px;background:var(--line)}
+.steps div{position:relative;text-align:center}
+.steps i{width:34px;height:34px;margin:0 auto;border-radius:50%;background:#fff;border:2px solid var(--blue);color:var(--blue);display:grid;place-items:center;font-style:normal;font-weight:800;font-size:14px}
+.steps b{display:block;margin-top:8px;font-size:14px;font-weight:700}
+.steps span{display:block;font-size:12.5px;color:var(--mute)}
+.ready .cta{display:grid;gap:7px;text-align:center}
+.ready .cta a{height:46px;border-radius:8px;background:var(--navy);color:#fff;font-weight:700;font-size:15px;display:grid;place-items:center}
+.ready .cta a.l{height:auto;background:none;color:var(--sub);font-size:13px;font-weight:600}
+
+/* 공고 목록 보강 */
+.bids .loc b{display:flex;align-items:center;gap:3px;font-size:13.5px;font-weight:700;color:var(--ink)}
+.bids .loc b svg{width:13px;height:13px;color:var(--mute)}
+.bids .loc small{display:block;font-size:12.5px;color:var(--mute)}
+.sw{display:flex;align-items:center;gap:7px;font-size:13.5px;color:var(--sub);margin-left:auto;position:relative}
+.sw i{width:34px;height:20px;border-radius:999px;background:var(--blue);position:relative}
+.sw i:after{content:"";position:absolute;right:2px;top:2px;width:16px;height:16px;border-radius:50%;background:#fff}
+.sw + .more{margin-left:16px}
+.notify{margin-top:12px;border-radius:12px;background:var(--surface);padding:15px 18px}
+.notify b{display:block;font-size:15px;font-weight:800}
+.notify p{margin:2px 0 10px;font-size:13px;color:var(--sub)}
+.notify .ch{display:flex;gap:6px;align-items:center}
+.notify .ch span{height:28px;padding:0 10px;border-radius:999px;background:#fff;border:1px solid var(--line);font-size:13px;font-weight:600;display:flex;align-items:center;position:relative}
+.notify .ch a{margin-left:auto;height:32px;padding:0 13px;border-radius:8px;background:var(--navy);color:#fff;font-size:13.5px;font-weight:700;display:flex;align-items:center}
+
+/* 공고 분석 예시 */
+.ex{height:24px;padding:0 9px;border-radius:5px;background:var(--surface);color:var(--sub);font-size:12.5px;font-weight:600;display:flex;align-items:center}
+.ac{padding-top:16px}
+.ac .sol{font-size:12.5px;color:var(--mute)}
+.ac h4{margin:2px 0 1px;font-size:19px;font-weight:800;letter-spacing:-.03em}
+.ac .en{font-size:13px;color:var(--sub)}
+.ac dl{margin:14px 0 0;display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--line-l)}
+.ac dl div{padding:10px 0;border-bottom:1px solid var(--line-l)}
+.ac dt{font-size:12.5px;color:var(--mute)}
+.ac dd{margin:2px 0 0;font-size:14.5px;font-weight:700}
+.chg{display:inline-flex;margin-left:8px;height:22px;padding:0 8px;border-radius:5px;background:var(--amber-l);color:var(--amber);font-size:12px;font-weight:700;align-items:center;position:relative;vertical-align:1px}
+.ac h5{margin:14px 0 8px;font-size:13.5px;font-weight:700;display:flex;justify-content:space-between}
+.ac h5 span{font-weight:500;color:var(--mute);font-size:12.5px}
+.docs{display:flex;flex-wrap:wrap;gap:6px}
+.docs span{height:27px;padding:0 10px;border-radius:6px;background:var(--surface);font-size:13px;color:var(--sub);display:flex;align-items:center;gap:5px}
+.docs span svg{width:13px;height:13px;color:var(--green);stroke-width:2.4}
+.ac .act{display:grid;grid-template-columns:1fr 1.3fr;gap:8px;margin-top:16px}
+.ac .act a{height:42px;border-radius:8px;font-size:14.5px;font-weight:700;display:grid;place-items:center}
+.ac .act a.o{border:1px solid var(--line)}
+.ac .act a.p{background:var(--navy);color:#fff}
+
+/* 기지별 공고 */
+.bm{display:grid;grid-template-columns:270px 1fr;gap:20px;padding-top:16px}
+.mapm{background:var(--surface);border-radius:12px;height:330px;position:relative;overflow:hidden}
+.mapm svg{position:absolute;left:5px;top:10px}
+.mapm .kp{fill:#e6e9ee}
+.mapm .kr{fill:#fff;stroke:#c9d0da;stroke-width:1.6}
+.mapm .dot circle{fill:var(--blue);fill-opacity:.9;stroke:#fff;stroke-width:3}
+.mapm .dot text{font-size:21px;font-weight:700;fill:var(--ink);paint-order:stroke;stroke:#fff;stroke-width:6px;stroke-linejoin:round}
+.mapm .dot text tspan.o{fill:var(--red)}
+.bt{width:100%;border-collapse:collapse}
+.bt th{height:34px;font-size:12.5px;font-weight:600;color:var(--mute);text-align:right;border-bottom:1px solid var(--line)}
+.bt th:first-child{text-align:left}
+.bt td{height:38px;border-bottom:1px solid var(--line-l);font-size:14px;text-align:right}
+.bt td:first-child{text-align:left;font-weight:700}
+.bt td.o b{display:inline-grid;place-items:center;min-width:22px;height:20px;padding:0 6px;border-radius:10px;background:var(--red-l);color:var(--red);font-size:12px}
+.bt td.o span{color:#c4c9d2}
+.bt td.a{font-weight:700}
+.bm .lg{margin-top:9px;font-size:12px;color:var(--mute);line-height:1.6}
+.bm .lg em{font-style:normal;color:var(--red);font-weight:800}
+
+/* 구역 띠 */
+.band{padding:64px 0 68px}
+.band.g{background:var(--surface);border-top:1px solid var(--line-l);border-bottom:1px solid var(--line-l)}
+.bh{text-align:center;margin-bottom:34px;position:relative}
+.bh small{font-size:14px;font-weight:700;color:var(--blue)}
+.bh h2{margin:6px 0 8px;font-size:30px;font-weight:800;letter-spacing:-.04em}
+.bh p{margin:0;font-size:15.5px;color:var(--sub)}
+.pane{background:#fff;border:1px solid var(--line);border-radius:14px;padding:24px 26px}
+.b2{display:grid;grid-template-columns:1fr 1fr;gap:28px}
+.b2 > *{position:relative}
+.ac{padding-top:0}
+.ac .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.ac .top b{height:26px;padding:0 10px;border-radius:6px;background:var(--blue-l);color:var(--blue);font-size:12.5px;font-weight:700;display:flex;align-items:center}
+.ac .top span{font-size:12.5px;color:var(--mute)}
+.rs{display:flex;flex-direction:column}
+.rs h3{margin:0;font-size:19px;font-weight:800;letter-spacing:-.03em}
+.rs p.s{margin:4px 0 8px;font-size:13.5px;color:var(--sub)}
+.rs ol{list-style:none;margin:0;padding:0;flex:1}
+.rs li{display:grid;grid-template-columns:34px 1fr auto;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line-l)}
+.rs li i{width:30px;height:30px;border-radius:50%;border:2px solid var(--blue);color:var(--blue);display:grid;place-items:center;font-style:normal;font-weight:800;font-size:13px}
+.rs li b{font-size:15px;font-weight:700}
+.rs li b span{display:block;font-size:12.5px;color:var(--mute);font-weight:400;margin-top:1px}
+.rs li em{font-style:normal;font-size:13px;color:var(--sub);font-weight:600;display:flex;align-items:center}
+.rs li em svg{width:14px;height:14px}
+.rs .cta{display:grid;grid-template-columns:1.3fr 1fr;gap:8px;margin-top:16px}
+.rs .cta a{height:44px;border-radius:8px;font-size:14.5px;font-weight:700;display:grid;place-items:center}
+.rs .cta a.p{background:var(--navy);color:#fff}
+.rs .cta a.o{border:1px solid var(--line)}
+
+/* 기지 지도 크게 */
+.basewrap{display:grid;grid-template-columns:460px 1fr;gap:36px}
+.mapc{background:var(--surface);border-radius:14px;position:relative;height:540px;overflow:hidden}
+.mapc svg{position:absolute;left:10px;top:10px}
+.mapc .kp{fill:#e6e9ee}
+.mapc .kr{fill:#fff;stroke:#c9d0da;stroke-width:1}
+.mapc .dot circle{fill:var(--blue);fill-opacity:.9;stroke:#fff;stroke-width:2}
+.mapc .dot text{font-size:12.5px;font-weight:700;fill:var(--ink);paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round}
+.mapc .dot text tspan.o{fill:var(--red)}
+.mapc .lg{position:absolute;left:16px;bottom:14px;background:#fff;border-radius:10px;padding:10px 12px;font-size:12px;color:var(--sub);display:grid;gap:5px;border:1px solid var(--line-l)}
+.mapc .lg div{display:flex;align-items:center;gap:7px}
+.mapc .lg i{display:inline-block;border-radius:50%;background:var(--blue);opacity:.9}
+.mapc .lg em{font-style:normal;color:var(--red);font-weight:800}
+.btab{width:100%;border-collapse:collapse}
+.btab th{height:42px;font-size:13px;font-weight:600;color:var(--mute);text-align:right;border-top:2px solid var(--ink);border-bottom:1px solid var(--line)}
+.btab th:first-child{text-align:left}
+.btab td{height:43px;border-bottom:1px solid var(--line-l);font-size:14.5px;text-align:right}
+.btab td:first-child{text-align:left;font-weight:700}
+.btab td:first-child small{font-weight:500;color:var(--mute);margin-left:6px;font-size:12.5px}
+.btab td.o b{display:inline-grid;place-items:center;min-width:24px;height:22px;padding:0 6px;border-radius:11px;background:var(--red-l);color:var(--red);font-size:12.5px}
+.btab td.o span{color:#c4c9d2}
+.btab td.n{width:200px}
+.btab td.n div{display:flex;align-items:center;justify-content:flex-end;gap:8px}
+.btab td.n i{display:block;height:8px;border-radius:0 4px 4px 0;background:var(--blue)}
+.btab td.a{font-weight:700;width:130px}
+.bnote{margin-top:12px;font-size:12.5px;color:var(--mute)}
+
+/* 숫자 띠 */
+.nums{display:grid;grid-template-columns:repeat(4,1fr);background:#fff;border:1px solid var(--line);border-radius:14px;margin-bottom:28px;position:relative}
+.nums div{padding:24px 28px}
+.nums div+div{border-left:1px solid var(--line-l)}
+.nums span{font-size:14px;color:var(--sub);font-weight:600}
+.nums b{display:block;margin-top:4px;font-size:32px;font-weight:800;letter-spacing:-.03em;color:var(--ink)}
+.nums b small{font-size:16px;font-weight:700;margin-left:2px}
+.nums b.r{color:var(--red)}
+.nums em{display:block;font-style:normal;font-size:12.5px;color:var(--mute);margin-top:2px}
+.pane .ph{margin-top:-6px}
+
+/* 탭 하나로 묶은 목록 */
+.tbox{border:1px solid var(--line);border-radius:14px;padding:0 24px 10px;position:relative}
+.tt{display:flex;gap:26px;height:58px;align-items:flex-end;border-bottom:1px solid var(--line)}
+.tt a{padding-bottom:15px;font-size:17px;font-weight:700;color:var(--mute);position:relative}
+.tt a.on{color:var(--ink)}
+.tt a.on:after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--ink)}
+.tt .more{margin-left:auto;padding-bottom:16px;display:flex;align-items:center;font-size:13.5px;font-weight:500;color:var(--sub)}
+.tt .more svg{width:15px;height:15px}
+.tbox .lst li{height:46px}
+.pst{display:grid;gap:16px}
+.pst .promo{height:142px}
+
+/* 신규 기능 표시 */
+.ann [data-new]{position:relative;outline:2px dashed var(--new);outline-offset:3px;border-radius:6px}
+.ann [data-new]::after{content:"신규";position:absolute;top:-10px;right:-8px;z-index:3;height:18px;padding:0 5px;border-radius:4px;background:var(--new);color:#fff;font-size:10.5px;font-weight:700;line-height:18px;letter-spacing:0}
+.ann .gnb [data-new]::after{top:-12px;right:-14px}
+.ann .mega [data-new]{outline:none}
+.ann .mega [data-new]::after{position:static;display:inline-block;margin-left:5px;vertical-align:1px}
+.mega li{white-space:normal}
+.ann .legend{display:flex}
+.legend{display:none;position:absolute;left:50%;top:2px;transform:translateX(-50%);z-index:20;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;background:#fff;border:1px solid var(--line);box-shadow:0 6px 18px rgba(16,24,40,.12);font-size:13px;color:var(--sub)}
+.legend i{display:inline-block;width:26px;height:14px;border:2px dashed var(--new);border-radius:4px}
+
+[hidden]{display:none!important}
+:root{--sub:#3d4657;--mute:#6b7384}
+body{font-size:16px;word-break:keep-all}
+.util{font-size:13.5px}
+.util nav{color:var(--sub)}
+.sch .kw{font-size:14px;white-space:nowrap}
+.sch .kw .cnt{color:var(--ink);font-weight:600;padding-right:12px;border-right:1px solid var(--line)}
+.sch .kw .cnt b{color:var(--blue)}
+.hico a{font-size:13.5px;color:var(--ink)}
+.gnb nav a{font-size:17px}
+.gnb .price,.tag,.ph .tabs a{border-radius:6px}
+.rel a{border-radius:8px;font-size:14.5px}
+.ph{height:52px}
+.ph h3{font-size:22px}
+.ph .tabs a{height:34px;font-size:15px;padding:0 13px}
+.ph .cnt{font-size:15px;color:var(--sub);font-weight:600}
+.ph .cnt b{color:var(--red);font-weight:800}
+.ph .more{font-size:14.5px}
+
+/* 공고 목록: 제목 18px, 번호 14.5px, 유형 15px, 마감일 17px 진하게 */
+.bids li{grid-template-columns:64px minmax(0,1fr) 112px 118px 96px;gap:16px;min-height:73px;padding:9px 0}
+.dd{height:30px;font-size:15px;border-radius:7px}
+.bids .t b{font-size:18px;font-weight:700;color:var(--ink)}
+.bids .t span{font-size:14.5px;color:var(--sub);margin-top:2px}
+.bd{height:29px;padding:0 11px;font-size:15px;border-radius:6px}
+.bids .loc b{font-size:15.5px;gap:4px}
+.bids .loc b svg{width:15px;height:15px}
+.bids .dl{font-size:17px;font-weight:800;color:var(--ink)}
+.bids .dl small{font-size:14px;color:var(--sub);font-weight:600}
+
+/* 첫 화면 틀 */
+.fs{display:grid;grid-template-columns:minmax(0,1fr) 372px;gap:28px;margin-top:24px;align-items:start}
+.side{gap:14px}
+.wide{margin-top:24px}
+
+/* 큰 버튼 */
+.bigb{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:56px;padding:0 28px;border-radius:10px;background:var(--blue);color:#fff;font-size:17.5px;font-weight:800;letter-spacing:-.02em}
+.bigb:hover{background:var(--blue-d)}
+.bigb svg{width:19px;height:19px;stroke-width:2.4}
+.bigb.o{background:#fff;color:var(--ink);border:1.5px solid var(--line)}
+
+/* 공급 상태 줄 */
+.empt{display:flex;align-items:center;gap:14px;margin:14px 0 16px;padding:15px 18px;border-radius:12px;background:var(--surface);font-size:16px;color:var(--ink)}
+.empt .fi{width:38px;height:38px;background:#fff;color:var(--blue)}
+.empt .fi svg{width:20px;height:20px}
+.empt b{font-weight:800}
+
+/* 공고문 예시 */
+.sp{background:#fff;border:1px solid var(--line);border-radius:14px;padding:26px 30px 22px}
+.sp .sh{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.sp .sh b{height:29px;padding:0 11px;border-radius:6px;background:var(--blue-l);color:var(--blue);font-size:14.5px;font-weight:800;display:flex;align-items:center}
+.sp .sh span{font-size:14.5px;color:var(--sub);font-weight:600}
+.sp .sol{font-size:14.5px;color:var(--mute)}
+.sp h4{margin:3px 0 2px;font-size:25px;line-height:1.35;font-weight:800;letter-spacing:-.035em}
+.sp .en{font-size:15px;color:var(--sub)}
+.sp .ov{margin:12px 0 0;font-size:16.5px;line-height:1.7;color:var(--ink)}
+.sp dl{margin:16px 0 0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));column-gap:20px;border-top:1px solid var(--line-l)}
+.sp dl div{padding:11px 0;border-bottom:1px solid var(--line-l)}
+.sp dt{font-size:14px;color:var(--mute);font-weight:600}
+.sp dd{margin:2px 0 0;font-size:16.5px;font-weight:700;line-height:1.45}
+.sp .det{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:30px;margin-top:22px}
+.sp h5{margin:0 0 8px;font-size:18px;font-weight:800;letter-spacing:-.03em;display:flex;align-items:baseline;justify-content:space-between}
+.sp h5 span{font-size:14px;font-weight:600;color:var(--mute)}
+.el{list-style:none;margin:0;padding:0;counter-reset:n}
+.el li{counter-increment:n;display:grid;grid-template-columns:28px 1fr;gap:8px;padding:8px 0;border-bottom:1px solid var(--line-l);font-size:15.5px;line-height:1.5}
+.el li:before{content:counter(n);width:24px;height:24px;margin-top:1px;border-radius:50%;background:var(--blue-l);color:var(--blue);font-size:13px;font-weight:800;display:grid;place-items:center}
+.sp .docs{gap:7px}
+.sp .docs span{height:34px;padding:0 12px;font-size:15px;color:var(--ink);border-radius:7px}
+.sp .docs span svg{width:15px;height:15px}
+.sp .docs em{font-style:normal;height:34px;padding:0 12px;border-radius:7px;border:1px dashed var(--line);font-size:14.5px;color:var(--sub);display:flex;align-items:center}
+.sp .nt{display:flex;align-items:center;gap:8px;margin-top:18px;padding-top:14px;border-top:1px solid var(--line-l);font-size:14px;color:var(--mute)}
+.sp .nt svg{width:17px;height:17px}
+.sgrid{display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:36px}
+.sgrid .act{margin-top:22px;display:flex;align-items:center;gap:14px}
+.sgrid .act small{font-size:14.5px;color:var(--sub)}
+.cond{background:var(--surface);border-radius:12px;padding:18px 22px}
+.cond h6{margin:0 0 4px;font-size:16px;font-weight:800}
+.cond dl{grid-template-columns:1fr;margin-top:6px;border-top:0}
+.cond dl div{display:grid;grid-template-columns:92px 1fr;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.cond dl div:last-child{border-bottom:0}
+.cond dd{margin:0;font-size:16px}
+
+/* 시안 1 오른쪽 칸 */
+.intro{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff}
+.intro .im{position:relative;height:150px;background:#dfe6ef}
+.intro .im img{width:100%;height:100%;object-fit:cover;object-position:center 30%;display:block}
+.intro .im .tag{position:absolute;left:16px;bottom:14px}
+.intro .bx{padding:20px 22px 20px}
+.intro h3{margin:0;font-size:22px;line-height:1.35;font-weight:800;letter-spacing:-.035em;color:var(--ink)}
+.intro p{margin:6px 0 14px;font-size:15.5px;color:var(--sub);line-height:1.55}
+.fr{background:var(--surface);border-radius:10px;padding:13px 16px}
+.fr b{display:block;font-size:14.5px;font-weight:800;color:var(--ink);margin-bottom:4px}
+.fr ul{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.fr li{display:flex;align-items:center;gap:8px;font-size:16px;font-weight:600}
+.fr li svg{width:17px;height:17px;color:var(--green);stroke-width:2.6}
+.intro .bigb{width:100%;margin-top:16px}
+.intro .lg{margin-top:11px;text-align:center;font-size:15px;color:var(--sub)}
+.intro .lg a{color:var(--blue);font-weight:700;margin-left:4px}
+.regb{display:flex;align-items:flex-start;gap:12px;border:1px solid var(--line);border-radius:12px;padding:15px 18px;background:#fff}
+.regb .fi{width:34px;height:34px;color:var(--blue);background:var(--blue-l)}
+.regb p{margin:0;font-size:15.5px;line-height:1.55;color:var(--ink)}
+.regb a{display:inline-flex;align-items:center;color:var(--blue);font-weight:700;white-space:nowrap}
+.regb a svg{width:15px;height:15px;stroke-width:2.4}
+.awc{border:1px solid var(--line);border-radius:12px;padding:13px 18px}
+body.aw .intro .im{height:86px}
+body.aw .intro .im .tag{display:none}
+.awc h4{margin:0 0 8px;font-size:16px;font-weight:800;display:flex;justify-content:space-between;align-items:baseline}
+.awc h4 span{font-size:13px;font-weight:600;color:var(--mute)}
+.awc .v{display:grid;grid-template-columns:1fr 1.3fr}
+.awc .v div+div{border-left:1px solid var(--line-l);padding-left:14px}
+.awc .v b{display:block;font-size:21px;font-weight:800;letter-spacing:-.02em;color:var(--navy)}
+.awc .v span{font-size:13.5px;color:var(--sub)}
+.awc p{margin:8px 0 0;font-size:13px;color:var(--mute)}
+
+/* 로그인 후 회원 칸 */
+.today.me h4{font-size:17px}
+.today.me h4 span{font-size:13.5px}
+.today.me .g b{font-size:30px}
+.today.me .g span{font-size:14.5px;font-weight:600}
+.mine{border:1px solid var(--line);border-radius:12px;padding:6px 18px 8px}
+.mine h4{margin:8px 0 2px;font-size:16px;font-weight:800;display:flex;justify-content:space-between;align-items:baseline}
+.mine h4 a{font-size:13.5px;font-weight:600;color:var(--sub)}
+.mine li{list-style:none;display:grid;grid-template-columns:52px 1fr;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line-l)}
+.mine li:last-child{border-bottom:0}
+.mine ul{margin:0;padding:0}
+.mine .dd{height:27px;font-size:13.5px}
+.mine li > div{min-width:0}
+.mine li b{font-size:15.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.mine li small{display:block;font-size:13px;color:var(--mute)}
+.qk{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.qk a{display:flex;align-items:center;gap:10px;height:56px;padding:0 14px;border:1px solid var(--line);border-radius:12px;font-size:15.5px;font-weight:700}
+.qk .fi{width:32px;height:32px}
+
+/* 시안 2, 3 머리 버튼 */
+.hbtn{margin-left:auto;display:flex;gap:8px}
+.hbtn a{height:46px;padding:0 20px;border-radius:10px;border:1.5px solid var(--line);display:flex;align-items:center;font-size:16px;font-weight:700;color:var(--ink)}
+.hbtn a.p{background:var(--blue);border-color:var(--blue);color:#fff}
+
+/* 시안 2 고정 배너 */
+.sban{position:relative;height:232px;border-radius:14px;overflow:hidden;background:#cfe0f2}
+.sban img{position:absolute;left:0;top:0;width:110%;height:100%;object-fit:cover;object-position:left 36%}
+.sban .shade{position:absolute;inset:0;background:linear-gradient(90deg,rgba(240,246,252,.97) 0%,rgba(240,246,252,.86) 42%,rgba(240,246,252,0) 70%)}
+.sban .txt{position:absolute;left:52px;top:38px;width:640px}
+.sban h2{margin:14px 0 8px;font-size:32px;line-height:1.3;font-weight:800;letter-spacing:-.035em;color:var(--navy)}
+.sban h2 em{font-style:normal;color:var(--blue)}
+.sban p{margin:0;font-size:17px;color:#2c3850;line-height:1.55}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+.freeb{display:flex;align-items:center;gap:16px;border:1px solid var(--line);border-radius:12px;padding:13px 16px 13px 18px;background:var(--blue-ll)}
+.freeb p{margin:0;flex:1;font-size:15.5px;line-height:1.5}
+.freeb p b{font-weight:800}
+.freeb a{flex:none;height:42px;padding:0 16px;border-radius:9px;background:var(--blue);color:#fff;font-size:15px;font-weight:800;display:flex;align-items:center}
+
+/* 시안 3 상태 카드 */
+.stc{display:grid;grid-template-columns:minmax(0,1fr) 380px;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--blue-ll)}
+.stc .tx{padding:28px 34px}
+.stc h2{margin:12px 0 8px;font-size:27px;font-weight:800;letter-spacing:-.035em;color:var(--navy)}
+.stc p{margin:0;font-size:16.5px;line-height:1.6;color:#2c3850}
+.stc p b{color:var(--ink)}
+.stc img{width:100%;height:100%;object-fit:cover;display:block}
+.sec{display:flex;align-items:baseline;gap:12px;margin:30px 0 14px}
+.sec h3{margin:0;font-size:22px;font-weight:800;letter-spacing:-.035em}
+.sec span{font-size:15px;color:var(--sub)}
+
+/* 아래 구역 글자 키움 */
+.bh small{font-size:15px}
+.bh h2{font-size:32px}
+.bh p{font-size:17px}
+.rs h3{font-size:21px}
+.rs p.s{font-size:15px}
+.rs li{padding:11px 0}
+.rs li b{font-size:16.5px}
+.rs li b span{font-size:14px;color:var(--sub)}
+.rs li em{font-size:14px}
+.rs .cta a{height:50px;font-size:16px}
+.pst.p3{gap:14px}
+.pst.p3 .promo{height:180px}
+.promo small{font-size:14px}
+.promo b{font-size:22px}
+.promo span{font-size:15px;line-height:1.5}
+.btab td{font-size:15.5px}
+.btab th{font-size:14px}
+.bnote{font-size:14px}
+.nums span{font-size:15px}
+.nums em{font-size:14px;color:var(--sub)}
+.aw td{font-size:16px;height:52px}
+.aw td.d{font-size:14.5px}
+.aw td.t small{font-size:13px}
+.src2{margin:10px 0 0;font-size:13.5px;color:var(--mute)}
+.tt a{font-size:18px}
+.tbox .lst li{height:50px;font-size:16px}
+.q{flex:none;width:24px;height:24px;border-radius:6px;background:var(--blue-l);color:var(--blue);font-size:13px;font-weight:800;display:grid;place-items:center}
+.prc .pl{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}
+.prc .pl div{border:1px solid var(--line);border-radius:12px;padding:16px 16px 14px}
+.prc .pl div.on{border-color:var(--blue);background:var(--blue-ll)}
+.prc .pl span{font-size:15px;font-weight:800;color:var(--sub)}
+.prc .pl div.on span{color:var(--blue)}
+.prc .pl b{display:block;margin:4px 0 6px;font-size:26px;font-weight:800;letter-spacing:-.03em}
+.prc .pl b small{font-size:15px;font-weight:700;margin-left:2px}
+.prc .pl b.s{font-size:20px;padding:4px 0 2px}
+.prc .pl em{font-style:normal;font-size:14px;color:var(--sub);line-height:1.5;display:block}
+.prc .qa{display:flex;align-items:center;gap:12px;margin-top:14px;padding:14px 16px;border-radius:12px;background:var(--surface)}
+.prc .qa .fi{background:#fff}
+.prc .qa b{flex:1;font-size:16px;font-weight:800}
+.prc .qa b span{display:block;font-size:14px;font-weight:500;color:var(--sub)}
+.float .box > a{font-size:12.5px}
+footer{font-size:14px}
+
+/* 시안 상태 고르기 */
+.mock{position:fixed;left:16px;bottom:16px;z-index:50;display:flex;align-items:center;gap:6px;padding:8px 10px;border-radius:12px;background:#1f2633;color:#fff;font-size:13.5px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+.mock strong{font-size:13.5px;margin-right:6px}
+.mock a{height:30px;padding:0 10px;border-radius:7px;display:flex;align-items:center;background:rgba(255,255,255,.1)}
+.mock a.on{background:var(--blue)}
+.mock em{font-style:normal;color:#b8c1cf;margin-left:6px;font-size:12.5px}
+body.shot .mock{display:none}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7.5"/><path d="m20.5 20.5-4.2-4.2"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+  <symbol id="i-cr" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="i-cl" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+  <symbol id="i-cu" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></symbol>
+  <symbol id="i-cd" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><path d="M9 6v12M15 6v12"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3.5 14.6 9l6 .7-4.5 4.1 1.2 5.9L12 16.8l-5.3 2.9 1.2-5.9-4.5-4.1 6-.7Z"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.7-.9L9.6 3.9A2 2 0 0 0 7.9 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="17" rx="2"/><path d="M16 2.5v4M8 2.5v4M3 10h18"/></symbol>
+  <symbol id="i-alarm" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M5 3 2 6M22 6l-3-3"/></symbol>
+  <symbol id="i-rss" viewBox="0 0 24 24"><path d="M4 11a9 9 0 0 1 9 9M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></symbol>
+  <symbol id="i-badge" viewBox="0 0 24 24"><path d="M12 2.5 14.4 4l2.8-.2.9 2.6 2.3 1.6-.9 2.6.9 2.6-2.3 1.6-.9 2.6-2.8-.2L12 19.5 9.6 18l-2.8.2-.9-2.6-2.3-1.6.9-2.6-.9-2.6 2.3-1.6.9-2.6 2.8.2Z"/><path d="m9 11 2 2 4-4"/></symbol>
+  <symbol id="i-pen" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.4 3.6a2.1 2.1 0 0 1 3 3L7.4 18.6a2 2 0 0 1-.9.5l-2.9.8.8-2.9a2 2 0 0 1 .5-.8z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 9h8M8 13h5"/></symbol>
+  <symbol id="i-headset" viewBox="0 0 24 24"><path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4M9 13h6M9 17h4"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2zM22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="m10 8.5 5 3.5-5 3.5Z"/></symbol>
+  <symbol id="i-ext" viewBox="0 0 24 24"><path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></symbol>
+  <symbol id="i-ok" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-3.5 4.5-5 8-5s6.5 1.5 8 5"/></symbol>
+  <symbol id="i-won" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M7 9l2 7 3-6 3 6 2-7M6.5 12h11"/></symbol>
+</svg>
+
+<div class="mock"><strong>시안 1 · 안 E″·E2</strong><a href="#s0" data-h="s0">지금</a><a href="#s1" data-h="s1">공급 생긴 뒤</a><a href="#s2" data-h="s2">로그인 후</a><a href="#s1-aw" data-h="s1-aw">낙찰 한 줄 (C1)</a><em>공급 생긴 뒤 목록은 가상 자료</em></div>
+<div class="util">
+  <div class="wrap">
+    <span>미군·연방 조달 입찰 정보 서비스</span>
+    <nav data-st="s0,s1"><a class="b" href="#">회원가입</a><a href="#">로그인</a><a href="#">이용 안내</a><a href="#">고객센터</a></nav><nav data-st="s2"><a class="b" href="#">○○건설 님</a><a href="#">로그아웃</a><a href="#">고객센터</a></nav>
+  </div>
+</div>
+<header class="hd">
+  <div class="wrap">
+    <a class="logo" href="#">
+      <small>미군·연방 조달 입찰 대행</small>
+      <span class="mk">
+        <span class="sq"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#fff" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"><path d="M3.5 6.5 7.5 18l4.5-9.5 4.5 9.5 4-11.5"/></svg></span>
+        <b>WJ<em>bid</em></b>
+      </span>
+    </a>
+    <div class="sch">
+      <div class="box">
+        <span class="sel">공고명<svg class="i"><use href="#i-cd"/></svg></span>
+        <span class="phd">공고명, 공고번호, 기지명을 입력하세요</span>
+        <span class="go"><svg class="i"><use href="#i-search"/></svg></span>
+      </div>
+      <div class="kw"><span>추천 검색어</span><a href="#">미화 용역</a><a href="#">시설 유지관리</a><a href="#">오산</a><a href="#">험프리스</a><a href="#">차량 정비</a><a class="adv" href="#">상세검색</a></div>
+    </div>
+    <div class="hico">
+      <a href="#"><svg class="i"><use href="#i-star"/></svg><span class="n" data-st="s2">3</span>관심 공고</a>
+      <a href="#"><svg class="i"><use href="#i-bell"/></svg><span class="n" data-st="s2">5</span>알림</a>
+      <a href="#"><svg class="i"><use href="#i-folder"/></svg>서류함</a>
+    </div>
+  </div>
+  <div class="gnb">
+    <div class="wrap">
+      <a class="all" href="#"><svg class="i"><use href="#i-menu"/></svg>전체메뉴</a>
+      <nav>
+        <a href="#">입찰공고</a><a href="#">사전공고</a><a href="#">낙찰정보</a><a href="#">발주분석</a><a href="#">AI 제안서</a><a href="#">서류함</a><a href="#">자료실</a><a href="#">교육·컨설팅</a><a href="#">고객센터</a>
+      </nav>
+      <a class="price" href="#">요금 안내</a>
+    </div>
+  </div>
+  <div class="mega">
+    <div class="wrap">
+      <div class="col"><h5>입찰공고</h5><ul><li>전체 공고 검색</li><li>마감 임박 공고</li><li>업종별 공고</li><li>기지별 공고 지도</li><li>관심 공고</li><li>입찰 캘린더</li><li>저장한 검색·알림 구독</li></ul></div>
+      <div class="col"><h5>사전공고</h5><ul><li>사전공고</li><li>사전수요조사</li><li>산업설명회 공지</li><li>발주 예정 알림</li></ul></div>
+      <div class="col"><h5>낙찰정보</h5><ul><li>낙찰 결과 검색</li><li>낙찰 업체 조회</li><li>낙찰 금액 통계</li><li>유사 공고 낙찰가</li></ul></div>
+      <div class="col"><h5>발주분석</h5><ul><li>월별 발주 동향</li><li>기지별 공고 지도</li><li>업종별 발주 규모</li><li>반복 발주 예측</li></ul></div>
+      <div class="col"><h5>AI 제안서</h5><ul><li>공고 분석 리포트</li><li>AI 적격성 진단</li><li>제안서 작성</li><li>제출 규격 검증</li><li>진행 현황</li><li>변경 공고 비교</li></ul></div>
+      <div class="col"><h5>서류함</h5><ul><li>공통 서류함</li><li>공고별 제출 서류</li><li>서류 유효기간 알림</li><li>입찰 준비 진단</li></ul></div>
+      <div class="col"><h5>자료실</h5><ul><li>입찰 서식</li><li>계약 조항 해설</li><li>조달 용어 사전</li><li>이용 가이드</li></ul></div>
+      <div class="col"><h5>교육·컨설팅</h5><ul><li>입찰 교육 일정</li><li>동영상 강의</li><li>SAM.gov·PIEE 등록 대행</li><li>1:1 컨설팅 신청</li></ul></div>
+      <div class="col"><h5>고객센터</h5><ul><li>공지사항</li><li>자주 묻는 질문</li><li>1:1 문의</li><li>요금 안내</li><li>카카오톡 알림 설정</li></ul></div>
+    </div>
+  </div>
+</header>
+<main class="wrap">
+  <div class="float">
+    <div class="box">
+      <a href="#"><svg class="i"><use href="#i-star"/></svg>관심 공고</a>
+      <a href="#"><svg class="i"><use href="#i-file"/></svg>요금 안내</a>
+      <a href="#"><svg class="i"><use href="#i-headset"/></svg>1:1 문의</a>
+    </div>
+    <a class="tp" href="#"><svg class="i"><use href="#i-cu"/></svg></a>
+  </div>
+  <div class="fs">
+    <div>
+      <div data-st="s0">
+        <div class="ph"><h3>마감 전 공고</h3><span class="cnt">공개된 공고문 <b>0건</b> · 10.10 기준</span></div>
+        <div class="empt"><span class="fi"><svg class="i"><use href="#i-clock"/></svg></span><span>새 한글 공고문이 올라오면 이 자리에 <b>마감순</b>으로 보입니다. 지금은 마감된 공고 한 건으로 미리 보여 드립니다.</span></div>
+        <article class="sp"><div class="sh"><b>공고문 예시</b><span>마감된 공고 · 2026.08.28 마감</span></div><div class="sol mono">W90VN926QA046</div><h4>부산지역 쓰레기 수거 및 처리 (USAG-대구)</h4><div class="en">Trash Removal and Disposal for Busan Area, USAG-Daegu</div><p class="ov">부산지역(BSC, 8부두, 마산, 김해)의 일반 쓰레기와 음식물 쓰레기를 수거, 운송, 폐기하는 용역입니다. 재활용 품목 분류와 처리가 포함되고, 폐기 관련 수수료는 모두 계약자가 부담합니다.</p><dl><div><dt>계약 방식</dt><dd>확정고정가격</dd></div><div><dt>계약 기간</dt><dd>기초 1년 + 옵션 4년 (2027~2031년)</dd></div><div><dt>평가 방식</dt><dd>기술 적격 업체 중 최저가 (LPTA)</dd></div><div><dt>대금 지급</dt><dd>한국 정부가 계약자에게 직접 지급</dd></div><div><dt>게시일</dt><dd>2026.07.28</dd></div><div><dt>마감일</dt><dd>2026.08.28(금)</dd></div></dl><div class="det"><div><h5>참가 자격<span>7가지</span></h5><ol class="el"><li>한국 법인만 참여 (등기부등본에 국내 주소)</li><li>사업장생활계폐기물 수집운반업 또는 처리업 허가증, 주계약자가 보유</li><li>수집운반업 허가라면 최종 처리업체와의 계약서</li><li>최근 7년 안 유사 업무 2년 이상, 금액 $400,000 또는 5억 원 이상</li><li>부산 저장시설 30km 안 폐기물 보관장소 (450톤, 300㎥ 이상)</li><li>계약관리자: 유사 경력 2년 이상, 영어 능숙, 자사 직원</li><li>제재, 형사판결, 연방세금 체납 없음 인증</li></ol></div><div><h5>제안서와 함께 낼 서류<span>10건</span></h5><div class="docs"><span><svg class="i"><use href="#i-ok"/></svg>등기부등본(유효사항)</span><span><svg class="i"><use href="#i-ok"/></svg>주식 변동 상황 명세서</span><span><svg class="i"><use href="#i-ok"/></svg>폐기물 허가증</span><span><svg class="i"><use href="#i-ok"/></svg>과거 실적 증빙</span><span><svg class="i"><use href="#i-ok"/></svg>폐기물 보관장소 증빙서류</span><span><svg class="i"><use href="#i-ok"/></svg>계약관리자(CM) 이력서</span><span><svg class="i"><use href="#i-ok"/></svg>가격 제안서</span><span><svg class="i"><use href="#i-ok"/></svg>원가 분석 자료</span><span><svg class="i"><use href="#i-ok"/></svg>책임사항 인증서 (52.209-5)</span><span><svg class="i"><use href="#i-ok"/></svg>세금 면제 신고서</span><em>낙찰 뒤 내는 서류 17건 더</em></div></div></div><div class="nt"><svg class="i"><use href="#i-file"/></svg>SAM.gov 원문(W90VN926QA046)을 WJbid 가 한글로 정리한 내용입니다. 마감된 공고라 지금은 신청할 수 없습니다.</div></article>
+      </div>
+      <div data-st="s1,s2"><section>
+      <div class="ph">
+        <h3>마감 전 공고</h3>
+        <div class="tabs"><a class="on" href="#">마감 임박</a><a href="#">최신 공고</a></div>
+        <span class="cnt">13건 · 7일 안 마감 <b>8건</b></span>
+        <a class="more" href="#">전체 보기<svg class="i"><use href="#i-cr"/></svg></a>
+      </div>
+      <ul class="bids">
+        <li><span class="dd u">D-3</span><div class="t"><b>대구지역 쓰레기 수거 및 처리 (USAG-Daegu)</b><span><i class="mono">W90VN926RA081</i></span></div><span><span class="bd r">입찰</span></span><span class="loc"><b><svg class="i"><use href="#i-pin"/></svg>대구</b></span><span class="dl">10.13<small>(화)</small></span></li>
+        <li><span class="dd u">D-3</span><div class="t"><b>막사 P-6821 수리, 주한미군 험프리스</b><span><i class="mono">W91QVN26RA070</i></span></div><span><span class="bd r">입찰</span></span><span class="loc"><b><svg class="i"><use href="#i-pin"/></svg>험프리스</b></span><span class="dl">10.13<small>(화)</small></span></li>
+        <li><span class="dd u">D-4</span><div class="t"><b>빈디케이터 V5 하드웨어 업그레이드</b><span><i class="mono">W90VN726QA009</i></span></div><span><span class="bd p">시장 조사</span></span><span class="loc"><b><svg class="i"><use href="#i-pin"/></svg>군산</b></span><span class="dl">10.14<small>(수)</small></span></li>
+        <li><span class="dd u">D-5</span><div class="t"><b>병영 CCTV 구매/신규설치/교체 (103개 병영)</b><span><i class="mono">W91QVN26RA046</i></span></div><span><span class="bd r">입찰</span></span><span class="loc"><b><svg class="i"><use href="#i-pin"/></svg>여러 기지</b></span><span class="dl">10.15<small>(목)</small></span></li>
+        <li><span class="dd u">D-5</span><div class="t"><b>군산 공군기지 7번가 및 주차장 B514, 517, 568 포장 수리</b><span><i class="mono">W90VN726RA020</i></span></div><span><span class="bd r">입찰</span></span><span class="loc"><b><svg class="i"><use href="#i-pin"/></svg>군산</b></span><span class="dl">10.15<small>(목)</small></span></li>
+        <li><span class="dd u">D-5</span><div class="t"><b>USAG Humphreys S-858 소방 폼 시스템 프로포셔너 수리</b><span><i class="mono">W51LL526RA017</i></span></div><span><span class="bd r">입찰</span></span><span class="loc"><b><svg class="i"><use href="#i-pin"/></svg>험프리스</b></span><span class="dl">10.15<small>(목)</small></span></li>
+        <li><span class="dd u">D-6</span><div class="t"><b>오산공군기지 B949 통신본부 소화설비 수리</b><span><i class="mono">W90VN626RA019</i></span></div><span><span class="bd r">입찰</span></span><span class="loc"><b><svg class="i"><use href="#i-pin"/></svg>오산</b></span><span class="dl">10.16<small>(금)</small></span></li>
+        <li><span class="dd u">D-6</span><div class="t"><b>캠프 험프리스 B6145 건물 사무용 가구 조달</b><span><i class="mono">W51LL526QA011</i></span></div><span><span class="bd r">입찰</span></span><span class="loc"><b><svg class="i"><use href="#i-pin"/></svg>험프리스</b></span><span class="dl">10.16<small>(금)</small></span></li>
+      </ul>
+    </section></div>
+    </div>
+    <div><div data-st="s0,s1" class="side">
+      <div class="intro">
+        <div class="im"><img src="img/army_5decc7b0.jpg" alt=""><span class="tag">USFK 입찰 첫걸음</span></div>
+        <div class="bx">
+          <h3>주한미군 공사·용역 입찰,<br>한글 공고문으로 시작하세요</h3>
+          <p>SAM.gov 영문 공고를 한글로 정리하고 입찰 준비를 돕습니다.</p>
+          <div class="fr"><b>무료 회원이 쓰는 것</b><ul><li><svg class="i"><use href="#i-ok"/></svg>공개된 한글 공고문 읽기</li><li><svg class="i"><use href="#i-ok"/></svg>관심 공고 저장</li><li><svg class="i"><use href="#i-ok"/></svg>입찰 신청</li></ul></div>
+          <a class="bigb" href="#">무료로 시작</a>
+          <div class="lg">이미 회원이신가요?<a href="#">로그인</a></div>
+        </div>
+      </div>
+      <div class="awc" data-aw="1"><h4>최근 낙찰 공지<span>SAM.gov 공개 자료</span></h4>
+        <div class="v"><div><b>99건</b><span>공고번호 기준</span></div><div><b>$61,910,091</b><span>금액이 적힌 88건 합</span></div></div>
+        <p>2026.03.30 ~ 09.30 · WJbid 의 낙찰 실적이 아닙니다</p></div>
+      <div class="regb"><span class="fi"><svg class="i"><use href="#i-check"/></svg></span><p>제출 때 SAM 등록이 필요할 수 있습니다. <a href="#">등록 안내<svg class="i"><use href="#i-cr"/></svg></a></p></div>
+    </div><div data-st="s2" class="side">
+      <div class="today me">
+        <h4>○○건설 님<span>오늘 확인할 것</span></h4>
+        <div class="g">
+          <a href="#"><b>3</b><span>관심 공고</span></a>
+          <a href="#"><b>2</b><span>입찰 신청</span></a>
+          <a href="#"><b class="r">5</b><span>새 알림</span></a>
+        </div>
+      </div>
+      <div class="mine"><h4>관심 공고 마감순<a href="#">모두 보기</a></h4><ul><li><span class="dd u">D-3</span><div><b>막사 P-6821 수리, 주한미군 험프리스</b><small>10.13(화) 마감 · 험프리스</small></div></li><li><span class="dd u">D-5</span><div><b>군산 공군기지 7번가 및 주차장 B514, 517, 568 포장 수리</b><small>10.15(목) 마감 · 군산</small></div></li><li><span class="dd u">D-6</span><div><b>오산공군기지 B949 통신본부 소화설비 수리</b><small>10.16(금) 마감 · 오산</small></div></li></ul></div>
+      <div class="qk">
+        <a href="#"><span class="fi"><svg class="i"><use href="#i-folder"/></svg></span>서류함</a>
+        <a href="#"><span class="fi"><svg class="i"><use href="#i-pen"/></svg></span>입찰 신청 현황</a>
+        <a href="#"><span class="fi"><svg class="i"><use href="#i-bell"/></svg></span>알림 설정</a>
+        <a href="#"><span class="fi"><svg class="i"><use href="#i-headset"/></svg></span>1:1 문의</a>
+      </div>
+    </div></div>
+  </div>
+</main>
+<section class="band g">
+  <div class="wrap">
+    <div class="bh"><small>시작 안내</small><h2>처음이라면 이 순서로 시작하세요</h2><p>공고 읽기부터 SAM.gov 등록, 서류 준비까지 차례대로 안내합니다</p></div>
+    <div class="b2">
+      <div class="pst p3">
+        <a class="promo a" href="#"><img src="img/pex_3184292.jpg" alt=""><div class="tx"><small>한글 공고문</small><b>수십 쪽 영문 공고, 필요한 것만 한글로</b><span>참가 자격과 제출 서류를 먼저 확인하세요</span></div></a>
+        <a class="promo b" href="#"><img src="img/pex_3760067.jpg" alt=""><div class="tx"><small>입찰 신청</small><b>고른 공고는 신청하고 진행을 확인</b><span>신청한 공고의 진행 상황을 한곳에서 봅니다</span></div></a>
+        <a class="promo a" href="#"><img src="img/army_71dae7c5.jpg" alt=""><div class="tx"><small>등록 대행 상담</small><b>SAM.gov·PIEE 등록, 전문가와 함께</b><span>처음 등록하는 회사도 순서대로 안내합니다</span></div></a>
+      </div>
+      <div class="pane rs">
+        <h3>입찰 준비 6단계</h3>
+        <p class="s">단계마다 안내 글이 있습니다. 이미 끝낸 단계는 건너뛰세요</p>
+        <ol><li><i>1</i><b>영문 사업자 정보<span>사업자등록증 영문화</span></b><em>안내<svg class="i"><use href="#i-cr"/></svg></em></li><li><i>2</i><b>NCAGE 코드<span>해외 업체 식별 코드</span></b><em>안내<svg class="i"><use href="#i-cr"/></svg></em></li><li><i>3</i><b>UEI 발급<span>SAM.gov 고유 번호</span></b><em>안내<svg class="i"><use href="#i-cr"/></svg></em></li><li><i>4</i><b>SAM.gov 등록<span>매년 갱신 필요</span></b><em>안내<svg class="i"><use href="#i-cr"/></svg></em></li><li><i>5</i><b>PIEE 계정<span>입찰서 제출 창구</span></b><em>안내<svg class="i"><use href="#i-cr"/></svg></em></li><li><i>6</i><b>공통 서류<span>실적, 면허, 재무 서류</span></b><em>안내<svg class="i"><use href="#i-cr"/></svg></em></li></ol>
+        <div class="cta"><a class="p" href="#">이용 안내 보기</a><a class="o" href="#">등록 대행 상담</a></div>
+      </div>
+    </div>
+  </div>
+</section>
+<section class="band">
+  <div class="wrap">
+    <div class="bh"><small>기지별 공고</small><h2>주한미군 기지마다 어떤 공고가 나올까요</h2><p>기지별로 진행 중인 공고와 지금까지의 공고, 낙찰 금액을 모았습니다</p></div>
+    <div class="basewrap">
+      <div class="mapc">
+        <svg width="440" height="520" viewBox="0 0 440 520" role="img" aria-label="주한미군 기지별 공고 지도">
+          <path class="kp" d="M276.8,17.1L271.2,20L268.8,22.1L268.1,23.7L268.5,25.8L269.2,30L268.8,34.3L267.4,38.3L265.7,41.6L263.3,44.7L258.4,50.1L252.2,54.3L245.6,56.5L239,56.9L228.9,56.5L222.4,57.8L221.3,57.4L219.9,56.3L218.9,54.5L217.9,53.8L199.5,55.5L193.6,57.4L190.8,57.6L181.8,54.9L169.7,55.9L166.9,55.5L160.7,56.1L154.1,58.8L147.8,62.5L142.6,67.1L141.9,67.7L140.9,69.2L139.5,72.5L137.8,77.2L136,79.1L132.2,82L130.8,83.8L122.5,96.4L118.7,99.3L116.3,100.3L114.2,100.6L113.2,101.4L112.8,104.3L113.5,114.8L113.2,114.8L112.1,116.4L111.8,118.3L111.1,118.5L109,119.7L106.2,121.4L104.5,120.9L91,112.3L90.3,111.7L87.9,107.6L87.5,106.9L85.4,107.4L83.7,108L76.1,111.9L74,112.7L71.9,112.9L68.4,112.7L66.4,113.3L64.3,114.6L63.6,115.4L63.2,115.8L63.6,116.4L63.9,118.3L64.6,120.7L65,122L65,123.6L64.6,125.5L64.3,126.3L59.8,125.5L58.4,120.5L57.3,118.1L56,118.3L55.3,117.9L54.6,115.2L54.6,109.6L51.5,111.7L50.4,111.5L49.7,109.2L49,107.8L47.6,106.1L46.3,104.9L45.2,104.5L43.8,105.7L44.2,107.4L45.6,108.6L46.6,109.2L46.6,110.4L47.6,113.7L47.6,115.4L46.9,114.6L45.9,113.9L44.9,113.3L43.8,112.9L42.8,112.7L42.1,112.9L41.4,112.7L40.7,112.1L39,110.2L34.1,102.8L33.8,101.6L33.1,100.8L31,100.1L30.3,99.7L30,98.9L30,97.5L30.3,95.2L29.6,94.6L28.2,94.6L27.2,94.2L25.5,93.1L24.8,92.9L20.6,92.7L18.9,92.3L15.1,90.4L12.6,89.8L10.2,89.8L8.5,90.7L8.5,92.7L10.2,94.8L12.6,96.4L14.4,97.1L17.8,96.4L18.9,97.3L18.2,99.5L19.2,99.1L20.3,98.9L20.9,98.9L22,99.5L20.9,101.2L19.9,102.8L22,102.8L22.7,102.6L23.4,102L24.1,102.8L23,104.1L21.6,105.1L20.3,105.7L18.9,106.1L17.1,106.1L16.1,105.3L15.1,104.1L13.7,102.8L13.3,105.7L14,108.6L14.4,111.3L12.6,113.7L14.4,115.2L14.7,115.4L14.4,116.6L13.7,117L11.9,117L11.6,117.4L11.6,118.3L12.3,119.5L12.6,121.4L12.6,122.4L11.9,122.8L10.9,122.8L9.9,122.6L9.2,122.2L8.1,121.4L8.5,120.9L8.8,120.9L8.8,120.7L8.8,120.3L7.8,119.7L6.7,119.7L6,120.3L5.7,121.8L5,121.8L3.6,121.6L2.9,120.5L3.6,118.7L1.2,120.7L0.1,123.8L-1.6,126.5L-5.1,127.9L-8.2,128.1L-10.3,128.3L-10.9,129.2L-11.3,131.2L-12.3,132.9L-13.7,133.3L-15.1,132L-13.7,125.7L-12.3,123L-9.6,123.8L-4.4,121.4L-5.7,120.5L-9.2,121.2L-10.9,120.3L-9.6,118.7L-7.5,117L-5.4,115.8L-3.3,115.4L1.5,116.6L3.3,116L3.6,112.9L1.9,113.5L0.8,113.3L-0.2,112.5L-1.2,111.3L1.9,108L1.9,106.7L-0.5,106.1L-2.6,105.5L-3.3,104.3L-4.4,103.4L-6.4,104.5L-6.1,104.9L-5.7,105.7L-5.7,106.1L-8.2,106.1L-9.2,106.3L-10.3,106.9L-8.5,107.8L-6.1,109.2L-4.4,110.9L-4.4,112.9L-6.1,111.3L-8.9,110.2L-11.3,109.8L-13.7,110.2L-13,111.3L-12.7,111.9L-11.6,112.5L-10.9,112.9L-14.1,115.4L-15.8,116.6L-17.5,117L-17.5,116.8L-17.5,116.2L-17.9,115.8L-18.2,115.4L-24.1,115.4L-23.1,113.5L-18.9,110.9L-17.5,108.6L-18.2,106.5L-22.4,104.3L-22,102L-24.1,102.4L-25.2,104.1L-26.2,106.3L-27.2,108.4L-28.6,109.4L-30.4,110L-32.1,110L-37.6,109L-38.7,108.6L-41.1,106.5L-42.1,106.1L-44.2,105.9L-46,105.3L-46.7,103.6L-46,101.2L-48.4,102.6L-49.1,102.8L-48.7,100.8L-48,99.5L-46.7,98.9L-44.9,98.7L-43.5,98.3L-41.1,96.4L-40.1,96.2L-38.7,96.6L-35.9,98.3L-34.2,98.7L-32.8,98.5L-31.4,98.3L-30.4,97.5L-29.3,96.2L-30,95.2L-31.1,96L-32.1,96.2L-33.5,95.8L-35.2,94L-35.9,93.7L-36.3,93.5L-36.6,91.9L-36.9,89.6L-35.9,88.6L-32.1,88.6L-27.9,87.8L-26.5,88.2L-26.2,89.2L-26.2,90.4L-25.5,91.1L-23.4,91.3L-22.7,87.1L-21,86.1L-21.7,84.3L-23.4,83.6L-27.2,83.6L-29,83.2L-32.1,82.2L-33.8,81.8L-35.2,82.2L-40.1,84.5L-44.6,85.3L-46,86.1L-53.2,81.8L-56.4,78.5L-58.1,77.6L-59.1,79.9L-60.2,80.7L-62.6,81.4L-67.1,81.8L-78.2,79.7L-79.2,78.5L-78.5,77L-76.5,76L-71.6,75.8L-69.9,74.7L-69.2,72.3L-68.5,71.8L-64.3,71L-63.6,70L-62.3,67.1L-61.2,66.1L-58.8,65.6L-57.4,66.7L-55,70.6L-53.9,70.2L-48,66.1L-50.5,65L-55.3,65.8L-58.1,63.8L-59.5,62.3L-59.8,61.3L-59.8,59.2L-58.8,51.6L-58.4,50.3L-54.3,43.7L-53.6,42.2L-52.2,38.5L-51.2,37.2L-50.5,37L-49.8,37L-49.8,38.1L-49.8,39.7L-48.7,38.5L-47,35.8L-45.6,32.7L-45.3,30.6L-46,29.3L-47.7,28.1L-48,26.8L-47.7,25.4L-47.3,24.4L-47.7,23.3L-49.1,22.1L-48.7,21.2L-47.3,21L-45.6,22.3L-44.6,21.4L-43.5,21.2L-43.2,22.5L-41.5,24.1L-39.4,22.1L-37.3,21L-34.9,22.7L-34.2,21.2L-34.2,18.9L-34.2,17.1L-35.2,16L-35.9,14.6L-35.9,13.1L-35.2,12.1L-33.8,12.5L-32.8,14.6L-32.1,16.2L-30,15.8L-29.7,15L-30,13.1L-30,11.5L-29,11.9L-28.6,13.1L-27.6,13.7L-25.9,13.3L-24.5,13.1L-22.4,11.7L-21.3,11.5L-20.3,12.3L-18.2,13.1L-17.2,12.1L-16.5,11.7L-15.5,10.4L-14.1,9.4L-11.6,8.5L-8.9,8.5L-8.2,8.7L-5.7,9.4L-4.7,9.6L-4.4,9.2L-4.4,8.3L-3.7,7.3L-2.6,6.9L1.5,9.6L2.2,10.6L2.2,13.1L2.9,13.7L4,13.5L4.7,12.3L5,11L5.3,10.4L6.4,10.6L7.1,11.5L7.8,12.5L8.1,13.3L9.2,15L11.6,16.2L14.4,16.9L16.1,16.2L15.4,15.4L14,13.5L13.7,12.9L12.6,12.5L10.5,12.5L9.5,12.1L5,6.5L3.6,5.2L2.2,5L0.1,5L-1.2,4.4L-1.6,3.5L-4,-1.1L-4,-1.5L-4,-1.7L-5.1,-1.5L-5.4,-1.1L-5.7,0L-6.4,1L-7.5,1L-6.8,1.7L-6.1,2.3L-5.4,3.3L-6.8,4.2L-9.9,5.6L-11.3,5.2L-12.3,3.5L-13,3.5L-13.4,5.2L-14.4,5.6L-16.8,5.2L-17.2,4.8L-17.2,4.2L-17.9,3.5L-18.2,3.5L-18.6,4.4L-18.6,5.2L-17.9,5.8L-17.5,6.2L-17.5,6.9L-18.9,7.5L-20.3,7.5L-22,6.9L-23.1,5.6L-23.8,4.4L-23.4,3.3L-21.3,1L-22,0.6L-22.7,0.2L-22.4,-1.1L-22.7,-2.5L-24.1,-3.8L-25.5,-4L-25.2,-1.1L-26.2,2.9L-29,3.1L-30.4,1.4L-30.7,0L-32.1,-0.6L-33.1,-1.7L-34.2,-5L-33.5,-7.1L-33.1,-9.2L-32.8,-13.8L-32.4,-15.9L-31.4,-18.8L-30.7,-21.7L-29,-24L-27.9,-26.1L-27.9,-27.6L-26.9,-29.5L-24.8,-33L-23.1,-35.3L-22,-37.4L-21,-39.3L-19.3,-39.3L-16.8,-39.1L-15.1,-39.5L-20,-40.3L-19.6,-41.4L-19.3,-42.2L-19.3,-43.1L-19.6,-43.7L-19.6,-44.5L-19.6,-45.6L-19.3,-46.4L-18.9,-47.1L-18.9,-47.5L-19.6,-48.1L-18.6,-49.4L-17.5,-49.8L-15.1,-49.8L-14.1,-50.2L-14.4,-51L-15.1,-52.3L-15.5,-53.3L-14.1,-55.7L-12,-56.7L-9.9,-56.5L-7.5,-55.9L-8.2,-57.8L-9.2,-58.6L-9.2,-59.9L-5.7,-66.6L-4.4,-67.8L-5.7,-68L-7.1,-69.1L-7.5,-70.8L-6.8,-72.9L-7.5,-73.3L-8.2,-74.6L-7.1,-74.1L-6.8,-74.1L-6.4,-73.7L-4.4,-74.8L-3.3,-75.8L-3,-77.1L-5.1,-77.1L-10.9,-77.9L-12.7,-78.8L-12.7,-80.7L-10.3,-84L-11.3,-84L-12.3,-84L-13.4,-83.6L-14.1,-83.2L-14.1,-86.3L-12.7,-88.2L-10.6,-89.7L-8.9,-91.6L-8.5,-93.1L-8.2,-94.8L-7.5,-96.3L-4.7,-97.3L-4,-98.6L-3.7,-100.3L-4.4,-101.9L-5.7,-100.9L-15.8,-95.6L-17.9,-94.8L-18.9,-94.4L-19.6,-94.1L-20.7,-94.8L-23.1,-97.7L-23.4,-98.2L-24.5,-99.2L-26.2,-99.8L-26.9,-100.5L-25.5,-102.8L-32.1,-102.8L-31.7,-102.2L-31.1,-100L-30.7,-99.4L-34.9,-99.4L-35.9,-99.6L-36.3,-100.3L-36.3,-101.1L-36.6,-101.9L-37.3,-103L-37.3,-103.8L-38,-104.3L-39,-104.5L-40.4,-104.1L-41.5,-104.1L-42.5,-104.5L-43.5,-104.9L-45.6,-107L-46,-107.4L-46.3,-108.3L-47,-108.5L-47.7,-108.5L-48.4,-108.7L-51.2,-111.7L-52.2,-111.9L-53.2,-109.8L-54.3,-110.6L-55.7,-111L-56.7,-111.7L-57.4,-115.5L-58.8,-116.9L-60.2,-118.2L-61.9,-119.1L-63.3,-119.7L-65.4,-119.9L-66.1,-120.3L-66.4,-121.4L-69.2,-121.6L-70.2,-122.4L-70.6,-125.2L-71.6,-126.9L-72.3,-125.4L-72.3,-124.1L-72,-123.1L-71.3,-122L-70.9,-120.7L-71.3,-119.3L-71.3,-117.6L-72,-116.5L-72,-115.3L-70.6,-114.8L-70.9,-112.9L-72.3,-112.9L-73.3,-112.1L-72.7,-110.8L-72,-109.5L-72.7,-109.1L-74.4,-109.8L-76.5,-108.7L-78.5,-106.6L-81,-105.5L-81.7,-103.2L-82,-102.8L-83.4,-103.6L-83.4,-104.3L-83.4,-104.5L-83.1,-105.3L-83.7,-105.5L-84.1,-105.7L-84.1,-106.2L-84.8,-107.4L-83.1,-109.5L-82.7,-111.9L-81.3,-112.7L-81,-114.4L-81.3,-116.1L-82,-116.1L-82.7,-115.7L-83.4,-115.7L-83.7,-116.1L-84.4,-117.6L-84.8,-118.2L-85.8,-118.8L-86.5,-119.1L-87.2,-119.5L-87.6,-120.3L-87.2,-121.6L-86.9,-123.5L-86.9,-124.8L-87.2,-125.4L-88.9,-126.2L-89.3,-127.3L-88.9,-129.8L-89.3,-130.7L-90,-131.1L-93.5,-131.3L-101.8,-132.8L-102.1,-132.6L-102.5,-132.2L-102.8,-132L-103.2,-132L-103.5,-132.4L-104.2,-133.4L-104.2,-133.7L-104.5,-134.1L-105.2,-136.4L-105.2,-137.3L-105.9,-137.5L-108.7,-137.9L-109.7,-140.6L-110.4,-141.5L-111.1,-142.1L-111.8,-142.8L-112.5,-143.2L-111.5,-144.7L-110.1,-145.3L-109.1,-145.7L-108,-146.6L-107.3,-148.3L-106.6,-154.4L-104.5,-157.6L-101.8,-157.2L-98.7,-155.9L-95.5,-157L-97.3,-157.8L-101.8,-158.3L-103.9,-158.7L-105.9,-160.2L-106.6,-162.3L-107,-164.4L-108,-166.3L-106.3,-168L-92.8,-181L-92.4,-181.2L-91.4,-181.4L-90.7,-181.9L-90.7,-182.3L-90.3,-183.8L-90,-184.4L-88.6,-185.9L-84.8,-188.2L-83.1,-190.2L-81.7,-191.2L-76.8,-192.3L-74.7,-193.2L-74,-195.3L-73,-198.1L-72.3,-200.8L-70.6,-201.9L-68.5,-202.3L-66.4,-203.8L-61.6,-208.5L-58.4,-212.8L-57.7,-214.3L-57.4,-215.1L-56.4,-214.1L-55.3,-212.8L-55,-212.2L-54.3,-211.7L-53.6,-211.5L-51.2,-211.3L-48.4,-211.7L-46.7,-211.5L-44.6,-211.7L-43.2,-212.2L-42.8,-213.4L-43.5,-215.1L-44.6,-216.6L-45.6,-218.1L-45.6,-219.8L-44.9,-221.6L-42.5,-222.4L-40.1,-223.3L-38.7,-224.1L-36.3,-225.2L-34.5,-226.5L-32.4,-227.8L-29.7,-229.1L-26.5,-230.1L-23.8,-231.2L-22.4,-231.6L-21.7,-232.7L-21,-234L-20.7,-235.3L-18.9,-235.9L-17.5,-236.1L-16.1,-235.5L-14.8,-235L-13,-235.7L-12.3,-235.7L-11.3,-235.5L-10.3,-234.2L-9.6,-234L-7.5,-233.8L-7.1,-234.8L-7.1,-236.3L-7.1,-236.5L-6.8,-238.3L-6.1,-238.9L-4.4,-238.5L-3.7,-239.1L-3.3,-240L-3.3,-241.7L-3,-242.8L-1.9,-244.1L-1.2,-244.9L0.1,-245.1L4,-245.3L5.3,-245.8L6,-247.3L6.4,-250.1L6.7,-252.4L7.8,-253.3L9.2,-252.9L10.5,-251.8L11.2,-250.7L11.6,-250.3L17.1,-250.5L18.5,-251.3L17.5,-253.3L14.7,-256.5L18.5,-261.2L20.6,-262.7L20.9,-263L23.7,-263.6L24.8,-263.8L25.1,-264.7L25.5,-265.5L26.1,-266.2L26.8,-266.2L27.9,-266L32,-264L32.7,-264.2L36.9,-267L37.9,-267.7L39.7,-267.9L40.7,-267.3L41.7,-266L42.8,-265.1L44.2,-265.7L45.6,-266.8L48.7,-267.3L49.7,-267.9L50.4,-269.2L50.1,-269.6L48.7,-269.8L47.3,-269.6L48.3,-271.6L50.1,-272.2L51.8,-272.4L53.5,-273.7L55.3,-276.7L56,-278.2L55.6,-279.3L56.3,-280.4L57,-281L58,-281.5L59.1,-281.9L58.7,-283.6L59.8,-284.9L61.2,-286.2L62.5,-287.9L61.2,-290.3L63.2,-292.5L74.3,-298.9L75.4,-300.2L76.4,-301.7L78.8,-307.4L79.9,-308.7L82.3,-311L83.3,-312.5L85.8,-318L86.8,-319.5L91.7,-325.3L94.4,-327.7L97.2,-327.5L97.2,-327L96.9,-326.6L96.5,-326.2L96.2,-325.7L96.2,-324.7L99.3,-325.7L99.3,-329L97.9,-333.1L97.2,-336.4L97.9,-337.9L101.4,-343.3L102.8,-349.2L104.5,-352.7L105.2,-354.4L104.5,-356.1L103.8,-357.9L103.8,-359.4L106.9,-363.1L108.7,-366.1L110,-366.4L113.5,-366.4L114.5,-366.8L117.7,-369.8L119.1,-370.7L118,-371.8L116.3,-372.7L115.2,-373.5L114.5,-375.1L116.3,-375.7L117.7,-375.7L119.1,-375.3L120.4,-374.2L123.2,-371.1L124.9,-370.1L125.6,-371.1L127,-374.4L132.2,-376.6L133.6,-380.1L134.7,-381.4L136.7,-382.9L138.5,-383.6L139.5,-382.7L139.5,-379.9L140.2,-379L141.2,-379.2L143.7,-378.8L145.4,-377.2L148.5,-374.6L149.6,-374.6L149.9,-372.9L152,-369.6L152.7,-368.1L150.9,-368.1L150.3,-367.7L149.9,-366.4L150.3,-364.4L150.9,-363.1L152.3,-362.2L155.5,-360.9L155.1,-360.5L154.8,-359.2L156.5,-359L161.3,-357L162.7,-355.7L160.7,-354.8L158.6,-353.7L156.8,-352L155.5,-349.6L156.1,-349.4L156.8,-349.2L157.9,-348.7L158.2,-347.7L158.9,-347.9L160.3,-348.7L161.3,-348.3L161.7,-347.9L162,-347.2L162.7,-347L163.4,-347.4L164.8,-350L165.2,-350.7L166.9,-350L169,-348.3L170.4,-348.1L171.1,-348.3L171.7,-348.7L172.4,-348.7L173.1,-348.1L173.1,-347.2L172.8,-346.4L171.7,-345.7L171.4,-345.5L172.8,-344.6L174.9,-344L178.7,-343.5L179.4,-343.7L181.1,-344.4L181.8,-344.6L182.8,-344.2L183.5,-343.5L183.9,-343.1L184.2,-342.7L186.7,-342.7L188,-343.1L189.4,-344L191.2,-344.6L192.5,-344.2L194.3,-343.3L196,-342.7L197.7,-343.5L197.7,-340.7L199.1,-339.4L202.9,-338.3L206.1,-336.2L206.8,-335.7L207.8,-336.2L208.8,-337.9L209.2,-337.9L212,-336.8L221,-336.6L223.4,-337.5L225.1,-336.2L227.2,-335.9L228.6,-336.8L229.3,-338.8L230.3,-339.6L232.4,-340.5L236.2,-340.9L239.3,-338.3L240,-338.8L241.1,-339.8L241.8,-340.9L242.8,-339.6L242.8,-337.2L242.8,-335.1L243.2,-333.6L243.9,-333.3L244.9,-333.6L246.6,-334.6L246.3,-331.8L248,-330.5L250.1,-330.5L251.8,-331.8L253.2,-330.9L251.8,-329.2L255.6,-328.8L259.5,-332.5L269.5,-350.5L270.9,-355.5L268.8,-358.3L268.8,-360.5L267.4,-363.1L265.7,-365.3L263.3,-366.6L259.5,-369.6L257,-372L256.7,-374.8L255.6,-377.5L251.1,-386.4L250.4,-388.8L247.3,-389.9L246.3,-391.6L245.6,-393.6L243.5,-404.8L243.9,-406.7L244.9,-408.5L247,-409.1L251.5,-409.1L266.7,-413.5L276.8,-412.6L278.9,-412L280.9,-410.4L285.5,-410.7L288.6,-408.9L290,-408.7L294.1,-410.2L294.8,-410.2L295.9,-409.3L296.9,-409.8L298.3,-412L299.3,-412.8L300.4,-413.3L307.3,-412.6L310.1,-413.3L311.1,-415.5L320.5,-415L326.7,-413.3L328.8,-412.6L332.2,-413.9L333.6,-419L334.3,-420.7L336.4,-421.4L338.8,-421.6L340.6,-422.5L343,-425.1L344,-426.9L344,-429.3L346.5,-427.7L348.2,-427.7L349.6,-428.6L352.4,-431.9L355.1,-434.3L356.9,-436.5L357.6,-437.2L358.2,-437.8L358.6,-438.5L358.2,-439.8L355.8,-439.8L355.5,-440.9L355.5,-442.2L356.5,-443.1L357.6,-443.3L358.2,-444L358.6,-445.1L358.6,-446.2L358.9,-447.1L360,-447.9L359.3,-448.8L358.2,-449.3L357.6,-449.5L356.5,-449.7L356.5,-450.6L359.6,-450.6L360.7,-451.2L361.4,-453.2L361,-453.9L360.7,-454.3L360,-454.8L360,-455.9L360.3,-457L360.7,-457.8L361.4,-458.5L366.6,-459.6L367.3,-459.8L367.6,-462.2L368.3,-464.2L369.3,-464.7L370.4,-463.1L371.8,-464L371.1,-465.1L370.7,-466.2L370.7,-467.1L371.8,-467.5L372.8,-467.1L373.8,-465.6L375.2,-464.9L375.9,-465.1L377,-466L378.4,-466.7L379.7,-466.7L384.2,-462.7L384.9,-461.6L387.7,-460L388.4,-459.2L388.8,-457.8L389.4,-457.4L390.5,-457.6L391.2,-458.3L391.9,-459.6L391.9,-460.9L392.2,-461.8L394.6,-462.7L395.3,-464.2L395.3,-466L395,-467.5L398.8,-467.1L402.6,-466.2L405.7,-466.9L408.2,-471.1L408.5,-475.9L408.5,-481L408.9,-485.4L411.3,-488.3L411.3,-488.9L409.9,-489.4L409.2,-491.1L410.2,-492.9L412.7,-493.6L412.3,-495.6L413,-496.7L413.7,-497.6L413.7,-498.4L412.7,-499.5L411.6,-500L410.9,-500.9L410.6,-503.3L410.9,-505.1L411.3,-506.6L412.3,-509.3L414.1,-512.6L414.4,-514.4L414.8,-518.4L418.2,-527.7L418.9,-529L419.6,-530.4L419.6,-533.5L420,-534.8L421,-535.9L424.1,-536.1L425.2,-536.8L424.5,-537L423.8,-537.7L423.1,-538.4L422.7,-539.5L423.8,-539.9L425.5,-541L426.5,-541.2L427.9,-541L428.6,-540.4L431.4,-536.4L432.4,-535.5L433.8,-534.8L435.2,-534.8L438.7,-534.8L443.2,-536.8L446,-537.5L447,-536.4L446.6,-534.6L446,-532.4L444.9,-530.6L443.9,-529.5L447.7,-527.7L452.9,-527.9L457.4,-527L458.8,-522.4L457.7,-511.3L457.7,-506.2L459.5,-501.5L464.7,-496.2L465.4,-494L472,-488.3L473,-487.8L474,-488.1L474.7,-488.1L475.4,-487.4L475.8,-486.3L475.4,-483.6L475.8,-482.3L477.8,-480.8L479.2,-481.4L479.6,-483.4L478.2,-485.4L479.2,-487.4L481,-488.7L482.7,-488.7L484.1,-487.4L484.4,-485.8L484.8,-480.8L485.5,-478.3L486.5,-475.7L486.9,-475.3L486.9,-473.7L487.2,-473L487.6,-472.6L487.9,-472.2L489.6,-467.3L490.7,-465.6L492.8,-464L494.8,-463.1L496.6,-461.4L497.6,-459.2L498,-455.9L498,-452.6L498,-451L499,-449.7L501.8,-447.5L501.1,-446.8L498.6,-446L495.2,-444.9L493.8,-444.6L492.4,-443.6L491.7,-443.3L491.7,-445.7L491.7,-447.3L491.7,-447.9L490.3,-449.3L488.9,-450.1L486.2,-450.6L484.1,-451.9L483.4,-453L480.6,-453.4L479.2,-452.8L479.6,-451L478.2,-449.7L476.5,-449.5L475.8,-450.6L474.7,-451.5L473.3,-451.5L473.3,-450.4L473.3,-449.3L472.3,-448.2L471.3,-447.1L471.6,-445.3L471.6,-444.4L472,-443.6L472.6,-443.6L473.3,-443.1L473.3,-441.6L473,-440.7L472.3,-440.9L470.6,-442.7L469.5,-442.5L468.8,-440.9L469.9,-439.4L468.8,-438.9L468.1,-437.4L466.4,-437L466.1,-434.1L465,-433.2L464,-433L464,-435L464.7,-437.6L464,-440L462.6,-440L458.4,-435.9L456.4,-433L455,-431.9L453.6,-431.7L453.9,-429.9L453.6,-422.5L452.9,-422.3L452.2,-422.7L451.2,-422L449.8,-420.3L450.1,-420.1L450.5,-419.2L449.8,-418.8L448.7,-419L447,-420.3L446,-421L443.2,-421L441.4,-419.4L440.8,-417L440.8,-415.9L439.4,-415.9L439,-414.8L438.7,-413.9L437.6,-410.9L437.6,-408.7L436.9,-408.3L435.6,-411.1L434.5,-410.7L434.5,-408L432.4,-406.9L433.1,-406.5L433.8,-405.8L434.5,-404.3L433.5,-404.1L432.8,-403.4L431.7,-401.7L432.1,-401.9L431.7,-400.8L431.4,-399.3L431.4,-398.6L430.7,-396.2L430,-395.4L429,-395.6L428.3,-396.9L425.8,-397.8L424.5,-396.9L423.8,-394L423.1,-390.8L423.1,-386.6L421.7,-382.3L420.3,-381L420,-378.8L419.3,-378.1L417.5,-380.5L416.1,-380.5L412.7,-378.1L411.3,-374.4L410.2,-370.1L409.2,-368.5L406.8,-367.2L404.4,-364L403.7,-359.8L402.3,-354.6L400.5,-351.1L401.6,-348.1L401.2,-345.9L400.9,-344L401.6,-340.3L403.7,-337.5L405.4,-335.5L406.8,-334.4L408.9,-334.6L409.6,-332.7L410.9,-330.9L412,-330.1L412.7,-330.1L414.1,-330.3L414.8,-330.1L415.4,-328.8L415.4,-328.3L415.1,-327.9L414.8,-326.2L414.4,-325.7L413.7,-322.9L413.7,-322.3L412,-321L410.9,-318.2L407.1,-302L406.4,-296.3L408.2,-291.6L407.5,-289.9L407.1,-287.9L407.5,-283.6L408.2,-278L408.5,-276.7L410.2,-274.6L411.6,-273.7L410.6,-272.8L410.2,-270L410.6,-269.2L408.5,-266.8L408.9,-264.2L407.8,-261.2L407.1,-259.7L406.1,-259.7L405,-261L404,-260.6L401.9,-260.2L399.8,-260.6L398.1,-260.2L396.7,-260.4L395.7,-260.2L392.9,-260.4L391.2,-258.9L391.2,-256.5L389.1,-256.1L387.7,-254.6L386.7,-254.1L383.9,-254.4L379,-252.9L375.6,-250.3L371.8,-248.3L370.7,-246.8L369.7,-244.9L368,-240.8L367.3,-239.1L366.6,-239.5L365.5,-240.4L364.8,-242.3L364.1,-243.6L362.4,-243.6L360.3,-243.2L358.9,-242.1L358.2,-240.6L357.9,-239.3L357.9,-238.7L357.9,-237.8L357.6,-237L357.2,-236.3L356.9,-234.6L356.5,-234L356.2,-232.7L355.8,-231.8L355.1,-231L354.8,-230.3L354.8,-229.1L354.4,-225.8L353.4,-225.4L353,-224.3L352.4,-223.1L348.9,-218.6L345.4,-213.6L340.9,-213.9L335.7,-212.2L328.4,-204.2L324.6,-200.8L321.5,-200.4L320.1,-198.7L317,-197.8L315.3,-197.6L314.2,-196.4L311.1,-196.8L308,-195.7L306.3,-193.2L304.9,-193.2L304.9,-194.4L303.1,-193.6L301.4,-191.4L301.1,-188.2L302.1,-187.6L304.9,-186.5L305.2,-185.3L305.9,-184.4L305.6,-182.5L305.6,-179.3L304.5,-178.9L303.5,-178L302.8,-177.2L302.1,-176.7L301.4,-176.7L300.4,-177.4L298.3,-177.6L297.2,-176.7L294.1,-175L293.4,-173.1L292.4,-172.1L290.7,-171L287.9,-171L286.5,-169.7L284.8,-167.8L283.7,-167.2L281.3,-166.1L279.6,-166.5L276.8,-166.3L274.4,-162.5L273.3,-157.6L270.9,-158.3L268.8,-162.3L267.1,-163.8L264.3,-162.5L263.6,-161.2L264.3,-157.8L263.3,-157.6L261.2,-157.8L260.1,-157.8L259.1,-157.4L257.4,-156.3L256.7,-156.1L255.6,-156.3L255.6,-157L254.9,-157.4L242.5,-159.7L241.8,-159.1L241.8,-157.4L241.4,-156.6L240.7,-155.9L239.7,-155.5L239,-155.1L238.3,-154.6L236.6,-151.7L235.9,-150.8L234.8,-150.6L232.8,-152.1L231,-149.1L231,-147L230.3,-141.7L229.6,-140.6L220.6,-139.6L222,-138.5L221.7,-137.3L218.9,-135.8L215.4,-136.2L212.3,-134.9L210.9,-131.1L209.2,-129.8L207.8,-131.5L205.4,-132.8L204,-130.3L202.6,-129.6L200.9,-128.6L199.5,-126.9L198.4,-124.1L195.7,-122.2L195,-121.2L194.6,-120.3L193.9,-118.4L193.6,-117.4L193.6,-116.3L194.3,-114.4L194.3,-111.4L194.6,-110.2L195.3,-109.5L196.4,-109.8L198.4,-108.5L200.2,-106.2L200.9,-103.2L197.1,-97.9L195.3,-92.7L197.1,-84.5L199.5,-72L199.5,-68.5L198.8,-67.2L197.7,-66.8L196.7,-67.2L195.7,-68.5L195.7,-70.1L196,-72L197.7,-75.4L194.3,-80L193.9,-81.7L192.9,-83.2L191.9,-83.6L190.5,-82.8L187.7,-80L187.7,-79.6L187,-78.6L186.3,-77.9L181.8,-76.2L181.8,-75.4L182.8,-74.8L185.3,-74.1L186.3,-73.7L187.7,-74.6L189.1,-75L190.5,-74.6L190.8,-72.5L190.5,-71.4L187.3,-70.8L186.3,-70.4L186,-71L185.3,-71.6L184.6,-71.8L183.9,-72L183.2,-71.6L183.2,-71L183.5,-70.1L183.9,-69.5L182.5,-66.2L181.8,-62.6L181.1,-59L182.1,-56.9L183.2,-54.4L184.6,-53.3L186,-52.7L187.7,-50.4L189.1,-49.8L190.8,-50.2L191.2,-51.3L190.8,-52.5L190.8,-53.3L192.5,-53.3L194.6,-48.7L196.7,-47.5L204,-48.1L206.1,-47.5L207.5,-46.4L208.1,-45.4L209.2,-44.3L210.6,-43.9L217.2,-43.9L218.5,-43.7L219.6,-42.9L221.7,-38.9L224.8,-34.7L225.5,-33.2L225.8,-31.6L227.2,-29.5L230.7,-26.1L231,-24.4L231.4,-24L232.4,-24.9L232.8,-25.3L233.5,-24.9L233.8,-24L234.1,-22.1L234.5,-21.1L235.2,-20.5L236.2,-20.1L238,-19L241.1,-13.8L243.2,-11.7L250.4,-9.8L261.9,4.4L263.3,3.7L267.8,1.4L268.8,1L271.9,5.6L272.6,6.5L274.4,7.5L275.1,8.3L276.4,10.4L276.4,10.8L276.4,12.7L276.4,15ZM-54.3,-104.5L-54.6,-103.6L-56,-103.2L-55,-100.5L-53.6,-97.7L-55.7,-96.5L-58.4,-94.8L-60.5,-92.5L-62.3,-92L-64.7,-90.8L-62.9,-94.1L-61.6,-93.5L-60.9,-95L-62.3,-96.3L-62.3,-96.9L-60.9,-96.9L-60.9,-97.5L-60.9,-98.2L-61.2,-98.6L-61.2,-100.7L-59.8,-101.5L-59.8,-103.4L-58.4,-104.5L-58.8,-105.5L-57.1,-105.7ZM-58.4,28.9L-56.7,31.8L-56.4,33.1L-60.5,32L-62.6,31.2L-64.3,29.8L-66.4,31.4L-67.5,30.4L-67.1,28.3L-63.3,26L-62.3,25.6L-61.6,26.8L-60.2,27.3L-59.1,28.1ZM-15.5,122.2L-14.8,122L-17.2,125.3L-18.6,126.9L-21.3,128.6L-22,129.4L-23.4,130.4L-25.5,130.8L-25.9,130L-23.1,126.5L-21.7,125.9L-20.7,126.3L-20.7,125.5L-20.3,124.4L-20,124.4L-19.6,124.2L-19.3,123.8L-18.9,123.6L-18.2,123.6ZM-33.1,119.9L-33.5,118.9L-33.5,118.3L-33.1,117.9L-31.1,116.6L-29.7,115.8L-29,115.8L-28.6,116.2L-28.6,116.8L-29,117L-29.3,117.2L-30.7,118.5L-32.1,119.9ZM-44.2,113.7L-43.2,113.9L-42.8,115.2L-43.2,116L-43.5,116L-43.9,116L-44.9,117.2L-45.6,117.4L-46.7,117.4L-47.3,117.2L-47.3,116.6L-47,116.2L-46.7,115.8L-46,115.6L-45.3,115.8L-44.9,116L-44.6,115.8L-44.2,115.4L-44.2,115.2L-44.6,114.6ZM-77.2,-94.8L-76.8,-95.8L-75.8,-96L-75.4,-95.2L-75.4,-93.9L-75.8,-92.5L-76.5,-91.8L-77.5,-91.8L-77.9,-92.5L-77.5,-93.5L-77.9,-94.1ZM-77.5,-97.1L-78.5,-96.3L-79.9,-96.3L-81.3,-97.3L-85.5,-96.3L-85.8,-96L-86.2,-96.3L-85.8,-97.1L-85.1,-97.5L-84.4,-98.2L-82.7,-99.6L-82.4,-99.4L-81,-99.6L-78.5,-100.3L-76.8,-100L-76.1,-99.2L-76.5,-98.2ZM-86.2,-82.8L-86.5,-83.8L-86.5,-84.9L-85.5,-85.1L-84.4,-86.1L-84.4,-85.1L-84.4,-84.9L-84.1,-84.5L-83.7,-83L-85.1,-82.6L-85.5,-82.3ZM-122.9,-129.8L-122.2,-130.3L-122.6,-130.9L-122.2,-130.9L-121.9,-131.1L-122.2,-131.3L-121.9,-131.5L-121.5,-131.5L-121.2,-131.3L-120.8,-131.1L-120.8,-130.7L-120.5,-130.5L-120.5,-130.3L-120.5,-129.8L-120.1,-129.8L-120.1,-129.6L-120.1,-129.2L-120.5,-129L-120.8,-128.8L-121.2,-128.8L-121.5,-128.4L-121.9,-127.9L-122.2,-128.1L-122.6,-128.4L-123.3,-128.4L-123.3,-129L-122.9,-129.4Z"/>
+          <path class="kr" d="M276.8,17.1L279.6,22.9L284.1,31.8L285.1,35.6L287.2,41.6L295.9,58.4L302.4,76L303.5,78.1L306.9,82.2L308.3,85.9L324.3,108.8L330.5,117.9L338.1,126.1L339.2,127.1L344,132.9L344.4,135.3L344.4,138.4L345.1,140.9L348.5,142.9L349.6,145L352.4,154L353.4,156.3L355.1,157.1L356.2,158.3L360.7,167.1L363.1,170.4L364.1,172.2L364.5,174.1L365.2,175.9L369.7,181L371.4,185.3L372.8,194.5L374.5,199.4L379.4,206.3L379.7,207.8L379,209.2L378.4,210.6L377.7,211.8L377.7,213.1L378.4,216.7L379.4,227.5L380.1,232.6L383.2,242.5L383.6,247.6L382.5,252.3L380.4,256.3L378.7,261.2L378.7,261.4L379,266.3L380.4,271.1L381.1,276L380.4,286.3L379.7,288.5L377,292.1L375.6,294.2L375.2,296.4L374.9,310.9L375.2,312.9L375.6,313.9L376.3,314.3L377,314.9L377.3,318.9L378,322.2L379,322.8L379.4,323.4L379,325.2L378.4,326.2L377.3,326.8L376.3,327L374.9,328.4L374.5,330L376.6,331.8L378,333.6L379.7,335.4L381.5,335.8L384.2,333.8L390.1,327.2L391.5,325.2L392.9,326.4L393.3,328.4L394,330.6L394.6,333L392.9,335.2L389.4,342.3L389.1,345.3L388.4,353.5L385.6,360.5L386,364.9L383.2,372.5L381.5,376.4L380.8,378.2L381.5,380.4L382.2,381.4L382.9,382.6L382.5,385.2L382.5,388.2L381.8,392.7L380.8,394.7L379,396.7L377.7,397.5L377,395.5L376.6,392.7L375.2,390.7L373.8,390.3L373.2,392.7L374.5,392.9L375.2,393.9L375.6,395.5L375.6,397.1L375.2,398.7L374.2,399.1L373.2,399.1L372.5,399.9L372.5,400.7L372.8,403.1L373.2,405.3L372.1,406.7L371.4,408.1L372.1,409.3L372.8,409.9L372.8,411.5L370.7,412.3L369,413.3L366.2,416.1L363.8,415.9L363.4,417.7L363.1,419.9L362.8,420.9L362.1,421.9L362.4,423.5L362.8,424.3L361.4,426.4L360,429.6L358.2,431.6L357.2,433.6L356.5,435L355.1,435L354.1,434.8L352.7,435L351.7,435L350.6,435.6L349.6,435.6L349.6,437.4L350.3,438.4L350.3,439.8L349.9,441.4L347.8,442.4L346.1,441L344.7,440L344,439L341.6,441.8L340.6,443.9L340.2,446.1L339.2,446.7L338.8,445.5L337.8,444.3L337.8,445.5L338.1,447.9L337.1,447.9L337.1,447.1L336.4,446.9L335.4,447.5L334.7,448.1L334,447.3L333.3,444.7L333.6,442.4L334.3,439.2L334.3,437.6L334,437.2L332.9,438.4L330.2,443.5L328.8,443.7L328.8,441.4L328.8,439L328.1,439L327.4,440.8L326.7,443.7L324.3,443.4L318,443.5L317.7,441.4L317,440.2L316,443.4L314.9,443.9L312.8,443L311.8,441L310.8,440.8L309,442L309,436.8L308.7,436.4L308,436.8L307.3,437.8L307.3,439.6L305.6,438.4L304.5,436.6L303.1,435.6L301.1,436.4L301.7,434.8L300.7,432.4L301.1,431.4L300.4,428.4L299.7,428L298.6,429L297.2,431L297.2,432.2L298.6,434.8L299.3,438L299.7,439L300.4,440.4L302.1,442.6L302.4,443.7L301.7,445.1L302.4,445.3L303.8,445.9L304.5,445.9L303.5,446.5L302.8,446.7L300.7,446.7L299.7,446.5L299.7,445.9L299.3,445.1L299,444.3L298.3,443.4L297.6,443L292.4,441.2L291,441L287.9,441.6L286.8,442L286.8,442.8L287.9,444.3L286.1,444.7L283,446.5L279.2,447.5L278.5,448.9L278.5,450.5L277.5,451.7L277.5,452.5L287.2,447.3L288.6,447.3L288.9,449.3L289.6,450.9L289.6,452.1L288.9,453.7L287.9,454.5L285.8,454.7L284.1,454.7L282.7,454.1L282,455.3L282.7,455.9L283.4,456.3L284.1,457.2L284.1,458L284.1,458.8L284.1,461.2L283.4,466.2L284.4,467L285.1,466.6L285.8,465.8L286.1,464.6L287.2,466.2L286.1,468.6L283.7,471.7L281.3,472.3L278.5,472.1L278.5,470.3L280.6,470.3L281.3,470.1L281.6,469.3L275.7,468.8L274.4,468.2L273,466.4L273,465.4L274,464.8L276.1,463.8L274,459.4L272.3,461L270.9,464L268.5,464.2L266.4,461.4L265.3,460.8L263.3,460.6L262.2,461.2L261.9,462.6L261.5,464.4L261.5,466.2L259.5,465.8L254.9,466L253.2,465L253.2,464.4L253.2,462.6L252.9,462.2L252.5,462L251.5,462.2L250.1,461.8L247.7,461.8L247,461.2L246.6,460.4L246.6,459.4L247,458.4L247,457.6L247,449.1L247,447.7L247.3,446.9L247.7,446.1L248.4,444.9L248.4,443.5L247,445.3L245.6,447.5L244.2,449.1L241.8,449.3L243.5,453.5L242.5,454.3L239.7,454.1L237.3,455.7L236.2,452.9L235.5,451.7L234.5,450.9L234.1,454.7L233.1,457.6L231,459.4L228.6,459.8L227.6,459.4L226.5,459L225.8,459.2L225.5,459.8L223.7,458.6L223.1,458.2L222.4,458L218.2,458.2L217.2,457.8L216.5,457.2L216.5,456.5L215.8,455.3L214.7,454.5L214.4,455.3L214.4,456.7L214.7,457.2L214,459.4L213.7,460.2L212.7,461.2L209.2,464.2L207.1,465.2L205.7,463.8L204,460.2L202.3,459.6L201.2,461L200.9,463.4L200.9,465.4L201.9,467.4L203.3,470.1L205,472.5L206.4,473.5L207.5,474.9L208.5,475.3L209.9,474.5L212.7,471.7L214.7,471.5L216.5,471.9L218.2,471.9L219.9,470.9L219.9,473.3L219.6,474.9L218.5,478.3L217.5,484L216.8,485.4L213.3,486.6L210.6,485.2L208.5,484.8L206.8,488.7L206.4,488.4L206.1,488.4L206.1,488.5L205.4,488.7L206.4,490.1L206.8,491.9L207.5,497L207.1,498L206.1,497.4L204.3,495.9L202.3,495.5L200.5,494.7L199.5,492.9L198.8,490.3L199.5,487.8L200.9,485.4L201.6,483L201.2,481L200.5,480L198.8,476.7L198.4,476.5L198.1,476.3L197.4,476.3L197.1,475.7L197.1,475.1L197.1,474.5L197.4,474.1L196,470.9L195.7,469.7L195.7,469.1L196,468L196.4,467.4L196,466.8L195.7,466.2L195,466L195,466.6L194.6,466.8L192.9,470.9L192.2,471.9L191.9,472.1L191.5,472.1L188,473.3L186.3,473.5L182.1,473.5L180.4,473.9L181.8,474.9L184.2,476.1L186.3,476.7L186.3,477.5L182.1,478.7L180.1,479.8L179.7,481.4L180.8,482.2L182.5,481.4L183.5,481.8L184.2,483L183.9,483.4L183.5,483.4L183.2,483.8L184.6,488.4L187.3,490.9L190.1,492.9L192.2,495.9L191.5,495.7L189.8,495.7L189.1,495.9L192.9,497.4L193.6,498.8L193.9,501.2L192.9,502L191.9,503L190.1,502.8L189.1,503.2L184.6,500.4L183.2,500L181.8,500.2L180.4,500.8L179,501.8L178.3,502.8L178.7,503.2L179.7,505.5L181.1,505.7L182.1,506.3L185.6,505.3L187.7,507.1L183.2,511.3L181.5,513.6L179.7,512.8L176.9,514.8L177.3,517L178.3,518.2L175.9,518.4L171.7,513L170.4,510.3L166.9,506.3L165.9,506.5L162,508.7L162.4,509.9L162.7,510.3L161,509.7L159.6,509.5L158.2,508.7L157.5,507.1L157.2,505.3L157.9,504.4L160,503.2L160.7,502.6L162.7,500L163.8,497.4L164.5,496.5L165.9,495.9L165.9,497.8L165.5,499.6L164.1,503.2L166.9,503L169,502L170.7,500L170.4,496.7L170,495.3L169.3,494.5L168.6,493.7L168.6,491.9L169,490.9L171.7,487.8L172.8,488.4L173.5,489.1L173.8,489.9L173.1,491.1L173.8,492.7L174.5,493.7L175.6,494.1L177.3,493.5L177.6,492.7L179,489.9L179.7,488.7L178.3,486.6L178,484.6L177.3,483.6L175.6,485L173.5,486L171.7,484.4L169.3,480.6L167.9,482.8L165.9,487.8L164.5,489.5L163.1,489.9L162,489.9L159.6,489.5L158.6,489.9L157.5,490.7L155.8,493.1L154.8,493.7L151.3,495.9L149.6,497.2L148.2,498L147.1,498.2L146.4,498.6L146.1,499.6L146.1,501L146.1,502.4L145.4,503.4L144.7,504.4L144,505.5L144.7,507.1L139.5,512.3L139.5,517.2L138.8,518L136,516.6L135.3,517.8L135,518.8L135,520.1L135.7,521.5L134.3,521.1L131.5,519.2L128.1,518L127,517.6L126.3,515.2L126.7,509.3L126.3,507.1L127,505.5L126.7,503.8L126,502.2L124.9,501.4L123.9,501.8L122.9,502.8L122.2,504L121.8,505.1L122.2,506.7L122.9,508.1L122.9,509.1L119.7,510.1L120.1,511.5L122.5,514.2L118.7,516.4L117.3,517.8L118.7,518.2L119.1,518.6L119.1,519.2L119.1,519.7L118.7,519.9L118,519.7L117.3,519.4L117,519.2L115.6,519.4L115.2,519.9L115.2,520.7L114.9,521.9L113.9,522.3L111.1,523.1L110,524.1L109.7,524.9L107.3,532.7L107.3,533.7L107.3,535.1L104.8,534.7L100.3,536.1L99.3,535.9L99.3,534.5L100,531.8L100,530.4L98.9,529.6L97.9,529.4L95.1,529.4L95.1,528.8L95.8,528L95.8,527.6L96.2,525.9L96.5,525.7L96.9,525.9L97.2,525.7L98.6,523.1L98.9,521.9L98.6,520.7L97.9,520.3L97.2,520.1L95.8,519.9L94.8,519.5L94.8,519L95.1,518.4L95.1,518.2L95.1,516.8L95.8,515.4L95.5,514.6L94.1,515L94.4,512.3L96.2,510.9L98.9,510.3L101.4,510.3L100.7,509.3L100.3,508.7L99.3,508.1L98.6,507.9L100,506.7L101,505.5L101,504.6L100,503.8L99.3,504L98.6,505.1L97.9,505.5L97.2,505.5L95.8,504.8L95.1,504.8L94.8,505.1L94.4,505.9L94.1,507.1L93.1,507.3L92.4,507.3L91.3,507.1L89.2,507.1L88.2,507.3L86.8,507.9L86.5,505.9L85.8,505L83.3,503.8L83.3,503.4L83,502.6L82.3,502L82,502.8L82,503.2L81.3,503.6L80.2,503.8L79.9,503.4L77.8,501.6L77.5,501.4L77.1,500.2L77.5,500L77.8,499.8L78.1,499L78.5,499.6L79.5,499.6L80.2,499L79.9,497.8L77.1,496.7L75,495.3L75,491.7L75.7,488.2L76.8,485.4L77.1,484.6L76.8,483.4L77.1,482.6L77.8,482.2L78.5,482.2L79.2,482.4L79.9,482.8L80.6,484.2L83.3,488.7L82.7,489.9L82.3,491.1L82.3,492.3L82.7,493.5L84.7,499L85.8,499.8L90.6,500.6L92.7,502L93.7,502L94.4,500L93.4,500L93.1,499.8L91,499.4L89.9,497.8L88.9,496.7L89.2,493.9L87.9,494.3L87.2,495.9L86.1,495.9L85.8,493.7L85.4,490.9L86.1,489.1L85.4,487.2L88.2,487L92.4,487.8L92.7,488.7L92.4,490.1L92.4,490.7L92.4,491.1L92.7,491.9L93.7,492.5L94.4,493.3L95.5,494.1L97.2,494.9L98.3,495.9L99.6,496.9L100.7,497.4L101,496.9L98.9,494.3L100.3,494.1L102.1,495.1L104.5,496.3L107.3,497.2L109,496.7L107.3,496.3L105.5,495.3L102.4,492.7L103.1,491.9L101,490.3L97.9,486.4L96.2,485.4L93.7,485L91,485.2L89.2,483.8L86.8,484.6L84.4,483.8L84,482.6L85.4,481L86.8,480.4L89.6,480.8L93.4,479.2L97.9,482.4L99.3,482.2L99.6,482.4L100,482.6L100,482.8L100.7,483L100.3,480.8L100.3,478.7L101.4,477.3L103.8,476.7L108.3,478.1L110.4,478.1L109.7,476.7L111.4,475.9L112.1,475.7L113.2,475.7L111.8,474.1L109.7,473.7L104.5,474.1L104.8,473.1L104.8,472.3L104.5,471.5L104.5,470.3L104.8,469.5L105.5,468.9L105.9,468.2L105.9,467L105.2,465.2L103.8,464.8L102.4,465.6L101.4,467L101,468L101.7,469.9L102.1,470.9L101.7,471.1L100.7,473.5L99.6,477.5L98.6,478.9L96.5,479.1L96.5,478.7L95.8,478.3L96.5,477.7L96.9,476.5L97.2,475.7L95.8,475.1L95.1,475.5L94.1,476.3L93.1,476.7L90.3,476.1L89.6,476.5L89.6,477.7L88.2,477.7L86.1,478.3L85.1,477.9L84.7,476.5L85.4,475.5L87.5,473.5L88.2,472.3L88.5,471.5L88.5,470.7L88.5,469.7L88.5,468L88.9,467.2L89.9,466.2L88.9,465.2L87.9,463.2L87.2,460.8L87.5,459L88.5,457.6L90.6,456.5L91,455.5L88.5,454.9L87.5,455.1L86.8,455.7L86.5,456.3L85.8,456.5L84.7,456.9L85.1,458L85.4,459.4L85.4,460.6L84,461.8L82.3,461.8L80.6,461.4L79.5,460.6L80.2,459.8L80.9,459.8L79.9,459L79.2,458.4L78.5,457.4L78.1,456.5L79.2,455.9L80.2,455.9L82.7,456.5L82.3,453.9L85.1,451.3L84.4,448.7L81.6,444.9L79.9,443.4L78.1,442.8L78.8,445.5L78.1,446.9L76.8,446.9L75.4,445.1L76.4,443.9L74,440.8L73.6,438.8L75,437.2L76.8,436.8L78.5,437.8L79.5,439.6L80.6,438.8L81.3,437.4L82,434.8L82.7,436.2L83,437.2L82.7,439.4L82.3,440.6L82,441.2L82.3,442L82.7,442L83,441.8L83.3,442L83.7,443.5L84,444.1L84.4,444.5L85.4,445.1L86.5,445.5L87.9,445.5L88.5,445.9L88.2,447.3L88.2,448.7L88.9,449.9L89.9,450.9L92.4,445.3L92.7,443.5L92.7,441.4L92,440.8L90.3,440.2L89.6,439.8L88.9,439.2L87.9,436.6L84.7,432.8L84,431.2L84.4,430.6L84.7,430L85.1,429.4L85.4,428.2L84.4,427.6L84,426.6L84,425.1L83,425.5L81.6,425.6L78.8,425.8L79.9,424.5L81.6,424.1L83.7,423.9L85.4,423.5L84.7,423.3L84.4,423.1L84,422.9L83.3,422.7L84,421.5L84.4,420.9L85.1,420.5L85.8,419.9L86.1,418.9L85.8,418.1L85.4,417.3L85.4,416.5L85.8,414.7L86.5,412.9L88.5,409.7L89.2,410.3L90.6,412.1L92.4,412.7L93.4,412.5L93.1,411.7L89.9,408.1L89.2,406.7L89.9,403.9L91.7,400.5L94.4,394.5L96.5,391.3L99.6,390.1L103.1,389.3L106.2,389.3L107.6,388.2L109,386.2L111.1,385.8L112.8,387.6L114.5,389.7L115.9,390.1L114.5,385.8L113.5,383.8L112.1,383L98.6,385.2L93.7,382.2L94.1,379L94.1,377.8L96.5,376.6L98.3,374.8L100,372.5L103.1,370.9L106.6,368.9L109.3,365.1L109.7,361.7L111.1,360.7L112.1,360.1L112.8,359.5L116.3,359.1L119.7,359.7L121.8,361.3L123.2,361.7L124.3,363.5L124.9,362.5L124.9,361.1L125.3,359.7L123.9,358.7L123.2,358.1L121.1,357.1L119.1,355.7L117.3,354.5L116.6,353.9L117,352.9L117.7,351.9L118.4,351.3L119.4,351.1L124.6,351.3L126,351.3L126.7,350.9L127.4,349.7L127.4,348.9L128.1,348.3L129.5,348.1L129.8,347.7L129.1,346.7L128.1,345.9L127,345.5L126.7,345.7L119.7,348.5L117.3,348.7L112.8,348.3L108,348.1L108,345.9L107.6,343.1L106.9,342.5L103.8,341.5L99.6,342.1L99.3,338.5L108,337.5L112.8,336.8L117.7,336.6L119.1,335.6L120.8,336.2L122.9,335.2L126.3,332.4L130.8,330.6L132.9,329.2L132.9,327.6L127.4,329.4L125.3,330L123.2,331.2L121.8,332.8L120.1,333.6L117.7,334L115.9,335L114.2,334.2L113.9,333.4L113.5,332.4L113.2,330.8L112.5,329.6L110.7,327.4L109.7,326L111.1,324.8L110.7,324.2L109.3,323.6L108,323.2L105.9,319.3L104.1,318.5L102.8,319.3L102.4,319.3L102.1,318.1L100,316.7L98.3,316.9L97.6,319.1L97.2,320L96.5,319.3L96.9,315.9L100.3,314.3L103.1,313.3L107.3,314.5L105.9,312.1L104.8,311.3L103.8,310.5L103.1,310.3L102.4,310.7L102.1,310.5L101,309.7L100.7,308.9L102.8,303.2L103.8,300.8L105.2,299.8L104.1,298.6L100,297.2L98.6,296.6L100,295.2L104.1,294.2L105.2,292.9L104.5,291.3L103.1,290.9L100,290.9L99.3,290.3L97.9,288.9L97.2,288.3L97.2,287.5L98.6,287.5L97.2,284.9L98.9,283.8L100.7,283.2L102.8,280.6L106.6,279.4L108.7,278.4L102.8,278.4L101.7,279.2L99.6,282.2L97.9,282.6L96.9,281.4L96.2,279.2L95.5,277L95.5,275.6L97.6,273.3L98.6,271.7L98.3,271.1L96.5,271.9L95.5,271.1L94.8,270.5L94.4,270.5L94.1,269.3L94.4,268.3L94.1,267.3L93.7,265.2L93.1,264.2L93.1,263.8L94.4,263.6L96.5,262.8L98.3,262.8L98.6,261.4L99.3,260.2L98.3,259.2L97.2,258.8L95.8,257.3L96.5,255.9L97.9,254.9L97.2,253.1L94.8,252.7L94.4,250.6L95.1,249.2L97.2,248.8L96.2,247.4L95.5,246.6L95.1,245.6L94.4,246.4L93.1,247.8L91.7,248.4L91.3,249.2L91.3,250L92,251.3L92,253.3L91.3,255.5L91.7,258.8L91,261.4L89.9,262.4L88.2,261.2L86.1,261L84.4,259.8L84.7,253.3L85.4,251.1L84.4,250.4L84.7,247.4L83.7,246.2L82,246.4L81.3,248L80.9,249.8L80.2,251.3L78.1,251.3L79.2,253.3L80.9,255.9L81.3,257.9L80.2,259L80.6,259.8L82,262L80.6,262.4L79.5,263L78.5,264L77.5,265.4L77.5,264.4L77.5,263.6L77.1,262.8L76.8,262L78.1,259.2L75.4,254.5L76.1,252.1L75.4,248.8L73.6,249.8L71.2,253.1L69.1,253.9L68.1,254.1L67.1,254.5L66.4,254.5L65,253.9L64.6,253.3L64.3,252.1L64.3,251.1L64.6,250.4L68.8,250.6L69.5,249.8L69.5,248L68.4,246.2L67.1,245.4L65.7,245L64.3,244L63.9,245.4L63.6,248.4L62.9,249.8L61.9,250.9L61.5,249.8L61.5,246.8L61.5,244L61.9,243.1L64.3,239.9L64.6,238.9L65,237.3L65.3,238.5L65.7,239.5L66.4,240.5L67.1,241.5L67.4,241.1L68.1,241.1L68.8,241.3L69.5,241.5L68.8,240.1L67.7,238.3L70.2,239.1L71.6,238.7L72.3,237.3L69.8,237L68.1,236.4L68.1,235L69.5,232.4L67.4,230.5L67.7,228.9L69.1,227.5L71.6,226.7L70.9,229.7L71.2,230.5L72.6,230.8L75,230.8L75.7,230.3L76.1,229.1L76.4,226.5L76.1,222.8L76.4,219.8L78.8,219.2L78.5,220.8L78.5,223.4L79.2,226.1L80.2,229.3L79.5,230.3L78.8,231.4L78.1,232.4L78.1,233.6L78.8,235.2L78.8,235.8L78.1,236.2L76.4,237.5L76.1,237.9L76.4,238.9L76.8,239.9L77.1,240.5L77.8,240.3L79.5,238.7L80.6,238.7L83.3,240.5L81.3,236.2L80.6,233.6L81.6,232.4L83.3,234.4L84.4,235L84.7,233.6L85.1,233.2L86.1,232.8L88.2,232.4L88.2,231.6L87.2,231.6L85.4,230.8L85.4,229.9L87.9,229.5L89.2,227.3L89.6,224.4L88.5,222.6L87.9,222.2L85.4,222.2L84,221.6L83,220.6L83,219.4L83.3,219L84.7,220L85.4,218.1L84.7,217.1L83,216.7L81.3,216.7L82,215.9L83,215.1L84,215.1L85.1,215.5L86.1,216.3L86.8,216.3L87.2,216.1L86.8,215.1L86.8,214.3L90.3,214.1L92,214.7L92.7,216.3L92.4,217.3L91.3,218.3L90.6,219.8L91.3,221.6L92,220.8L93.4,220.2L94.1,220.4L94.4,221.2L94.8,222.2L95.1,222.8L95.1,223.6L95.1,224L94.1,225.1L94.1,225.9L94.1,231.2L94.1,232.8L95.1,233.8L95.8,234.2L95.8,233.6L96.5,230.8L98.3,224.9L98.6,222.2L98.9,221.4L100.3,222.2L102.1,224L102.8,225.5L103.1,226.7L103.8,227.3L105.2,227.5L105.2,226.7L104.5,225.9L103.8,223.4L102.8,222.2L96.9,215.9L96.5,215.5L96.9,214.3L97.9,214.3L98.6,215.3L100.3,217.3L101,217.9L102.1,218.3L103.1,218.3L104.1,217.9L104.1,217.1L103.5,216.3L102.1,215.9L100.3,215.1L98.3,213.3L97.6,210.4L97.2,208.6L98.9,208.6L100.7,209.2L102.1,210.4L103.8,211.8L105.9,213.1L106.6,213.9L108,214.9L109.3,215.7L110.4,217.3L110,219L109,220L109,220.8L110,222.6L110,223.8L109.7,225.9L111.1,225.1L111.4,224.2L111.4,223.2L111.1,220.2L111.8,219.2L112.1,218.1L113.2,216.5L114.5,215.9L116.3,215.7L118,216.1L119.7,216.7L122.2,217.3L123.6,218.3L125.6,220.6L126,223L124.3,228.3L125.6,227.5L127.4,225.3L128.4,225.1L129.1,226.1L129.5,227.7L129.8,231.2L129.5,232L129.1,233.6L129.1,234.6L129.1,235.4L130.1,236.8L130.8,240.7L130.5,241.7L129.1,242.3L129.1,243.3L129.8,244L130.1,244.4L130.8,244.8L131.5,242.1L132.6,240.5L132.9,238.7L132.2,235.8L134.3,236.2L136,236.6L132.9,233L131.9,231L134,229.9L135.7,229.7L139.9,228.1L143,225.7L144.4,225.1L145.4,223.8L146.1,220.8L145.7,220.4L145.1,219.4L144.7,219.2L145.4,218.8L145.7,218.5L146.4,218.5L147.8,217.9L148.5,217.7L149.2,217.3L149.6,215.9L143.7,217.5L142.6,218.8L143,222.4L142.3,223.4L140.2,224L137.1,223.6L133.3,221.4L129.8,218.1L128.4,214.9L134.3,214.3L134.3,213.5L134,213.3L132.9,212.6L134,212.4L135,212.4L136,212.8L136.7,213.5L136.4,211.2L135,209.2L134,206.7L135,203.7L133.6,203.1L132.9,204.3L132.2,206.1L132.2,208.2L131.9,210.2L130.8,210.6L129.8,209.8L128.1,210.2L126.3,210.6L121.8,209.2L121.8,208L121.5,206.7L121.8,205.1L121.5,203.1L122.5,201L123.9,199.2L125.6,198.4L127,197.8L129.8,197.8L132.2,196.9L132.9,196.1L132.9,193.9L132.2,193.5L130.8,194.3L129.1,195.9L127.7,195.7L126.7,195.3L126.3,194.3L126.3,192.9L123.9,193.9L122.2,195.3L118.7,199L118,199.8L116.6,200.2L115.6,200L115.2,199.4L115.2,198.4L115.6,197.4L117.3,195.3L114.2,195.9L113.5,195.7L113.2,193.9L113.5,192.7L114.9,192.1L116.3,191.6L117.3,191L118.4,189.4L118,189L115.6,189.4L114.5,188.8L113.9,187.6L113.2,185.9L112.5,184.5L112.8,184.3L113.2,184.1L113.9,183.5L114.5,184.1L115.6,184.1L117.3,183.5L119.1,183.9L120.1,184.7L121.5,185.1L122.9,184.5L122.9,185.7L122.9,187.2L123.6,188.2L124.3,188.6L125.3,188.2L126,186.9L126.3,184.5L128.1,182L129.5,182.2L130.8,183.1L132.9,182.9L132.6,181.8L131.9,181L131.2,180.6L130.1,180.4L128.8,180.4L128.4,179.4L126.7,179.2L125.6,179.6L124.6,179.6L122.9,179.2L119.7,178.2L115.6,174.9L115.2,173.7L117,170.8L118.4,169.6L118,168.8L113.2,168.1L110.7,171.2L108.3,169.4L109.3,167.1L110.7,165.1L109.7,163.8L108,162.8L106.6,162L106.6,159.7L106.2,158.1L107.3,156.5L110,155.6L110.7,155.2L111.1,154.2L109.7,153.8L109.3,154.8L107.6,155L106.9,153.8L106.9,151.5L107.3,148.7L106.9,147.6L105.9,145.8L105.2,144.4L104.1,142.7L103.1,141.7L103.1,140.1L102.8,137.6L101.7,133.7L100.3,123.6L100.7,122L101.7,121.8L107.3,123.8L109,123.4L110.4,122.8L111.4,122.4L112.8,123.4L113.2,124.9L113.5,126.9L113.5,129.4L112.8,130.8L112.8,133.7L115.6,136.2L119.4,137.8L121.8,138L120.1,136L114.5,132L115.9,127.7L116.6,125.1L116.3,123.4L115.2,121.4L115.2,120.3L114.9,118.9L115.6,116.6L116.6,114.6L115.9,113.7L114.9,113.7L113.5,114.8L112.8,104.3L113.2,101.4L114.2,100.6L116.3,100.3L118.7,99.3L122.5,96.4L130.8,83.8L132.2,82L136,79.1L137.8,77.2L139.5,72.5L140.9,69.2L141.9,67.7L142.6,67.1L147.8,62.5L154.1,58.8L160.7,56.1L166.9,55.5L169.7,55.9L181.8,54.9L190.8,57.6L193.6,57.4L199.5,55.5L217.9,53.8L218.9,54.5L219.9,56.3L221.3,57.4L222.4,57.8L228.9,56.5L239,56.9L245.6,56.5L252.2,54.3L258.4,50.1L263.3,44.7L265.7,41.6L267.4,38.3L268.8,34.3L269.2,30L268.5,25.8L268.1,23.7L268.8,22.1L271.2,20ZM88.2,280.2L88.9,282.4L90.3,284.5L90.6,286.3L89.9,285.9L85.4,286.1L84,285.9L83.7,284.1L84.4,283.4L85.1,282.8L85.4,281.6L83,283.2L82,282.6L82.3,280.8L84,278.4L83.3,277.8L82.3,279.2L81.6,278.2L80.6,278.8L81.3,275.8L80.9,271.5L80.2,268.9L79.5,265.4L80.2,264.4L82,262.8L83.7,262.2L85.1,264.2L85.1,265L84.7,265.8L84,266.5L84,267.3L85.8,270.9L86.1,272.1L85.8,273.1L86.1,273.9L87.2,274.5L88.2,276L86.1,276L86.1,276.8L86.8,277L88.2,277.8L87.9,278.4L87.9,279ZM77.5,117.9L79.5,117.9L81.3,118.1L82,119.1L81.3,121.4L79.9,122.8L77.5,123L73.6,122L72.6,122.4L71.6,123L70.5,123L70.2,121.8L70.5,121.4L71.6,117.9L72.9,116.8L74.3,116.4L75.7,116.8ZM140.2,630.5L140.9,632.1L140.5,632.5L139.5,632.8L138.8,633.6L138.8,634.2L139.5,635.4L139.5,636L139.2,636.5L138.5,637.7L138.1,638.1L136.4,640.1L133.3,642.6L132.2,644.9L130.8,647.5L130.5,648.4L130.1,650L127.7,650.2L126.7,650.6L124.3,650.4L120.4,653.3L110.7,655.2L107.6,658L103.5,658.7L99.3,658.3L94.4,659.3L90.3,658.1L81.3,658.1L78.5,659.5L76.8,662.6L75,662.8L73.6,662L71.2,658.5L68.4,657.6L65.7,654.6L64.6,651L66.4,646.3L68.1,643.4L68.8,642.4L72.3,640.4L75,635.4L77.8,634.8L78.8,632.1L83.3,630.5L93.4,627.8L95.8,625.6L105.2,624.7L111.4,621.9L113.2,622.3L120.8,620.9L125.3,620.6L128.4,621.1L129.5,622.9L130.8,623.9L135.7,625.8L137.1,627.2L137.8,630.7L138.8,632.1L139.2,631.5L139.9,631.1ZM162,513.8L165.2,513.4L166.5,513.4L167.9,514.2L169,516L168.6,518.2L167.2,519.9L165.5,520.7L161.7,521.5L160,521.3L158.9,520.7L156.8,519.2L156.8,518.2L157.2,517.6L157.2,517L156.8,516.6L156.1,516L157.2,515L158.9,514.4ZM85.8,512.1L85.8,513.6L85.4,515.4L85.1,517.2L83,521.3L82.3,522.5L81.3,523.1L81.3,522.7L79.5,521.1L78.8,520.7L78.8,521.5L78.5,523.3L69.1,528.4L68.1,528.6L64.3,529L62.9,528.8L62.9,527.8L63.2,526.8L63.9,526.3L64.3,525.7L63.9,524.9L61.2,523.1L61.2,525.7L59.1,523.3L60.1,519.4L62.9,516.2L65.7,516L66.4,513.4L67.1,512.4L68.1,511.5L69.1,510.9L69.8,510.9L70.5,510.3L70.9,508.7L71.9,510.1L73.6,510.1L75,509.3L75.4,507.5L74.7,505.9L72.3,504.2L72.9,503.2L74.3,503L76.1,503.8L77.5,505L78.5,505.5L78.8,505.7L78.8,506.5L79.5,507.3L80.2,507.9L80.6,507.7L82.7,506.3L82.7,507.3ZM220.6,490.3L221.7,490.5L222.7,491.9L223.4,493.7L224.1,496.5L224.1,498.2L223.7,500L223.1,501.6L222.4,502.6L221,502.6L219.9,502L216.5,498.6L216.1,497.2L216.8,495.1L217.2,494.5L218.9,493.1L219.2,492.5L219.9,489.5L218.5,488L218.9,487L219.9,486.4L221,486.4L222,486.8L222.4,488L222,489.1ZM48,487L49,488L49.4,488.4L49.7,489.3L49.4,490.3L49,491.1L47.6,493.1L46.9,493.5L46.3,493.7L45.2,493.5L45.2,493.1L43.8,492.3L42.4,491.7L41.7,491.9L41.1,489.9L41.7,488.9L44.5,487.8L46.3,485.4L46.9,485.2L47.3,485.4ZM49.7,479.1L49.7,481.4L49.4,481.2L48.3,481L47.6,480.6L46.9,481.8L45.6,481.8L44.5,481.4L43.8,481.8L43.8,483.4L43.1,484.8L42.4,485.8L41.1,486.4L40,486.2L39.3,485.4L38.6,484.2L38.6,482.6L39,481.2L39.7,480L40.7,479.4L41.7,479.1L43.1,479.4L44.9,479.1L48,477.9L48.7,477.9L49,477.9L49.4,478.3ZM54.6,463.4L54.9,461.8L56,461.6L57,462.4L57.7,463.6L58,465.4L57.7,467L57,468.4L55.6,469.3L54.2,469.7L53.5,469.5L52.8,468.9L52.1,468.6L49,469.3L47.6,469.3L47.6,468.6L48.7,467.8L50.4,465L51.8,463.8L52.5,463.8L53.2,464.2L54.2,464.2ZM248.4,474.9L248.7,476.3L248.7,477.5L248,478.7L247.7,480.2L248,482.6L248,484L247.3,484.6L246.6,485L247.3,487.6L247,488.7L245.6,488.9L244.2,488.2L242.8,487.4L240.7,488.2L239.3,488.5L238.3,486.2L237.3,481.4L235.5,480.6L234.5,481.4L233.5,483.4L233.1,486L232.8,487L231.4,487L230,486.4L228.9,486L228.3,484.8L228.3,484L228.3,483L227.9,481.4L225.5,472.7L225.1,470.7L225.1,468.6L226.2,466.6L227.2,466L227.9,465.8L228.3,465.4L228.9,462.8L229.3,462.2L231,460.8L232.4,460.2L233.8,460.8L234.8,461.8L235.9,463.4L235.5,465L234.8,466.4L232.4,468.6L233.1,469.5L233.5,471.5L233.8,472.5L234.8,473.1L236.9,473.9L238,475.9L240,475.5L242.1,474.7L244.5,474.1L247.7,474.7ZM313.9,468.6L313.5,469.9L313.2,471.5L312.5,472.3L311.1,471.7L311.4,473.3L312.8,476.1L313.2,477.9L312.5,478.1L310.8,477.5L309,476.5L307.6,475.7L307.3,477.5L307.3,478.3L305.6,480.2L304.9,481.8L306.3,482.6L307.6,483.4L308.3,484.2L306.9,485.6L300,487.8L297.9,487.8L301.1,485.4L299.7,484.8L299.3,483.8L299.3,482.4L300,480.6L296.9,482.2L295.9,481.6L295.5,480.2L295.5,478.9L296.2,478.3L298.6,477.7L299.3,476.5L299.3,474.7L300,472.5L298.6,471.7L297.6,472.9L294.1,474.5L292.7,475.7L291.3,474.1L290,472.5L288.9,470.9L288.6,468.6L289.3,467.4L290.7,466L292,465.2L293.4,464.6L296.9,463.8L297.9,463.8L299.3,464.6L300.7,465.4L302.1,466L303.8,466.2L303.8,465.4L302.1,464.2L301.1,462.4L300.7,460.4L300.4,458.6L301.7,458.6L308.3,454.9L307.3,452.7L308,450.5L309.4,449.3L311.1,450.1L311.4,451.1L311.4,452.1L310.8,456.5L310.8,457.2L311.4,458.6L311.8,459.6L312.5,460.8L312.5,462.4L312.1,463.8L310.4,467.8L312.5,467.2L313.2,466.4L313.5,466.6ZM59.8,447.3L59.1,447.3L56.7,446.7L55.6,446.7L55.3,446.5L55.3,446.3L54.9,446.1L54.6,445.9L55.3,442.4L55.6,441.2L56.3,440.8L57.7,440.4L58.7,440L59.1,439.2L59.8,437.6L61.5,436.4L63.6,436L65,436.4L62.2,438L61.5,439L61.2,440.2L61.9,441.4L62.9,443.5L61.9,443.9L60.8,444.9L60.1,446.3ZM103.5,153L103.8,153.4L104.1,154L104.5,154.4L104.8,155.2L105.2,155.9L104.8,156.1L103.8,156.7L103.5,157.1L101.7,157.5L101,157.5L100,157.9L97.9,158.9L96.5,159.9L95.8,161.2L91.7,164.2L91,164L89.9,164.2L89.6,164L89.2,162.6L88.5,162.2L88.2,162.6L87.9,162.6L87.5,162.4L87.9,162L87.5,161.4L86.8,161.4L86.5,161.8L86.1,162.2L85.4,162L84.4,161.6L84.7,161L84.7,160.4L83.7,159.3L83.3,158.7L83.7,157.9L84.4,157.7L85.1,158.1L89.6,155L92.7,154.6L94.8,154.8L96.5,153.8L97.2,150.9L98.6,150.5L99.6,151.5L100.3,151.8L101,152.2L101.4,152.4L102.1,152.4L102.4,152.6ZM521.2,149.1L522.9,150.3L522.9,153.4L521.9,156.9L520.5,159.1L518.8,160.2L516.3,159.5L513.9,158.1L512.5,156.3L511.8,153.8L512.5,152L514.2,150.7L517.7,150.1L520.1,149.3ZM83.3,131L84.7,131.8L85.4,132.9L85.8,134.1L84.7,135.5L82.7,135.5L76.1,130.4L77.1,129.8L77.5,128.8L78.1,126.5L78.5,125.9L78.8,125.3L79.2,124.9L79.9,124.6L80.2,124.9L80.6,125.3L80.6,125.7L80.9,127.9L80.9,128.3L81.6,129.2L82,129.8ZM97.9,142.9L97.2,142.9L96.5,142.7L95.5,141.7L94.8,141.3L94.4,141.3L94.1,141.7L93.7,142.1L88.5,142.3L86.8,141.5L84.7,138.8L87.9,138L88.5,137.6L89.2,136.2L89.2,135.5L88.5,135.3L88.2,134.5L84.7,128.1L84.4,127.1L84.7,125.7L84.7,119.9L85.1,118.7L86.1,118.3L88.2,115.6L89.9,115.2L91.7,116.4L93.1,118.1L94.4,119.3L97.6,120.9L98.9,122.2L99.3,124.2L99.3,125.1L98.6,126.7L98.6,127.5L98.9,128.3L99.6,130L100,130.8L100.3,135.3L100,136.4L100.3,137L101,138.2L101.4,138.8L100,139.4L98.9,142.1ZM-73,96.2L-72,97.5L-72,99.3L-73.3,100.3L-75.4,99.1L-77.9,99.3L-78.2,99.5L-78.2,101L-77.2,101.4L-76.1,101.6L-75.4,102L-77.5,103.6L-81.3,103L-84.4,100.6L-83.4,96.2L-81,97.1L-75.8,95.2ZM175.2,567.7L175.6,568.3L176.3,568.5L176.6,568.9L176.6,569.5L175.2,568.7L173.8,568.5L173.5,568.1L173.1,567.3L173.1,566.4L172.8,566.2L172.4,565.8L172.1,565L172.4,564.4L172.4,563.8L172.4,563.4L172.8,563.4L173.1,563.4L173.5,563.2L173.8,563L174.2,563.4L173.8,564.6L173.8,565.8ZM196.7,517.6L197.1,518.8L197.1,519.5L196.4,520.3L194.6,521.3L192.9,521.9L192.5,521.5L192.5,520.5L191.9,519.9L190.8,519.5L190.5,519L190.5,518.6L189.4,517.8L189.1,517.4L189.4,516.4L189.1,515.8L189.1,515.2L189.4,515L190.1,515.2L190.8,515.8L192.2,516L192.2,516.4L192.9,516.2L193.6,515.4L194.6,515.4ZM220.6,511.1L221.3,511.5L221.7,512.1L221.7,512.8L220.3,513.2L219.6,513.2L219.6,513L219.2,512.6L218.2,512.1L216.8,511.7L215.8,510.9L215.4,509.9L215.1,509.1L214,508.7L213.3,507.9L214,506.9L215.8,506.1L217.5,505.9L218.5,506.7L220.3,509.7L219.9,510.5L219.9,510.9ZM58.7,500.6L59.1,500.8L59.1,501.4L59.1,502.6L58.7,503.8L58.7,505L58,505.5L57.3,506.1L56.7,506.9L54.6,508.1L53.5,508.1L52.5,507.9L52.1,507.3L52.8,507.1L53.2,507.1L53.9,506.5L54.2,506.1L54.2,505.7L52.1,505.3L52.5,504.6L53.9,504.4L55.3,504.4L56.3,503.6L57,502.4L56.3,501.2L55.6,499.6L54.9,497.6L55.6,497.2L56.7,498L57.3,498.8L58.7,499.4ZM52.8,503.8L51.8,504.2L51.1,503.6L50.8,499.4L51.1,497.2L51.8,496.1L53.2,498.8L54.2,500.4L54.9,502L54.6,503.4L53.9,503.6ZM-4.4,489.7L-3.3,489.5L-3,489.9L-4,490.9L-4.4,491.3L-4.7,492.1L-6.1,493.9L-6.4,494.7L-7.1,495.7L-7.5,496.5L-7.8,496.9L-8.9,496.5L-9.6,494.7L-9.2,493.1L-8.9,491.7L-8.2,490.5L-7.5,489.3L-6.8,488.7L-5.7,488.5L-5.4,488.9L-5.1,489.7ZM66,484.6L66,485.6L66.4,487L65.7,488L64.3,488.2L63.2,487L62.5,485.8L61.5,485.8L60.8,486.2L60.5,486.4L59.8,486.4L59.1,485.8L59.1,484.8L58,483.2L56.3,481.2L55.6,480.2L56.7,480.4L57.3,480.4L58,480.2L59.1,480L60.5,480.2L61.2,480.6L61.9,481.2L62.9,481.6L63.9,481.8L65,482L65.3,482.6L65.7,483.2L65.7,483.8ZM65.3,477.7L65,477.9L64.6,478.7L65,480.2L64.3,480.8L63.2,481.2L62.2,480.6L60.8,479.4L59.1,478.9L58,478.3L59.1,477.5L61.5,477.1L62.9,476.5L63.6,475.7L64.3,476.3L65,477.1ZM56.7,474.1L56,472.9L55.3,471.7L55.6,470.7L57,470.1L58,469.9L59.1,470.5L59.8,470.5L60.1,469.7L60.1,468.4L60.8,467.6L62.2,467.6L62.9,467.4L63.2,467.8L63.6,468.4L63.9,469.1L62.5,469.9L62.9,471.7L62.9,472.9L62.2,473.3L61.2,473.3L60.5,473.9L60.5,475.3L60.1,476.3L59.1,476.9L58.4,476.9L58,476.1L58,475.7ZM248.7,471.5L249.1,471.7L249.7,472.5L248.7,472.7L244.2,471.7L241.8,472.5L240.4,472.3L239,471.3L238.3,469.7L238.7,468L240,466.2L241.1,464.6L241.8,463.4L243.5,463L243.9,464.4L243.2,466.2L242.8,467.6L242.8,468.6L243.5,468.9L244.2,467.8L245.2,466L245.9,465.8L246.3,466.6L247,467L247.3,467.4L247.7,468.8L248,470.7ZM72.9,463L71.9,463.4L70.9,463.4L70.2,462.4L70.5,461.2L71.2,460.8L72.9,460.8L73.3,461L73.6,461.6L73.3,462.8ZM66.4,447.5L66.4,448.1L66.7,448.7L66.7,449.9L66,450.1L65.7,450.5L65.3,450.3L64.3,449.3L63.9,449.1L63.2,449.3L62.9,449.3L62.9,448.7L62.5,448.5L61.9,448.5L61.9,448.3L62.5,447.7L62.2,447.7L61.9,447.7L61.5,447.5L61.5,447.1L62.2,446.5L62.9,446.5L63.9,446.9L65,446.7L66,446.9ZM322.9,450.7L322.5,453.1L321.8,453.9L321.2,454.1L321.2,453.7L320.5,451.5L319.8,450.9L319.4,450.3L319.8,449.3L319.4,448.3L318.7,447.5L319.1,446.5L320.1,446.1L321.2,445.9L322.2,446.1L322.9,447.7ZM74,386L73.6,385.6L73.3,384.8L73.3,384L74.3,383.4L74.3,383.2L73.6,383L74,382.6L74.7,382.4L75,381.8L75.4,381.8L75.7,381.6L75.7,381L76.1,381L77.1,381.2L77.8,380.6L78.1,380.2L78.8,380.6L78.8,381.2L78.5,382.2L76.8,383.6L75.7,385L74.7,385.6L74.3,385.8ZM58.7,187.6L58,188L57.7,188L57.7,187.4L58,185.5L58.4,183.9L59.1,182.9L59.8,183.5L60.5,184.5L61.2,185.1L63.6,186.3L64.3,187.2L63.9,188L62.9,189.2L61.9,189.6L60.8,189.6L59.8,189.2L59.1,188.2L59.1,187.6ZM95.8,181.4L96.5,182L97.2,183.7L96.5,184.1L95.5,184.5L95.1,185.3L95.1,185.9L94.4,186.9L93.1,187.2L92.4,186.7L91.7,186.7L91,186.3L91,184.9L91,183.3L91.7,182.2L93.4,181.2ZM108.3,184.3L108.3,184.9L108.7,185.9L108.3,187.2L103.1,191L101,191.2L101,190.6L102.1,189.2L102.1,188.4L101.7,187.8L103.1,186.3L103.1,184.9L102.4,183.1L101.7,181.8L101,181L101.4,180.8L103.1,181.4L104.1,180.4L104.5,180.4L104.5,181.4L104.8,182.5L105.9,183.1L107.6,183.9ZM19.2,132.9L20.3,133.1L20.9,133.7L20.6,135.1L19.6,136L18.9,136.2L18.9,135.5L18.2,134.1L18.2,133.1ZM-74.4,112.5L-73.7,112.9L-73.7,113.5L-74,114.8L-74.4,116L-74.7,117L-75.4,117.4L-76.1,117.4L-76.8,117.7L-77.2,118.1L-77.5,118.3L-77.5,117.9L-77.5,117.7L-77.9,117L-78.5,116.2L-78.2,115.2L-76.8,113.9L-75.8,112.7L-75.1,112.3ZM-34.9,564.4L-35.6,564.2L-37.3,562.4L-38.3,561.8L-38.7,560.9L-38,559.7L-37.3,558.9L-36.3,559.3L-35.6,560.3L-34.2,563.2L-33.8,564.2L-34.2,564.6L-34.9,564.6ZM106.9,550.5L107.6,550.8L108.3,551.8L108.3,552.4L107.6,552L107.3,552L107.3,552.4L106.9,552.2L105.9,551.8L105.2,551.8L104.5,552.2L104.1,553L103.1,553.6L102.1,554.6L100.7,555.4L98.9,555.4L97.9,554L97.9,552.2L98.6,550.5L100.3,549.3L101.7,549.3L103.8,550.5L104.5,550.6L105.2,550.3L106.2,550.3ZM113.9,552.2L114.2,552.4L114.5,553L114.2,553.4L113.9,553.4L113.5,554.2L113.5,555.4L113.2,556.3L112.1,556.5L111.8,556.2L111.4,555.8L111.1,555.4L110.7,555.2L110.4,553.6L111.1,551L111.1,549.5L110.4,548.9L110.4,548.3L111.1,547.5L111.1,547.1L112.1,547.1L113.5,548.1L113.9,549.1L112.8,549.9L112.8,550.8ZM136.7,547.1L137.4,547.9L138.1,548.7L137.8,550.1L137.8,550.6L137.1,551.8L136,552.4L134.7,552.4L133.3,552L132.6,551.2L131.9,551.2L131.5,551.8L131.2,551.6L130.8,549.9L131.5,548.7L131.5,547.5L131.9,546.5L132.6,545.9L134,545.3L135.7,545.7ZM108,544.8L108.3,545.3L108.7,546.3L108,546.9L107.6,548.3L106.2,548.3L105.2,548.5L105.9,549.3L105.2,549.7L103.8,549.3L103.1,548.5L102.8,548.1L102.4,547.9L102.1,547.9L102.1,547.5L102.4,546.1L102.8,545.5L102.8,545.1L102.4,544.9L102.8,544.8L103.1,544.6L103.1,544.2L103.1,544L102.8,543.2L103.1,542.8L103.8,543L104.5,543.4L106.6,543.8L107.6,544.4ZM57.7,534.3L57.7,535.5L57.7,536.5L57.3,537.1L56.3,537.3L55.6,537.7L55.3,537.5L54.9,536.9L54.6,536.9L54.6,537.5L53.9,537.5L51.8,536.7L51.1,535.7L51.1,535.1L51.5,534.5L51.5,533.9L52.1,533.5L55.6,534.1L57,533.9ZM131.2,534.1L130.8,534.5L130.1,534.7L129.5,534.1L129.5,533.1L128.8,532.6L128.1,532.2L127,532.4L126,532.7L124.9,532.7L124.6,532.6L124.3,532.4L122.2,531.4L122.2,531L122.9,530.8L123.9,530.6L124.3,530.4L124.6,530.2L125.6,530.2L126.3,530.6L127.4,530.2L128.8,529.2L129.8,529L130.1,529.4L130.8,529.6L131.5,529.6L131.9,529.4L132.9,529.6L134.3,529.8L135,530.4L135,531.2L134.3,532L134.3,532.4L134,533.1L133.6,533.7L132.6,533.5L131.9,533.7ZM154.1,530L154.4,530.2L154.8,530.8L154.1,531L153.4,530.6L152.3,530.2L151.6,530.6L152,530.8L152.3,531.2L151.6,532L150.3,533.1L149.2,533.7L148.9,532.7L149.6,532L150.3,531.6L149.9,531L147.8,530.6L147.8,530.2L147.8,529.6L147.1,529.2L145.4,529L144.7,528.8L144.7,528.6L144.7,528.4L145.4,528.2L146.1,527.8L146.8,526.8L147.8,526.1L147.8,525.7L148.2,525.9L148.9,526.4L149.6,527.4L149.9,528.4L150.6,528.8L152,528.4L152.7,528.2L153.4,528.6L153.7,529.2ZM122.5,534.1L122.9,534.9L123.2,536.1L123.2,536.5L122.5,536.3L122.2,536.3L121.1,535.9L120.4,535.3L120.1,535.5L120.1,536.1L119.4,536.5L118.7,536.1L117.3,535.7L115.6,535.1L115.2,534.3L116.3,533.5L115.9,532.7L115.2,532.6L114.2,532.7L112.8,532.4L111.8,531.8L111.1,530.8L110.7,529.6L110.7,528.2L110.7,526.6L111.4,525.3L112.1,524.1L113.2,523.5L113.5,523.5L115.2,523.3L116.3,523.7L117.3,524.3L118.7,525.7L119.4,528L119.7,529.8L120.1,530.6L120.4,531.4L120.8,532.4ZM122.5,525.5L122.2,525.5L121.5,525.1L121.8,524.3L122.5,523.7L123.2,522.1L124.6,520.3L126.3,519.4L128.4,519L129.5,519.2L130.1,519.7L130.1,520.5L129.5,521.1L129.8,521.3L130.5,521.9L131.2,522.7L131.9,523.7L131.9,524.3L131.2,524.5L129.5,523.9L128.4,524.1L128.1,524.9L125.6,526.1L124.6,527.2L124.3,528.4L123.9,528.8L123.2,528L123.2,526.8L122.9,525.9ZM270.2,495.5L270.2,495.9L270.2,496.5L269.2,497.6L268.8,497.8L268.1,497.8L267.4,497.6L266.4,497.8L265.3,498.4L265,498.8L264.3,499L264.3,498.4L264.7,497.8L264.7,497L264.3,496.7L263.6,496.7L263.3,496.3L263.3,495.7L263.6,495.3L263.6,494.5L264,494.1L264.7,494.1L267.8,495.7L267.8,496.5L268.1,496.5ZM278.9,474.3L279.9,473.9L281.3,473.7L283,473.5L283.7,474.5L284.1,475.9L283.7,476.9L284.1,477.5L283.4,478.1L282.7,477.7L282.3,478.1L282.3,478.3L283,478.5L283.7,479.1L283.4,479.8L282.3,481L280.9,481L280.3,480.2L279.9,479.2L278.9,479.2L279.2,478.5L278.9,477.7L277.5,477.5L277.1,477.1L278.2,476.5L278.2,475.5L277.5,474.7L275.7,474.1L274.4,474.5L274,474.5L273.7,473.7L274.4,472.9L275.4,472.5L277.1,473.1L278.2,474.1ZM264.7,472.5L266.4,474.1L266.7,475.1L266.4,475.7L265.3,475.7L265,475.9L265,476.7L264.7,477.1L263.6,476.9L263.3,476.5L262.2,475.9L261.5,474.9L261.5,474.3L262.2,473.1L263.6,472.1ZM82,469.1L83.7,469.9L84,472.3L82,474.1L80.9,473.7L81.6,472.9L82,472.3L81.6,471.9L78.8,470.3L78.5,470.1L75.7,470.5L74.3,471.3L72.9,471.5L71.9,471.1L71.2,470.3L71.9,469.7L73.3,469.5L75.4,468.9L75.7,468.6L76.1,468.2L76.1,467.6L77.1,467.2L77.8,466.6L77.8,465.6L77.1,464.6L76.8,463.4L77.8,463L79.5,463.4L81.3,464.2L82.3,465.4L82.3,466.2L81.3,466.2L79.9,467.2L79.9,467.8L79.9,468.4L79.9,468.9L80.6,469.1ZM71.6,447.7L71.9,447.1L71.2,446.9L68.8,446.5L68.1,446.1L67.4,445.9L66.7,445.9L66.4,445.5L66,445.1L65.3,444.5L64.3,442.2L65,441.2L66,440.8L67.4,441.2L68.1,441.8L69.1,441.6L69.8,441L70.5,441.4L70.9,442L71.2,441.8L71.9,441.8L71.9,442.4L71.2,443.2L70.5,443.2L70.2,443.5L70.2,444.1L71.2,445.3L71.9,445.7L72.9,445.7L73.6,446.5L74,447.7L74.3,448.3L74.7,449.3L74.3,450.3L74,450.7L73.6,450.3L72.6,450.1L71.9,449.5L71.6,448.7ZM613.4,185.7L613.7,185.7L613.4,185.9Z"/>
+          <g class="dot"><title>평택 험프리스 누적 44건, 진행 중 2건</title><circle cx="148.4" cy="219.6" r="14.0"/><text x="167.4" y="229.6" text-anchor="start">평택 험프리스 <tspan class="o">2</tspan></text></g>
+          <g class="dot"><title>오산 누적 25건, 진행 중 3건</title><circle cx="148.3" cy="204.2" r="11.5"/><text x="164.8" y="201.2" text-anchor="start">오산 <tspan class="o">3</tspan></text></g>
+          <g class="dot"><title>왜관 캐럴 누적 23건, 진행 중 0건</title><circle cx="281.4" cy="336.1" r="11.2"/><text x="265.2" y="340.6" text-anchor="end">왜관 캐럴</text></g>
+          <g class="dot"><title>군산 누적 22건, 진행 중 1건</title><circle cx="108.4" cy="346.4" r="11.1"/><text x="92.3" y="350.9" text-anchor="end">군산 <tspan class="o">1</tspan></text></g>
+          <g class="dot"><title>대구 누적 21건, 진행 중 2건</title><circle cx="298.3" cy="353.9" r="10.9"/><text x="314.2" y="358.4" text-anchor="start">대구 <tspan class="o">2</tspan></text></g>
+          <g class="dot"><title>동두천 누적 16건, 진행 중 1건</title><circle cx="151.1" cy="103.7" r="10.0"/><text x="166.1" y="108.2" text-anchor="start">동두천 <tspan class="o">1</tspan></text></g>
+          <g class="dot"><title>성남 누적 6건, 진행 중 1건</title><circle cx="156.3" cy="161.4" r="7.7"/><text x="169.0" y="165.9" text-anchor="start">성남 <tspan class="o">1</tspan></text></g>
+          <g class="dot"><title>포항 누적 5건, 진행 중 0건</title><circle cx="374.6" cy="335" r="7.4"/><text x="387.0" y="339.5" text-anchor="start">포항</text></g>
+          <g class="dot"><title>부산 누적 3건, 진행 중 0건</title><circle cx="342.7" cy="439.5" r="6.6"/><text x="354.3" y="444.0" text-anchor="start">부산</text></g>
+          <g class="dot"><title>진해 누적 3건, 진행 중 0건</title><circle cx="307" cy="436.2" r="6.6"/><text x="295.4" y="440.7" text-anchor="end">진해</text></g>
+          <g class="dot"><title>용산 누적 1건, 진행 중 1건</title><circle cx="143.3" cy="150.9" r="5.5"/><text x="132.8" y="155.4" text-anchor="end">용산 <tspan class="o">1</tspan></text></g>
+        </svg>
+        <div class="lg"><div><i style="width:10px;height:10px"></i><i style="width:18px;height:18px"></i>원 크기 = 누적 공고 수</div><div><em>3</em>진행 중 공고</div></div>
+      </div>
+      <div>
+        <table class="btab">
+          <thead><tr><th>기지</th><th>진행 중</th><th>누적 공고</th><th>낙찰 금액 합계</th></tr></thead>
+          <tbody>
+            <tr><td>평택 험프리스<small>Camp Humphreys</small></td><td class="o"><b>2</b></td><td class="n"><div><i style="width:120px"></i>44</div></td><td class="a">$4.93M</td></tr>
+            <tr><td>오산 공군기지<small>Osan AB</small></td><td class="o"><b>3</b></td><td class="n"><div><i style="width:68px"></i>25</div></td><td class="a">$1.10M</td></tr>
+            <tr><td>왜관 캐럴<small>Camp Carroll</small></td><td class="o"><span>0</span></td><td class="n"><div><i style="width:63px"></i>23</div></td><td class="a">$9.00M</td></tr>
+            <tr><td>군산 공군기지<small>Kunsan AB</small></td><td class="o"><b>1</b></td><td class="n"><div><i style="width:60px"></i>22</div></td><td class="a">$8.02M</td></tr>
+            <tr><td>대구<small>Camp Walker·Henry</small></td><td class="o"><b>2</b></td><td class="n"><div><i style="width:57px"></i>21</div></td><td class="a">$6.57M</td></tr>
+            <tr><td>동두천<small>Camp Casey·Hovey</small></td><td class="o"><b>1</b></td><td class="n"><div><i style="width:44px"></i>16</div></td><td class="a">$6.44M</td></tr>
+            <tr><td>성남<small>K-16·CP Tango</small></td><td class="o"><b>1</b></td><td class="n"><div><i style="width:16px"></i>6</div></td><td class="a">$0.42M</td></tr>
+            <tr><td>포항<small>Camp Mujuk</small></td><td class="o"><span>0</span></td><td class="n"><div><i style="width:14px"></i>5</div></td><td class="a">$4.06M</td></tr>
+            <tr><td>부산<small>Busan</small></td><td class="o"><span>0</span></td><td class="n"><div><i style="width:8px"></i>3</div></td><td class="a">$8.51M</td></tr>
+            <tr><td>진해<small>Chinhae</small></td><td class="o"><span>0</span></td><td class="n"><div><i style="width:8px"></i>3</div></td><td class="a">-</td></tr>
+            <tr><td>서울 용산<small>Yongsan</small></td><td class="o"><b>1</b></td><td class="n"><div><i style="width:3px"></i>1</div></td><td class="a">-</td></tr>
+          </tbody>
+        </table>
+        <p class="bnote">공고 제목과 수행 장소에 기지명이 나온 공고 기준, 2026.10.10 집계</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band g">
+  <div class="wrap">
+    <div class="bh"><small>낙찰·발주 동향</small><h2>주한미군 조달, 숫자로 봅니다</h2><p>SAM.gov에 올라온 주한미군 공고와 낙찰 공지를 모아 집계합니다</p></div>
+    <div class="nums">
+      <div><span>SAM.gov 마감 전 공고</span><b class="r">13<small>건</small></b><em>원본 기준, 한글 공고문 0건</em></div>
+      <div><span>WJbid 한글 공고문</span><b>21<small>건</small></b><em>마감된 공고 포함, 10.10 기준</em></div>
+      <div><span>낙찰 공지</span><b>99<small>건</small></b><em>공고번호 기준, 2026.03.30 이후</em></div>
+      <div><span>낙찰 금액 합계</span><b>$61.9<small>M</small></b><em>금액이 적힌 88건</em></div>
+    </div>
+    <div class="b2">
+      <section class="pane">
+        <div class="ph"><h3>최근 낙찰</h3><div class="tabs"><a class="on" href="#">최근 순</a><a href="#">금액 높은 순</a></div></div>
+        <table class="aw">
+          <tr><td class="d">09.30</td><td class="t">진공 트레일러 구매<small class="mono">W90VN726QA014</small></td><td class="a">$60,700</td></tr>
+          <tr><td class="d">09.29</td><td class="t">MATOC 비행장 도로·주차장 보수<small class="mono">W91QVN24D0049-W90VN726FA075</small></td><td class="a">$1,559,624</td></tr>
+          <tr><td class="d">09.29</td><td class="t">Camp Mujuk 고가 물탱크 세척·보수 (Bldg. 1117)<small class="mono">W90VN926RA080</small></td><td class="a">$485,088</td></tr>
+          <tr><td class="d">09.29</td><td class="t">우체국 CCTV 설치 (Main, COWAN)<small class="mono">W51LL526PA014</small></td><td class="a">$51,993</td></tr>
+          <tr><td class="d">09.28</td><td class="t">제41전략통신 기반시설 수명주기 교체<small class="mono">W91QVN26RA097</small></td><td class="a">$248,696</td></tr>
+          <tr><td class="d">09.24</td><td class="t">USFK 사령부 화상회의 장비 구매·설치<small class="mono">W91QVN26PA054</small></td><td class="a">$1,630,498</td></tr>
+        </table>
+        <p class="src2">SAM.gov 공개 낙찰 공지를 WJbid 가 모은 것입니다. WJbid 의 낙찰 실적이 아닙니다.</p>
+      </section>
+      <section class="pane">
+        <div class="ph"><h3>발주 동향</h3><div class="tabs"><a class="on" href="#">월별</a><a href="#">업종별</a></div></div>
+        <div class="trend">
+          <div>
+            <h6>월별 공고 수</h6>
+            <div class="cols">
+              <div class="c" title="2026년 5월 26건"><b>26</b><i style="height:30px"></i></div>
+              <div class="c" title="2026년 6월 79건"><b>79</b><i style="height:91px"></i></div>
+              <div class="c" title="2026년 7월 119건"><b>119</b><i style="height:137px"></i></div>
+              <div class="c" title="2026년 8월 85건"><b>85</b><i style="height:98px"></i></div>
+              <div class="c" title="2026년 9월 65건"><b>65</b><i style="height:75px"></i></div>
+              <div class="c" title="2026년 10월 1~10일 11건"><b>11</b><i class="part" style="height:13px"></i></div>
+            </div>
+            <div class="xl"><span>5월</span><span>6월</span><span>7월</span><span>8월</span><span>9월</span><span>10월</span></div>
+          </div>
+          <div>
+            <h6>업종별 공고 수</h6>
+            <div class="hb">
+              <div><span>제조업</span><i style="width:100%"></i><b>89</b></div>
+              <div><span>건설</span><i style="width:98%"></i><b>87</b></div>
+              <div><span>관리·시설지원</span><i style="width:43%"></i><b>38</b></div>
+              <div><span>도매업</span><i style="width:17%"></i><b>15</b></div>
+              <div><span>전문·기술</span><i style="width:11%"></i><b>10</b></div>
+              <div><span>운송업</span><i style="width:4.5%"></i><b>4</b></div>
+            </div>
+            <p class="note">10월은 10일까지 집계</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</section>
+<section class="band" style="padding-bottom:20px">
+  <div class="wrap">
+    <div class="b2">
+      <div class="tbox">
+        <div class="tt"><a class="on" href="#">자주 묻는 질문</a><a href="#">공지사항</a><a class="more" href="#">더 보기<svg class="i"><use href="#i-cr"/></svg></a></div>
+        <ul class="lst"><li><span class="q">Q</span><span class="t">SAM.gov 등록이 꼭 있어야 입찰할 수 있나요?</span></li><li><span class="q">Q</span><span class="t">한글 공고문은 영문 원문과 무엇이 다른가요?</span></li><li><span class="q">Q</span><span class="t">무료 회원은 무엇을 쓸 수 있나요?</span></li><li><span class="q">Q</span><span class="t">입찰 신청을 하면 그다음은 어떻게 되나요?</span></li><li><span class="q">Q</span><span class="t">PIEE 계정은 언제 만들어야 하나요?</span></li><li><span class="q">Q</span><span class="t">마감된 공고도 볼 수 있나요?</span></li></ul>
+      </div>
+      <div class="pane prc">
+        <div class="ph"><h3>요금 안내</h3><a class="more" href="#">자세히<svg class="i"><use href="#i-cr"/></svg></a></div>
+        <div class="pl">
+          <div><span>무료</span><b>0<small>원</small></b><em>공개된 한글 공고문 읽기, 관심 공고 저장, 입찰 신청</em></div>
+          <div class="on"><span>Pro</span><b>20,000<small>원/월</small></b><em>더 쓰는 기능은 요금 안내에서 확인하세요</em></div>
+          <div><span>컨설팅</span><b class="s">상담 후 결정</b><em>등록 대행, 입찰서 검토</em></div>
+        </div>
+        <a class="qa" href="#"><span class="fi"><svg class="i"><use href="#i-headset"/></svg></span><b>1:1 문의<span>궁금한 점을 남겨 주시면 답변 드립니다</span></b><svg class="i"><use href="#i-cr"/></svg></a>
+      </div>
+    </div>
+    <div class="rel">
+      <h4>관련 사이트</h4>
+      <a href="#">SAM.gov<svg class="i"><use href="#i-ext"/></svg></a>
+      <a href="#">PIEE<svg class="i"><use href="#i-ext"/></svg></a>
+      <a href="#">DLA<svg class="i"><use href="#i-ext"/></svg></a>
+      <a href="#">USAspending<svg class="i"><use href="#i-ext"/></svg></a>
+      <a href="#">Acquisition.gov (FAR)<svg class="i"><use href="#i-ext"/></svg></a>
+      <a href="#">주한미군 USFK<svg class="i"><use href="#i-ext"/></svg></a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="lk"><a href="#">이용약관</a><a href="#">개인정보처리방침</a><a href="#">면책 고지</a><a href="#">환불 정책</a><a href="#">고객센터</a><a href="#" style="position:relative">제휴 문의</a></div>
+    <div class="info">
+      <div><span>상호 우진USbid</span><span>이메일 support@wjbid.com</span></div>
+      <div>© 2026 WJbid · 우진USbid · 미군·연방 조달 입찰 대행 서비스</div>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  function apply() {
+    var p = location.hash.replace('#', '').split('-');
+    var st = 's0';
+    p.forEach(function (x) { if (/^s[0-2]$/.test(x)) st = x; });
+    var open = p.indexOf('open') > -1, aw = p.indexOf('aw') > -1;
+    document.body.classList.toggle('shot', p.indexOf('shot') > -1);
+    document.body.classList.toggle('menu-open', p.indexOf('menu') > -1);
+    document.body.classList.toggle('aw', aw);
+    document.querySelectorAll('[data-st]').forEach(function (el) { el.hidden = el.dataset.st.split(',').indexOf(st) < 0; });
+    document.querySelectorAll('[data-open]').forEach(function (el) { el.hidden = (el.dataset.open === '1') !== open; });
+    document.querySelectorAll('[data-aw]').forEach(function (el) { el.hidden = (el.dataset.aw === '1') !== aw; });
+    var cur = location.hash.replace('#', '').replace('-shot', '') || 's0';
+    document.querySelectorAll('.mock a').forEach(function (a) { a.classList.toggle('on', a.dataset.h === cur); });
+  }
+  document.addEventListener('click', function (ev) {
+    var t = ev.target.closest('[data-toggle]');
+    if (!t) return;
+    ev.preventDefault();
+    var h = location.hash.replace('#', '') || 's0';
+    location.hash = h.indexOf('open') > -1 ? h.replace('-open', '') : h + '-open';
+  });
+  window.addEventListener('hashchange', apply);
+  apply();
+})();
+</script>
+</body>
+</html>

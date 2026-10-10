@@ -1,0 +1,346 @@
+[
+ {
+  "no": 1,
+  "group": "국내 입찰정보 업체",
+  "name": "인포21C",
+  "img": "../v/info21c_fold.jpg",
+  "title": "인포21C 입찰정보 - 최상의 정보를 최고의 고객에게",
+  "url": "https://www.info21c.net"
+ },
+ {
+  "no": 2,
+  "group": "국내 입찰정보 업체",
+  "name": "케이비드",
+  "img": "../v/kbid_fold.jpg",
+  "title": "케이비드 - 대한민국 NO1. 입찰정보서비스",
+  "url": "https://www.kbid.co.kr"
+ },
+ {
+  "no": 3,
+  "group": "국내 입찰정보 업체",
+  "name": "비드프로",
+  "img": "../v/bidpro_fold.jpg",
+  "title": "비드프로(Since 2002)_공공입찰 빠른 낙찰!",
+  "url": "https://www.bidpro.co.kr"
+ },
+ {
+  "no": 4,
+  "group": "국내 입찰정보 업체",
+  "name": "클라이원트",
+  "img": "../v/cliwant_fold.jpg",
+  "title": "CLIWANT — 수주의 모든 과정을 AI로",
+  "url": "https://www.cliwant.com"
+ },
+ {
+  "no": 5,
+  "group": "국내 입찰정보 업체",
+  "name": "웰로비즈",
+  "img": "../r2/v/wellobiz_fold.jpg",
+  "title": "웰로비즈 - 700만 기업을 위한 맞춤형 정부지원·매출확보 솔루션",
+  "url": "https://www.wellobiz.com"
+ },
+ {
+  "no": 6,
+  "group": "국내 입찰정보 업체",
+  "name": "산군",
+  "img": "../r2/v/sankun_fold.jpg",
+  "title": "산업의역군 ::: 건설 빅데이터 플랫폼 ::: 산군",
+  "url": "https://www.sankun.com"
+ },
+ {
+  "no": 7,
+  "group": "국내 입찰정보 업체",
+  "name": "비드큐",
+  "img": "../r2/v/bidq_fold.jpg",
+  "title": "비드큐 입찰정보 - 최고의 입찰실무 파트너",
+  "url": "https://www.bidq.co.kr"
+ },
+ {
+  "no": 8,
+  "group": "국내 공공 조달 포털",
+  "name": "나라장터",
+  "img": "../r2/v/g2b_fold.jpg",
+  "title": "나라장터",
+  "url": "https://www.g2b.go.kr"
+ },
+ {
+  "no": 9,
+  "group": "국내 공공 조달 포털",
+  "name": "국방전자조달",
+  "img": "../r2/v/d2b_fold.jpg",
+  "title": "방위사업청 국방전자조달시스템",
+  "url": "https://www.d2b.go.kr"
+ },
+ {
+  "no": 10,
+  "group": "국내 공공 조달 포털",
+  "name": "온비드",
+  "img": "../r2/v/onbid_fold.jpg",
+  "title": "온비드",
+  "url": "https://www.onbid.co.kr"
+ },
+ {
+  "no": 11,
+  "group": "국내 공공 조달 포털",
+  "name": "학교장터",
+  "img": "../r2/v/s2b_fold.jpg",
+  "title": "S2B",
+  "url": "https://www.s2b.kr"
+ },
+ {
+  "no": 12,
+  "group": "국내 공공 조달 포털",
+  "name": "한전 전자조달",
+  "img": "../r2/v/kepco_fold.jpg",
+  "title": "한국전력 전자조달 시스템",
+  "url": "https://srm.kepco.net"
+ },
+ {
+  "no": 13,
+  "group": "국내 공공 조달 포털",
+  "name": "누리장터",
+  "img": "../r2/v/nuri_fold.jpg",
+  "title": "누리장터",
+  "url": "https://nuri.g2b.go.kr"
+ },
+ {
+  "no": 14,
+  "group": "국내 공공 조달 포털",
+  "name": "종합쇼핑몰",
+  "img": "../r2/v/shopg2b_fold.jpg",
+  "title": "나라장터 쇼핑몰",
+  "url": "https://shop.g2b.go.kr"
+ },
+ {
+  "no": 15,
+  "group": "해외 공식 조달 포털",
+  "name": "SAM.gov",
+  "img": "../r2/v/samgov_fold.jpg",
+  "title": "Home | SAM.gov",
+  "url": "https://sam.gov"
+ },
+ {
+  "no": 16,
+  "group": "해외 공식 조달 포털",
+  "name": "USAspending",
+  "img": "../r2/v/usaspending_fold.jpg",
+  "title": "Government Spending Open Data | USAspending",
+  "url": "https://www.usaspending.gov"
+ },
+ {
+  "no": 17,
+  "group": "해외 공식 조달 포털",
+  "name": "TED (EU)",
+  "img": "../r2/v/ted_fold.jpg",
+  "title": "TED - EU Tenders, the Supplement to the Official Journ",
+  "url": "https://ted.europa.eu/en/"
+ },
+ {
+  "no": 18,
+  "group": "해외 공식 조달 포털",
+  "name": "Find a Tender (UK)",
+  "img": "../r2/v/findtender_fold.jpg",
+  "title": "Find a Tender",
+  "url": "https://www.find-tender.service.gov.uk"
+ },
+ {
+  "no": 19,
+  "group": "해외 입찰 정보·분석",
+  "name": "GovWin IQ",
+  "img": "../v/govwin_fold.jpg",
+  "title": "GovWin IQ: Find Leads First, Win More Contracts | Delt",
+  "url": "https://www.deltek.com/en/government-contracting/govwin"
+ },
+ {
+  "no": 20,
+  "group": "해외 입찰 정보·분석",
+  "name": "HigherGov",
+  "img": "../v/highergov_fold.jpg",
+  "title": "HigherGov: Government Market Intel and Capture",
+  "url": "https://www.highergov.com"
+ },
+ {
+  "no": 21,
+  "group": "해외 입찰 정보·분석",
+  "name": "GovTribe",
+  "img": "../v/govtribe_fold.jpg",
+  "title": "GovTribe | Grow Your Government Business",
+  "url": "https://govtribe.com"
+ },
+ {
+  "no": 22,
+  "group": "해외 입찰 정보·분석",
+  "name": "Govly",
+  "img": "../v/govly_fold.jpg",
+  "title": "Govly: The #1 Market Network for Government Contractor",
+  "url": "https://www.govly.com"
+ },
+ {
+  "no": 23,
+  "group": "해외 입찰 정보·분석",
+  "name": "SamSearch",
+  "img": "../v/samsearch_fold.jpg",
+  "title": "The Complete AI Platform for Government Contracting",
+  "url": "https://samsearch.co"
+ },
+ {
+  "no": 24,
+  "group": "해외 입찰 정보·분석",
+  "name": "BidNet Direct",
+  "img": "../r2/v/bidnet_fold.jpg",
+  "title": "Government Bids Opportunities and RFP | BidNet Direct",
+  "url": "https://www.bidnetdirect.com"
+ },
+ {
+  "no": 25,
+  "group": "해외 입찰 정보·분석",
+  "name": "GovSpend",
+  "img": "../r2/v/govspend_fold.jpg",
+  "title": "B2G Intelligence for the Public Sector | GovSpend",
+  "url": "https://govspend.com"
+ },
+ {
+  "no": 26,
+  "group": "해외 입찰 정보·분석",
+  "name": "DemandStar",
+  "img": "../r2/v/demandstar_fold.jpg",
+  "title": "Government Contract Bids, RFPs & Procurement | DemandS",
+  "url": "https://www.demandstar.com"
+ },
+ {
+  "no": 27,
+  "group": "해외 입찰 정보·분석",
+  "name": "Stotles",
+  "img": "../r2/v/stotles_fold.jpg",
+  "title": "Stotles: Win public sector contracts & simplify govern",
+  "url": "https://www.stotles.com"
+ },
+ {
+  "no": 28,
+  "group": "해외 입찰 정보·분석",
+  "name": "Tussell",
+  "img": "../r2/v/tussell_fold.jpg",
+  "title": "Tussell: Trusted insights on government contracts and ",
+  "url": "https://www.tussell.com"
+ },
+ {
+  "no": 29,
+  "group": "해외 입찰 정보·분석",
+  "name": "Federal Compass",
+  "img": "../r2/v/federalcompass_fold.jpg",
+  "title": "Market Intelligence for Government Contractors | Feder",
+  "url": "https://www.federalcompass.com"
+ },
+ {
+  "no": 30,
+  "group": "해외 입찰 정보·분석",
+  "name": "BidPrime",
+  "img": "../r2/v/bidprime_fold.jpg",
+  "title": "BidPrime",
+  "url": "https://www.bidprime.com"
+ },
+ {
+  "no": 31,
+  "group": "해외 입찰 정보·분석",
+  "name": "Tracker",
+  "img": "../r2/v/tracker_fold.jpg",
+  "title": "Public Sector Tender Opportunities & Intelligence - Tr",
+  "url": "https://www.trackerintelligence.com"
+ },
+ {
+  "no": 32,
+  "group": "해외 입찰 정보·분석",
+  "name": "Unanet",
+  "img": "../r2/v/unanet_fold.jpg",
+  "title": "Unanet | Modern Solutions for Your Project-Driven Busi",
+  "url": "https://unanet.com"
+ },
+ {
+  "no": 33,
+  "group": "해외 AI 수주·제안서",
+  "name": "GovDash",
+  "img": "../v/govdash_fold.jpg",
+  "title": "GovDash | Dash, the AI for Government Contractors",
+  "url": "https://www.govdash.com"
+ },
+ {
+  "no": 34,
+  "group": "해외 AI 수주·제안서",
+  "name": "Sweetspot",
+  "img": "../v/sweetspot_fold.jpg",
+  "title": "Sweetspot - AI for Government Contracting",
+  "url": "https://www.sweetspot.so"
+ },
+ {
+  "no": 35,
+  "group": "해외 AI 수주·제안서",
+  "name": "GovSignals",
+  "img": "../v/govsignals_fold.jpg",
+  "title": "GovSignals: Next-Generation AI Acquisition",
+  "url": "https://www.govsignals.ai"
+ },
+ {
+  "no": 36,
+  "group": "해외 AI 수주·제안서",
+  "name": "Vultron",
+  "img": "../r2/v/vultron_fold.jpg",
+  "title": "Vultron",
+  "url": "https://www.vultron.ai"
+ },
+ {
+  "no": 37,
+  "group": "해외 AI 수주·제안서",
+  "name": "AutogenAI",
+  "img": "../r2/v/autogenai_fold.jpg",
+  "title": "AutogenAI | AI Proposal Writing Solutions for Business",
+  "url": "https://autogenai.com"
+ },
+ {
+  "no": 38,
+  "group": "해외 AI 수주·제안서",
+  "name": "Loopio",
+  "img": "../r2/v/loopio_fold.jpg",
+  "title": "Loopio | AI RFP Software with a Competitive Edge",
+  "url": "https://loopio.com"
+ },
+ {
+  "no": 39,
+  "group": "해외 AI 수주·제안서",
+  "name": "Responsive",
+  "img": "../r2/v/responsive_fold.jpg",
+  "title": "#1 AI RFP Software & G2 Market Leader",
+  "url": "https://www.responsive.io"
+ },
+ {
+  "no": 40,
+  "group": "해외 AI 수주·제안서",
+  "name": "Inventive AI",
+  "img": "../r2/v/inventive_fold.jpg",
+  "title": "Inventive AI | 90% Faster RFP Responses & Higher Win R",
+  "url": "https://www.inventive.ai"
+ },
+ {
+  "no": 41,
+  "group": "해외 AI 수주·제안서",
+  "name": "Procurement Sciences",
+  "img": "../r2/v/procsci_fold.jpg",
+  "title": "AI for Government Contracting: Win More Bids | Procure",
+  "url": "https://www.procurementsciences.com"
+ },
+ {
+  "no": 42,
+  "group": "해외 AI 수주·제안서",
+  "name": "CLEATUS",
+  "img": "../r2/v/cleat_fold.jpg",
+  "title": "CLEATUS – AI for GovCon: Find, Bid & Win Contracts",
+  "url": "https://www.cleat.ai"
+ },
+ {
+  "no": 43,
+  "group": "해외 AI 수주·제안서",
+  "name": "autorfp.ai",
+  "img": "../r2/v/autorfp_fold.jpg",
+  "title": "AutoRFP.ai | Agentic AI RFP Software to Win Deals",
+  "url": "https://autorfp.ai"
+ }
+]

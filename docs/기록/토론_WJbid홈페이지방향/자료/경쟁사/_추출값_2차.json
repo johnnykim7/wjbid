@@ -1,0 +1,436 @@
+[
+ {
+  "name": "wellobiz",
+  "url": "https://www.wellobiz.com",
+  "status": 200,
+  "finalUrl": "https://www.wellobiz.com/",
+  "data": {
+   "title": "웰로비즈 - 700만 기업을 위한 맞춤형 정부지원·매출확보 솔루션",
+   "h1": "사업 선정부터 투자 유치까지, 기업 성장의 모든 기회가 펼쳐집니다",
+   "h1Size": "60px",
+   "bodyFont": "pretendard, \"pretendard Fallback\"",
+   "textLen": 2843
+  }
+ },
+ {
+  "name": "bidq",
+  "url": "https://www.bidq.co.kr",
+  "status": 200,
+  "finalUrl": "https://www.bidq.co.kr/",
+  "data": {
+   "title": "비드큐 입찰정보 - 최고의 입찰실무 파트너",
+   "h1": "",
+   "h1Size": "",
+   "bodyFont": "돋움",
+   "textLen": 1701
+  }
+ },
+ {
+  "name": "sankun",
+  "url": "https://www.sankun.com",
+  "status": 200,
+  "finalUrl": "https://www.sankun.com/",
+  "data": {
+   "title": "산업의역군 ::: 건설 빅데이터 플랫폼 ::: 산군",
+   "h1": "산업의역군, 건설 빅데이터 플랫폼",
+   "h1Size": "13px",
+   "bodyFont": "\"Noto Sans KR\", sans-serif",
+   "textLen": 3741
+  }
+ },
+ {
+  "name": "g2b",
+  "url": "https://www.g2b.go.kr",
+  "status": 200,
+  "finalUrl": "https://www.g2b.go.kr/",
+  "data": {
+   "title": "나라장터",
+   "h1": "나라장터",
+   "h1Size": "0px",
+   "bodyFont": "Roboto, NotoSansCJKkr, \"Malgun Gothic\", Dotum, sans-serif",
+   "textLen": 1705
+  }
+ },
+ {
+  "name": "d2b",
+  "url": "https://www.d2b.go.kr",
+  "status": 200,
+  "finalUrl": "https://www.d2b.go.kr/index.do",
+  "data": {
+   "title": "방위사업청 국방전자조달시스템",
+   "h1": "",
+   "h1Size": "24px",
+   "bodyFont": "\"맑은 고딕\", \"Malgun Gothic\", dotum, 돋움, sans-serif",
+   "textLen": 1654
+  }
+ },
+ {
+  "name": "onbid",
+  "url": "https://www.onbid.co.kr",
+  "status": 200,
+  "finalUrl": "https://www.onbid.co.kr/op/meminf/lgnmng/prtllgn/PrtlLgnController/main.do",
+  "data": {
+   "title": "온비드",
+   "h1": "",
+   "h1Size": "32px",
+   "bodyFont": "Pretendard, \"맑은 고딕\", dotum, sans-serif",
+   "textLen": 2626
+  }
+ },
+ {
+  "name": "s2b",
+  "url": "https://www.s2b.kr",
+  "status": 200,
+  "finalUrl": "https://www.s2b.kr/",
+  "data": {
+   "title": "S2B",
+   "h1": "",
+   "h1Size": "",
+   "bodyFont": "Times",
+   "textLen": 196
+  }
+ },
+ {
+  "name": "kepco",
+  "url": "https://srm.kepco.net",
+  "status": 200,
+  "finalUrl": "https://srm.kepco.net/index.do",
+  "data": {
+   "title": "한국전력 전자조달 시스템",
+   "h1": "",
+   "h1Size": "",
+   "bodyFont": "\"Malgun Gothic\", Verdana, Arial",
+   "textLen": 68
+  }
+ },
+ {
+  "name": "nuri",
+  "url": "https://nuri.g2b.go.kr",
+  "status": 200,
+  "finalUrl": "https://nuri.g2b.go.kr/",
+  "data": {
+   "title": "누리장터",
+   "h1": "조달청 로고",
+   "h1Size": "0px",
+   "bodyFont": "Roboto, NotoSansCJKkr, \"Malgun Gothic\", Dotum, sans-serif",
+   "textLen": 1307
+  }
+ },
+ {
+  "name": "shopg2b",
+  "url": "https://shop.g2b.go.kr",
+  "status": 200,
+  "finalUrl": "https://shop.g2b.go.kr/",
+  "data": {
+   "title": "나라장터 쇼핑몰",
+   "h1": "",
+   "h1Size": "",
+   "bodyFont": "Roboto, NotoSansCJKkr, \"Malgun Gothic\", Dotum, sans-serif",
+   "textLen": 4234
+  }
+ },
+ {
+  "name": "samgov",
+  "url": "https://sam.gov",
+  "status": 200,
+  "finalUrl": "https://sam.gov/",
+  "data": {
+   "title": "Home | SAM.gov",
+   "h1": "SAM.gov | Home",
+   "h1Size": "32px",
+   "bodyFont": "\"Source Sans Pro Web\", \"Helvetica Neue\", Helvetica, Roboto, Arial, sans-serif",
+   "textLen": 4319
+  }
+ },
+ {
+  "name": "ted",
+  "url": "https://ted.europa.eu/en/",
+  "status": 202,
+  "finalUrl": "https://ted.europa.eu/en/",
+  "data": {
+   "title": "TED - EU Tenders, the Supplement to the Official Journal - TED",
+   "h1": "Ted • tenders electronic daily",
+   "h1Size": "18px",
+   "bodyFont": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, \"Noto S",
+   "textLen": 1594
+  }
+ },
+ {
+  "name": "usaspending",
+  "url": "https://www.usaspending.gov",
+  "status": 200,
+  "finalUrl": "https://www.usaspending.gov/",
+  "data": {
+   "title": "Government Spending Open Data | USAspending",
+   "h1": "",
+   "h1Size": "32px",
+   "bodyFont": "\"Source Sans Pro\", \"Helvetica Neue\", Helvetica, Roboto, Arial, sans-serif",
+   "textLen": 3593
+  }
+ },
+ {
+  "name": "findtender",
+  "url": "https://www.find-tender.service.gov.uk",
+  "status": 200,
+  "finalUrl": "https://www.find-tender.service.gov.uk/Search",
+  "data": {
+   "title": "Find a Tender",
+   "h1": "Find information on UK public sector procurements and contracts",
+   "h1Size": "48px",
+   "bodyFont": "\"GDS Transport\", Arial, sans-serif",
+   "textLen": 2694
+  }
+ },
+ {
+  "name": "bidnet",
+  "url": "https://www.bidnetdirect.com",
+  "status": 200,
+  "finalUrl": "https://www.bidnetdirect.com/",
+  "data": {
+   "title": "Government Bids Opportunities and RFP | BidNet Direct",
+   "h1": "Find government bids matching your business.",
+   "h1Size": "53.0226px",
+   "bodyFont": "Roboto, sans-serif",
+   "textLen": 3635
+  }
+ },
+ {
+  "name": "bgov",
+  "url": "https://about.bgov.com",
+  "status": 403,
+  "finalUrl": "https://about.bgov.com/",
+  "data": {
+   "title": "Access to this page has been denied",
+   "h1": "",
+   "h1Size": "",
+   "bodyFont": "Times",
+   "textLen": 88
+  }
+ },
+ {
+  "name": "demandstar",
+  "url": "https://www.demandstar.com",
+  "status": 200,
+  "finalUrl": "https://network.demandstar.com/",
+  "data": {
+   "title": "Government Contract Bids, RFPs & Procurement | DemandStar",
+   "h1": "How We Connect Businesses Directly with Local Governments",
+   "h1Size": "42px",
+   "bodyFont": "Poppins, Arial, Helvetica, sans-serif",
+   "textLen": 3983
+  }
+ },
+ {
+  "name": "gobid",
+  "url": "https://www.gobid.co.kr",
+  "error": "page.goto: Timeout 35000ms exceeded.\nCall log:\n  - navigating to \"https://www.gobid.co.kr/\", waiting until \"domcontentloaded\"\n"
+ },
+ {
+  "name": "tussell",
+  "url": "https://www.tussell.com",
+  "status": 200,
+  "finalUrl": "https://www.tussell.com/",
+  "data": {
+   "title": "Tussell: Trusted insights on government contracts and spend",
+   "h1": "Do more business with government",
+   "h1Size": "48px",
+   "bodyFont": "sofia-pro, sans-serif, Helvetica",
+   "textLen": 4234
+  }
+ },
+ {
+  "name": "stotles",
+  "url": "https://www.stotles.com",
+  "status": 200,
+  "finalUrl": "https://www.stotles.com/",
+  "data": {
+   "title": "Stotles: Win public sector contracts & simplify government tendering",
+   "h1": "Stotles is the revenue engine for go-to-government teams.",
+   "h1Size": "56px",
+   "bodyFont": "Inter, Arial, sans-serif",
+   "textLen": 4605
+  }
+ },
+ {
+  "name": "federalcompass",
+  "url": "https://www.federalcompass.com",
+  "status": 200,
+  "finalUrl": "https://www.federalcompass.com/",
+  "data": {
+   "title": "Market Intelligence for Government Contractors | Federal Compass",
+   "h1": "The Winning Formula for Federal Contractors",
+   "h1Size": "60px",
+   "bodyFont": "Roboto, sans-serif",
+   "textLen": 6391
+  }
+ },
+ {
+  "name": "govspend",
+  "url": "https://govspend.com",
+  "status": 200,
+  "finalUrl": "https://govspend.com/",
+  "data": {
+   "title": "B2G Intelligence for the Public Sector | GovSpend",
+   "h1": "Introducing the MCP Server Built for Government Market Intelligence",
+   "h1Size": "56px",
+   "bodyFont": "Lato, Arial, Helvetica, sans-serif",
+   "textLen": 3671
+  }
+ },
+ {
+  "name": "bidprime",
+  "url": "https://www.bidprime.com",
+  "status": 200,
+  "finalUrl": "https://www.bidprime.com/",
+  "data": {
+   "title": "BidPrime",
+   "h1": "",
+   "h1Size": "",
+   "bodyFont": "Inter, ui-sans-serif, system-ui, sans-serif",
+   "textLen": 6158
+  }
+ },
+ {
+  "name": "opengov",
+  "url": "https://opengov.com",
+  "status": 403,
+  "finalUrl": "https://opengov.com/",
+  "data": {
+   "title": "Checking your browser...",
+   "h1": "Confirm you are human",
+   "h1Size": "32px",
+   "bodyFont": "\"Helvetica Neue\", HelveticaNeue, Helvetica, Arial, sans-serif",
+   "textLen": 100
+  }
+ },
+ {
+  "name": "tracker",
+  "url": "https://www.trackerintelligence.com",
+  "status": 200,
+  "finalUrl": "https://www.trackerintelligence.com/",
+  "data": {
+   "title": "Public Sector Tender Opportunities & Intelligence - Tracker",
+   "h1": "Protect contracts you have. Develop your tender strategy. Grow your public sector market share.",
+   "h1Size": "50px",
+   "bodyFont": "Inter, sans-serif",
+   "textLen": 4841
+  }
+ },
+ {
+  "name": "vultron",
+  "url": "https://www.vultron.ai",
+  "status": 200,
+  "finalUrl": "https://www.vultron.ai/",
+  "data": {
+   "title": "Vultron",
+   "h1": "Vultron has joined forces with pWin.ai",
+   "h1Size": "60px",
+   "bodyFont": "\"Source Sans 3\", sans-serif",
+   "textLen": 3764
+  }
+ },
+ {
+  "name": "unanet",
+  "url": "https://unanet.com",
+  "status": 200,
+  "finalUrl": "https://unanet.com/",
+  "data": {
+   "title": "Unanet | Modern Solutions for Your Project-Driven Business",
+   "h1": "Projects Unified. Growth Unleashed.",
+   "h1Size": "60px",
+   "bodyFont": "\"Mona Sans\", arial, sans-serif",
+   "textLen": 8393
+  }
+ },
+ {
+  "name": "autogenai",
+  "url": "https://autogenai.com",
+  "status": 200,
+  "finalUrl": "https://autogenai.com/",
+  "data": {
+   "title": "AutogenAI | AI Proposal Writing Solutions for Businesses",
+   "h1": "Write More Winning Proposals",
+   "h1Size": "66.4px",
+   "bodyFont": "NeueHaas, sans-serif, sans-serif",
+   "textLen": 9402
+  }
+ },
+ {
+  "name": "responsive",
+  "url": "https://www.responsive.io",
+  "status": 200,
+  "finalUrl": "https://www.responsive.io/",
+  "data": {
+   "title": "#1 AI RFP Software & G2 Market Leader",
+   "h1": "#1 AI RFP SOFTWARE & G2 MARKET LEADER",
+   "h1Size": "12px",
+   "bodyFont": "interDisplay, \"interDisplay Fallback\", system-ui, -apple-system, \"Segoe UI\", Rob",
+   "textLen": 5981
+  }
+ },
+ {
+  "name": "loopio",
+  "url": "https://loopio.com",
+  "status": 200,
+  "finalUrl": "https://loopio.com/",
+  "data": {
+   "title": "Loopio | AI RFP Software with a Competitive Edge",
+   "h1": "AI RFP Software",
+   "h1Size": "20px",
+   "bodyFont": "\"Albert Sans\"",
+   "textLen": 14756
+  }
+ },
+ {
+  "name": "inventive",
+  "url": "https://www.inventive.ai",
+  "status": 200,
+  "finalUrl": "https://www.inventive.ai/",
+  "data": {
+   "title": "Inventive AI | 90% Faster RFP Responses & Higher Win Rates",
+   "h1": "Win More With AI Agents For ‍RFP & SecQ.",
+   "h1Size": "64px",
+   "bodyFont": "Figtree, Arial, sans-serif",
+   "textLen": 12635
+  }
+ },
+ {
+  "name": "autorfp",
+  "url": "https://autorfp.ai",
+  "status": 200,
+  "finalUrl": "https://autorfp.ai/",
+  "data": {
+   "title": "AutoRFP.ai | Agentic AI RFP Software to Win Deals",
+   "h1": "AI RFP SOFTWARE",
+   "h1Size": "15.4px",
+   "bodyFont": "\"var(--aw-font-sans, ui-sans-serif)\", ui-sans-serif, system-ui, sans-serif, \"App",
+   "textLen": 8931
+  }
+ },
+ {
+  "name": "procsci",
+  "url": "https://www.procurementsciences.com",
+  "status": 200,
+  "finalUrl": "https://www.procurementsciences.com/",
+  "data": {
+   "title": "AI for Government Contracting: Win More Bids | Procurement Sciences",
+   "h1": "Win More Government Contracts with AI",
+   "h1Size": "64px",
+   "bodyFont": "Inter, Arial, sans-serif",
+   "textLen": 9913
+  }
+ },
+ {
+  "name": "cleat",
+  "url": "https://www.cleat.ai",
+  "status": 200,
+  "finalUrl": "https://www.cleat.ai/",
+  "data": {
+   "title": "CLEATUS – AI for GovCon: Find, Bid & Win Contracts",
+   "h1": "Find. Bid. Win! Government Contracts with AI",
+   "h1Size": "48px",
+   "bodyFont": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, \"Helvetica Neue\", \"Noto Sans\", A",
+   "textLen": 20699
+  }
+ }
+]
