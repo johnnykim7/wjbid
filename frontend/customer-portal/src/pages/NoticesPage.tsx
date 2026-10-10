@@ -51,14 +51,6 @@ const NOTICES: Notice[] = [
     body: '회사 프로필에 등록한 NAICS 코드를 기준으로 관련 USFK 조달 공고를 자동 추천하는 기능이 추가되었습니다. 프로필에서 NAICS 코드를 등록해 보세요.',
   },
   {
-    id: 2,
-    title: '요금제 개편 안내 (Basic / Professional / Enterprise)',
-    date: '2026-05-30',
-    important: false,
-    isNew: false,
-    body: '서비스 요금제가 3단계로 개편되었습니다. 입찰 규모와 지원 범위에 따라 플랜을 선택하실 수 있습니다. 자세한 내용은 요금제 페이지를 확인해 주세요.',
-  },
-  {
     id: 1,
     title: 'WJbid 정식 서비스 오픈',
     date: '2026-05-16',
