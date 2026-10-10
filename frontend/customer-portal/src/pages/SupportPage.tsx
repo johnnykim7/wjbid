@@ -1,10 +1,11 @@
 /**
  * CR-124 — 고객센터(Support) 페이지.
  * 상단: FAQ 요약 아코디언(3~4개) + 하단: 1:1 문의 폼.
- * BE 미연동 — FAQ_SUMMARY는 더미, 폼 제출은 콘솔 출력 + alert 플레이스홀더(추후 API 연동).
+ * FAQ_SUMMARY는 더미. 1:1 문의는 서버에 접수한다(CR-132).
+ * 다른 화면이 /support?type=<유형코드>&title=<제목> 으로 유형과 제목을 채워 열 수 있다(CR-133).
  */
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   Accordion,
   AccordionItem,
@@ -20,6 +21,8 @@ import {
   SelectItem,
 } from '@therecommerce-develop/ds-ui'
 import { Button } from '../components/ui/button'
+import { useAuth } from '../context/AuthContext'
+import { getInquiryTypes, getMyProfile, submitInquiry, type InquiryTypeItem } from '../api/client'
 
 // 더미 데이터 (BE 미연동)
 const FAQ_SUMMARY = [
@@ -41,26 +44,77 @@ const FAQ_SUMMARY = [
   },
 ]
 
-const INQUIRY_TYPES = ['서비스 이용 문의', 'SAM.gov 등록 문의', '제안서 작성 문의', '결제·환불 문의', '기타']
+const TITLE_MAX = 200
+
+const EMPTY_FORM = { name: '', email: '', typeCode: '', title: '', content: '' }
 
 export default function SupportPage() {
-  const [form, setForm] = useState({
-    name: '',
-    email: '',
-    type: INQUIRY_TYPES[0],
-    title: '',
-    content: '',
-  })
+  const { isAuthenticated } = useAuth()
+  const [params] = useSearchParams()
+  const formRef = useRef<HTMLElement>(null)
+  const [types, setTypes] = useState<InquiryTypeItem[]>([])
+  const [typesFailed, setTypesFailed] = useState(false)
+  const [form, setForm] = useState(EMPTY_FORM)
+  const [sending, setSending] = useState(false)
+  const [sendFailed, setSendFailed] = useState(false)
+  const [sentTo, setSentTo] = useState<string | null>(null)
+
+  // 주소로 넘어온 유형이 쓰는 유형이면 고르고, 아니면 목록 첫 번째를 고른다
+  const defaultTypeCode = (list: InquiryTypeItem[]) => {
+    const wanted = params.get('type')
+    return list.find((t) => t.code === wanted)?.code ?? list[0]?.code ?? ''
+  }
+
+  useEffect(() => {
+    const wantedType = params.get('type')
+    const wantedTitle = params.get('title')
+    getInquiryTypes()
+      .then((res) => {
+        setTypes(res.data)
+        setForm((prev) => ({
+          ...prev,
+          typeCode: defaultTypeCode(res.data),
+          title: wantedTitle ? wantedTitle.slice(0, TITLE_MAX) : prev.title,
+        }))
+        if (res.data.some((t) => t.code === wantedType) || wantedTitle) {
+          formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+      })
+      .catch(() => setTypesFailed(true))
+    // 주소 값은 처음 열 때 한 번만 채운다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    if (!isAuthenticated) return
+    getMyProfile()
+      .then((res) => {
+        const me = res.data as { email?: string; contactPerson?: string; companyName?: string }
+        setForm((prev) => ({
+          ...prev,
+          name: prev.name || me.contactPerson || me.companyName || '',
+          email: prev.email || me.email || '',
+        }))
+      })
+      .catch(() => undefined)
+  }, [isAuthenticated])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    // TODO: BE 미연동 — 추후 1:1 문의 등록 API로 교체
-    console.log('[SupportPage] 1:1 문의 제출 (placeholder):', form)
-    alert('문의가 접수되었습니다. 빠른 시일 내에 답변드리겠습니다.')
-    setForm({ name: '', email: '', type: INQUIRY_TYPES[0], title: '', content: '' })
+    setSending(true)
+    setSendFailed(false)
+    submitInquiry(form)
+      .then(() => setSentTo(form.email))
+      .catch(() => setSendFailed(true))
+      .finally(() => setSending(false))
   }
 
-  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
+  const startNew = () => {
+    setSentTo(null)
+    setForm((prev) => ({ ...EMPTY_FORM, name: prev.name, email: prev.email, typeCode: types[0]?.code ?? '' }))
+  }
+
+  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm((prev) => ({ ...prev, [k]: e.target.value }))
 
   return (
@@ -104,8 +158,20 @@ export default function SupportPage() {
         </section>
 
         {/* 1:1 문의 폼 */}
-        <section>
+        <section ref={formRef} className="scroll-mt-4">
           <h2 className="text-lg font-extrabold text-ink mb-5">1:1 문의</h2>
+          {sentTo ? (
+            <div className="bg-white rounded-xl border border-line p-8 text-center space-y-2">
+              <i className="fa-solid fa-circle-check text-3xl text-success" />
+              <p className="text-base font-bold text-ink">문의가 접수되었습니다.</p>
+              <p className="text-sm text-ink-sub">답변은 {sentTo} 로 보내 드립니다.</p>
+              <div className="pt-3">
+                <Button type="button" variant="outline" onClick={startNew}>
+                  새 문의 쓰기
+                </Button>
+              </div>
+            </div>
+          ) : (
           <form
             onSubmit={handleSubmit}
             className="bg-white rounded-xl border border-line p-6 space-y-5"
@@ -113,7 +179,7 @@ export default function SupportPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="space-y-1.5">
                 <Label htmlFor="name">이름</Label>
-                <Input id="name" value={form.name} onChange={set('name')} placeholder="홍길동" required />
+                <Input id="name" value={form.name} onChange={set('name')} placeholder="홍길동" maxLength={100} required />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="email">이메일</Label>
@@ -123,6 +189,7 @@ export default function SupportPage() {
                   value={form.email}
                   onChange={set('email')}
                   placeholder="you@example.com"
+                  maxLength={255}
                   required
                 />
               </div>
@@ -131,16 +198,17 @@ export default function SupportPage() {
             <div className="space-y-1.5">
               <Label htmlFor="type">문의 유형</Label>
               <Select
-                value={form.type}
-                onValueChange={(v) => setForm((prev) => ({ ...prev, type: v }))}
+                value={form.typeCode}
+                onValueChange={(v) => setForm((prev) => ({ ...prev, typeCode: v }))}
+                disabled={types.length === 0}
               >
                 <SelectTrigger id="type" className="w-full">
                   <SelectValue placeholder="문의 유형 선택" />
                 </SelectTrigger>
                 <SelectContent>
-                  {INQUIRY_TYPES.map((t) => (
-                    <SelectItem key={t} value={t}>
-                      {t}
+                  {types.map((t) => (
+                    <SelectItem key={t.code} value={t.code}>
+                      {t.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -154,6 +222,7 @@ export default function SupportPage() {
                 value={form.title}
                 onChange={set('title')}
                 placeholder="문의 제목을 입력해 주세요"
+                maxLength={TITLE_MAX}
                 required
               />
             </div>
@@ -166,16 +235,25 @@ export default function SupportPage() {
                 onChange={set('content')}
                 rows={6}
                 placeholder="문의 내용을 자세히 작성해 주세요"
+                maxLength={5000}
                 required
               />
             </div>
 
+            {typesFailed && (
+              <p className="text-sm text-danger">문의 유형을 불러오지 못했습니다. 잠시 뒤 다시 열어 주세요.</p>
+            )}
+            {sendFailed && (
+              <p className="text-sm text-danger">문의를 보내지 못했습니다. 잠시 뒤 다시 보내 주세요.</p>
+            )}
+
             <div className="flex justify-end">
-              <Button type="submit" variant="accent">
-                <i className="fa-solid fa-paper-plane mr-2" /> 문의 제출
+              <Button type="submit" variant="accent" disabled={sending || !form.typeCode}>
+                <i className="fa-solid fa-paper-plane mr-2" /> {sending ? '보내는 중' : '문의 보내기'}
               </Button>
             </div>
           </form>
+          )}
         </section>
       </div>
     </div>

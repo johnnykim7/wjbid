@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -38,16 +39,18 @@ public class NotificationService {
      * @param referenceId   참조 엔티티 ID
      * @param referenceType 참조 엔티티 타입
      * @param idempotencyKey 멱등 키
+     * @return 발송 성공 여부. 같은 키로 이미 보낸 적이 있으면 그때의 결과
      */
     @Transactional
-    public void sendNotification(NotificationType type, String recipientEmail, UUID recipientId,
+    public boolean sendNotification(NotificationType type, String recipientEmail, UUID recipientId,
                                  String subject, Map<String, Object> variables, UUID referenceId,
                                  String referenceType, String idempotencyKey) {
 
         // BIZ-012: 멱등성 — 동일 키로 이미 발송했으면 무시
-        if (notificationLogRepository.existsByIdempotencyKey(idempotencyKey)) {
+        Optional<NotificationLog> sent = notificationLogRepository.findByIdempotencyKey(idempotencyKey);
+        if (sent.isPresent()) {
             log.info("Notification already sent (idempotency): key={}", idempotencyKey);
-            return;
+            return Boolean.TRUE.equals(sent.get().getSuccess());
         }
 
         BpNotificationClient.SendResult result = bpNotificationClient.sendEmail(
@@ -67,5 +70,6 @@ public class NotificationService {
                 .build();
 
         notificationLogRepository.save(logEntry);
+        return result.success();
     }
 }

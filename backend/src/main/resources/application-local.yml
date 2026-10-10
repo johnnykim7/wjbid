@@ -1,0 +1,25 @@
+# 로컬 실행값. SPRING_PROFILES_ACTIVE=local 로 띄운다.
+# 기본값이 운영 DB, 운영 Aimbase, 운영 알림 서버를 가리키므로 로컬에서는 모두 맥 안으로 돌린다.
+# DB 와 Redis 는 도커로 띄운 로컬 전용 컨테이너, 알림 서버는 받은 요청을 파일에 적기만 하는 가짜 수신기다.
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:33132/bidding_agency?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useUnicode=true&useSSL=false&allowPublicKeyRetrieval=true}
+    username: ${DB_USERNAME:local}
+    password: ${DB_PASSWORD:local}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:13132}
+
+server:
+  port: ${SERVER_PORT:8183}
+
+app:
+  sam-gov:
+    scheduler:
+      enabled: false
+  aimbase:
+    base-url: ${AIMBASE_URL:http://localhost:18133}
+  self-base-url: ${SELF_BASE_URL:http://localhost:8183/api}
+  bp-notification:
+    base-url: ${BP_NOTIFICATION_URL:http://localhost:18132/api/v1}

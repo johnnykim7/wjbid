@@ -20,7 +20,10 @@ public enum NotificationType {
     // CR-018: 고객 대상 진행 알림 3종 (기존 bp-notification 템플릿 재사용 — 전용 템플릿은 후속 운영작업)
     PROPOSAL_READY_CUSTOMER("BID_DOC_GENERATED"),
     BID_SUBMITTED_CUSTOMER("BID_REQUEST_ADMIN"),
-    BID_AWARDED_CUSTOMER("BID_OPPORTUNITY_APPROVED");
+    BID_AWARDED_CUSTOMER("BID_OPPORTUNITY_APPROVED"),
+    // CR-132: 1:1 문의 접수 관리자 알림, 관리자 답변 고객 메일
+    INQUIRY_RECEIVED("BID_INQUIRY_ADMIN"),
+    INQUIRY_ANSWERED("BID_INQUIRY_ANSWER");
 
     private final String templateCode;
 

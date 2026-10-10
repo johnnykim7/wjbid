@@ -15,6 +15,8 @@ import NoticeAdminPage from './pages/NoticeAdminPage'
 import NoticeAdminDetailPage from './pages/NoticeAdminDetailPage'
 import RfpSamplePage from './pages/RfpSamplePage'
 import RfpSampleDetailPage from './pages/RfpSampleDetailPage'
+import InquiryAdminPage from './pages/InquiryAdminPage'
+import InquiryAdminDetailPage from './pages/InquiryAdminDetailPage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('adminToken')
@@ -48,6 +50,8 @@ export default function App() {
           <Route path="templates" element={<DocumentTemplatePage />} />
           <Route path="rfp-samples" element={<RfpSamplePage />} />
           <Route path="rfp-samples/:id" element={<RfpSampleDetailPage />} />
+          <Route path="inquiries" element={<InquiryAdminPage />} />
+          <Route path="inquiries/:id" element={<InquiryAdminDetailPage />} />
           <Route path="documents/:id/edit" element={<DocumentEditPage />} />
           <Route path="documents/:id/sections" element={<ProposalTreePage />} />
         </Route>

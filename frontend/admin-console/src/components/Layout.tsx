@@ -1,4 +1,7 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { getAdminInquiryCounts } from '../api/client'
+import { INQUIRY_COUNTS_CHANGED } from './inquiryCounts'
 
 const NAV = [
   { to: '/', icon: 'fa-solid fa-chart-line', label: '대시보드', exact: true },
@@ -9,10 +12,24 @@ const NAV = [
   { to: '/collection', icon: 'fa-solid fa-satellite-dish', label: 'SAM.gov 수집' },
   { to: '/templates', icon: 'fa-solid fa-file-lines', label: '문서 템플릿' },
   { to: '/rfp-samples', icon: 'fa-solid fa-trophy', label: '성공 제안서 패턴' },
+  { to: '/inquiries', icon: 'fa-solid fa-headset', label: '1:1 문의' },
 ]
 
 export default function Layout() {
   const navigate = useNavigate()
+  const location = useLocation()
+  // CR-132: 1:1 문의 미답변 건수. 읽지 못하면 숫자를 감춘다
+  const [unanswered, setUnanswered] = useState<number | null>(null)
+
+  useEffect(() => {
+    const refresh = () =>
+      getAdminInquiryCounts()
+        .then((res) => setUnanswered(res.data.received))
+        .catch(() => setUnanswered(null))
+    refresh()
+    window.addEventListener(INQUIRY_COUNTS_CHANGED, refresh)
+    return () => window.removeEventListener(INQUIRY_COUNTS_CHANGED, refresh)
+  }, [location.pathname])
 
   const handleLogout = () => {
     localStorage.removeItem('adminToken')
@@ -44,6 +61,11 @@ export default function Layout() {
             >
               <i className={`${icon} w-4 text-center`} />
               {label}
+              {to === '/inquiries' && !!unanswered && (
+                <span className="ml-auto bg-danger text-white text-[11px] font-bold rounded-full px-[7px] py-px">
+                  {unanswered}
+                </span>
+              )}
             </NavLink>
           ))}
         </nav>

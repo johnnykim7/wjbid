@@ -312,3 +312,60 @@ export const updatePatternGuide = (industryType: string, data: {
   guideJson?: Record<string, unknown>
   guideMarkdown?: string
 }) => api.put(`/admin/pattern-guides/${industryType}`, data)
+
+// 고객센터 1:1 문의 (CR-132)
+export type InquiryStatus = 'RECEIVED' | 'ANSWERED'
+
+export interface InquiryListItem {
+  id: string
+  createdAt: string
+  typeCode: string
+  typeLabel: string
+  title: string
+  name: string
+  email: string
+  member: boolean
+  status: InquiryStatus
+}
+
+export interface InquiryCounts {
+  all: number
+  received: number
+  answered: number
+}
+
+export interface InquiryDetail {
+  id: string
+  typeCode: string
+  typeLabel: string
+  title: string
+  content: string
+  name: string
+  email: string
+  memberId: string | null
+  memberCompanyName: string | null
+  status: InquiryStatus
+  createdAt: string
+  adminNotice: { total: number; success: number; lastSentAt: string | null }
+  answer: string | null
+  answeredAt: string | null
+  answeredByEmail: string | null
+}
+
+export const INQUIRY_ALREADY_ANSWERED = 'INQUIRY_ALREADY_ANSWERED'
+
+export const getInquiryTypes = () =>
+  api.get<{ code: string; label: string }[]>('/inquiries/types')
+
+export const getAdminInquiries = (params: { status?: InquiryStatus; typeCode?: string; page?: number; size?: number }) =>
+  api.get<{ content: InquiryListItem[]; totalElements: number; totalPages: number; number: number; size: number }>(
+    '/admin/inquiries', { params })
+
+export const getAdminInquiryCounts = () =>
+  api.get<InquiryCounts>('/admin/inquiries/counts')
+
+export const getAdminInquiry = (id: string) =>
+  api.get<InquiryDetail>(`/admin/inquiries/${id}`)
+
+export const answerAdminInquiry = (id: string, answer: string) =>
+  api.post<InquiryDetail>(`/admin/inquiries/${id}/answer`, { answer })

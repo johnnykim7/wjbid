@@ -112,6 +112,19 @@ export const getPricing = () =>
   api.get<PricingInfo>('/pricing')
 
 // Members (Profile)
+// 고객센터 1:1 문의 (CR-132). 비로그인도 쓸 수 있고, 토큰이 있으면 서버가 회원과 묶는다
+export interface InquiryTypeItem {
+  code: string
+  label: string
+}
+
+export const getInquiryTypes = () =>
+  api.get<InquiryTypeItem[]>('/inquiries/types')
+
+export const submitInquiry = (data: {
+  typeCode: string; title: string; content: string; name: string; email: string
+}) => api.post<{ id: string; status: string; createdAt: string }>('/inquiries', data)
+
 export const getMyProfile = () =>
   api.get('/members/me')
 

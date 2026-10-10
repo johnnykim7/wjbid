@@ -12,7 +12,7 @@ import java.util.UUID;
 
 public interface NotificationLogRepository extends JpaRepository<NotificationLog, UUID> {
 
-    boolean existsByIdempotencyKey(String idempotencyKey);
+    Optional<NotificationLog> findByIdempotencyKey(String idempotencyKey);
 
     List<NotificationLog> findByNotificationType(NotificationType type);
 

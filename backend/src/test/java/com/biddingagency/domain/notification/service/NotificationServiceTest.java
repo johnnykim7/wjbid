@@ -38,7 +38,7 @@ class NotificationServiceTest {
     void 신규알림_sendNotification_이메일발송_로그저장() {
         // given
         String idempotencyKey = "TEST_KEY_" + UUID.randomUUID();
-        given(notificationLogRepository.existsByIdempotencyKey(idempotencyKey)).willReturn(false);
+        given(notificationLogRepository.findByIdempotencyKey(idempotencyKey)).willReturn(java.util.Optional.empty());
         given(bpNotificationClient.sendEmail(any(), any(), any()))
                 .willReturn(new BpNotificationClient.SendResult(true, "req-1", null));
         given(notificationLogRepository.save(any(NotificationLog.class))).willAnswer(inv -> inv.getArgument(0));
@@ -66,7 +66,8 @@ class NotificationServiceTest {
     void 중복키_sendNotification_무시_BIZ012() {
         // given
         String idempotencyKey = "DUPLICATE_KEY";
-        given(notificationLogRepository.existsByIdempotencyKey(idempotencyKey)).willReturn(true);
+        given(notificationLogRepository.findByIdempotencyKey(idempotencyKey))
+                .willReturn(java.util.Optional.of(NotificationLog.builder().success(true).build()));
 
         // when
         notificationService.sendNotification(
@@ -86,7 +87,7 @@ class NotificationServiceTest {
     void 이메일실패_sendNotification_에러로그저장() {
         // given
         String idempotencyKey = "FAIL_KEY_" + UUID.randomUUID();
-        given(notificationLogRepository.existsByIdempotencyKey(idempotencyKey)).willReturn(false);
+        given(notificationLogRepository.findByIdempotencyKey(idempotencyKey)).willReturn(java.util.Optional.empty());
         given(bpNotificationClient.sendEmail(any(), any(), any()))
                 .willReturn(new BpNotificationClient.SendResult(false, null, "SMTP error"));
         given(notificationLogRepository.save(any(NotificationLog.class))).willAnswer(inv -> inv.getArgument(0));

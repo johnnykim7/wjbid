@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.18",
+    "@therecommerce-develop/ds-ui": "file:../../../../bp-platform/design-system/packages/ui",
     "@tiptap/extension-placeholder": "^3.20.4",
     "@tiptap/extension-table": "^3.24.0",
     "@tiptap/extension-table-cell": "^3.24.0",
@@ -23,6 +24,7 @@
     "@tiptap/starter-kit": "^3.20.4",
     "axios": "^1.13.5",
     "clsx": "^2.1.1",
+    "radix-ui": "^1.7.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^6.30.3",

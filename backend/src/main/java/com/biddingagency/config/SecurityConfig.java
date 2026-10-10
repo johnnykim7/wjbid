@@ -80,6 +80,10 @@ public class SecurityConfig {
                         // Public read endpoints (pricing)
                         .requestMatchers(HttpMethod.GET, "/pricing/**").permitAll()
 
+                        // CR-132: 1:1 문의는 비로그인도 접수한다. 토큰이 있으면 필터가 인증을 넣어 회원과 묶인다
+                        .requestMatchers(HttpMethod.GET, "/inquiries/types").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/inquiries").permitAll()
+
                         // Admin endpoints
                         .requestMatchers("/admin/**").hasRole("ADMIN")
 
