@@ -36,6 +36,9 @@ import { FAQS, HOME_FAQ_COUNT, NOTICES, NOTICE_TEXT } from '../data/supportConte
 const FAQ_TITLES = FAQS.slice(0, HOME_FAQ_COUNT).map((f) => f.q)
 const NOTICE_TITLES = NOTICES.map((n) => n.title)
 
+/** 첫 화면의 대표 문장. 큰 제목이 두 곳에 나뉘면 눈이 멈출 곳이 없어 한 번에 한 자리에만 둔다 (CR-134) */
+const HEADLINE = <>주한미군 공사·용역 입찰,<br />한글로 찾고 순서대로 준비하세요</>
+
 /*
  * 홈 (CR-127). 화면 정본 홈시안_파랑.html 의 #s0(공고 0건), #s1(공고 있음), #s2(회원)를 한 화면에서 상태로 가른다.
  * 클래스 이름은 정본과 같게 두어 wjbid-aida.css 규칙이 그대로 걸린다.
@@ -114,17 +117,27 @@ export default function HomePage() {
   const showEmpty = loaded && !failed && total === 0
   const countText = (n: number | null) => (n == null ? '-' : n)
 
+  const benefits = (
+    <ul>
+      {FREE_BENEFITS.map((t) => <li key={t}><Icon name="ok" />{t}</li>)}
+    </ul>
+  )
+  const start = (
+    <>
+      <Link className="bigb" to="/register">무료로 시작</Link>
+      <div className="lg">이미 회원이신가요?<Link to="/login">로그인</Link></div>
+    </>
+  )
+
   const left = showEmpty ? (
     <div className="st">
       <div className="ph">
         <h3>마감 전 공고</h3>
-        <span className="cnt">공개된 한글 공고문 <b>0건</b> · {todayMd()} 기준</span>
+        <span className="cnt">공개된 한글 공고문 0건 · 준비 중 · {todayMd()} 기준</span>
       </div>
       <div className="empty">
         <div className="tx">
-          <span className="tag">준비 중</span>
-          <h3>마감 전 공고를<br />한글 공고문으로 정리하고 있습니다</h3>
-          <p>올라오는 대로 이 자리에 마감순으로 보입니다.</p>
+          <h3>{HEADLINE}</h3>
           <Link className="smp" to={comingSoonHref('notice-sample')}>
             <small>{SAMPLE_NOTICE.caption}</small>
             <b>{SAMPLE_NOTICE.title}</b>
@@ -135,10 +148,6 @@ export default function HomePage() {
               ))}
             </dl>
           </Link>
-          <div className="lk">
-            <Link to={isAuthenticated ? '/notifications' : '/register'}>새 공고 알림 받기<Icon name="cr" /></Link>
-            <Link to={comingSoonHref('notice-sample')}>공고문 예시 전체 보기<Icon name="cr" /></Link>
-          </div>
         </div>
         <img src={IMAGES.empty} alt="" />
       </div>
@@ -198,24 +207,31 @@ export default function HomePage() {
         <Link to={comingSoonHref('recompete-calendar')}><span className="fi"><Icon name="cal" /></span>재발주 달력</Link>
       </div>
     </div>
+  ) : showEmpty ? (
+    // 공고 0건이면 대표 문장은 왼쪽이 가져가고, 여기는 왼쪽과 같은 머리 아래 사진과 가입·로그인만 남긴다.
+    // 사진이 남는 높이를 채워 글을 늘리지 않고도 상자가 비어 보이지 않게 한다 (CR-134)
+    <div className="st">
+      <div className="ph"><h3>무료 회원</h3></div>
+      <div className="intro join">
+        <div className="im"><img src={IMAGES.intro} alt="" /><span className="tag">USFK 입찰 첫걸음</span></div>
+        <div className="bx">
+          <div className="fr">{benefits}</div>
+          {start}
+        </div>
+      </div>
+    </div>
   ) : (
     <div className="st side">
       <div className="intro">
         <div className="im"><img src={IMAGES.intro} alt="" /><span className="tag">USFK 입찰 첫걸음</span></div>
         <div className="bx">
-          <h3>주한미군 공사·용역 입찰,<br />한글로 찾고 순서대로 준비하세요</h3>
-          <div className="fr">
-            <b>무료 회원</b>
-            <ul>
-              {FREE_BENEFITS.map((t) => <li key={t}><Icon name="ok" />{t}</li>)}
-            </ul>
-          </div>
+          <h3>{HEADLINE}</h3>
+          <div className="fr"><b>무료 회원</b>{benefits}</div>
           <div className="up">
             <span>상세 번역·적격성 판정은 <b>회원</b></span>
             <Link to="/pricing">{monthly}<Icon name="cr" /></Link>
           </div>
-          <Link className="bigb" to="/register">무료로 시작</Link>
-          <div className="lg">이미 회원이신가요?<Link to="/login">로그인</Link></div>
+          {start}
           <div className="sam">
             <Icon name="check" />
             <span>제출 때 SAM 등록이 필요할 수 있습니다</span>
@@ -229,16 +245,6 @@ export default function HomePage() {
   return (
     <div className="wj home">
       <div className="wrap">
-        <div className="float">
-          <div className="box">
-            <Link to="/bookmarks"><Icon name="star" />관심 공고</Link>
-            <Link to="/pricing"><Icon name="file" />요금 안내</Link>
-            <Link to="/support"><Icon name="headset" />1:1 문의</Link>
-          </div>
-          <Button className="wj-reset tp" aria-label="맨 위로" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-            <Icon name="cu" />
-          </Button>
-        </div>
         <div className="fs">
           <div>{left}</div>
           <div>{right}</div>

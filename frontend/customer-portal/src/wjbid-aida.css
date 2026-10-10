@@ -102,12 +102,6 @@
 .wj .rel h4 { margin: 0px 22px 0px 0px; font-size: 14.5px; font-weight: 800; white-space: nowrap; }
 .wj .rel a { display: flex; align-items: center; gap: 6px; height: 34px; padding: 0px 14px; border: 1px solid var(--color-line); border-radius: 999px; font-size: 13.5px; font-weight: 600; color: var(--color-ink-sub); }
 .wj .rel a svg { width: 14px; height: 14px; color: var(--color-ink-mute); }
-.wj .float { position: absolute; right: -104px; top: 24px; width: 82px; display: flex; flex-direction: column; gap: 8px; }
-.wj .float .box { border: 1px solid var(--color-line); border-radius: 10px; background: white; overflow: hidden; position: relative; }
-.wj .float .box > a { display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 12px 4px; font-size: 12px; font-weight: 600; text-align: center; line-height: 1.3; }
-.wj .float .box > a + a { border-top: 1px solid var(--color-line-soft); }
-.wj .float .box svg { width: 22px; height: 22px; color: var(--color-brand-deep); }
-.wj .float .tp { height: 38px; border: 1px solid var(--color-line); border-radius: 10px; background: white; display: grid; place-items: center; color: var(--color-ink-sub); }
 footer.wj { margin-top: 48px; background: var(--color-dark); color: var(--color-dark-text); padding: 28px 0px 40px; font-size: 13.5px; }
 footer.wj .lk { display: flex; gap: 22px; color: white; font-weight: 600; padding-bottom: 16px; border-bottom: 1px solid var(--color-dark-line); }
 footer.wj .lk a:nth-child(2) { color: var(--color-brand-on-dark); }
@@ -200,7 +194,6 @@ footer.wj .info span + span::before { content: ""; display: inline-block; width:
 .wj .tt > * { font-size: 18px; }
 .wj .tbox .lst li { height: 50px; font-size: 16px; }
 .wj .q { flex: 0 0 auto; width: 24px; height: 24px; border-radius: 6px; background: var(--color-brand-soft); color: var(--color-brand); font-size: 13px; font-weight: 800; display: grid; place-items: center; }
-.wj .float .box > a { font-size: 12.5px; }
 footer.wj { font-size: 14px; }
 .wj .fs { align-items: stretch; margin-top: 20px; }
 .wj .fs > div { display: flex; flex-direction: column; min-width: 0px; }
@@ -218,10 +211,6 @@ footer.wj { font-size: 14px; }
 .wj .empty { flex: 1 1 0%; display: grid; grid-template-columns: minmax(0px, 1fr) 300px; margin-top: 16px; border: 1px solid var(--color-line); border-radius: 14px; overflow: hidden; background: var(--color-brand-softer); }
 .wj .empty .tx { padding: 34px 36px; display: flex; flex-direction: column; }
 .wj .empty h3 { margin: 12px 0px 10px; font-size: 27px; line-height: 1.35; font-weight: 800; letter-spacing: -0.035em; color: var(--color-brand-deep); }
-.wj .empty p { margin: 0px; font-size: 16.5px; line-height: 1.65; color: color-mix(in srgb, var(--color-ink) 40%, var(--color-ink-sub)); }
-.wj .empty .lk { margin-top: auto; display: flex; gap: 10px; }
-.wj .empty .lk a { height: 48px; padding: 0px 18px; border-radius: 10px; border: 1.5px solid var(--color-line); background: white; display: inline-flex; align-items: center; gap: 6px; font-size: 16px; font-weight: 700; }
-.wj .empty .lk a svg { width: 16px; height: 16px; stroke-width: 2.4; }
 .wj .empty img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .wj .smp { display: block; margin: 18px 0px; padding: 16px 18px; border: 1px solid var(--color-line); border-radius: 10px; background: white; }
 .wj .smp small { display: block; font-size: 13.5px; font-weight: 700; color: var(--color-brand); }
@@ -232,8 +221,8 @@ footer.wj { font-size: 14px; }
 .wj .smp dt { font-size: 12.5px; color: var(--color-ink-mute); }
 .wj .smp dd { margin: 1px 0px 0px; font-size: 15px; font-weight: 700; color: var(--color-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .wj .empty { margin-top: 12px; }
-.wj .empty .tx { padding: 24px 32px; }
-.wj .empty h3 { margin: 10px 0px 6px; font-size: 25px; }
+.wj .empty .tx { padding: 28px 32px; justify-content: center; }
+.wj .empty h3 { margin: 0px; font-size: 28px; }
 .wj .smp { margin: 12px 0px 14px; padding: 13px 16px; }
 .wj .smp dl { margin-top: 9px; padding-top: 9px; gap: 5px 16px; }
 .wj .side { flex: 1 1 0%; }
@@ -253,6 +242,12 @@ footer.wj { font-size: 14px; }
 .wj .intro .sam span { flex: 1 1 0%; }
 .wj .intro .sam a { display: inline-flex; align-items: center; font-weight: 700; color: var(--color-brand); white-space: nowrap; }
 .wj .intro .sam a svg { width: 14px; height: 14px; stroke-width: 2.4; }
+.wj .intro.join { margin-top: 12px; }
+.wj .intro.join .im { flex: 1 1 0%; height: auto; min-height: 120px; }
+.wj .intro.join .im img { position: absolute; inset: 0px; }
+.wj .intro.join .bx { flex: 0 0 auto; padding: 20px 22px; }
+.wj .intro.join .fr { margin-top: 0px; }
+.wj .intro.join .bigb { margin-top: 18px; }
 .wj .mine h6 { margin: 10px 0px 0px; font-size: 14.5px; font-weight: 800; color: var(--color-ink-sub); }
 .wj .mine { flex: 1 1 0%; }
 .wj .fitsum { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 6px 0px 4px; }
@@ -385,15 +380,13 @@ footer.wj { font-size: 14px; }
 .wj .fc > p { order: -1; margin: 0px 0px 6px; font-size: 15.5px; }
 .wj .fc h3 { margin: 0px 0px 16px; font-size: 22px; }
 .wj .pc .rec { border-radius: 4px; }
-.wj .float .box { border-radius: 8px; }
 .wj.menu-open .mega { display: block; }
 
-/* 정본에만 있는 중간 색 셋(꼬리말 구분선, 전체메뉴 항목, 공고 0건 안내 글)은 이름표 두 개를 섞어 같은 색을 낸다. */
+/* 정본에만 있는 중간 색 셋(꼬리말 구분선, 전체메뉴 항목)은 이름표 두 개를 섞어 같은 색을 낸다. */
 
 /* 정본에서 인라인 스타일이던 것과, 정본에 없는 상태(마감 여유, 빈 목록, 판정 준비 중) */
 .wj.top { position: relative; z-index: 10; }
 .wj .logo .sq { color: white; }
-.wj .empty .tx .tag { align-self: flex-start; }
 .wj .pv .cmp ul { list-style: disc; }
 .wj .pv .cmp .sub { margin-top: 4px; color: var(--color-ink-mute); }
 .wj .band.last { padding-bottom: 20px; }
