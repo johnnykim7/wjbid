@@ -18,7 +18,9 @@ api.interceptors.response.use(
   async (err) => {
     // 갱신 후 다시 보낸 요청이 또 401 이면 토큰 문제가 아니므로 더 갱신하지 않는다.
     // 횟수 제한이 없으면 갱신과 재요청이 끝없이 돈다(CR-130).
-    if (err.response?.status === 401 && err.config && !err.config._retried) {
+    // 로그인·가입 요청의 401 은 잘못 넣은 비밀번호라서 토큰을 갱신할 일이 아니다.
+    // 갱신하러 가면 남은 옛 토큰 때문에 화면이 새로 열려 실패 안내가 사라진다(CR-131).
+    if (err.response?.status === 401 && err.config && !err.config._retried && !err.config.url?.startsWith('/auth/')) {
       const refreshToken = localStorage.getItem('refreshToken')
       if (refreshToken) {
         try {
@@ -40,6 +42,9 @@ api.interceptors.response.use(
 // Auth
 export const login = (email: string, password: string) =>
   api.post('/auth/login', { email, password })
+
+/** 이미 가입된 이메일로 가입하면 서버가 409 와 함께 주는 오류 코드 (CR-131) */
+export const EMAIL_ALREADY_EXISTS = 'EMAIL_ALREADY_EXISTS'
 
 export const register = (data: {
   email: string; password: string; companyName: string

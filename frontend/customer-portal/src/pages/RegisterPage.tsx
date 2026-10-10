@@ -1,11 +1,48 @@
-import { useState } from 'react'
+import { useRef, useState, type ComponentProps, type ReactNode } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { Input, Label, Button, Checkbox } from '@therecommerce-develop/ds-ui'
-import { register } from '../api/client'
+import { register, EMAIL_ALREADY_EXISTS } from '../api/client'
+import { Icon } from '../components/layout/Icon'
+import { JoinIntro } from '../components/auth/JoinIntro'
+import { IMAGES } from '../data/homeContent'
+import '../wjbid-auth.css'
 
+type FieldKey = 'email' | 'password' | 'passwordConfirm' | 'companyName' | 'businessRegistrationNumber' | 'contactPerson' | 'phone'
+type ErrorKey = FieldKey | 'agree'
+
+// 서버 가입 검증(RegisterRequest)과 같은 값이다
+const PASSWORD_MIN = 8
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const REQUIRED = '꼭 넣어 주세요'
+// 화면에서 위에서 아래로 놓인 순서. 첫 오류 칸으로 옮길 때 쓴다
+const ERROR_ORDER: ErrorKey[] = ['email', 'password', 'passwordConfirm', 'companyName', 'businessRegistrationNumber', 'contactPerson', 'phone', 'agree']
+const COUNT_WORD = ['', '한', '두', '세', '네', '다섯', '여섯', '일곱', '여덟']
+
+function Fld({ id, label, error, hint, ...input }: ComponentProps<typeof Input> & { id: string; label: string; error?: ReactNode; hint?: string }) {
+  const hintId = `${id}-hint`
+  return (
+    <div className="fld">
+      <Label htmlFor={id} className="wj-reset fl">{label} <span className="rq">*</span></Label>
+      <Input
+        id={id}
+        className="wj-reset in"
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error || hint ? hintId : undefined}
+        {...input}
+      />
+      {error ? (
+        <div id={hintId} className="hint bad"><Icon name="alert" />{error}</div>
+      ) : hint ? (
+        <div id={hintId} className="hint">{hint}</div>
+      ) : null}
+    </div>
+  )
+}
+
+/** 회원가입 (CR-131). 화면 정본은 docs/기록/토론_WJbid홈페이지방향/자료/시안/AIDA_색상/로그인_회원가입_시안.html #reg */
 export default function RegisterPage() {
   const navigate = useNavigate()
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<Record<FieldKey, string>>({
     email: '',
     password: '',
     passwordConfirm: '',
@@ -13,261 +50,200 @@ export default function RegisterPage() {
     businessRegistrationNumber: '',
     contactPerson: '',
     phone: '',
-    address: '',
   })
-  // 가입 동의 (CR-124) — 약관·개인정보 필수, 마케팅 선택
+  // 가입 동의 (CR-124). 약관·개인정보 필수, 소식 받기 선택
   const [agree, setAgree] = useState({ terms: false, privacy: false, marketing: false })
-  const [error, setError] = useState('')
+  const [errors, setErrors] = useState<Partial<Record<ErrorKey, string>>>({})
+  const [emailTaken, setEmailTaken] = useState(false)
+  const [serverFailed, setServerFailed] = useState(false)
   const [loading, setLoading] = useState(false)
+  const refs = useRef<Partial<Record<ErrorKey, HTMLElement | null>>>({})
 
-  const update = (field: string, value: string) =>
-    setForm((f) => ({ ...f, [field]: value }))
-  const toggleAgree = (field: 'terms' | 'privacy' | 'marketing') =>
-    setAgree((a) => ({ ...a, [field]: !a[field] }))
-  const toggleAll = () => {
-    const all = agree.terms && agree.privacy && agree.marketing
-    setAgree({ terms: !all, privacy: !all, marketing: !all })
+  const moveTo = (key: ErrorKey) => {
+    const el = refs.current[key]
+    if (!el) return
+    el.focus({ preventScroll: true })
+    el.scrollIntoView({ block: 'center' })
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
+  const update = (key: FieldKey, value: string) => {
+    setForm((f) => ({ ...f, [key]: value }))
+    setErrors((e) => ({ ...e, [key]: undefined }))
+    if (key === 'email') setEmailTaken(false)
+  }
 
-    if (form.password !== form.passwordConfirm) {
-      setError('비밀번호가 일치하지 않습니다.')
-      return
-    }
-    if (form.password.length < 8) {
-      setError('비밀번호는 8자 이상이어야 합니다.')
-      return
-    }
-    if (!agree.terms || !agree.privacy) {
-      setError('이용약관 및 개인정보처리방침에 동의해 주세요.')
+  const setAgreeAll = (next: typeof agree) => {
+    setAgree(next)
+    if (next.terms && next.privacy) setErrors((e) => ({ ...e, agree: undefined }))
+  }
+  const allAgreed = agree.terms && agree.privacy && agree.marketing
+  const toggleAll = () => setAgreeAll({ terms: !allAgreed, privacy: !allAgreed, marketing: !allAgreed })
+
+  const validate = () => {
+    const e: Partial<Record<ErrorKey, string>> = {}
+    const email = form.email.trim()
+    if (!email) e.email = REQUIRED
+    else if (!EMAIL_PATTERN.test(email)) e.email = '이메일 형식이 맞지 않습니다'
+    if (form.password.length < PASSWORD_MIN) e.password = `${PASSWORD_MIN}자 이상 넣어 주세요`
+    if (!form.passwordConfirm) e.passwordConfirm = REQUIRED
+    else if (form.passwordConfirm !== form.password) e.passwordConfirm = '비밀번호가 같지 않습니다'
+    const company: FieldKey[] = ['companyName', 'businessRegistrationNumber', 'contactPerson', 'phone']
+    company.forEach((k) => {
+      if (!form[k].trim()) e[k] = REQUIRED
+    })
+    if (!agree.terms || !agree.privacy) e.agree = '필수 약관 두 가지에 동의해 주세요'
+    return e
+  }
+
+  const handleSubmit = async (ev: React.FormEvent) => {
+    ev.preventDefault()
+    setServerFailed(false)
+    const found = validate()
+    setErrors(found)
+    const first = ERROR_ORDER.find((k) => found[k])
+    if (first) {
+      moveTo(first)
       return
     }
 
     setLoading(true)
     try {
       await register({
-        email: form.email,
+        email: form.email.trim(),
         password: form.password,
-        companyName: form.companyName,
-        businessRegistrationNumber: form.businessRegistrationNumber,
-        contactPerson: form.contactPerson,
-        phone: form.phone,
-        address: form.address,
+        companyName: form.companyName.trim(),
+        businessRegistrationNumber: form.businessRegistrationNumber.trim(),
+        contactPerson: form.contactPerson.trim(),
+        phone: form.phone.trim(),
         agreeTerms: agree.terms,
         agreePrivacy: agree.privacy,
         agreeMarketing: agree.marketing,
       })
       navigate('/login', { state: { registered: true } })
     } catch (err: unknown) {
-      const axiosErr = err as { response?: { data?: { message?: string } } }
-      setError(axiosErr.response?.data?.message ?? '회원가입에 실패했습니다. 다시 시도해 주세요.')
+      // 서버 문장을 그대로 보이지 않고 오류 코드만 보고 안내를 고른다
+      const res = (err as { response?: { status?: number; data?: { error?: string } } }).response
+      if (res?.status === 409 && res.data?.error === EMAIL_ALREADY_EXISTS) {
+        setEmailTaken(true)
+        moveTo('email')
+      } else {
+        setServerFailed(true)
+      }
     } finally {
       setLoading(false)
     }
   }
 
+  const errorCount = ERROR_ORDER.filter((k) => errors[k]).length
+  const emailError = emailTaken ? <>이미 가입된 이메일입니다.<Link to="/login">로그인하기</Link></> : errors.email
+
   return (
-    <div className="min-h-screen flex bg-surface">
-      {/* 좌측 브랜드 패널 */}
-      <div
-        className="hidden lg:flex flex-col justify-between w-[460px] flex-shrink-0 p-12 text-white bg-brand-deep"
-      >
-        <div className="flex items-center gap-2.5">
-          <div
-            className="w-8 h-8 rounded-md flex items-center justify-center bg-white/12"
-          >
-            <i className="fa-solid fa-file-signature text-white text-sm" />
-          </div>
-          <span className="font-bold text-lg text-white">WJbid.com</span>
-        </div>
+    <div className="wj au-pg">
+      <div className="au r">
+        <form className="card reg" onSubmit={handleSubmit} noValidate>
+          <h1>회원가입</h1>
+          <p className="lead">무료 회원으로 가입하면 마감 전 공고를 한글로 보고 관심 공고를 저장할 수 있습니다</p>
 
-        <div>
-          <h2 className="text-3xl font-bold leading-snug mb-4">
-            지금 가입하고<br />입찰을 시작하세요
-          </h2>
-          <p className="text-sm leading-relaxed mb-10 text-white/60">
-            회원가입 후 바로 SAM.gov 공고를 검색하고<br />
-            전문가 제안서 작성 서비스를 이용할 수 있습니다.
-          </p>
-          <div className="space-y-3">
-            {[
-              { icon: 'fa-solid fa-user-plus', text: '간편한 회원가입' },
-              { icon: 'fa-solid fa-bolt', text: '즉시 공고 검색 시작' },
-              { icon: 'fa-solid fa-brain', text: '전문가 제안서 작성' },
-            ].map((f) => (
-              <div key={f.text} className="flex items-center gap-3">
-                <div
-                  className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-white/10"
-                >
-                  <i className={`${f.icon} text-xs text-white/75`} />
-                </div>
-                <span className="text-sm text-white/65">{f.text}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <p className="text-xs text-white/30">© 2025 WJbid.com</p>
-      </div>
-
-      {/* 우측 가입 폼 */}
-      <div className="flex-1 flex items-center justify-center px-6 py-12">
-        <div className="w-full max-w-[440px]">
-          {/* 모바일 로고 */}
-          <div className="lg:hidden flex items-center gap-2.5 mb-8">
-            <div className="w-8 h-8 rounded-md flex items-center justify-center bg-brand-deep">
-              <i className="fa-solid fa-file-signature text-white text-sm" />
-            </div>
-            <span className="font-bold text-[17px] text-brand-deep">
-              WJbid<span className="font-normal text-sm text-brand">.com</span>
-            </span>
-          </div>
-
-          <div className="mb-8">
-            <h1 className="text-2xl font-bold text-ink mb-1">회원가입</h1>
-            <p className="text-sm text-ink-mute">기업 정보를 입력하여 서비스에 가입하세요</p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* 계정 정보 */}
-            <div className="space-y-1.5">
-              <Label>이메일 <span className="text-danger">*</span></Label>
-              <Input
-                type="email"
-                value={form.email}
-                onChange={(e) => update('email', e.target.value)}
-                required
-                placeholder="name@company.com"
+          <div className="part">
+            <h2><span className="no">1</span>계정</h2>
+            <Fld
+              ref={(el: HTMLInputElement | null) => { refs.current.email = el }}
+              id="reg-email" label="이메일" type="email" autoComplete="email" placeholder="name@company.com"
+              value={form.email} onChange={(e) => update('email', e.target.value)} error={emailError}
+            />
+            <div className="cols2">
+              <Fld
+                ref={(el: HTMLInputElement | null) => { refs.current.password = el }}
+                id="reg-password" label="비밀번호" type="password" autoComplete="new-password" placeholder={`${PASSWORD_MIN}자 이상`}
+                value={form.password} onChange={(e) => update('password', e.target.value)}
+                error={errors.password} hint={`${PASSWORD_MIN}자 이상`}
+              />
+              <Fld
+                ref={(el: HTMLInputElement | null) => { refs.current.passwordConfirm = el }}
+                id="reg-password-confirm" label="비밀번호 확인" type="password" autoComplete="new-password" placeholder="한 번 더 입력"
+                value={form.passwordConfirm} onChange={(e) => update('passwordConfirm', e.target.value)} error={errors.passwordConfirm}
               />
             </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>비밀번호 <span className="text-danger">*</span></Label>
-                <Input
-                  type="password"
-                  value={form.password}
-                  onChange={(e) => update('password', e.target.value)}
-                  required
-                  placeholder="8자 이상"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>비밀번호 확인 <span className="text-danger">*</span></Label>
-                <Input
-                  type="password"
-                  value={form.passwordConfirm}
-                  onChange={(e) => update('passwordConfirm', e.target.value)}
-                  required
-                  placeholder="비밀번호 재입력"
-                />
-              </div>
-            </div>
-
-            {/* 구분선 */}
-            <div className="border-t border-line pt-4">
-              <p className="text-xs font-semibold text-ink-mute uppercase tracking-wider mb-3">기업 정보</p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>회사명 <span className="text-danger">*</span></Label>
-                <Input type="text" value={form.companyName}
-                  onChange={(e) => update('companyName', e.target.value)} required
-                  placeholder="예: VOOMERANG Co., Ltd." />
-              </div>
-              <div className="space-y-1.5">
-                <Label>사업자등록번호 <span className="text-danger">*</span></Label>
-                <Input type="text" value={form.businessRegistrationNumber}
-                  onChange={(e) => update('businessRegistrationNumber', e.target.value)} required
-                  placeholder="123-45-67890" />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>담당자명 <span className="text-danger">*</span></Label>
-                <Input type="text" value={form.contactPerson}
-                  onChange={(e) => update('contactPerson', e.target.value)} required
-                  placeholder="예: 김철수" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>전화번호 <span className="text-danger">*</span></Label>
-                <Input type="tel" value={form.phone}
-                  onChange={(e) => update('phone', e.target.value)} required
-                  placeholder="010-1234-5678" />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>주소</Label>
-              <Input type="text" value={form.address}
-                onChange={(e) => update('address', e.target.value)}
-                placeholder="예: 서울특별시 강남구 ... (가입 후 프로필에서 입력 가능)" />
-            </div>
-
-            {/* 약관 동의 (CR-124) */}
-            <div className="border-t border-line pt-4 space-y-2.5">
-              <label className="flex items-center gap-2.5 cursor-pointer pb-1 mb-1 border-b border-line-soft">
-                <Checkbox checked={agree.terms && agree.privacy && agree.marketing} onCheckedChange={toggleAll} />
-                <span className="text-sm font-semibold text-ink">전체 동의</span>
-              </label>
-              <label className="flex items-center gap-2.5 cursor-pointer">
-                <Checkbox checked={agree.terms} onCheckedChange={() => toggleAgree('terms')} />
-                <span className="text-sm text-ink-sub">
-                  <span className="text-danger">[필수]</span>{' '}
-                  <Link to="/terms" target="_blank" className="text-brand hover:underline">이용약관</Link>에 동의합니다
-                </span>
-              </label>
-              <label className="flex items-center gap-2.5 cursor-pointer">
-                <Checkbox checked={agree.privacy} onCheckedChange={() => toggleAgree('privacy')} />
-                <span className="text-sm text-ink-sub">
-                  <span className="text-danger">[필수]</span>{' '}
-                  <Link to="/privacy" target="_blank" className="text-brand hover:underline">개인정보처리방침</Link>에 동의합니다
-                </span>
-              </label>
-              <label className="flex items-center gap-2.5 cursor-pointer">
-                <Checkbox checked={agree.marketing} onCheckedChange={() => toggleAgree('marketing')} />
-                <span className="text-sm text-ink-sub">
-                  <span className="text-ink-mute">[선택]</span> 마케팅 정보 수신에 동의합니다
-                </span>
-              </label>
-            </div>
-
-            {error && (
-              <div className="flex items-center gap-2 p-3 rounded-lg bg-danger-soft border border-danger/30">
-                <i className="fa-solid fa-circle-exclamation text-danger text-sm flex-shrink-0" />
-                <p className="text-sm text-danger">{error}</p>
-              </div>
-            )}
-
-            <Button type="submit" disabled={loading} className="w-full mt-2" size="lg">
-              {loading ? '가입 처리 중...' : '회원가입'}
-            </Button>
-          </form>
-
-          <div className="mt-6 text-center">
-            <p className="text-sm text-ink-mute">
-              이미 계정이 있으신가요?{' '}
-              <Link to="/login" className="text-brand font-medium hover:underline">
-                로그인
-              </Link>
-            </p>
           </div>
 
-          <div className="mt-4 pt-4 border-t border-line">
-            <Link
-              to="/"
-              className="flex items-center gap-1.5 text-xs text-ink-mute hover:text-ink-sub transition-colors"
-            >
-              <i className="fa-solid fa-arrow-left text-[10px]" />
-              홈으로 돌아가기
-            </Link>
+          <div className="part">
+            <h2><span className="no">2</span>회사 정보</h2>
+            <div className="cols2">
+              <Fld
+                ref={(el: HTMLInputElement | null) => { refs.current.companyName = el }}
+                id="reg-company" label="회사명" autoComplete="organization" placeholder="예: 한빛환경"
+                value={form.companyName} onChange={(e) => update('companyName', e.target.value)} error={errors.companyName}
+              />
+              <Fld
+                ref={(el: HTMLInputElement | null) => { refs.current.businessRegistrationNumber = el }}
+                id="reg-brn" label="사업자등록번호" inputMode="numeric" placeholder="123-45-67890"
+                value={form.businessRegistrationNumber} onChange={(e) => update('businessRegistrationNumber', e.target.value)}
+                error={errors.businessRegistrationNumber}
+              />
+            </div>
+            <div className="cols2">
+              <Fld
+                ref={(el: HTMLInputElement | null) => { refs.current.contactPerson = el }}
+                id="reg-contact" label="담당자명" autoComplete="name" placeholder="예: 김민수"
+                value={form.contactPerson} onChange={(e) => update('contactPerson', e.target.value)} error={errors.contactPerson}
+              />
+              <Fld
+                ref={(el: HTMLInputElement | null) => { refs.current.phone = el }}
+                id="reg-phone" label="전화번호" type="tel" autoComplete="tel" placeholder="010-1234-5678"
+                value={form.phone} onChange={(e) => update('phone', e.target.value)} error={errors.phone}
+              />
+            </div>
           </div>
-        </div>
+
+          <div className="part">
+            <h2><span className="no">3</span>약관 동의</h2>
+            <div className={`agr${errors.agree ? ' bad' : ''}`}>
+              <div className="arow aall">
+                <Checkbox id="agree-all" className="wj-reset ck" checked={allAgreed} onCheckedChange={toggleAll} />
+                <Label htmlFor="agree-all" className="wj-reset atx">전체 동의</Label>
+              </div>
+              <div className="arow">
+                <Checkbox
+                  ref={(el: HTMLButtonElement | null) => { refs.current.agree = el }}
+                  id="agree-terms" className="wj-reset ck" checked={agree.terms}
+                  onCheckedChange={(c) => setAgreeAll({ ...agree, terms: c === true })}
+                />
+                <Label htmlFor="agree-terms" className="wj-reset atx"><em className="req">[필수]</em>이용약관에 동의합니다</Label>
+                <Link to="/terms" target="_blank" rel="noopener">보기<Icon name="cr" /></Link>
+              </div>
+              <div className="arow">
+                <Checkbox
+                  id="agree-privacy" className="wj-reset ck" checked={agree.privacy}
+                  onCheckedChange={(c) => setAgreeAll({ ...agree, privacy: c === true })}
+                />
+                <Label htmlFor="agree-privacy" className="wj-reset atx"><em className="req">[필수]</em>개인정보처리방침에 동의합니다</Label>
+                <Link to="/privacy" target="_blank" rel="noopener">보기<Icon name="cr" /></Link>
+              </div>
+              <div className="arow">
+                <Checkbox
+                  id="agree-marketing" className="wj-reset ck" checked={agree.marketing}
+                  onCheckedChange={(c) => setAgreeAll({ ...agree, marketing: c === true })}
+                />
+                <Label htmlFor="agree-marketing" className="wj-reset atx"><em className="opt">[선택]</em>새 공고·서비스 소식 받기</Label>
+              </div>
+            </div>
+            {errors.agree && <div className="hint bad"><Icon name="alert" />{errors.agree}</div>}
+          </div>
+
+          {errorCount > 0 && (
+            <div className="msg err" role="alert"><Icon name="alert" /><span>빨간 칸 {COUNT_WORD[errorCount]} 곳을 고쳐 주세요.</span></div>
+          )}
+          {serverFailed && (
+            <div className="msg err" role="alert"><Icon name="alert" /><span>가입을 마치지 못했습니다. 잠시 뒤 다시 시도해 주세요.</span></div>
+          )}
+          <Button type="submit" className="wj-reset bigb w" disabled={loading}>
+            {loading ? '가입하는 중' : '무료로 가입하기'}
+          </Button>
+        </form>
+
+        <JoinIntro image={IMAGES.register} tag="가입하면 바로" title={<>가입하면 바로<br />이렇게 쓸 수 있습니다</>}>
+          <div className="lg">이미 회원이신가요?<Link to="/login">로그인</Link></div>
+        </JoinIntro>
       </div>
     </div>
   )

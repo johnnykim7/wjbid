@@ -12,6 +12,8 @@ export const SOON_DAYS = 7
 export const IMAGES = {
   empty: '/img/army_17a23e72.jpg',
   intro: '/img/army_5decc7b0.jpg',
+  login: '/img/army_71dae7c5.jpg',
+  register: '/img/army_17a23e72.jpg',
 }
 
 /** 공고 0건일 때 보여 주는 마감된 공고 예시 */

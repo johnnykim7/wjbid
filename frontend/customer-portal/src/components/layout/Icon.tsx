@@ -20,6 +20,8 @@ const PATHS: Record<string, ReactNode> = {
   pin: <><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" /></>,
   ok: <path d="M20 6 9 17l-5-5" />,
   eye: <><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" /></>,
+  alert: <><circle cx="12" cy="12" r="9" /><path d="M12 7.5v5.5M12 16.5v.01" /></>,
+  okc: <><circle cx="12" cy="12" r="9" /><path d="m8 12.5 3 3 5-6" /></>,
 }
 
 export type IconName = keyof typeof PATHS

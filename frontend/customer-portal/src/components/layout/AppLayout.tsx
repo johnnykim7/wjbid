@@ -6,7 +6,7 @@ import { useMemberSummary } from './useMemberSummary'
 import '../../wjbid-aida.css'
 
 /**
- * 공통 틀 (CR-127). 로그인·회원가입을 뺀 모든 고객 화면에 머리말과 꼬리말을 씌운다.
+ * 공통 틀 (CR-127). 모든 고객 화면에 머리말과 꼬리말을 씌운다(로그인·회원가입은 CR-131 부터).
  * 보통 화면은 1200px 가운데 정렬 상자 안에 그리고, 홈은 띠가 화면 끝까지 차야 해서 상자 없이(contained=false) 그린다.
  * 회원 숫자는 머리말과 홈이 같이 쓰므로 여기서 한 번 읽어 Outlet context 로 넘긴다.
  */

@@ -53,11 +53,10 @@ function AppRoutes() {
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/refund" element={<RefundPage />} />
         <Route path="/disclaimer" element={<DisclaimerPage />} />
+        {/* 로그인 / 회원가입도 공통 틀 안에 (CR-131) */}
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
       </Route>
-
-      {/* 로그인 / 회원가입 (GNB 없음) */}
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
 
       {/* 인증 필요 페이지 (GNB 포함) */}
       <Route element={<ProtectedRoute />}>

@@ -1,0 +1,73 @@
+/* 로그인·회원가입 (CR-131).
+   화면 정본(docs/기록/토론_WJbid홈페이지방향/자료/시안/AIDA_색상/로그인_회원가입_시안.html)의 규칙을 색만 이름표로 바꿔 옮겼다.
+   첫걸음 상자는 홈 규칙(wjbid-aida.css 의 .intro)을 그대로 받고 크기만 덮는다.
+   정본에만 있는 중간 색은 CR-127 처럼 이름표 두 개를 섞어 낸다. */
+
+/* 공통 틀 본문 상자가 위 28px 을 이미 주므로 정본 위 여백 32 에 모자란 4 만 더한다.
+   아래는 다른 화면과 같게 공통 틀 여백(본문 상자 28 + 꼬리말 위 48)을 그대로 둔다 */
+.wj.au-pg { background: transparent; padding-top: 4px; }
+
+.wj .au { display: grid; gap: 24px; align-items: start; }
+.wj .au.l { grid-template-columns: 1fr 1fr; align-items: stretch; }
+.wj .au.r { grid-template-columns: 1fr 400px; }
+.wj .au .card { background: white; border: 1px solid var(--color-line); border-radius: 14px; }
+.wj .au .card h1 { margin: 0px; font-size: 32px; font-weight: 800; letter-spacing: -0.04em; color: var(--color-ink); line-height: 1.2; }
+.wj .au .card .lead { margin: 10px 0px 0px; font-size: 17px; color: var(--color-ink-sub); line-height: 1.55; }
+.wj .au .lgn { padding: 44px 48px 40px; display: flex; flex-direction: column; }
+.wj .au .reg { padding: 44px 48px; }
+
+.wj .au .fld { display: block; margin-top: 22px; }
+.wj .au .fl { display: flex; align-items: center; gap: 4px; font-size: 16.5px; font-weight: 700; color: var(--color-ink); margin-bottom: 8px; line-height: 1.5; cursor: default; }
+.wj .au .fl .rq { color: var(--color-danger); }
+.wj .au .in { display: block; width: 100%; height: 56px; padding: 0px 18px; border: 1.5px solid color-mix(in srgb, var(--color-line-strong) 75%, var(--color-line)); border-radius: 8px; font-size: 17.5px; color: var(--color-ink); background: white; cursor: text; }
+.wj .au .in::placeholder { color: color-mix(in srgb, var(--color-ink-mute) 50%, var(--color-ink-faint)); opacity: 1; }
+.wj .au .in:focus-visible { outline: none; }
+.wj .au .in:focus { border-color: var(--color-brand); box-shadow: 0 0 0 3px var(--color-brand-soft); }
+.wj .au .in[aria-invalid="true"] { border-color: var(--color-danger); background: color-mix(in srgb, var(--color-danger-soft) 40%, white); }
+.wj .au .in[aria-invalid="true"]:focus { box-shadow: 0 0 0 3px var(--color-danger-soft); }
+.wj .au .hint { margin-top: 7px; font-size: 14.5px; color: var(--color-ink-sub); }
+.wj .au .hint.bad { color: var(--color-danger); font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.wj .au .hint.bad svg { width: 16px; height: 16px; stroke-width: 2.4; }
+.wj .au .hint a { color: var(--color-brand); font-weight: 700; margin-left: 6px; }
+.wj .au .cols2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0px 20px; }
+
+.wj .au .msg { display: flex; align-items: flex-start; gap: 10px; margin-top: 22px; padding: 14px 16px; border-radius: 8px; font-size: 16px; font-weight: 600; line-height: 1.5; }
+.wj .au .msg svg { width: 20px; height: 20px; stroke-width: 2.4; margin-top: 1px; }
+.wj .au .msg.err { background: var(--color-danger-soft); color: color-mix(in srgb, var(--color-danger) 82%, black); border: 1px solid color-mix(in srgb, var(--color-danger) 25%, var(--color-danger-soft)); }
+.wj .au .msg.good { background: var(--color-success-soft); color: var(--color-success); border: 1px solid color-mix(in srgb, var(--color-success) 20%, var(--color-success-soft)); }
+
+.wj .au .bigb.w { width: 100%; height: 60px; font-size: 19px; margin-top: 28px; border-radius: 8px; }
+.wj .au .bigb.w:disabled { opacity: 0.6; cursor: default; }
+.wj .au .forgot { margin-top: auto; padding-top: 26px; }
+.wj .au .forgot .bx2 { border-top: 1px solid var(--color-line-soft); padding-top: 20px; font-size: 15.5px; color: var(--color-ink-sub); line-height: 1.6; }
+.wj .au .forgot b { display: block; font-size: 16.5px; color: var(--color-ink); margin-bottom: 3px; }
+.wj .au .forgot a { color: var(--color-brand); font-weight: 700; }
+
+.wj .au.l .intro { display: flex; flex-direction: column; }
+.wj .au.l .intro .im { height: 210px; }
+.wj .au.l .intro .bx { flex: 1 1 0%; display: flex; flex-direction: column; padding: 26px 30px; }
+.wj .au.l .intro h3 { font-size: 24px; }
+.wj .au.l .intro .bigb { margin-top: auto; height: 58px; font-size: 18px; }
+.wj .au.l .intro .up { margin: 14px 0px 22px; }
+.wj .au.r .intro { position: sticky; top: 20px; }
+.wj .au.r .intro .im { height: 170px; }
+
+.wj .au .part { margin-top: 36px; padding-top: 30px; border-top: 1px solid var(--color-line-soft); }
+.wj .au .lead + .part { margin-top: 30px; }
+.wj .au .part h2 { margin: 0px; display: flex; align-items: center; gap: 10px; font-size: 21px; font-weight: 800; letter-spacing: -0.03em; }
+.wj .au .part h2 .no { width: 30px; height: 30px; border-radius: 50%; background: var(--color-brand); color: white; font-size: 16px; display: grid; place-items: center; }
+
+.wj .au .agr { margin-top: 18px; border: 1.5px solid color-mix(in srgb, var(--color-line-strong) 75%, var(--color-line)); border-radius: 10px; overflow: hidden; }
+.wj .au .agr.bad { border-color: var(--color-danger); }
+.wj .au .agr .arow { display: flex; align-items: center; gap: 12px; padding: 15px 18px; font-size: 16.5px; color: var(--color-ink); }
+.wj .au .agr .arow + .arow { border-top: 1px solid var(--color-line-soft); }
+.wj .au .agr .arow.aall { background: var(--color-surface); font-size: 17.5px; font-weight: 800; }
+.wj .au .agr .arow .atx { flex: 1 1 0%; cursor: pointer; }
+.wj .au .agr .arow .atx em { font-style: normal; font-weight: 700; margin-right: 6px; }
+.wj .au .agr .arow .atx em.req { color: var(--color-danger); }
+.wj .au .agr .arow .atx em.opt { color: var(--color-ink-mute); }
+.wj .au .agr .arow > a { font-size: 15px; font-weight: 700; color: var(--color-brand); display: inline-flex; align-items: center; }
+.wj .au .agr .arow > a svg { width: 15px; height: 15px; stroke-width: 2.4; }
+.wj .au .ck { width: 24px; height: 24px; border-radius: 6px; border: 1.8px solid color-mix(in srgb, var(--color-ink-faint) 90%, var(--color-ink-mute)); background: white; display: grid; place-items: center; flex: 0 0 auto; }
+.wj .au .ck[data-state="checked"] { background: var(--color-brand); border-color: var(--color-brand); }
+.wj .au .ck svg { width: 16px; height: 16px; color: white; stroke-width: 3; }
