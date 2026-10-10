@@ -75,19 +75,19 @@ export default function NoticesPage() {
     <div className="flex-1 overflow-y-auto">
       {/* 페이지 헤더 (제목 + 부제 — 전 페이지 통일) */}
       <div className="text-center mb-10 pt-2">
-        <h1 className="text-2xl font-bold text-[#0c1e3d]">공지사항</h1>
-        <p className="mt-2 text-slate-500">
+        <h1 className="text-2xl font-bold text-ink">공지사항</h1>
+        <p className="mt-2 text-ink-mute">
           WJbid 서비스 업데이트와 운영 소식을 안내해 드립니다.
         </p>
       </div>
 
       {/* 목록 */}
       <div className="max-w-3xl mx-auto px-6 py-12">
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="bg-white rounded-xl border border-line overflow-hidden">
           {NOTICES.map((notice) => {
             const open = openId === notice.id
             return (
-              <div key={notice.id} className="border-b border-gray-100 last:border-b-0">
+              <div key={notice.id} className="border-b border-line-soft last:border-b-0">
                 <Button
                   type="button"
                   variant="ghost"
@@ -96,24 +96,24 @@ export default function NoticesPage() {
                 >
                   <div className="flex gap-1.5 shrink-0">
                     {notice.important && (
-                      <Badge className="bg-[#1a56db] text-white text-[11px]">중요</Badge>
+                      <Badge className="bg-brand text-white text-[11px]">중요</Badge>
                     )}
                     {notice.isNew && (
-                      <Badge className="bg-emerald-100 text-emerald-700 text-[11px]">NEW</Badge>
+                      <Badge className="bg-new text-white text-[11px]">NEW</Badge>
                     )}
                   </div>
-                  <span className="flex-1 text-sm font-semibold text-gray-900 truncate">
+                  <span className="flex-1 text-sm font-semibold text-ink truncate">
                     {notice.title}
                   </span>
-                  <span className="text-xs text-gray-400 shrink-0">{notice.date}</span>
+                  <span className="text-xs text-ink-mute shrink-0">{notice.date}</span>
                   <i
-                    className={`fa-solid fa-chevron-down text-gray-300 text-xs transition-transform ${
+                    className={`fa-solid fa-chevron-down text-ink-faint text-xs transition-transform ${
                       open ? 'rotate-180' : ''
                     }`}
                   />
                 </Button>
                 {open && (
-                  <div className="px-5 pb-5 pt-1 text-sm text-gray-600 leading-relaxed bg-gray-50">
+                  <div className="px-5 pb-5 pt-1 text-sm text-ink-sub leading-relaxed bg-surface">
                     {notice.body}
                   </div>
                 )}
@@ -122,9 +122,9 @@ export default function NoticesPage() {
           })}
         </div>
 
-        <p className="text-center text-xs text-gray-400 mt-6">
+        <p className="text-center text-xs text-ink-mute mt-6">
           문의 사항은{' '}
-          <Link to="/support" className="text-[#1a56db] font-medium hover:underline">
+          <Link to="/support" className="text-brand font-medium hover:underline">
             고객센터
           </Link>
           를 이용해 주세요.

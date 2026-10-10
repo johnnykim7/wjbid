@@ -77,8 +77,8 @@ export default function ProfilePage() {
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h2 className="text-xl font-bold text-gray-800">기업 프로필 설정</h2>
-            <p className="text-sm text-gray-500 mt-1">
+            <h2 className="text-xl font-bold text-ink">기업 프로필 설정</h2>
+            <p className="text-sm text-ink-mute mt-1">
               이 정보를 바탕으로 귀사에 최적화된 제안서를 작성합니다.
             </p>
           </div>
@@ -94,20 +94,20 @@ export default function ProfilePage() {
         </div>
 
         {error && (
-          <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+          <div className="mb-4 px-4 py-3 bg-danger-soft border border-danger/30 rounded-lg text-sm text-danger">
             {error}
           </div>
         )}
 
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-8 space-y-8">
+        <div className="bg-white border border-line rounded-xl shadow-sm p-8 space-y-8">
           {/* 계정 정보 (읽기 전용) */}
           <section>
-            <h3 className="text-lg font-bold text-gray-800 border-b border-gray-200 pb-2 mb-4">
+            <h3 className="text-lg font-bold text-ink border-b border-line pb-2 mb-4">
               계정 정보
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <Label className="block text-sm font-medium text-gray-700 mb-1">이메일</Label>
+                <Label className="block text-sm font-medium text-ink-sub mb-1">이메일</Label>
                 <Input
                   type="email"
                   value={profile?.email ?? ''}
@@ -115,7 +115,7 @@ export default function ProfilePage() {
                 />
               </div>
               <div>
-                <Label className="block text-sm font-medium text-gray-700 mb-1">역할</Label>
+                <Label className="block text-sm font-medium text-ink-sub mb-1">역할</Label>
                 <Input
                   type="text"
                   value={profile?.role ?? ''}
@@ -127,13 +127,13 @@ export default function ProfilePage() {
 
           {/* 기업 정보 */}
           <section>
-            <h3 className="text-lg font-bold text-gray-800 border-b border-gray-200 pb-2 mb-4">
+            <h3 className="text-lg font-bold text-ink border-b border-line pb-2 mb-4">
               기업 정보
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <Label className="block text-sm font-medium text-gray-700 mb-1">
-                  회사명 <span className="text-red-500">*</span>
+                <Label className="block text-sm font-medium text-ink-sub mb-1">
+                  회사명 <span className="text-danger">*</span>
                 </Label>
                 <Input
                   type="text"
@@ -143,7 +143,7 @@ export default function ProfilePage() {
                 />
               </div>
               <div>
-                <Label className="block text-sm font-medium text-gray-700 mb-1">
+                <Label className="block text-sm font-medium text-ink-sub mb-1">
                   사업자 등록번호
                 </Label>
                 <Input
@@ -155,7 +155,7 @@ export default function ProfilePage() {
                 />
               </div>
               <div className="md:col-span-2">
-                <Label className="block text-sm font-medium text-gray-700 mb-1">주소</Label>
+                <Label className="block text-sm font-medium text-ink-sub mb-1">주소</Label>
                 <Input
                   type="text"
                   value={form.address}
@@ -168,12 +168,12 @@ export default function ProfilePage() {
 
           {/* 담당자 정보 */}
           <section>
-            <h3 className="text-lg font-bold text-gray-800 border-b border-gray-200 pb-2 mb-4">
+            <h3 className="text-lg font-bold text-ink border-b border-line pb-2 mb-4">
               담당자 정보
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <Label className="block text-sm font-medium text-gray-700 mb-1">담당자명</Label>
+                <Label className="block text-sm font-medium text-ink-sub mb-1">담당자명</Label>
                 <Input
                   type="text"
                   value={form.contactPerson}
@@ -182,7 +182,7 @@ export default function ProfilePage() {
                 />
               </div>
               <div>
-                <Label className="block text-sm font-medium text-gray-700 mb-1">전화번호</Label>
+                <Label className="block text-sm font-medium text-ink-sub mb-1">전화번호</Label>
                 <Input
                   type="tel"
                   value={form.phone}

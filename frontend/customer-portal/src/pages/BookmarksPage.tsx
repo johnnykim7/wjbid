@@ -56,15 +56,15 @@ export default function BookmarksPage() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-bold text-gray-800 mb-6">
+      <h2 className="text-xl font-bold text-ink mb-6">
         관심 공고 (북마크)
         {bookmarks.length > 0 && (
-          <span className="ml-2 text-sm font-normal text-gray-500">{bookmarks.length}건</span>
+          <span className="ml-2 text-sm font-normal text-ink-mute">{bookmarks.length}건</span>
         )}
       </h2>
 
       {bookmarks.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 p-16 text-center text-gray-400 shadow-sm">
+        <div className="bg-white rounded-xl border border-line p-16 text-center text-ink-mute shadow-sm">
           <i className="fa-regular fa-bookmark text-4xl mb-3 block" />
           <p className="font-medium">저장된 관심 공고가 없습니다.</p>
           <p className="text-sm mt-1">입찰 검색에서 관심 공고를 저장해보세요.</p>
@@ -78,7 +78,7 @@ export default function BookmarksPage() {
           </Button>
         </div>
       ) : (
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+        <div className="bg-white border border-line rounded-xl shadow-sm overflow-hidden">
           <Table>
             <TableHeader>
               <tr>
@@ -96,15 +96,15 @@ export default function BookmarksPage() {
                   onClick={() => navigate(`/search/${bid.id}`)}
                 >
                   <TableCell className="whitespace-nowrap align-top">
-                    <div className="font-bold text-primary text-xs">{bid.solicitationNumber}</div>
+                    <div className="font-bold text-ink text-xs">{bid.solicitationNumber}</div>
                     <div className="mt-2">
                       <Badge variant="active" size="sm">Active</Badge>
                     </div>
                   </TableCell>
                   <TableCell className="align-top">
-                    <div className="font-semibold text-gray-900 text-sm mb-1 line-clamp-2">{bid.title}</div>
-                    <div className="text-xs text-gray-500 flex items-center gap-1">
-                      <i className="fa-solid fa-building-columns text-gray-400" />
+                    <div className="font-semibold text-ink text-sm mb-1 line-clamp-2">{bid.title}</div>
+                    <div className="text-xs text-ink-mute flex items-center gap-1">
+                      <i className="fa-solid fa-building-columns text-ink-mute" />
                       {bid.agencyName}
                     </div>
                   </TableCell>
@@ -118,7 +118,7 @@ export default function BookmarksPage() {
                       variant="ghost"
                       size="icon"
                       title="북마크 제거"
-                      className="text-secondary hover:text-red-500 mr-3"
+                      className="text-brand hover:text-danger mr-3"
                       disabled={removingId === bid.id}
                       onClick={(e) => handleRemove(bid, e)}
                     >
@@ -130,7 +130,7 @@ export default function BookmarksPage() {
                       variant="ghost"
                       size="icon"
                       title="제안서 작성"
-                      className="text-secondary hover:text-blue-700"
+                      className="text-brand hover:text-brand-strong"
                       onClick={(e) => openAiModal(bid, e)}
                     >
                       <i className="fa-solid fa-wand-magic-sparkles text-lg" />

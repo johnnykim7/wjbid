@@ -31,10 +31,10 @@ export function DdayBadge({ deadline }: { deadline?: string | null }) {
   // 지난 마감=회색, 임박(7일 이하)=빨강, 그 외=파랑
   const tone =
     days! < 0
-      ? 'bg-gray-100 text-gray-500'
+      ? 'bg-surface text-ink-mute'
       : days! <= 7
-        ? 'bg-red-50 text-red-600'
-        : 'bg-blue-50 text-blue-600'
+        ? 'bg-danger-soft text-danger'
+        : 'bg-brand-soft text-brand'
 
   return (
     <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-semibold ${tone}`}>

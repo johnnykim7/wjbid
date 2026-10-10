@@ -32,21 +32,21 @@ export function StatCard({
       data-slot="stat-card"
       className={cn(
         'p-4',
-        dark ? 'bg-gradient-to-r from-primary to-slate-800 border-gray-700 text-white' : '',
+        dark ? 'bg-brand-deep border-dark-line text-white' : '',
         className
       )}
     >
       {icon && (
-        <div className={cn('w-9 h-9 rounded-lg flex items-center justify-center mb-3', iconBg ?? 'bg-gray-100')}>
-          <i className={cn(icon, 'text-sm', iconColor ?? 'text-gray-600')} />
+        <div className={cn('w-9 h-9 rounded-lg flex items-center justify-center mb-3', iconBg ?? 'bg-surface')}>
+          <i className={cn(icon, 'text-sm', iconColor ?? 'text-ink-sub')} />
         </div>
       )}
-      <div className={cn('text-sm mb-1', dark ? 'text-gray-300' : 'text-gray-500')}>{label}</div>
+      <div className={cn('text-sm mb-1', dark ? 'text-ink-faint' : 'text-ink-mute')}>{label}</div>
       <div className="flex items-end justify-between">
-        <div className={cn('text-2xl font-bold', dark ? 'text-white' : 'text-gray-800')}>
+        <div className={cn('text-2xl font-bold', dark ? 'text-white' : 'text-ink')}>
           {value}
           {unit && (
-            <span className={cn('text-sm font-normal ml-1', dark ? 'text-gray-400' : 'text-gray-500')}>
+            <span className={cn('text-sm font-normal ml-1', dark ? 'text-ink-mute' : 'text-ink-mute')}>
               {unit}
             </span>
           )}

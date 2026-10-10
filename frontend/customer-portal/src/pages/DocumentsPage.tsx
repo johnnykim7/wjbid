@@ -150,14 +150,14 @@ export default function DocumentsPage() {
   return (
     <div className="space-y-6">
       <div className="mb-6">
-        <h2 className="text-xl font-bold text-gray-800">서류함</h2>
-        <p className="text-sm text-gray-500 mt-1">
+        <h2 className="text-xl font-bold text-ink">서류함</h2>
+        <p className="text-sm text-ink-mute mt-1">
           사업자등록증·회사소개서 등 공통 서류를 한 번 등록해 두면 제안서 작성 시 자동으로 채워집니다.
         </p>
       </div>
 
       {error && (
-        <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-2.5 text-sm text-red-600">
+        <div className="rounded-lg bg-danger-soft border border-danger/30 px-4 py-2.5 text-sm text-danger">
           <i className="fa-solid fa-circle-exclamation mr-1.5" />
           {error}
         </div>
@@ -170,16 +170,16 @@ export default function DocumentsPage() {
           value={stats.stored}
           unit="건"
           icon="fa-solid fa-folder-open"
-          iconBg="bg-emerald-100"
-          iconColor="text-emerald-600"
+          iconBg="bg-success-soft"
+          iconColor="text-success"
         />
         <StatCard
           label="고정 서류 미등록"
           value={stats.fixedMissing}
           unit="건"
           icon="fa-solid fa-triangle-exclamation"
-          iconBg="bg-amber-100"
-          iconColor="text-amber-600"
+          iconBg="bg-warning-soft"
+          iconColor="text-warning"
           dark={stats.fixedMissing > 0}
         />
       </div>
@@ -194,9 +194,9 @@ export default function DocumentsPage() {
 
       {/* 고정 카테고리 슬롯 */}
       <div>
-        <h3 className="text-sm font-bold text-gray-700 mb-3">공통 서류</h3>
+        <h3 className="text-sm font-bold text-ink-sub mb-3">공통 서류</h3>
         {loading ? (
-          <div className="text-sm text-gray-400 py-8 text-center">
+          <div className="text-sm text-ink-mute py-8 text-center">
             <i className="fa-solid fa-spinner fa-spin mr-2" />불러오는 중…
           </div>
         ) : (
@@ -208,7 +208,7 @@ export default function DocumentsPage() {
               return (
                 <Card key={slot.category} className="p-5 flex flex-col">
                   <div className="flex items-start justify-between gap-2 mb-2">
-                    <h4 className="text-sm font-bold text-gray-800 truncate">{slot.categoryLabel}</h4>
+                    <h4 className="text-sm font-bold text-ink truncate">{slot.categoryLabel}</h4>
                     {done ? (
                       <Badge variant="active" size="sm">
                         <i className="fa-solid fa-check mr-1" /> 완료
@@ -222,17 +222,17 @@ export default function DocumentsPage() {
 
                   <div className="flex-1 my-3">
                     {done ? (
-                      <div className="flex items-center gap-2 rounded-lg bg-gray-50 border border-gray-100 px-3 py-2">
-                        <i className="fa-solid fa-file-lines text-secondary" />
+                      <div className="flex items-center gap-2 rounded-lg bg-surface border border-line-soft px-3 py-2">
+                        <i className="fa-solid fa-file-lines text-brand" />
                         <div className="min-w-0">
-                          <p className="text-xs font-medium text-gray-700 truncate">{doc!.fileName}</p>
-                          <p className="text-[11px] text-gray-400">
+                          <p className="text-xs font-medium text-ink-sub truncate">{doc!.fileName}</p>
+                          <p className="text-[11px] text-ink-mute">
                             {formatSize(doc!.fileSize)} · {doc!.createdAt?.slice(0, 10)}
                           </p>
                         </div>
                       </div>
                     ) : (
-                      <div className="flex items-center justify-center rounded-lg border border-dashed border-gray-200 px-3 py-4 text-xs text-gray-400">
+                      <div className="flex items-center justify-center rounded-lg border border-dashed border-line px-3 py-4 text-xs text-ink-mute">
                         <i className="fa-solid fa-cloud-arrow-up mr-1.5" /> 파일을 업로드하세요
                       </div>
                     )}
@@ -255,7 +255,7 @@ export default function DocumentsPage() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="text-gray-400 hover:text-red-500"
+                        className="text-ink-mute hover:text-danger"
                         title="삭제"
                         disabled={!!busy}
                         onClick={() => handleDelete(doc!)}
@@ -274,7 +274,7 @@ export default function DocumentsPage() {
       {/* 기타 서류 */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-bold text-gray-700">기타 서류</h3>
+          <h3 className="text-sm font-bold text-ink-sub">기타 서류</h3>
           <Button variant="outline" size="sm" onClick={() => setOtherOpen(true)}>
             <i className="fa-solid fa-plus mr-1.5" /> 기타 서류 추가
           </Button>
@@ -284,10 +284,10 @@ export default function DocumentsPage() {
           <div className="space-y-2">
             {vault.others.map((doc) => (
               <Card key={doc.id} className="px-4 py-3 flex items-center gap-3">
-                <i className="fa-solid fa-file-lines text-secondary text-lg shrink-0" />
+                <i className="fa-solid fa-file-lines text-brand text-lg shrink-0" />
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-gray-800 truncate">{doc.displayName || doc.fileName}</p>
-                  <p className="text-xs text-gray-400 truncate">
+                  <p className="text-sm font-medium text-ink truncate">{doc.displayName || doc.fileName}</p>
+                  <p className="text-xs text-ink-mute truncate">
                     {doc.fileName} · {formatSize(doc.fileSize)}
                     {doc.description ? ` · ${doc.description}` : ''}
                   </p>
@@ -295,7 +295,7 @@ export default function DocumentsPage() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="text-gray-400 hover:text-red-500 shrink-0"
+                  className="text-ink-mute hover:text-danger shrink-0"
                   title="삭제"
                   disabled={busyKey === doc.id}
                   onClick={() => handleDelete(doc)}
@@ -306,7 +306,7 @@ export default function DocumentsPage() {
             ))}
           </div>
         ) : (
-          <div className="rounded-lg border border-dashed border-gray-200 px-4 py-6 text-center text-xs text-gray-400">
+          <div className="rounded-lg border border-dashed border-line px-4 py-6 text-center text-xs text-ink-mute">
             등록된 기타 서류가 없습니다.
           </div>
         )}
@@ -320,40 +320,40 @@ export default function DocumentsPage() {
           </DialogHeader>
           <DialogBody className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                문서제목 <span className="text-red-500">*</span>
+              <label className="block text-xs font-medium text-ink-sub mb-1">
+                문서제목 <span className="text-danger">*</span>
               </label>
               <input
                 type="text"
                 value={otherTitle}
                 onChange={(e) => setOtherTitle(e.target.value)}
                 placeholder="예: 품질인증서"
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/40"
+                className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/40"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                파일 <span className="text-red-500">*</span>
+              <label className="block text-xs font-medium text-ink-sub mb-1">
+                파일 <span className="text-danger">*</span>
               </label>
               <input
                 type="file"
                 onChange={(e) => setOtherFile(e.target.files?.[0] ?? null)}
-                className="w-full text-sm text-gray-600 file:mr-3 file:rounded-md file:border-0 file:bg-gray-100 file:px-3 file:py-1.5 file:text-sm file:font-medium hover:file:bg-gray-200"
+                className="w-full text-sm text-ink-sub file:mr-3 file:rounded-md file:border-0 file:bg-surface file:px-3 file:py-1.5 file:text-sm file:font-medium hover:file:bg-line"
               />
               {otherFile && (
-                <p className="mt-1 text-[11px] text-gray-400">
+                <p className="mt-1 text-[11px] text-ink-mute">
                   {otherFile.name} · {formatSize(otherFile.size)}
                 </p>
               )}
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">설명</label>
+              <label className="block text-xs font-medium text-ink-sub mb-1">설명</label>
               <textarea
                 value={otherDesc}
                 onChange={(e) => setOtherDesc(e.target.value)}
                 rows={2}
                 placeholder="간단한 메모 (선택)"
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/40 resize-none"
+                className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/40 resize-none"
               />
             </div>
           </DialogBody>

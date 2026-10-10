@@ -26,15 +26,15 @@ interface Props {
   contentJson?: Record<string, unknown> | null
 }
 
-const NAVY = 'bg-slate-800 text-white'
-const NAVY_DARK = 'bg-slate-900 text-white'
-const NAVY_BORDER = 'border-slate-700'
-const SECTION_BORDER = 'border-slate-200'
+const NAVY = 'bg-brand-deep text-white'
+const NAVY_DARK = 'bg-brand-deep text-white'
+const NAVY_BORDER = 'border-dark-line'
+const SECTION_BORDER = 'border-line'
 
 export default function NoticeDocumentView({ contentJson }: Props) {
   if (!contentJson) {
     return (
-      <div className="rounded-lg bg-yellow-50 border border-yellow-200 px-4 py-3 text-sm text-yellow-800">
+      <div className="rounded-lg bg-warning-soft border border-warning/30 px-4 py-3 text-sm text-warning">
         공고문 본문이 아직 준비되지 않았습니다.
       </div>
     )
@@ -42,7 +42,7 @@ export default function NoticeDocumentView({ contentJson }: Props) {
 
   const doc = contentJson as unknown as Node
   if (doc.type !== 'doc' || !Array.isArray(doc.content)) {
-    return <div className="text-sm text-red-600">올바르지 않은 본문 형식입니다.</div>
+    return <div className="text-sm text-danger">올바르지 않은 본문 형식입니다.</div>
   }
 
   // CR-044: 고객 화면은 "필요 서류 체크리스트"(별도 액션 영역)로 서류를 안내하므로
@@ -126,9 +126,9 @@ function NoticeHeader({ attrs }: { attrs: Record<string, unknown> }) {
   return (
     <div className={`${NAVY_DARK} rounded-t-lg px-6 py-5 mb-0`}>
       <h1 className="text-xl font-bold leading-snug">{title}</h1>
-      {subtitle && <div className="text-sm text-slate-300 mt-1">{subtitle}</div>}
-      {organization && <div className="text-sm text-slate-300 mt-0.5">{organization}</div>}
-      <div className="flex gap-4 mt-3 text-xs text-slate-200">
+      {subtitle && <div className="text-sm text-dark-text mt-1">{subtitle}</div>}
+      {organization && <div className="text-sm text-dark-text mt-0.5">{organization}</div>}
+      <div className="flex gap-4 mt-3 text-xs text-dark-text">
         {solNo && <span>Solicitation: <span className="font-mono">{solNo}</span></span>}
         {issuedDate && <span>발행일: {issuedDate}</span>}
       </div>
@@ -149,7 +149,7 @@ function MetaGrid({ content }: { content: Node[] }) {
             key={i}
             className={`px-3 py-2 ${i < cells.length - 1 ? 'border-r ' + NAVY_BORDER : ''} text-center`}
           >
-            <div className="text-[10px] text-slate-300 uppercase tracking-wide">{label}</div>
+            <div className="text-[10px] text-dark-text uppercase tracking-wide">{label}</div>
             <div className="text-sm font-semibold mt-0.5 break-keep">{value || '-'}</div>
           </div>
         )
@@ -162,27 +162,27 @@ function Heading({ level, content }: { level: number; content: Node[] }) {
   const text = collectText(content)
   if (level === 2) {
     return (
-      <h2 className="text-base font-bold text-slate-900 mt-6 mb-3 pb-1.5 border-b-2 border-slate-800">
+      <h2 className="text-base font-bold text-ink mt-6 mb-3 pb-1.5 border-b-2 border-ink">
         {text}
       </h2>
     )
   }
   if (level === 3) {
-    return <h3 className="text-sm font-semibold text-slate-700 mt-4 mb-2">{text}</h3>
+    return <h3 className="text-sm font-semibold text-ink-sub mt-4 mb-2">{text}</h3>
   }
-  return <h4 className="text-sm font-medium text-slate-700 mt-3 mb-1.5">{text}</h4>
+  return <h4 className="text-sm font-medium text-ink-sub mt-3 mb-1.5">{text}</h4>
 }
 
 function Paragraph({ tone, content }: { tone?: string; content: Node[] }) {
   const text = collectText(content)
-  const cls = tone === 'muted' ? 'text-xs text-slate-500 mb-2' : 'text-sm text-slate-700 leading-relaxed mb-3'
+  const cls = tone === 'muted' ? 'text-xs text-ink-mute mb-2' : 'text-sm text-ink-sub leading-relaxed mb-3'
   return <p className={cls}>{text}</p>
 }
 
 function BulletList({ items }: { items: string[] }) {
   if (items.length === 0) return null
   return (
-    <ul className="list-disc pl-5 space-y-1 text-sm text-slate-700 mb-3">
+    <ul className="list-disc pl-5 space-y-1 text-sm text-ink-sub mb-3">
       {items.map((item, i) => (
         <li key={i}>{item}</li>
       ))}
@@ -197,10 +197,10 @@ function KvTable({ rows }: { rows: { label: string; value: string }[] }) {
       <tbody>
         {rows.map((r, i) => (
           <tr key={i} className={`border-b ${SECTION_BORDER} last:border-0`}>
-            <th className="w-1/3 bg-slate-50 px-3 py-2 text-left font-semibold text-slate-700 align-top">
+            <th className="w-1/3 bg-surface px-3 py-2 text-left font-semibold text-ink-sub align-top">
               {r.label}
             </th>
-            <td className="px-3 py-2 text-slate-700">{r.value}</td>
+            <td className="px-3 py-2 text-ink-sub">{r.value}</td>
           </tr>
         ))}
       </tbody>
@@ -224,7 +224,7 @@ function DataTable({
         <thead>
           <tr className={`${NAVY}`}>
             {headers.map((h, i) => (
-              <th key={i} className="px-3 py-2 text-left font-semibold border-r border-slate-700 last:border-0">
+              <th key={i} className="px-3 py-2 text-left font-semibold border-r border-dark-line last:border-0">
                 {h}
               </th>
             ))}
@@ -232,9 +232,9 @@ function DataTable({
         </thead>
         <tbody>
           {rows.map((row, i) => (
-            <tr key={i} className={`border-b ${SECTION_BORDER} last:border-0 ${i % 2 === 1 ? 'bg-slate-50' : ''}`}>
+            <tr key={i} className={`border-b ${SECTION_BORDER} last:border-0 ${i % 2 === 1 ? 'bg-surface' : ''}`}>
               {row.map((cell, j) => (
-                <td key={j} className="px-3 py-2 text-slate-700 align-top">
+                <td key={j} className="px-3 py-2 text-ink-sub align-top">
                   {cell}
                 </td>
               ))}
@@ -242,7 +242,7 @@ function DataTable({
           ))}
         </tbody>
       </table>
-      {footer && <div className="text-xs text-slate-500 mt-1.5">{footer}</div>}
+      {footer && <div className="text-xs text-ink-mute mt-1.5">{footer}</div>}
     </div>
   )
 }
@@ -253,13 +253,13 @@ function GroupedList({ groups }: { groups: { label: string; items: string[]; req
     <div className="space-y-3 mb-3">
       {groups.map((g, i) => (
         <div key={i} className={`border ${SECTION_BORDER} rounded-md overflow-hidden`}>
-          <div className="bg-slate-100 px-3 py-1.5 text-sm font-semibold text-slate-800 flex items-center justify-between">
+          <div className="bg-surface px-3 py-1.5 text-sm font-semibold text-ink flex items-center justify-between">
             <span>{g.label}</span>
             {g.required && (
-              <span className="text-[10px] px-1.5 py-0.5 bg-red-100 text-red-700 rounded">필수</span>
+              <span className="text-[10px] px-1.5 py-0.5 bg-danger-soft text-danger rounded">필수</span>
             )}
           </div>
-          <ul className="list-disc pl-8 py-2 space-y-1 text-sm text-slate-700">
+          <ul className="list-disc pl-8 py-2 space-y-1 text-sm text-ink-sub">
             {g.items.map((item, j) => (
               <li key={j}>{item}</li>
             ))}
@@ -276,10 +276,10 @@ function CalloutList({ items, tone }: { items: CalloutItem[]; tone: string }) {
   if (items.length === 0) return null
   const toneCls =
     tone === 'danger'
-      ? 'border-red-300 bg-red-50 text-red-900'
+      ? 'border-danger/30 bg-danger-soft text-danger'
       : tone === 'warning'
-        ? 'border-yellow-300 bg-yellow-50 text-yellow-900'
-        : 'border-blue-300 bg-blue-50 text-blue-900'
+        ? 'border-warning/30 bg-warning-soft text-warning'
+        : 'border-brand-line bg-brand-soft text-ink'
   return (
     <div className="space-y-2 mb-3">
       {items.map((item, i) => {

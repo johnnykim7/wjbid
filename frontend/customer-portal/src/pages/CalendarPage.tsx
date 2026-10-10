@@ -80,15 +80,15 @@ export default function CalendarPage() {
   return (
     <div className="space-y-6">
       <div className="mb-6">
-        <h2 className="text-xl font-bold text-gray-800">입찰 캘린더</h2>
-        <p className="text-sm text-gray-500 mt-1">관심 공고의 마감일을 달력에서 한눈에 확인하세요.</p>
+        <h2 className="text-xl font-bold text-ink">입찰 캘린더</h2>
+        <p className="text-sm text-ink-mute mt-1">관심 공고의 마감일을 달력에서 한눈에 확인하세요.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* 월 달력 */}
         <Card className="lg:col-span-2">
           <CardHeader>
-            <h3 className="text-base font-bold text-gray-800">월 달력</h3>
+            <h3 className="text-base font-bold text-ink">월 달력</h3>
           </CardHeader>
           <CardContent className="flex justify-center">
             <Calendar
@@ -97,7 +97,7 @@ export default function CalendarPage() {
               onSelect={setSelected}
               modifiers={{ deadline: deadlineDates }}
               modifiersClassNames={{
-                deadline: 'bg-primary/10 text-primary font-bold rounded-md',
+                deadline: 'bg-brand-soft text-ink font-bold rounded-md',
               }}
             />
           </CardContent>
@@ -106,10 +106,10 @@ export default function CalendarPage() {
         {/* 마감 임박 사이드 리스트 */}
         <Card>
           <CardHeader>
-            <h3 className="text-base font-bold text-gray-800">
+            <h3 className="text-base font-bold text-ink">
               마감 임박 공고
               {upcoming.length > 0 && (
-                <span className="ml-2 text-xs font-normal text-gray-500">{upcoming.length}건</span>
+                <span className="ml-2 text-xs font-normal text-ink-mute">{upcoming.length}건</span>
               )}
             </h3>
           </CardHeader>
@@ -121,27 +121,27 @@ export default function CalendarPage() {
                 description="입찰 검색에서 관심 공고를 저장하세요."
               />
             ) : (
-              <ul className="divide-y divide-gray-100 max-h-[480px] overflow-y-auto">
+              <ul className="divide-y divide-line-soft max-h-[480px] overflow-y-auto">
                 {upcoming.map((b) => {
                   const badge = deadlineBadge(b.responseDeadline)
                   return (
                     <li key={b.id}>
                       <Link
                         to={`/search/${b.id}`}
-                        className="block px-5 py-3 hover:bg-blue-50/50 transition"
+                        className="block px-5 py-3 hover:bg-brand-softer transition"
                       >
                         <div className="flex items-start justify-between gap-2 mb-1">
-                          <span className="text-xs font-bold text-primary font-mono truncate">
+                          <span className="text-xs font-bold text-ink font-mono truncate">
                             {b.solicitationNumber}
                           </span>
                           <Badge variant={badge.variant} size="sm">
                             {badge.label}
                           </Badge>
                         </div>
-                        <p className="text-sm font-medium text-gray-800 line-clamp-2 leading-snug">
+                        <p className="text-sm font-medium text-ink line-clamp-2 leading-snug">
                           {b.title}
                         </p>
-                        <p className="text-xs text-gray-400 mt-1">
+                        <p className="text-xs text-ink-mute mt-1">
                           <i className="fa-regular fa-clock mr-1" />
                           {b.responseDeadline?.slice(0, 10)}
                         </p>
@@ -159,20 +159,20 @@ export default function CalendarPage() {
       {selected && (
         <Card className="mt-6">
           <CardHeader>
-            <h3 className="text-base font-bold text-gray-800">
+            <h3 className="text-base font-bold text-ink">
               {selected.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}{' '}
               마감 공고
             </h3>
           </CardHeader>
           <CardContent>
             {onSelectedDay.length === 0 ? (
-              <p className="text-sm text-gray-400">이 날짜에 마감되는 관심 공고가 없습니다.</p>
+              <p className="text-sm text-ink-mute">이 날짜에 마감되는 관심 공고가 없습니다.</p>
             ) : (
               <ul className="space-y-2">
                 {onSelectedDay.map((b) => (
                   <li key={b.id} className="flex items-center justify-between text-sm">
-                    <Link to={`/search/${b.id}`} className="text-secondary hover:underline truncate">
-                      <span className="font-mono text-xs text-primary mr-2">
+                    <Link to={`/search/${b.id}`} className="text-brand hover:underline truncate">
+                      <span className="font-mono text-xs text-ink mr-2">
                         {b.solicitationNumber}
                       </span>
                       {b.title}

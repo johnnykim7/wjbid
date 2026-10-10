@@ -41,18 +41,18 @@ export default function BillingPage() {
   return (
     <div className="space-y-6">
       <div className="mb-6">
-        <h2 className="text-xl font-bold text-gray-800">결제 내역</h2>
-        <p className="text-sm text-gray-500 mt-1">건당 과금 · 구독 없음 — 사용한 만큼만 결제됩니다.</p>
+        <h2 className="text-xl font-bold text-ink">결제 내역</h2>
+        <p className="text-sm text-ink-mute mt-1">건당 과금 · 구독 없음 — 사용한 만큼만 결제됩니다.</p>
       </div>
 
       {/* 안내 배너 */}
-      <div className="mb-6 flex items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 px-5 py-4">
-        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-          <i className="fa-solid fa-receipt text-primary" />
+      <div className="mb-6 flex items-center gap-3 rounded-xl border border-brand-line bg-brand-softer px-5 py-4">
+        <div className="w-10 h-10 rounded-lg bg-brand-soft flex items-center justify-center flex-shrink-0">
+          <i className="fa-solid fa-receipt text-brand" />
         </div>
         <div className="text-sm">
-          <p className="font-semibold text-gray-800">건당 과금 · 구독 없음</p>
-          <p className="text-gray-500 mt-0.5">
+          <p className="font-semibold text-ink">건당 과금 · 구독 없음</p>
+          <p className="text-ink-mute mt-0.5">
             공고분석 및 제안서 작성은 사용 건수만큼 청구됩니다. 월 구독료는 없습니다.
           </p>
         </div>
@@ -64,8 +64,8 @@ export default function BillingPage() {
           label="누적 결제 금액"
           value={KRW(total)}
           icon="fa-solid fa-won-sign"
-          iconBg="bg-primary/10"
-          iconColor="text-primary"
+          iconBg="bg-brand-soft"
+          iconColor="text-brand"
           dark
         />
         <StatCard
@@ -73,16 +73,16 @@ export default function BillingPage() {
           value={analysisCount}
           unit="건"
           icon="fa-solid fa-magnifying-glass-chart"
-          iconBg="bg-sky-100"
-          iconColor="text-sky-600"
+          iconBg="bg-brand-soft"
+          iconColor="text-brand"
         />
         <StatCard
           label="제안서 작성"
           value={proposalCount}
           unit="건"
           icon="fa-solid fa-file-pen"
-          iconBg="bg-emerald-100"
-          iconColor="text-emerald-600"
+          iconBg="bg-brand-soft"
+          iconColor="text-brand"
         />
       </div>
 
@@ -107,32 +107,32 @@ export default function BillingPage() {
             <TableBody>
               {rows.map((r) => (
                 <TableRow key={r.id}>
-                  <TableCell className="whitespace-nowrap text-gray-500">{r.date}</TableCell>
+                  <TableCell className="whitespace-nowrap text-ink-mute">{r.date}</TableCell>
                   <TableCell>
                     <Badge variant={r.item === '제안서' ? 'final' : 'info'} size="sm">
                       {r.item}
                     </Badge>
                   </TableCell>
-                  <TableCell className="font-mono text-xs text-primary font-semibold">
+                  <TableCell className="font-mono text-xs text-ink font-semibold">
                     {r.noticeId}
                   </TableCell>
-                  <TableCell className="text-right font-semibold text-gray-800">
+                  <TableCell className="text-right font-semibold text-ink">
                     {KRW(r.amount)}
                   </TableCell>
                 </TableRow>
               ))}
-              <TableRow className="hover:bg-transparent bg-gray-50">
-                <TableCell colSpan={3} className="text-right font-bold text-gray-700">
+              <TableRow className="hover:bg-transparent bg-surface">
+                <TableCell colSpan={3} className="text-right font-bold text-ink-sub">
                   합계
                 </TableCell>
-                <TableCell className="text-right font-bold text-primary">{KRW(total)}</TableCell>
+                <TableCell className="text-right font-bold text-ink">{KRW(total)}</TableCell>
               </TableRow>
             </TableBody>
           </Table>
         )}
       </Card>
 
-      <p className="mt-6 text-xs text-gray-400">
+      <p className="mt-6 text-xs text-ink-mute">
         <i className="fa-solid fa-circle-info mr-1" />
         결제 내역은 현재 화면 시연용 더미 데이터입니다. (BE 미연동)
       </p>

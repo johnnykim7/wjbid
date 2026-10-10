@@ -57,11 +57,11 @@ function StateGuide({ state, onUpload }: { state: string; onUpload: () => void }
   if (state === 'CREATED' || state === 'DOCS_PENDING') {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center p-8">
-        <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center mb-4">
-          <i className="fa-solid fa-cloud-arrow-up text-2xl text-amber-500" />
+        <div className="w-16 h-16 bg-brand-soft rounded-full flex items-center justify-center mb-4">
+          <i className="fa-solid fa-cloud-arrow-up text-2xl text-brand" />
         </div>
-        <h3 className="text-lg font-bold text-gray-800 mb-2">필요서류 제출이 필요합니다</h3>
-        <p className="text-sm text-gray-500 max-w-xs mb-5">
+        <h3 className="text-lg font-bold text-ink mb-2">필요서류 제출이 필요합니다</h3>
+        <p className="text-sm text-ink-mute max-w-xs mb-5">
           공고가 요구하는 서류를 업로드한 뒤 ‘문서 제출 완료’를 누르면<br />
           요구사항 분석과 문서 작성이 시작됩니다.
         </p>
@@ -74,17 +74,17 @@ function StateGuide({ state, onUpload }: { state: string; onUpload: () => void }
   if (ANALYZING_STATES.includes(state)) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center p-8">
-        <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4">
-          <i className="fa-solid fa-magnifying-glass text-2xl text-secondary" />
+        <div className="w-16 h-16 bg-brand-soft rounded-full flex items-center justify-center mb-4">
+          <i className="fa-solid fa-magnifying-glass text-2xl text-brand" />
         </div>
-        <h3 className="text-lg font-bold text-gray-800 mb-2">요구사항 분석 중</h3>
-        <p className="text-sm text-gray-500 max-w-xs">
+        <h3 className="text-lg font-bold text-ink mb-2">요구사항 분석 중</h3>
+        <p className="text-sm text-ink-mute max-w-xs">
           공고를 분석하고 요구사항을 추출하고 있습니다.<br />
           잠시 후 문서 작성이 시작됩니다.
         </p>
         <div className="mt-4 flex gap-1.5">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="w-2 h-2 bg-secondary rounded-full animate-bounce" style={{ animationDelay: `${i * 0.2}s` }} />
+            <div key={i} className="w-2 h-2 bg-brand rounded-full animate-bounce" style={{ animationDelay: `${i * 0.2}s` }} />
           ))}
         </div>
       </div>
@@ -93,11 +93,11 @@ function StateGuide({ state, onUpload }: { state: string; onUpload: () => void }
   if (DRAFTING_STATES.includes(state)) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center p-8">
-        <div className="w-16 h-16 bg-purple-50 rounded-full flex items-center justify-center mb-4">
-          <i className="fa-solid fa-pen-to-square text-2xl text-purple-500" />
+        <div className="w-16 h-16 bg-brand-soft rounded-full flex items-center justify-center mb-4">
+          <i className="fa-solid fa-pen-to-square text-2xl text-brand" />
         </div>
-        <h3 className="text-lg font-bold text-gray-800 mb-2">문서 작성 / 검토 중</h3>
-        <p className="text-sm text-gray-500 max-w-xs">
+        <h3 className="text-lg font-bold text-ink mb-2">문서 작성 / 검토 중</h3>
+        <p className="text-sm text-ink-mute max-w-xs">
           제안서 문서를 작성하거나 내부 검토가 진행 중입니다.<br />
           문서가 생성되면 좌측에서 확인하세요.
         </p>
@@ -107,18 +107,18 @@ function StateGuide({ state, onUpload }: { state: string; onUpload: () => void }
   if (READY_STATES.includes(state)) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center p-8">
-        <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mb-4">
-          <i className="fa-solid fa-paper-plane text-2xl text-emerald-500" />
+        <div className="w-16 h-16 bg-brand-soft rounded-full flex items-center justify-center mb-4">
+          <i className="fa-solid fa-paper-plane text-2xl text-brand" />
         </div>
-        <h3 className="text-lg font-bold text-gray-800 mb-2">제출 준비 완료</h3>
-        <p className="text-sm text-gray-500 max-w-xs">
+        <h3 className="text-lg font-bold text-ink mb-2">제출 준비 완료</h3>
+        <p className="text-sm text-ink-mute max-w-xs">
           문서가 준비되었습니다. 담당자가 검토 후 제출합니다.
         </p>
       </div>
     )
   }
   return (
-    <div className="flex items-center justify-center h-full text-gray-400">
+    <div className="flex items-center justify-center h-full text-ink-mute">
       <p>좌측 목록에서 제안서를 선택하세요.</p>
     </div>
   )
@@ -173,8 +173,8 @@ export default function ProposalsPage() {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h2 className="text-xl font-bold text-gray-800">내 제안서 관리</h2>
-          <p className="text-sm text-gray-500 mt-1">작성된 제안서 초안을 확인하고 수정하세요.</p>
+          <h2 className="text-xl font-bold text-ink">내 제안서 관리</h2>
+          <p className="text-sm text-ink-mute mt-1">작성된 제안서 초안을 확인하고 수정하세요.</p>
         </div>
       </div>
 
@@ -189,13 +189,13 @@ export default function ProposalsPage() {
       ) : (
         <div className="flex gap-6 h-[calc(100vh-220px)]">
           {/* Left: List */}
-          <div className="w-80 flex-shrink-0 bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
-            <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+          <div className="w-80 flex-shrink-0 bg-white border border-line rounded-xl shadow-sm overflow-hidden flex flex-col">
+            <div className="px-4 py-3 border-b border-line bg-surface">
+              <p className="text-xs font-bold text-ink-mute uppercase tracking-wider">
                 제안서 목록 ({proposals.length})
               </p>
             </div>
-            <div className="flex-1 overflow-y-auto divide-y divide-gray-100">
+            <div className="flex-1 overflow-y-auto divide-y divide-line-soft">
               {proposals.map((p) => (
                 <div
                   key={p.id}
@@ -204,28 +204,28 @@ export default function ProposalsPage() {
                   onClick={() => loadDocuments(p)}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') loadDocuments(p) }}
                   className={cn(
-                    'w-full text-left px-4 py-4 hover:bg-blue-50/50 transition cursor-pointer',
-                    selected?.id === p.id && 'bg-blue-50 border-l-2 border-secondary'
+                    'w-full text-left px-4 py-4 hover:bg-brand-softer transition cursor-pointer',
+                    selected?.id === p.id && 'bg-brand-soft border-l-2 border-brand'
                   )}
                 >
                   <div className="flex items-start justify-between gap-2 mb-1">
-                    <span className="text-xs font-bold text-primary font-mono truncate">
+                    <span className="text-xs font-bold text-ink font-mono truncate">
                       {p.solicitationNumber ?? p.opportunityId}
                     </span>
                     <Badge variant={STATE_BADGE[p.state] ?? 'active'} size="sm">
                       {stateLabel(p)}
                     </Badge>
                   </div>
-                  <p className="text-sm font-medium text-gray-800 line-clamp-2 leading-snug">
+                  <p className="text-sm font-medium text-ink line-clamp-2 leading-snug">
                     {p.displayTitle || p.opportunityTitle}
                   </p>
                   <div className="flex items-center justify-between mt-1">
-                    <p className="text-xs text-gray-400">{p.createdAt?.slice(0, 10)}</p>
+                    <p className="text-xs text-ink-mute">{p.createdAt?.slice(0, 10)}</p>
                     <DsButton
                       variant="ghost"
                       size="sm"
                       onClick={(e) => { e.stopPropagation(); navigate(`/proposals/${p.id}`) }}
-                      className="h-auto px-0 py-0 text-xs text-secondary hover:underline hover:bg-transparent"
+                      className="h-auto px-0 py-0 text-xs text-brand hover:underline hover:bg-transparent"
                     >
                       상세 &rarr;
                     </DsButton>
@@ -236,9 +236,9 @@ export default function ProposalsPage() {
           </div>
 
           {/* Right: Document Viewer */}
-          <div className="flex-1 bg-gray-100 rounded-xl border border-gray-200 overflow-hidden flex flex-col">
+          <div className="flex-1 bg-surface rounded-xl border border-line overflow-hidden flex flex-col">
             {!selected ? (
-              <div className="flex-1 flex items-center justify-center text-gray-400">
+              <div className="flex-1 flex items-center justify-center text-ink-mute">
                 <p>좌측 목록에서 제안서를 선택하세요.</p>
               </div>
             ) : docLoading ? (
@@ -248,17 +248,17 @@ export default function ProposalsPage() {
             ) : (
               <>
                 {/* Doc header */}
-                <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between flex-shrink-0">
+                <div className="bg-white border-b border-line px-6 py-3 flex items-center justify-between flex-shrink-0">
                   <div className="flex items-center gap-3">
                     <div>
-                      <p className="text-sm font-bold text-gray-800">
+                      <p className="text-sm font-bold text-ink">
                         {selected.solicitationNumber ?? selected.opportunityId}
                       </p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-ink-mute">
                         {DOC_TYPE_LABELS[activeDoc?.documentType] ?? activeDoc?.documentType}
                         {activeDoc && ` · v${activeDoc.currentVersionNo}`}
                         {activeDoc?.status && (
-                          <span className="ml-2 px-1.5 py-0.5 rounded text-xs bg-gray-100 text-gray-500">
+                          <span className="ml-2 px-1.5 py-0.5 rounded text-xs bg-surface text-ink-mute">
                             {activeDoc.status}
                           </span>
                         )}
@@ -274,7 +274,7 @@ export default function ProposalsPage() {
 
                 {/* Doc tabs (if multiple) */}
                 {documents.length > 1 && (
-                  <div className="bg-white border-b border-gray-200 px-6 flex gap-1 flex-shrink-0 overflow-x-auto">
+                  <div className="bg-white border-b border-line px-6 flex gap-1 flex-shrink-0 overflow-x-auto">
                     {documents.map((doc, idx) => (
                       <DsButton
                         key={doc.id}
@@ -284,8 +284,8 @@ export default function ProposalsPage() {
                         className={cn(
                           'h-auto rounded-none px-3 py-2 text-xs font-medium whitespace-nowrap border-b-2 transition hover:bg-transparent',
                           idx === activeDocIdx
-                            ? 'border-secondary text-secondary'
-                            : 'border-transparent text-gray-500 hover:text-gray-700'
+                            ? 'border-brand text-brand'
+                            : 'border-transparent text-ink-mute hover:text-ink-sub'
                         )}
                       >
                         {DOC_TYPE_LABELS[doc.documentType] ?? doc.documentType}
@@ -298,25 +298,25 @@ export default function ProposalsPage() {
                 <div className="flex-1 overflow-y-auto p-8">
                   {activeDoc?.contentJson ? (
                     <div className="proposal-doc max-w-3xl mx-auto bg-white rounded-xl shadow-sm p-8">
-                      <div className="text-right text-sm text-gray-500 mb-6">
+                      <div className="text-right text-sm text-ink-mute mb-6">
                         Date: {activeDoc.editedAt?.slice(0, 10) ?? selected.createdAt?.slice(0, 10)}<br />
                         Reference: <span>{selected.solicitationNumber ?? selected.opportunityId}</span>
                       </div>
-                      <h1 className="text-2xl font-bold text-center uppercase tracking-wider border-b-2 border-primary pb-4 mb-8">
+                      <h1 className="text-2xl font-bold text-center uppercase tracking-wider border-b-2 border-ink pb-4 mb-8">
                         {DOC_TYPE_LABELS[activeDoc.documentType] ?? activeDoc.documentType}
                       </h1>
-                      <pre className="whitespace-pre-wrap font-serif text-sm text-gray-800 leading-relaxed">
+                      <pre className="whitespace-pre-wrap font-serif text-sm text-ink leading-relaxed">
                         {extractTextFromTipTap(activeDoc.contentJson)}
                       </pre>
                       {activeDoc.changeSummary && (
-                        <p className="mt-8 pt-4 border-t border-gray-100 text-xs text-gray-400">
+                        <p className="mt-8 pt-4 border-t border-line-soft text-xs text-ink-mute">
                           <i className="fa-solid fa-clock-rotate-left mr-1" />
                           {activeDoc.changeSummary}
                         </p>
                       )}
                     </div>
                   ) : (
-                    <div className="flex items-center justify-center h-full text-gray-400 text-sm">
+                    <div className="flex items-center justify-center h-full text-ink-mute text-sm">
                       문서 내용이 없습니다.
                     </div>
                   )}

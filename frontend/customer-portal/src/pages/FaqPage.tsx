@@ -52,8 +52,8 @@ export default function FaqPage() {
     <div className="flex-1 overflow-y-auto">
       {/* 페이지 헤더 (제목 + 부제 — 전 페이지 통일) */}
       <div className="text-center mb-10 pt-2">
-        <h1 className="text-2xl font-bold text-[#0c1e3d]">자주 묻는 질문</h1>
-        <p className="mt-2 text-slate-500">
+        <h1 className="text-2xl font-bold text-ink">자주 묻는 질문</h1>
+        <p className="mt-2 text-ink-mute">
           미군(USFK)·연방 조달 입찰에 대해 자주 묻는 질문을 모았습니다.
         </p>
       </div>
@@ -65,24 +65,24 @@ export default function FaqPage() {
             <AccordionItem
               key={idx}
               value={`faq-${idx}`}
-              className="bg-white rounded-xl border border-gray-200 px-5"
+              className="bg-white rounded-xl border border-line px-5"
             >
-              <AccordionTrigger className="text-sm font-bold text-gray-900 gap-2">
+              <AccordionTrigger className="text-sm font-bold text-ink gap-2">
                 <span className="flex items-start gap-2 text-left">
-                  <i className="fa-solid fa-circle-question text-[#1a56db] mt-0.5" />
+                  <i className="fa-solid fa-circle-question text-brand mt-0.5" />
                   {faq.q}
                 </span>
               </AccordionTrigger>
-              <AccordionContent className="text-sm text-gray-600 ml-6 leading-relaxed">
+              <AccordionContent className="text-sm text-ink-sub ml-6 leading-relaxed">
                 {faq.a}
               </AccordionContent>
             </AccordionItem>
           ))}
         </Accordion>
 
-        <p className="text-center text-xs text-gray-400 mt-8">
+        <p className="text-center text-xs text-ink-mute mt-8">
           원하는 답을 찾지 못하셨나요?{' '}
-          <Link to="/support" className="text-[#1a56db] font-medium hover:underline">
+          <Link to="/support" className="text-brand font-medium hover:underline">
             1:1 문의하기
           </Link>
         </p>

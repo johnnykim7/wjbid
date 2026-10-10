@@ -74,33 +74,33 @@ export function AiProposalModal({
       <DialogContent showCloseButton={!submitting}>
         <DialogHeader>
           <div className="flex items-center gap-3">
-            <div className="bg-secondary/10 text-secondary p-2 rounded-lg">
+            <div className="bg-brand-soft text-brand p-2 rounded-lg">
               <i className="fa-solid fa-wand-magic-sparkles" />
             </div>
             <div>
               <DialogTitle>제안서 작성 신청</DialogTitle>
-              <p className="text-xs text-gray-500 mt-0.5 font-mono">{noticeId}</p>
+              <p className="text-xs text-ink-mute mt-0.5 font-mono">{noticeId}</p>
             </div>
           </div>
         </DialogHeader>
 
         <DialogBody>
           <div>
-            <p className="text-sm text-gray-600 mb-3">
+            <p className="text-sm text-ink-sub mb-3">
               아래 공고에 대한 제안서 작성을 신청합니다.
             </p>
-            <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-sm font-medium text-gray-800 line-clamp-2">
+            <div className="bg-surface border border-line rounded-lg px-4 py-3 text-sm font-medium text-ink line-clamp-2">
               {noticeTitle}
             </div>
-            <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
-              <p className="text-xs text-blue-700">
+            <div className="mt-4 p-3 bg-brand-soft rounded-lg border border-brand-line">
+              <p className="text-xs text-brand">
                 <i className="fa-solid fa-circle-info mr-1" />
                 신청 후 <strong>내 제안서</strong> 화면으로 이동합니다. 필요서류를 업로드하면 요구사항 분석 및 문서 작성이 진행됩니다.
               </p>
             </div>
             {error && (
-              <div className="mt-3 p-3 bg-red-50 rounded-lg border border-red-100">
-                <p className="text-xs text-red-600">
+              <div className="mt-3 p-3 bg-danger-soft rounded-lg border border-danger/30">
+                <p className="text-xs text-danger">
                   <i className="fa-solid fa-triangle-exclamation mr-1" />
                   {error}
                 </p>

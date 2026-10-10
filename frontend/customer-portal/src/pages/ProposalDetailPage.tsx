@@ -225,29 +225,29 @@ export default function ProposalDetailPage() {
     return (
       <div
         key={doc.name}
-        className={`bg-white border rounded-xl p-4 ${uploaded ? 'border-green-200' : 'border-gray-200'}`}
+        className={`bg-white border rounded-xl p-4 ${uploaded ? 'border-success/30' : 'border-line'}`}
       >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <i className={`fa-solid ${uploaded ? 'fa-circle-check text-green-500' : 'fa-circle-exclamation text-amber-400'}`} />
-              <p className="text-sm font-semibold text-gray-800">{doc.name}</p>
+              <i className={`fa-solid ${uploaded ? 'fa-circle-check text-success' : 'fa-circle-exclamation text-warning'}`} />
+              <p className="text-sm font-semibold text-ink">{doc.name}</p>
               {doc.mandatory ? (
-                <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-50 text-red-500">필수</span>
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-danger-soft text-danger">필수</span>
               ) : (
-                <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-500">선택</span>
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-surface text-ink-mute">선택</span>
               )}
             </div>
-            {doc.description && <p className="text-xs text-gray-500 mt-1 ml-6">{doc.description}</p>}
-            <div className="flex gap-3 mt-1 ml-6 text-xs text-gray-400">
+            {doc.description && <p className="text-xs text-ink-mute mt-1 ml-6">{doc.description}</p>}
+            <div className="flex gap-3 mt-1 ml-6 text-xs text-ink-mute">
               {doc.format && <span><i className="fa-solid fa-file mr-1" />{doc.format}</span>}
               {doc.pageLimit && <span><i className="fa-solid fa-ruler mr-1" />{doc.pageLimit}</span>}
             </div>
             {uploaded && (
-              <div className="flex items-center gap-2 mt-2 ml-6 text-xs text-gray-700">
-                <i className="fa-solid fa-paperclip text-gray-400" />
+              <div className="flex items-center gap-2 mt-2 ml-6 text-xs text-ink-sub">
+                <i className="fa-solid fa-paperclip text-ink-mute" />
                 <span className="truncate">{uploaded.fileName}</span>
-                <span className="text-gray-400 flex-shrink-0">({(uploaded.fileSize / 1024).toFixed(1)} KB)</span>
+                <span className="text-ink-mute flex-shrink-0">({(uploaded.fileSize / 1024).toFixed(1)} KB)</span>
               </div>
             )}
           </div>
@@ -265,10 +265,10 @@ export default function ProposalDetailPage() {
             )}
             <label className={`inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition ${
               isUploading
-                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                ? 'bg-surface text-ink-mute cursor-not-allowed'
                 : uploaded
-                  ? 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
-                  : 'bg-secondary text-white hover:opacity-90'
+                  ? 'bg-white border border-line text-ink-sub hover:bg-surface'
+                  : 'bg-brand text-white hover:opacity-90'
             }`}>
               {isUploading ? (
                 <><i className="fa-solid fa-spinner fa-spin mr-1.5" /> 업로드 중</>
@@ -294,20 +294,20 @@ export default function ProposalDetailPage() {
   // CR-033: 플랫폼생성/시스템양식 subfactor — 읽기전용 (고객이 올리지 않음)
   const partyBadge = (party?: FulfillmentParty) => {
     if (party === 'PLATFORM_GENERATED')
-      return <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-600">플랫폼 생성</span>
+      return <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-white border border-line text-ink-sub">플랫폼 생성</span>
     if (party === 'SYSTEM_FORM')
-      return <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-50 text-purple-600">시스템 양식</span>
+      return <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-white border border-line text-ink-sub">시스템 양식</span>
     return null
   }
   const renderReadonlySub = (s: Subfactor) => (
-    <div key={s.subfactorId ?? s.name} className="bg-gray-50 border border-gray-200 rounded-xl p-4 opacity-90">
+    <div key={s.subfactorId ?? s.name} className="bg-surface border border-line rounded-xl p-4 opacity-90">
       <div className="flex items-center gap-2 flex-wrap">
-        <i className="fa-solid fa-robot text-gray-400" />
-        <p className="text-sm font-medium text-gray-700">{s.name}</p>
+        <i className="fa-solid fa-robot text-ink-mute" />
+        <p className="text-sm font-medium text-ink-sub">{s.name}</p>
         {partyBadge(s.fulfillmentParty)}
       </div>
-      {s.description && <p className="text-xs text-gray-500 mt-1 ml-6">{s.description}</p>}
-      <p className="text-[11px] text-gray-400 mt-1 ml-6">
+      {s.description && <p className="text-xs text-ink-mute mt-1 ml-6">{s.description}</p>}
+      <p className="text-[11px] text-ink-mute mt-1 ml-6">
         <i className="fa-solid fa-circle-info mr-1" />업로드 불필요 — 플랫폼이 자동 처리합니다
       </p>
     </div>
@@ -351,8 +351,8 @@ export default function ProposalDetailPage() {
 
   if (loading) return <LoadingSpinner fullPage />
   if (!proposal) return (
-    <div className="flex flex-col items-center justify-center h-full text-gray-500 gap-4 p-8">
-      <i className="fa-solid fa-circle-exclamation text-4xl text-gray-300" />
+    <div className="flex flex-col items-center justify-center h-full text-ink-mute gap-4 p-8">
+      <i className="fa-solid fa-circle-exclamation text-4xl text-ink-faint" />
       <p>제안서를 찾을 수 없습니다.</p>
       <DsButton variant="ghost" mode="link" onClick={() => navigate('/proposals')}>목록으로</DsButton>
     </div>
@@ -370,15 +370,15 @@ export default function ProposalDetailPage() {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center shadow-sm z-10">
+      <div className="sticky top-0 bg-white border-b border-line px-6 py-4 flex justify-between items-center shadow-sm z-10">
         <div className="flex items-center gap-4">
           <DsButton variant="ghost" size="icon" onClick={() => navigate('/proposals')}>
             <i className="fa-solid fa-arrow-left text-xl" />
           </DsButton>
           <div>
-            <h3 className="text-lg font-bold text-gray-800 line-clamp-1">{proposal.displayTitle || proposal.opportunityTitle}</h3>
+            <h3 className="text-lg font-bold text-ink line-clamp-1">{proposal.displayTitle || proposal.opportunityTitle}</h3>
             <div className="flex items-center gap-2 mt-0.5">
-              <span className="text-xs text-gray-500">{proposal.solicitationNumber ?? proposal.opportunityId}</span>
+              <span className="text-xs text-ink-mute">{proposal.solicitationNumber ?? proposal.opportunityId}</span>
               <Badge variant={STATE_BADGE[proposal.state] ?? 'active'} size="sm">
                 {STATE_LABEL[proposal.state] ?? proposal.state}
               </Badge>
@@ -388,7 +388,7 @@ export default function ProposalDetailPage() {
       </div>
 
       {/* Tabs */}
-      <div className="bg-white border-b border-gray-200 px-6 flex gap-1">
+      <div className="bg-white border-b border-line px-6 flex gap-1">
         {([
           { key: 'uploads', label: '제출 서류', icon: 'fa-solid fa-cloud-arrow-up', count: clientSlots.length },
           { key: 'documents', label: '생성 문서', icon: 'fa-solid fa-file-lines', count: documents.length },
@@ -399,14 +399,14 @@ export default function ProposalDetailPage() {
             onClick={() => setActiveTab(tab.key)}
             className={`px-4 py-3 text-sm font-medium border-b-2 transition ${
               activeTab === tab.key
-                ? 'border-secondary text-secondary'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+                ? 'border-brand text-brand'
+                : 'border-transparent text-ink-mute hover:text-ink-sub'
             }`}
           >
             <i className={`${tab.icon} mr-1.5`} />
             {tab.label}
             {tab.count > 0 && (
-              <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-xs bg-gray-100 text-gray-500">{tab.count}</span>
+              <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-xs bg-surface text-ink-mute">{tab.count}</span>
             )}
           </button>
         ))}
@@ -418,30 +418,30 @@ export default function ProposalDetailPage() {
         {activeTab === 'documents' && (
           documents.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center p-8">
-              <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4">
-                <i className="fa-solid fa-file-circle-plus text-2xl text-secondary" />
+              <div className="w-16 h-16 bg-brand-soft rounded-full flex items-center justify-center mb-4">
+                <i className="fa-solid fa-file-circle-plus text-2xl text-brand" />
               </div>
-              <h3 className="text-lg font-bold text-gray-800 mb-2">아직 생성된 문서가 없습니다</h3>
-              <p className="text-sm text-gray-500 max-w-xs">
+              <h3 className="text-lg font-bold text-ink mb-2">아직 생성된 문서가 없습니다</h3>
+              <p className="text-sm text-ink-mute max-w-xs">
                 요구사항 분석과 문서 생성이 끝나면 여기에 표시됩니다.
               </p>
             </div>
           ) : (
             <div className="flex h-full">
               {/* Doc list sidebar */}
-              <div className="w-64 border-r border-gray-200 bg-gray-50 flex-shrink-0 overflow-y-auto">
+              <div className="w-64 border-r border-line bg-surface flex-shrink-0 overflow-y-auto">
                 {documents.map((doc, idx) => (
                   <button
                     key={doc.id}
                     onClick={() => setActiveDocIdx(idx)}
-                    className={`w-full text-left px-4 py-4 border-b border-gray-100 hover:bg-white transition ${
-                      idx === activeDocIdx ? 'bg-white border-l-2 border-l-secondary' : ''
+                    className={`w-full text-left px-4 py-4 border-b border-line-soft hover:bg-white transition ${
+                      idx === activeDocIdx ? 'bg-white border-l-2 border-l-brand' : ''
                     }`}
                   >
-                    <p className="text-sm font-medium text-gray-800">
+                    <p className="text-sm font-medium text-ink">
                       {DOC_TYPE_LABELS[doc.documentType] ?? doc.documentType}
                     </p>
-                    <p className="text-xs text-gray-400 mt-0.5">
+                    <p className="text-xs text-ink-mute mt-0.5">
                       v{doc.currentVersionNo} | {doc.status}
                     </p>
                   </button>
@@ -450,21 +450,21 @@ export default function ProposalDetailPage() {
               {/* Doc viewer */}
               <div className="flex-1 p-8 overflow-y-auto">
                 {activeDoc?.contentJson ? (
-                  <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-                    <h1 className="text-xl font-bold text-center uppercase tracking-wider border-b-2 border-gray-800 pb-4 mb-6">
+                  <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-sm border border-line p-8">
+                    <h1 className="text-xl font-bold text-center uppercase tracking-wider border-b-2 border-ink pb-4 mb-6">
                       {DOC_TYPE_LABELS[activeDoc.documentType] ?? activeDoc.documentType}
                     </h1>
-                    <pre className="whitespace-pre-wrap font-serif text-sm text-gray-800 leading-relaxed">
+                    <pre className="whitespace-pre-wrap font-serif text-sm text-ink leading-relaxed">
                       {extractText(activeDoc.contentJson)}
                     </pre>
                     {activeDoc.changeSummary && (
-                      <p className="mt-6 pt-4 border-t border-gray-100 text-xs text-gray-400">
+                      <p className="mt-6 pt-4 border-t border-line-soft text-xs text-ink-mute">
                         <i className="fa-solid fa-clock-rotate-left mr-1" /> {activeDoc.changeSummary}
                       </p>
                     )}
                   </div>
                 ) : (
-                  <div className="flex items-center justify-center h-full text-sm text-gray-400">
+                  <div className="flex items-center justify-center h-full text-sm text-ink-mute">
                     문서 내용이 없습니다.
                   </div>
                 )}
@@ -478,19 +478,19 @@ export default function ProposalDetailPage() {
           <div className="p-6 max-w-3xl mx-auto space-y-4">
             {/* 관리자 첨부 반려 사유 — 재업로드 안내 */}
             {rejectionReason && (
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+              <div className="bg-warning-soft border border-warning/30 rounded-xl p-4">
                 <div className="flex items-start gap-2">
-                  <i className="fa-solid fa-triangle-exclamation text-amber-500 mt-0.5" />
+                  <i className="fa-solid fa-triangle-exclamation text-warning mt-0.5" />
                   <div>
-                    <p className="text-sm font-semibold text-amber-800">제출 서류가 반려되었습니다</p>
-                    <p className="text-xs text-amber-700 mt-1 whitespace-pre-wrap">{rejectionReason}</p>
-                    <p className="text-xs text-amber-600 mt-2">아래에서 서류를 다시 업로드한 뒤 ‘문서 제출 완료’를 눌러주세요.</p>
+                    <p className="text-sm font-semibold text-warning">제출 서류가 반려되었습니다</p>
+                    <p className="text-xs text-warning mt-1 whitespace-pre-wrap">{rejectionReason}</p>
+                    <p className="text-xs text-warning mt-2">아래에서 서류를 다시 업로드한 뒤 ‘문서 제출 완료’를 눌러주세요.</p>
                   </div>
                 </div>
               </div>
             )}
             {clientSlots.length === 0 && !hasFactors ? (
-              <div className="text-center py-12 text-gray-400">
+              <div className="text-center py-12 text-ink-mute">
                 <i className="fa-solid fa-folder-open text-4xl mb-3" />
                 <p className="text-sm">이 공고에는 명시된 필요 서류가 없습니다.</p>
                 <p className="text-xs mt-1">바로 제출 가능합니다.</p>
@@ -498,17 +498,17 @@ export default function ProposalDetailPage() {
             ) : (
               <>
                 {/* 충족 요약 — 고객이 업로드할 슬롯 기준 */}
-                <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
+                <div className="bg-white border border-line rounded-xl p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-gray-800">필수 서류 충족 현황</p>
-                      <p className="text-xs text-gray-500 mt-0.5">
+                      <p className="text-sm font-medium text-ink">필수 서류 충족 현황</p>
+                      <p className="text-xs text-ink-mute mt-0.5">
                         {fulfilledMandatory} / {mandatoryDocs.length} 건 업로드 완료
                       </p>
                     </div>
-                    <div className="w-32 h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="w-32 h-2 bg-surface rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-secondary transition-all"
+                        className="h-full bg-brand transition-all"
                         style={{
                           width: mandatoryDocs.length > 0
                             ? `${(fulfilledMandatory / mandatoryDocs.length) * 100}%`
@@ -518,9 +518,9 @@ export default function ProposalDetailPage() {
                     </div>
                   </div>
                   {/* CR-125: 서류함에서 자동 채우기 */}
-                  <div className="flex items-center justify-between gap-3 border-t border-gray-100 pt-3">
-                    <p className="text-xs text-gray-500">
-                      <i className="fa-solid fa-folder-open mr-1.5 text-secondary" />
+                  <div className="flex items-center justify-between gap-3 border-t border-line-soft pt-3">
+                    <p className="text-xs text-ink-mute">
+                      <i className="fa-solid fa-folder-open mr-1.5 text-brand" />
                       서류함에 등록한 공통 서류(사업자등록증 등)를 한 번에 채울 수 있습니다.
                     </p>
                     <DsButton variant="outline" size="sm" onClick={handleAutoFill} disabled={autoFilling}>
@@ -532,8 +532,8 @@ export default function ProposalDetailPage() {
                     </DsButton>
                   </div>
                   {autoFillMsg && (
-                    <p className="text-xs text-gray-600 bg-gray-50 rounded-lg px-3 py-2">
-                      <i className="fa-solid fa-circle-info mr-1.5 text-gray-400" />
+                    <p className="text-xs text-ink-sub bg-surface rounded-lg px-3 py-2">
+                      <i className="fa-solid fa-circle-info mr-1.5 text-ink-mute" />
                       {autoFillMsg}
                     </p>
                   )}
@@ -545,10 +545,10 @@ export default function ProposalDetailPage() {
                     {factors.map((f) => (
                       <div key={f.factorId ?? f.factorTitle}>
                         <div className="flex items-center gap-2 mb-2">
-                          <span className="px-2 py-0.5 rounded bg-gray-800 text-white text-[11px] font-semibold tracking-wide">
+                          <span className="px-2 py-0.5 rounded bg-brand-deep text-white text-[11px] font-semibold tracking-wide">
                             FACTOR {f.factorId}
                           </span>
-                          <span className="text-sm font-semibold text-gray-700">{f.factorTitle}</span>
+                          <span className="text-sm font-semibold text-ink-sub">{f.factorTitle}</span>
                         </div>
                         <div className="space-y-3 pl-1">
                           {(f.subfactors ?? []).map((s) =>
@@ -576,25 +576,25 @@ export default function ProposalDetailPage() {
 
                 {/* CR-033: 참여 자격요건 — 제출 전 충족해야 할 자격 (읽기 안내) */}
                 {eligibility.length > 0 && (
-                  <div className="bg-amber-50/60 border border-amber-200 rounded-xl p-4">
-                    <p className="text-sm font-semibold text-amber-800 mb-2">
+                  <div className="bg-warning-soft/60 border border-warning/30 rounded-xl p-4">
+                    <p className="text-sm font-semibold text-warning mb-2">
                       <i className="fa-solid fa-shield-halved mr-1.5" />참여 자격요건
                     </p>
-                    <p className="text-xs text-amber-700 mb-3">아래 자격을 충족해야 입찰에 참여할 수 있습니다. 자격 증빙은 위 제출 서류로 갈음됩니다.</p>
+                    <p className="text-xs text-warning mb-3">아래 자격을 충족해야 입찰에 참여할 수 있습니다. 자격 증빙은 위 제출 서류로 갈음됩니다.</p>
                     <div className="space-y-2">
                       {eligibility.map((e, i) => (
                         <div key={i} className="flex items-start gap-2 text-sm">
-                          <i className={`fa-solid ${e.isGate ? 'fa-triangle-exclamation text-amber-500' : 'fa-circle-check text-amber-400'} mt-0.5`} />
+                          <i className={`fa-solid ${e.isGate ? 'fa-triangle-exclamation text-warning' : 'fa-circle-check text-warning'} mt-0.5`} />
                           <div className="flex-1">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-medium text-gray-800">{e.title}</span>
+                              <span className="font-medium text-ink">{e.title}</span>
                               {e.isGate && (
-                                <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-700">미충족 시 부적격</span>
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-warning-soft text-warning">미충족 시 부적격</span>
                               )}
                             </div>
-                            {e.description && <p className="text-xs text-gray-600 mt-0.5">{e.description}</p>}
+                            {e.description && <p className="text-xs text-ink-sub mt-0.5">{e.description}</p>}
                             {e.evidenceBy && (
-                              <p className="text-[11px] text-emerald-600 mt-0.5"><i className="fa-solid fa-link mr-1" />증빙: {e.evidenceBy}</p>
+                              <p className="text-[11px] text-success mt-0.5"><i className="fa-solid fa-link mr-1" />증빙: {e.evidenceBy}</p>
                             )}
                           </div>
                         </div>
@@ -605,13 +605,13 @@ export default function ProposalDetailPage() {
 
                 {/* 분류 외 추가 첨부(category 미지정) — 있으면 표시 */}
                 {clientDocs.filter((c) => !c.documentCategory).length > 0 && (
-                  <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
-                    <p className="text-xs font-medium text-gray-500 mb-2">기타 첨부</p>
+                  <div className="bg-surface border border-line rounded-xl p-4">
+                    <p className="text-xs font-medium text-ink-mute mb-2">기타 첨부</p>
                     <div className="space-y-1.5">
                       {clientDocs.filter((c) => !c.documentCategory).map((c) => (
                         <div key={c.id} className="flex items-center justify-between text-xs">
-                          <span className="text-gray-700 truncate">
-                            <i className="fa-solid fa-paperclip text-gray-400 mr-1" />
+                          <span className="text-ink-sub truncate">
+                            <i className="fa-solid fa-paperclip text-ink-mute mr-1" />
                             {c.fileName}
                           </span>
                           <DsButton
@@ -632,7 +632,7 @@ export default function ProposalDetailPage() {
                 {(proposal.state === 'CREATED' || proposal.state === 'DOCS_PENDING') && (
                   <div className="pt-2">
                     {submitError && (
-                      <p className="text-xs text-red-500 mb-2 text-center">{submitError}</p>
+                      <p className="text-xs text-danger mb-2 text-center">{submitError}</p>
                     )}
                     <Button
                       variant="primary"
@@ -647,7 +647,7 @@ export default function ProposalDetailPage() {
                       )}
                     </Button>
                     {!canSubmitDocs && (
-                      <p className="text-xs text-gray-400 mt-2 text-center">
+                      <p className="text-xs text-ink-mute mt-2 text-center">
                         모든 필수 서류를 업로드하면 제출할 수 있습니다.
                       </p>
                     )}
@@ -662,29 +662,29 @@ export default function ProposalDetailPage() {
         {activeTab === 'history' && (
           <div className="p-6 max-w-3xl mx-auto">
             {history.length === 0 ? (
-              <div className="text-center py-12 text-gray-400">
+              <div className="text-center py-12 text-ink-mute">
                 <i className="fa-solid fa-clock-rotate-left text-4xl mb-3" />
                 <p className="text-sm">진행 이력이 없습니다.</p>
               </div>
             ) : (
               <div className="relative pl-6">
-                <div className="absolute left-2.5 top-2 bottom-2 w-0.5 bg-gray-200" />
+                <div className="absolute left-2.5 top-2 bottom-2 w-0.5 bg-line" />
                 {history.map((h, idx) => (
                   <div key={idx} className="relative mb-6 last:mb-0">
-                    <div className="absolute -left-3.5 top-1.5 w-3 h-3 rounded-full bg-white border-2 border-secondary" />
-                    <div className="bg-white rounded-lg border border-gray-200 p-4 ml-4">
+                    <div className="absolute -left-3.5 top-1.5 w-3 h-3 rounded-full bg-white border-2 border-brand" />
+                    <div className="bg-white rounded-lg border border-line p-4 ml-4">
                       <div className="flex items-center gap-2 mb-1">
                         <Badge variant={STATE_BADGE[h.toState] ?? 'active'} size="sm">
                           {STATE_LABEL[h.toState] ?? h.toState}
                         </Badge>
                         {h.fromState && (
-                          <span className="text-xs text-gray-400">
+                          <span className="text-xs text-ink-mute">
                             {STATE_LABEL[h.fromState] ?? h.fromState} &rarr;
                           </span>
                         )}
                       </div>
-                      {h.notes && <p className="text-sm text-gray-600 mt-1">{h.notes}</p>}
-                      <p className="text-xs text-gray-400 mt-2">
+                      {h.notes && <p className="text-sm text-ink-sub mt-1">{h.notes}</p>}
+                      <p className="text-xs text-ink-mute mt-2">
                         {h.timestamp ? new Date(h.timestamp).toLocaleString('ko-KR') : ''}
                         {h.username && ` | ${h.username}`}
                       </p>

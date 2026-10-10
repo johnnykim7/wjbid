@@ -67,8 +67,8 @@ export default function SupportPage() {
     <div className="flex-1 overflow-y-auto">
       {/* 페이지 헤더 (제목 + 부제 — 전 페이지 통일) */}
       <div className="text-center mb-10 pt-2">
-        <h1 className="text-2xl font-bold text-[#0c1e3d]">고객센터</h1>
-        <p className="mt-2 text-slate-500">
+        <h1 className="text-2xl font-bold text-ink">고객센터</h1>
+        <p className="mt-2 text-ink-mute">
           자주 묻는 질문을 먼저 확인하시고, 해결되지 않으면 1:1 문의를 남겨 주세요.
         </p>
       </div>
@@ -77,8 +77,8 @@ export default function SupportPage() {
         {/* FAQ 요약 */}
         <section>
           <div className="flex items-center justify-between mb-5">
-            <h2 className="text-lg font-extrabold text-gray-900">자주 묻는 질문</h2>
-            <Link to="/faq" className="text-sm text-[#1a56db] font-medium hover:underline">
+            <h2 className="text-lg font-extrabold text-ink">자주 묻는 질문</h2>
+            <Link to="/faq" className="text-sm text-brand font-medium hover:underline">
               전체 FAQ 보기 <i className="fa-solid fa-arrow-right text-xs ml-0.5" />
             </Link>
           </div>
@@ -87,15 +87,15 @@ export default function SupportPage() {
               <AccordionItem
                 key={idx}
                 value={`sfaq-${idx}`}
-                className="bg-white rounded-xl border border-gray-200 px-5"
+                className="bg-white rounded-xl border border-line px-5"
               >
-                <AccordionTrigger className="text-sm font-bold text-gray-900 gap-2">
+                <AccordionTrigger className="text-sm font-bold text-ink gap-2">
                   <span className="flex items-start gap-2 text-left">
-                    <i className="fa-solid fa-circle-question text-[#1a56db] mt-0.5" />
+                    <i className="fa-solid fa-circle-question text-brand mt-0.5" />
                     {faq.q}
                   </span>
                 </AccordionTrigger>
-                <AccordionContent className="text-sm text-gray-600 ml-6 leading-relaxed">
+                <AccordionContent className="text-sm text-ink-sub ml-6 leading-relaxed">
                   {faq.a}
                 </AccordionContent>
               </AccordionItem>
@@ -105,10 +105,10 @@ export default function SupportPage() {
 
         {/* 1:1 문의 폼 */}
         <section>
-          <h2 className="text-lg font-extrabold text-gray-900 mb-5">1:1 문의</h2>
+          <h2 className="text-lg font-extrabold text-ink mb-5">1:1 문의</h2>
           <form
             onSubmit={handleSubmit}
-            className="bg-white rounded-xl border border-gray-200 p-6 space-y-5"
+            className="bg-white rounded-xl border border-line p-6 space-y-5"
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="space-y-1.5">

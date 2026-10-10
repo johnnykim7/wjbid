@@ -53,21 +53,21 @@ export default function NotificationsPage() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-bold text-gray-800 mb-6">
+      <h2 className="text-xl font-bold text-ink mb-6">
         알림
         {items.length > 0 && (
-          <span className="ml-2 text-sm font-normal text-gray-500">{items.length}건</span>
+          <span className="ml-2 text-sm font-normal text-ink-mute">{items.length}건</span>
         )}
       </h2>
 
       {items.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 p-16 text-center text-gray-400 shadow-sm">
+        <div className="bg-white rounded-xl border border-line p-16 text-center text-ink-mute shadow-sm">
           <i className="fa-regular fa-bell text-4xl mb-3 block" />
           <p className="font-medium">알림이 없습니다.</p>
           <p className="text-sm mt-1">새 입찰 공고가 등록되면 알림을 받아보실 수 있습니다.</p>
         </div>
       ) : (
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden divide-y divide-gray-50">
+        <div className="bg-white border border-line rounded-xl shadow-sm overflow-hidden divide-y divide-line-soft">
           {items.map((n) => {
             const clickable = n.referenceType === 'Opportunity' && !!n.referenceId
             return (
@@ -81,11 +81,11 @@ export default function NotificationsPage() {
               >
                 <div className="flex items-start gap-3">
                   {!n.read && (
-                    <span className="mt-1.5 h-2 w-2 rounded-full bg-[#1a56db] flex-shrink-0" />
+                    <span className="mt-1.5 h-2 w-2 rounded-full bg-brand flex-shrink-0" />
                   )}
                   <div className={n.read ? 'pl-5' : ''}>
-                    <p className="text-sm text-gray-900 font-medium">{n.subject}</p>
-                    <p className="text-xs text-gray-400 mt-1">{formatDateTime(n.sentAt)}</p>
+                    <p className="text-sm text-ink font-medium">{n.subject}</p>
+                    <p className="text-xs text-ink-mute mt-1">{formatDateTime(n.sentAt)}</p>
                   </div>
                 </div>
               </Button>

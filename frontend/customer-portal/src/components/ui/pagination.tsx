@@ -31,9 +31,9 @@ export function Pagination({
   const pages = Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i)
 
   return (
-    <div className={cn('bg-white px-4 py-3 border-t border-gray-200 flex items-center justify-between', className)}>
+    <div className={cn('bg-white px-4 py-3 border-t border-line flex items-center justify-between', className)}>
       {totalElements != null && (
-        <p className="text-sm text-gray-700 hidden sm:block">
+        <p className="text-sm text-ink-sub hidden sm:block">
           전체 <span className="font-medium">{totalElements.toLocaleString()}</span>건 중{' '}
           <span className="font-medium">{from}</span>–<span className="font-medium">{to}</span>건 표시
         </p>

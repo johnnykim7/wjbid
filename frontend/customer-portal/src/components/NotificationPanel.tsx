@@ -42,12 +42,12 @@ export function NotificationPanel({ items, loading, onClose, onLoad, onMarkRead 
   return (
     <>
       <div className="fixed inset-0 z-10" onClick={onClose} />
-      <div className="absolute right-0 mt-1 w-80 bg-white rounded-xl shadow-lg border border-gray-200 z-20 overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-          <span className="font-semibold text-sm text-gray-800">알림</span>
+      <div className="absolute right-0 mt-1 w-80 bg-white rounded-xl shadow-lg border border-line z-20 overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-line-soft">
+          <span className="font-semibold text-sm text-ink">알림</span>
           <button
             onClick={() => { navigate('/notifications'); onClose() }}
-            className="text-xs text-[#1a56db] hover:underline"
+            className="text-xs text-brand hover:underline"
           >
             전체 보기
           </button>
@@ -55,25 +55,25 @@ export function NotificationPanel({ items, loading, onClose, onLoad, onMarkRead 
 
         <div className="max-h-96 overflow-y-auto">
           {loading ? (
-            <div className="px-4 py-8 text-center text-sm text-gray-400">불러오는 중…</div>
+            <div className="px-4 py-8 text-center text-sm text-ink-mute">불러오는 중…</div>
           ) : items.length === 0 ? (
-            <div className="px-4 py-8 text-center text-sm text-gray-400">알림이 없습니다.</div>
+            <div className="px-4 py-8 text-center text-sm text-ink-mute">알림이 없습니다.</div>
           ) : (
             items.map((n) => (
               <button
                 key={n.id}
                 onClick={() => handleClick(n)}
-                className={`block w-full text-left px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors ${
+                className={`block w-full text-left px-4 py-3 border-b border-line-soft hover:bg-surface transition-colors ${
                   n.read ? 'opacity-60' : ''
                 }`}
               >
                 <div className="flex items-start gap-2">
                   {!n.read && (
-                    <span className="mt-1.5 h-2 w-2 rounded-full bg-[#1a56db] flex-shrink-0" />
+                    <span className="mt-1.5 h-2 w-2 rounded-full bg-brand flex-shrink-0" />
                   )}
                   <div className={n.read ? 'pl-4' : ''}>
-                    <p className="text-sm text-gray-800 font-medium leading-snug">{n.subject}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{timeAgo(n.sentAt)}</p>
+                    <p className="text-sm text-ink font-medium leading-snug">{n.subject}</p>
+                    <p className="text-xs text-ink-mute mt-0.5">{timeAgo(n.sentAt)}</p>
                   </div>
                 </div>
               </button>

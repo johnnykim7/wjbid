@@ -144,13 +144,13 @@ export default function SearchPage() {
           label="관심 공고 (북마크)"
           value={stats.bookmarks}
           unit="건"
-          iconColor="text-secondary"
+          iconColor="text-brand"
         />
         <StatCard
           label="나의 입찰 요청"
           value={stats.proposals}
           unit="건"
-          iconColor="text-accent"
+          iconColor="text-brand"
         />
         <StatCard
           dark
@@ -171,10 +171,10 @@ export default function SearchPage() {
       </div>
 
       {/* Filter Bar */}
-      <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-4">
+      <div className="bg-white p-4 rounded-xl border border-line shadow-sm mb-4">
         <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-4 items-center">
           <div className="flex-1 w-full relative">
-            <i className="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm z-10" />
+            <i className="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-ink-mute text-sm z-10" />
             <Input
               type="text"
               placeholder="공고번호, 키워드(예: IT Support), 기관명 검색..."
@@ -211,7 +211,7 @@ export default function SearchPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
+      <div className="bg-white border border-line rounded-xl shadow-sm overflow-hidden flex flex-col">
         {loading ? (
           <LoadingSpinner fullPage />
         ) : loadError ? (
@@ -248,29 +248,29 @@ export default function SearchPage() {
                       onClick={() => navigate(`/search/${bid.id}`)}
                     >
                       <TableCell className="whitespace-nowrap align-top">
-                        <div className="font-bold text-primary text-xs">{bid.solicitationNumber}</div>
+                        <div className="font-bold text-ink text-xs">{bid.solicitationNumber}</div>
                         {bid.naicsCode && (
-                          <div className="text-xs text-gray-400 mt-1">NAICS: {bid.naicsCode}</div>
+                          <div className="text-xs text-ink-mute mt-1">NAICS: {bid.naicsCode}</div>
                         )}
                       </TableCell>
                       <TableCell className="align-top">
-                        <div className="font-semibold text-gray-900 text-sm mb-1 line-clamp-2">
+                        <div className="font-semibold text-ink text-sm mb-1 line-clamp-2">
                           {bid.title}
                         </div>
-                        <div className="text-xs text-gray-500 flex items-center gap-1">
-                          <i className="fa-solid fa-building-columns text-gray-400" />
+                        <div className="text-xs text-ink-mute flex items-center gap-1">
+                          <i className="fa-solid fa-building-columns text-ink-mute" />
                           {bid.agencyName}
                         </div>
                       </TableCell>
-                      <TableCell className="align-top text-sm text-gray-600">
+                      <TableCell className="align-top text-sm text-ink-sub">
                         {bid.type || '-'}
                       </TableCell>
-                      <TableCell className="whitespace-nowrap align-top text-sm text-gray-600">
+                      <TableCell className="whitespace-nowrap align-top text-sm text-ink-sub">
                         {bid.postedDate || '-'}
                       </TableCell>
                       <TableCell className="whitespace-nowrap align-top">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-sm text-gray-700">{bid.responseDeadline}</span>
+                          <span className="text-sm text-ink-sub">{bid.responseDeadline}</span>
                           <DdayBadge deadline={bid.responseDeadline} />
                         </div>
                       </TableCell>
@@ -279,7 +279,7 @@ export default function SearchPage() {
                           variant="ghost"
                           size="icon"
                           title={bookmarkedIds.has(bid.id) ? '북마크 제거' : '관심 공고 저장'}
-                          className={bookmarkedIds.has(bid.id) ? 'text-secondary' : 'text-gray-400 hover:text-secondary'}
+                          className={bookmarkedIds.has(bid.id) ? 'text-brand' : 'text-ink-mute hover:text-brand'}
                           onClick={(e) => toggleBookmark(bid, e)}
                         >
                           <i className={bookmarkedIds.has(bid.id) ? 'fa-solid fa-bookmark' : 'fa-regular fa-bookmark'} />

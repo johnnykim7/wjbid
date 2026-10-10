@@ -18,8 +18,8 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 // 로컬 variant → DS variant (+ 보존용 className)
 const VARIANT_MAP: Record<LocalVariant, { ds: string; cls?: string }> = {
   primary:     { ds: 'primary' },
-  brandBlue:   { ds: 'primary', cls: 'bg-brandBlue hover:bg-brandBlue/90 text-white' },
-  accent:      { ds: 'primary', cls: 'bg-accent hover:bg-accent/90 text-white' },
+  brandBlue:   { ds: 'primary' },
+  accent:      { ds: 'primary' },
   outline:     { ds: 'outline' },
   ghost:       { ds: 'ghost' },
   dark:        { ds: 'mono' },

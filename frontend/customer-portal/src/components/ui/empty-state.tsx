@@ -23,7 +23,7 @@ export function EmptyState({ icon, title, description, action, className }: Empt
       <EmptyHeader>
         {icon && (
           <EmptyMedia variant="icon">
-            <i className={cn(icon, 'text-2xl text-gray-400')} />
+            <i className={cn(icon, 'text-2xl text-ink-mute')} />
           </EmptyMedia>
         )}
         <EmptyTitle>{title}</EmptyTitle>

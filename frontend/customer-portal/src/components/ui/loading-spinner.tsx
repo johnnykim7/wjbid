@@ -8,7 +8,7 @@ interface LoadingSpinnerProps {
 }
 
 export function LoadingSpinner({ className, fullPage }: LoadingSpinnerProps) {
-  const spinner = <DsSpinner className={cn('size-6 text-primary', className)} />
+  const spinner = <DsSpinner className={cn('size-6 text-brand', className)} />
   if (fullPage) {
     return <div className="flex-1 flex items-center justify-center min-h-64">{spinner}</div>
   }

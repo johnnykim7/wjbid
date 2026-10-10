@@ -34,32 +34,32 @@ export default function DisclaimerPage() {
     <div className="flex-1 overflow-y-auto">
       {/* 페이지 헤더 (제목 + 부제 — 전 페이지 통일) */}
       <div className="text-center mb-10 pt-2">
-        <h1 className="text-2xl font-bold text-[#0c1e3d]">면책 고지</h1>
-        <p className="mt-2 text-slate-500">
+        <h1 className="text-2xl font-bold text-ink">면책 고지</h1>
+        <p className="mt-2 text-ink-mute">
           서비스 이용 전 반드시 확인해야 할 책임 및 면책 사항입니다.
         </p>
       </div>
 
       <div className="max-w-3xl mx-auto px-6 py-16">
-        <div className="rounded-xl border border-[#1a56db]/30 bg-[#1a56db]/5 p-6 mb-8">
-          <p className="text-sm font-semibold text-[#0c1e3d] leading-relaxed">
+        <div className="rounded-xl border border-brand-line bg-brand-softer p-6 mb-8">
+          <p className="text-sm font-semibold text-ink leading-relaxed">
             본 서비스는 낙찰을 보장하지 않으며, 입찰서의 최종 제출 및 서명은 고객의 책임입니다.
           </p>
         </div>
 
         <div className="space-y-6">
           {SECTIONS.map((s) => (
-            <div key={s.no} className="bg-white rounded-xl border border-gray-200 p-6">
-              <h2 className="text-base font-bold text-[#0c1e3d] mb-2">
+            <div key={s.no} className="bg-white rounded-xl border border-line p-6">
+              <h2 className="text-base font-bold text-ink mb-2">
                 {s.no}. {s.title}
               </h2>
-              <p className="text-sm text-gray-600 leading-relaxed">{s.body}</p>
+              <p className="text-sm text-ink-sub leading-relaxed">{s.body}</p>
             </div>
           ))}
         </div>
 
         <div className="text-center mt-12">
-          <Link to="/" className="text-sm font-semibold text-[#1a56db] hover:underline">
+          <Link to="/" className="text-sm font-semibold text-brand hover:underline">
             ← 홈으로 돌아가기
           </Link>
         </div>

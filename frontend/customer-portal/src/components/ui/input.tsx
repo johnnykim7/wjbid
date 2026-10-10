@@ -14,7 +14,7 @@ export function InputWrapper({ className, icon, children, ...props }: InputWrapp
       {...props}
     >
       {icon && (
-        <span className="absolute left-3 text-gray-400 pointer-events-none">
+        <span className="absolute left-3 text-ink-mute pointer-events-none">
           {icon}
         </span>
       )}

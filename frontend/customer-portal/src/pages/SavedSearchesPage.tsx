@@ -67,8 +67,8 @@ export default function SavedSearchesPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h2 className="text-xl font-bold text-gray-800">저장한 검색 / 알림 구독</h2>
-          <p className="text-sm text-gray-500 mt-1">
+          <h2 className="text-xl font-bold text-ink">저장한 검색 / 알림 구독</h2>
+          <p className="text-sm text-ink-mute mt-1">
             자주 쓰는 검색 조건을 저장하고, 새 공고가 올라오면 알림을 받으세요.
           </p>
         </div>
@@ -90,10 +90,10 @@ export default function SavedSearchesPage() {
             <Card key={s.id} className="p-5">
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div className="min-w-0">
-                  <h3 className="text-base font-bold text-gray-800 truncate">{s.name}</h3>
-                  <p className="text-xs text-gray-400 mt-0.5">
+                  <h3 className="text-base font-bold text-ink truncate">{s.name}</h3>
+                  <p className="text-xs text-ink-mute mt-0.5">
                     {s.alertOn ? (
-                      <span className="text-secondary">
+                      <span className="text-brand">
                         <i className="fa-solid fa-bell mr-1" /> 알림 켜짐
                       </span>
                     ) : (
@@ -124,16 +124,16 @@ export default function SavedSearchesPage() {
                 )}
               </div>
 
-              <div className="flex items-center justify-between border-t border-gray-100 pt-3">
-                <span className="text-xs text-gray-500">
+              <div className="flex items-center justify-between border-t border-line-soft pt-3">
+                <span className="text-xs text-ink-mute">
                   최근 매칭{' '}
-                  <span className="font-bold text-gray-800">{s.lastMatched}</span>건
+                  <span className="font-bold text-ink">{s.lastMatched}</span>건
                 </span>
                 <div className="flex gap-2">
-                  <Button variant="ghost" size="sm" className="text-secondary">
+                  <Button variant="ghost" size="sm" className="text-brand">
                     <i className="fa-solid fa-arrow-right mr-1" /> 결과 보기
                   </Button>
-                  <Button variant="ghost" size="icon" className="text-gray-400 hover:text-red-500" title="삭제">
+                  <Button variant="ghost" size="icon" className="text-ink-mute hover:text-danger" title="삭제">
                     <i className="fa-regular fa-trash-can" />
                   </Button>
                 </div>
@@ -143,7 +143,7 @@ export default function SavedSearchesPage() {
         </div>
       )}
 
-      <p className="mt-6 text-xs text-gray-400">
+      <p className="mt-6 text-xs text-ink-mute">
         <i className="fa-solid fa-circle-info mr-1" />
         저장한 검색·알림 구독은 현재 화면 시연용 더미 데이터입니다. (BE 미연동)
       </p>

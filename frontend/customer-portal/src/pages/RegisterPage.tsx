@@ -70,16 +70,14 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex" style={{ background: '#f5f7fa' }}>
+    <div className="min-h-screen flex bg-surface">
       {/* 좌측 브랜드 패널 */}
       <div
-        className="hidden lg:flex flex-col justify-between w-[460px] flex-shrink-0 p-12 text-white"
-        style={{ background: 'linear-gradient(160deg, #0c1e3d 0%, #1a3a6c 100%)' }}
+        className="hidden lg:flex flex-col justify-between w-[460px] flex-shrink-0 p-12 text-white bg-brand-deep"
       >
         <div className="flex items-center gap-2.5">
           <div
-            className="w-8 h-8 rounded-md flex items-center justify-center"
-            style={{ background: 'rgba(255,255,255,0.12)' }}
+            className="w-8 h-8 rounded-md flex items-center justify-center bg-white/12"
           >
             <i className="fa-solid fa-file-signature text-white text-sm" />
           </div>
@@ -90,7 +88,7 @@ export default function RegisterPage() {
           <h2 className="text-3xl font-bold leading-snug mb-4">
             지금 가입하고<br />입찰을 시작하세요
           </h2>
-          <p className="text-sm leading-relaxed mb-10" style={{ color: 'rgba(255,255,255,0.6)' }}>
+          <p className="text-sm leading-relaxed mb-10 text-white/60">
             회원가입 후 바로 SAM.gov 공고를 검색하고<br />
             전문가 제안서 작성 서비스를 이용할 수 있습니다.
           </p>
@@ -102,18 +100,17 @@ export default function RegisterPage() {
             ].map((f) => (
               <div key={f.text} className="flex items-center gap-3">
                 <div
-                  className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                  style={{ background: 'rgba(255,255,255,0.1)' }}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-white/10"
                 >
-                  <i className={`${f.icon} text-xs`} style={{ color: 'rgba(255,255,255,0.75)' }} />
+                  <i className={`${f.icon} text-xs text-white/75`} />
                 </div>
-                <span className="text-sm" style={{ color: 'rgba(255,255,255,0.65)' }}>{f.text}</span>
+                <span className="text-sm text-white/65">{f.text}</span>
               </div>
             ))}
           </div>
         </div>
 
-        <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>© 2025 WJbid.com</p>
+        <p className="text-xs text-white/30">© 2025 WJbid.com</p>
       </div>
 
       {/* 우측 가입 폼 */}
@@ -121,23 +118,23 @@ export default function RegisterPage() {
         <div className="w-full max-w-[440px]">
           {/* 모바일 로고 */}
           <div className="lg:hidden flex items-center gap-2.5 mb-8">
-            <div className="w-8 h-8 rounded-md flex items-center justify-center" style={{ background: '#0c1e3d' }}>
+            <div className="w-8 h-8 rounded-md flex items-center justify-center bg-brand-deep">
               <i className="fa-solid fa-file-signature text-white text-sm" />
             </div>
-            <span className="font-bold text-[17px]" style={{ color: '#0c1e3d' }}>
-              WJbid<span className="font-normal text-sm" style={{ color: '#1a56db' }}>.com</span>
+            <span className="font-bold text-[17px] text-brand-deep">
+              WJbid<span className="font-normal text-sm text-brand">.com</span>
             </span>
           </div>
 
           <div className="mb-8">
-            <h1 className="text-2xl font-bold text-[#0c1e3d] mb-1">회원가입</h1>
-            <p className="text-sm text-gray-500">기업 정보를 입력하여 서비스에 가입하세요</p>
+            <h1 className="text-2xl font-bold text-ink mb-1">회원가입</h1>
+            <p className="text-sm text-ink-mute">기업 정보를 입력하여 서비스에 가입하세요</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* 계정 정보 */}
             <div className="space-y-1.5">
-              <Label>이메일 <span className="text-red-500">*</span></Label>
+              <Label>이메일 <span className="text-danger">*</span></Label>
               <Input
                 type="email"
                 value={form.email}
@@ -149,7 +146,7 @@ export default function RegisterPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label>비밀번호 <span className="text-red-500">*</span></Label>
+                <Label>비밀번호 <span className="text-danger">*</span></Label>
                 <Input
                   type="password"
                   value={form.password}
@@ -159,7 +156,7 @@ export default function RegisterPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>비밀번호 확인 <span className="text-red-500">*</span></Label>
+                <Label>비밀번호 확인 <span className="text-danger">*</span></Label>
                 <Input
                   type="password"
                   value={form.passwordConfirm}
@@ -171,19 +168,19 @@ export default function RegisterPage() {
             </div>
 
             {/* 구분선 */}
-            <div className="border-t border-gray-200 pt-4">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">기업 정보</p>
+            <div className="border-t border-line pt-4">
+              <p className="text-xs font-semibold text-ink-mute uppercase tracking-wider mb-3">기업 정보</p>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label>회사명 <span className="text-red-500">*</span></Label>
+                <Label>회사명 <span className="text-danger">*</span></Label>
                 <Input type="text" value={form.companyName}
                   onChange={(e) => update('companyName', e.target.value)} required
                   placeholder="예: VOOMERANG Co., Ltd." />
               </div>
               <div className="space-y-1.5">
-                <Label>사업자등록번호 <span className="text-red-500">*</span></Label>
+                <Label>사업자등록번호 <span className="text-danger">*</span></Label>
                 <Input type="text" value={form.businessRegistrationNumber}
                   onChange={(e) => update('businessRegistrationNumber', e.target.value)} required
                   placeholder="123-45-67890" />
@@ -192,13 +189,13 @@ export default function RegisterPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label>담당자명 <span className="text-red-500">*</span></Label>
+                <Label>담당자명 <span className="text-danger">*</span></Label>
                 <Input type="text" value={form.contactPerson}
                   onChange={(e) => update('contactPerson', e.target.value)} required
                   placeholder="예: 김철수" />
               </div>
               <div className="space-y-1.5">
-                <Label>전화번호 <span className="text-red-500">*</span></Label>
+                <Label>전화번호 <span className="text-danger">*</span></Label>
                 <Input type="tel" value={form.phone}
                   onChange={(e) => update('phone', e.target.value)} required
                   placeholder="010-1234-5678" />
@@ -213,37 +210,37 @@ export default function RegisterPage() {
             </div>
 
             {/* 약관 동의 (CR-124) */}
-            <div className="border-t border-gray-200 pt-4 space-y-2.5">
-              <label className="flex items-center gap-2.5 cursor-pointer pb-1 mb-1 border-b border-gray-100">
+            <div className="border-t border-line pt-4 space-y-2.5">
+              <label className="flex items-center gap-2.5 cursor-pointer pb-1 mb-1 border-b border-line-soft">
                 <Checkbox checked={agree.terms && agree.privacy && agree.marketing} onCheckedChange={toggleAll} />
-                <span className="text-sm font-semibold text-[#0c1e3d]">전체 동의</span>
+                <span className="text-sm font-semibold text-ink">전체 동의</span>
               </label>
               <label className="flex items-center gap-2.5 cursor-pointer">
                 <Checkbox checked={agree.terms} onCheckedChange={() => toggleAgree('terms')} />
-                <span className="text-sm text-gray-600">
-                  <span className="text-red-500">[필수]</span>{' '}
-                  <Link to="/terms" target="_blank" className="text-[#1a56db] hover:underline">이용약관</Link>에 동의합니다
+                <span className="text-sm text-ink-sub">
+                  <span className="text-danger">[필수]</span>{' '}
+                  <Link to="/terms" target="_blank" className="text-brand hover:underline">이용약관</Link>에 동의합니다
                 </span>
               </label>
               <label className="flex items-center gap-2.5 cursor-pointer">
                 <Checkbox checked={agree.privacy} onCheckedChange={() => toggleAgree('privacy')} />
-                <span className="text-sm text-gray-600">
-                  <span className="text-red-500">[필수]</span>{' '}
-                  <Link to="/privacy" target="_blank" className="text-[#1a56db] hover:underline">개인정보처리방침</Link>에 동의합니다
+                <span className="text-sm text-ink-sub">
+                  <span className="text-danger">[필수]</span>{' '}
+                  <Link to="/privacy" target="_blank" className="text-brand hover:underline">개인정보처리방침</Link>에 동의합니다
                 </span>
               </label>
               <label className="flex items-center gap-2.5 cursor-pointer">
                 <Checkbox checked={agree.marketing} onCheckedChange={() => toggleAgree('marketing')} />
-                <span className="text-sm text-gray-600">
-                  <span className="text-gray-400">[선택]</span> 마케팅 정보 수신에 동의합니다
+                <span className="text-sm text-ink-sub">
+                  <span className="text-ink-mute">[선택]</span> 마케팅 정보 수신에 동의합니다
                 </span>
               </label>
             </div>
 
             {error && (
-              <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 border border-red-200">
-                <i className="fa-solid fa-circle-exclamation text-red-500 text-sm flex-shrink-0" />
-                <p className="text-sm text-red-700">{error}</p>
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-danger-soft border border-danger/30">
+                <i className="fa-solid fa-circle-exclamation text-danger text-sm flex-shrink-0" />
+                <p className="text-sm text-danger">{error}</p>
               </div>
             )}
 
@@ -253,18 +250,18 @@ export default function RegisterPage() {
           </form>
 
           <div className="mt-6 text-center">
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-ink-mute">
               이미 계정이 있으신가요?{' '}
-              <Link to="/login" className="text-[#1a56db] font-medium hover:underline">
+              <Link to="/login" className="text-brand font-medium hover:underline">
                 로그인
               </Link>
             </p>
           </div>
 
-          <div className="mt-4 pt-4 border-t border-gray-200">
+          <div className="mt-4 pt-4 border-t border-line">
             <Link
               to="/"
-              className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+              className="flex items-center gap-1.5 text-xs text-ink-mute hover:text-ink-sub transition-colors"
             >
               <i className="fa-solid fa-arrow-left text-[10px]" />
               홈으로 돌아가기

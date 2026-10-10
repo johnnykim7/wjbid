@@ -23,11 +23,11 @@ export function TableBody({ className, ...props }: React.HTMLAttributes<HTMLTabl
 
 export function TableRow({ className, ...props }: React.HTMLAttributes<HTMLTableRowElement>) {
   // DS 기본 구분선(border-border)이 진해 연한 톤으로 덮음
-  return <DsTableRow className={cn('!border-gray-100', className)} {...props} />
+  return <DsTableRow className={cn('!border-line-soft', className)} {...props} />
 }
 
 export function TableHead({ className, ...props }: React.ThHTMLAttributes<HTMLTableCellElement>) {
-  return <DsTableHead className={cn('!border-gray-100', className)} {...props} />
+  return <DsTableHead className={cn('!border-line-soft', className)} {...props} />
 }
 
 export function TableCell({ className, ...props }: React.TdHTMLAttributes<HTMLTableCellElement>) {
