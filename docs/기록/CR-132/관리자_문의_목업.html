@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>1:1 문의 목업</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #0f172a; --secondary: #3b82f6; --accent: #10b981; --sidebar: #1e293b;
+    --danger: #ef4444; --warning: #f59e0b;
+    --g50: #f9fafb; --g100: #f3f4f6; --g200: #e5e7eb; --g300: #d1d5db; --g400: #9ca3af;
+    --g500: #6b7280; --g600: #4b5563; --g700: #374151; --g900: #111827;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Inter', 'Apple SD Gothic Neo', sans-serif; background: #e9ecf1; color: var(--g900); }
+  .switch { position: sticky; top: 0; z-index: 10; display: flex; gap: 8px; align-items: center; padding: 10px 16px; background: #fff; border-bottom: 1px solid var(--g200); font-size: 13px; }
+  .switch b { margin-right: 6px; color: var(--g600); font-weight: 600; }
+  .switch button { border: 1px solid var(--g300); background: #fff; border-radius: 6px; padding: 6px 12px; font-size: 13px; cursor: pointer; color: var(--g700); }
+  .switch button.on { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .app { display: flex; height: calc(100vh - 49px); min-height: 640px; }
+  aside { width: 240px; background: var(--sidebar); flex-shrink: 0; display: flex; flex-direction: column; }
+  .brand { padding: 20px 24px; border-bottom: 1px solid rgba(255,255,255,.1); }
+  .brand div:first-child { color: #fff; font-weight: 700; font-size: 18px; }
+  .brand div:last-child { color: rgba(255,255,255,.5); font-size: 12px; margin-top: 2px; }
+  nav { flex: 1; padding: 16px 12px; }
+  nav a { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; font-size: 14px; color: rgba(255,255,255,.7); text-decoration: none; margin-bottom: 2px; }
+  nav a i { width: 16px; text-align: center; }
+  nav a.on { background: var(--secondary); color: #fff; font-weight: 500; }
+  nav a .cnt { margin-left: auto; background: var(--danger); color: #fff; font-size: 11px; font-weight: 700; border-radius: 999px; padding: 1px 7px; }
+  nav a.new { position: relative; }
+  nav a.new::after { content: '새 메뉴'; position: absolute; right: -6px; top: -8px; font-size: 10px; background: var(--warning); color: #fff; padding: 1px 6px; border-radius: 4px; }
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  header { height: 56px; background: #fff; border-bottom: 1px solid var(--g200); display: flex; align-items: center; padding: 0 24px; font-size: 14px; color: var(--g500); flex-shrink: 0; }
+  header i { color: var(--secondary); margin-right: 8px; }
+  .body { flex: 1; overflow-y: auto; background: var(--g100); }
+  .page { padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+  h1 { font-size: 20px; margin: 0; font-weight: 700; }
+  .sub { font-size: 14px; color: var(--g500); margin-top: 2px; }
+  .card { background: #fff; border: 1px solid var(--g200); border-radius: 12px; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 14px 16px; border-bottom: 1px solid var(--g200); }
+  .seg { display: inline-flex; border: 1px solid var(--g300); border-radius: 8px; overflow: hidden; }
+  .seg span { padding: 7px 14px; font-size: 13px; color: var(--g600); border-right: 1px solid var(--g300); cursor: pointer; }
+  .seg span:last-child { border-right: 0; }
+  .seg span.on { background: var(--primary); color: #fff; font-weight: 600; }
+  .seg span em { font-style: normal; margin-left: 6px; font-size: 12px; opacity: .8; }
+  .sel { display: inline-flex; align-items: center; justify-content: space-between; gap: 24px; border: 1px solid var(--g300); border-radius: 8px; padding: 7px 12px; font-size: 13px; color: var(--g700); background: #fff; min-width: 180px; }
+  .sel i { color: var(--g400); font-size: 11px; }
+  .spacer { flex: 1; }
+  .hint { font-size: 12px; color: var(--g500); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { text-align: left; padding: 12px 16px; font-size: 12px; font-weight: 600; color: var(--g500); background: var(--g50); border-bottom: 1px solid var(--g200); }
+  td { padding: 13px 16px; border-bottom: 1px solid var(--g100); color: var(--g600); }
+  tr.row { cursor: pointer; }
+  tr.row:hover td { background: var(--g50); }
+  tr.unread td.title { font-weight: 700; color: var(--g900); }
+  td.title { color: var(--g900); font-weight: 500; max-width: 360px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  td.mono { font-size: 12px; color: var(--g500); white-space: nowrap; }
+  .pill { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .p-wait { background: #fef3c7; color: #b45309; }
+  .p-done { background: #d1fae5; color: #047857; }
+  .p-type { background: var(--g100); color: var(--g700); font-weight: 500; }
+  .p-mem { background: #dbeafe; color: #1d4ed8; font-weight: 500; }
+  .p-guest { background: var(--g100); color: var(--g500); font-weight: 500; }
+  .pager { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; font-size: 13px; color: var(--g500); }
+  .pager .btns { display: flex; gap: 6px; }
+  .pager .btns span { border: 1px solid var(--g300); border-radius: 6px; padding: 5px 10px; background: #fff; }
+  .pager .btns span.on { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .back { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--g500); cursor: pointer; }
+  .detail-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+  .grid2 { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 20px; align-items: start; }
+  .sec { padding: 20px 24px; }
+  .sec h2 { font-size: 15px; font-weight: 700; margin: 0 0 14px; display: flex; align-items: center; gap: 8px; }
+  .sec h2 i { color: var(--secondary); }
+  .q-title { font-size: 18px; font-weight: 700; margin: 6px 0 14px; }
+  .q-body { font-size: 14px; line-height: 1.75; color: var(--g700); white-space: pre-line; background: var(--g50); border: 1px solid var(--g200); border-radius: 10px; padding: 16px 18px; }
+  dl { margin: 0; display: grid; grid-template-columns: 96px 1fr; row-gap: 12px; font-size: 13px; }
+  dt { color: var(--g500); }
+  dd { margin: 0; color: var(--g900); font-weight: 500; word-break: break-all; }
+  dd a { color: var(--secondary); text-decoration: none; }
+  .ok { color: #047857; } .ng { color: var(--danger); }
+  .textarea { border: 1px solid var(--g300); border-radius: 10px; min-height: 168px; padding: 14px 16px; font-size: 14px; color: var(--g400); line-height: 1.7; }
+  .textarea.focus { border-color: var(--secondary); box-shadow: 0 0 0 3px rgba(59,130,246,.15); color: var(--g900); }
+  .ans-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; gap: 12px; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; border-radius: 8px; padding: 9px 18px; font-size: 14px; font-weight: 600; border: 1px solid transparent; cursor: pointer; }
+  .btn-primary { background: var(--secondary); color: #fff; }
+  .btn-ghost { background: #fff; color: var(--g700); border-color: var(--g300); }
+  .answered { border: 1px solid #a7f3d0; background: #ecfdf5; border-radius: 10px; padding: 16px 18px; }
+  .answered .meta { font-size: 12px; color: #047857; margin-bottom: 10px; display: flex; gap: 14px; flex-wrap: wrap; }
+  .answered .txt { font-size: 14px; line-height: 1.75; color: var(--g900); white-space: pre-line; }
+  .note { font-size: 12px; color: var(--g500); line-height: 1.6; }
+  .callout { font-size: 12px; background: #fffbeb; border: 1px solid #fde68a; color: #92400e; border-radius: 8px; padding: 10px 12px; line-height: 1.6; }
+  .screen { display: none; }
+  .screen.on { display: block; }
+  @media (max-width: 900px) {
+    aside { display: none; }
+    .grid2 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="switch">
+  <b>CR-132 목업</b>
+  <button data-s="list" class="on">문의 목록</button>
+  <button data-s="wait">상세 · 미답변</button>
+  <button data-s="done">상세 · 답변완료</button>
+</div>
+
+<div class="app">
+  <aside>
+    <div class="brand"><div>Bidding Agency</div><div>Admin Console</div></div>
+    <nav>
+      <a><i class="fa-solid fa-chart-line"></i>대시보드</a>
+      <a><i class="fa-solid fa-users"></i>회원 관리</a>
+      <a><i class="fa-solid fa-file-contract"></i>입찰 요청 관리</a>
+      <a><i class="fa-solid fa-inbox"></i>원본 공고</a>
+      <a><i class="fa-solid fa-bullhorn"></i>공고문 관리</a>
+      <a><i class="fa-solid fa-satellite-dish"></i>SAM.gov 수집</a>
+      <a><i class="fa-solid fa-file-lines"></i>문서 템플릿</a>
+      <a><i class="fa-solid fa-trophy"></i>성공 제안서 패턴</a>
+      <a class="on new"><i class="fa-solid fa-headset"></i>1:1 문의<span class="cnt">3</span></a>
+    </nav>
+  </aside>
+
+  <div class="main">
+    <header><i class="fa-solid fa-shield-halved"></i>Admin Console</header>
+    <div class="body">
+
+      <!-- 목록 -->
+      <div class="screen on" id="s-list">
+        <div class="page">
+          <div>
+            <h1>1:1 문의</h1>
+            <div class="sub">고객센터로 들어온 문의를 확인하고 답변합니다.</div>
+          </div>
+          <div class="card">
+            <div class="toolbar">
+              <div class="seg">
+                <span>전체<em>24</em></span>
+                <span class="on">미답변<em>3</em></span>
+                <span>답변완료<em>21</em></span>
+              </div>
+              <div class="sel">유형 전체 <i class="fa-solid fa-chevron-down"></i></div>
+              <div class="spacer"></div>
+              <span class="hint">최근 접수 순</span>
+            </div>
+            <table>
+              <thead><tr><th>접수 일시</th><th>유형</th><th>제목</th><th>이름</th><th>이메일</th><th>구분</th><th>상태</th></tr></thead>
+              <tbody>
+                <tr class="row unread" data-go="wait">
+                  <td class="mono">2026-10-11 09:42</td>
+                  <td><span class="pill p-type">SAM.gov 등록 문의</span></td>
+                  <td class="title">UEI 발급 후 CAGE 코드가 안 나오는데 입찰 신청이 가능한가요?</td>
+                  <td>박서연</td><td class="mono">seoyeon.park@example.com</td>
+                  <td><span class="pill p-guest">비회원</span></td>
+                  <td><span class="pill p-wait"><i class="fa-regular fa-clock"></i>미답변</span></td>
+                </tr>
+                <tr class="row unread" data-go="wait">
+                  <td class="mono">2026-10-11 08:15</td>
+                  <td><span class="pill p-type">결제·환불 문의</span></td>
+                  <td class="title">회원 요금 결제 수단과 세금계산서 발행 문의드립니다</td>
+                  <td>이도윤</td><td class="mono">doyoon@hanbit-fm.example.com</td>
+                  <td><span class="pill p-mem">회원</span></td>
+                  <td><span class="pill p-wait"><i class="fa-regular fa-clock"></i>미답변</span></td>
+                </tr>
+                <tr class="row unread" data-go="wait">
+                  <td class="mono">2026-10-10 17:03</td>
+                  <td><span class="pill p-type">제안서 자문·검토 문의</span></td>
+                  <td class="title">평택 시설관리 공고 제안서 영문 검수까지 맡길 수 있나요?</td>
+                  <td>정하은</td><td class="mono">haeun.jung@example.com</td>
+                  <td><span class="pill p-mem">회원</span></td>
+                  <td><span class="pill p-wait"><i class="fa-regular fa-clock"></i>미답변</span></td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="pager"><span>3건 중 1-3</span><div class="btns"><span class="on">1</span></div></div>
+          </div>
+          <div class="callout">상세에서 목록으로 돌아오면 고른 상태·유형과 보던 위치가 그대로 남습니다. 왼쪽 메뉴의 숫자는 미답변 건수입니다.</div>
+        </div>
+      </div>
+
+      <!-- 상세: 미답변 -->
+      <div class="screen" id="s-wait">
+        <div class="page">
+          <span class="back" data-go="list"><i class="fa-solid fa-arrow-left"></i>목록으로</span>
+          <div class="detail-head">
+            <div>
+              <span class="pill p-wait"><i class="fa-regular fa-clock"></i>미답변</span>
+              <span class="pill p-type" style="margin-left:6px">SAM.gov 등록 문의</span>
+              <div class="q-title">UEI 발급 후 CAGE 코드가 안 나오는데 입찰 신청이 가능한가요?</div>
+            </div>
+          </div>
+          <div class="grid2">
+            <div style="display:flex;flex-direction:column;gap:20px">
+              <div class="card sec">
+                <h2><i class="fa-regular fa-envelope"></i>문의 내용</h2>
+                <div class="q-body">안녕하세요. 지난주 SAM.gov 에서 UEI 는 발급받았는데 CAGE 코드는 아직 심사 중으로 나옵니다.
+캠프 험프리스 시설 유지보수 공고 마감이 이달 말인데, CAGE 코드 없이도 WJbid 로 입찰 신청을 먼저 넣어 둘 수 있는지 궁금합니다.
+가능하다면 어떤 서류를 미리 준비하면 될까요?</div>
+              </div>
+              <div class="card sec">
+                <h2><i class="fa-solid fa-reply"></i>답변</h2>
+                <div class="textarea focus">박서연 님, 문의 주셔서 감사합니다.
+CAGE 코드 심사 중에도 입찰 신청은 먼저 넣으실 수 있습니다. 다만 제출 전까지 CAGE 코드가 나와야 하므로...</div>
+                <div class="ans-foot">
+                  <span class="note">보내면 seoyeon.park@example.com 으로 메일이 가고 상태가 답변완료로 바뀝니다. 보낸 답변은 고칠 수 없습니다.</span>
+                  <span class="btn btn-primary"><i class="fa-solid fa-paper-plane"></i>답변 보내기</span>
+                </div>
+              </div>
+            </div>
+            <div class="card sec">
+              <h2><i class="fa-regular fa-user"></i>문의자</h2>
+              <dl>
+                <dt>이름</dt><dd>박서연</dd>
+                <dt>이메일</dt><dd>seoyeon.park@example.com</dd>
+                <dt>구분</dt><dd><span class="pill p-guest">비회원</span></dd>
+                <dt>접수 일시</dt><dd>2026-10-11 09:42</dd>
+                <dt>관리자 알림</dt><dd class="ok"><i class="fa-solid fa-check"></i> 보냄 09:42 (2명)</dd>
+              </dl>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 상세: 답변완료 -->
+      <div class="screen" id="s-done">
+        <div class="page">
+          <span class="back" data-go="list"><i class="fa-solid fa-arrow-left"></i>목록으로</span>
+          <div class="detail-head">
+            <div>
+              <span class="pill p-done"><i class="fa-solid fa-check"></i>답변완료</span>
+              <span class="pill p-type" style="margin-left:6px">결제·환불 문의</span>
+              <div class="q-title">회원 요금 결제 수단과 세금계산서 발행 문의드립니다</div>
+            </div>
+          </div>
+          <div class="grid2">
+            <div style="display:flex;flex-direction:column;gap:20px">
+              <div class="card sec">
+                <h2><i class="fa-regular fa-envelope"></i>문의 내용</h2>
+                <div class="q-body">회원으로 가입하려고 합니다. 법인카드 말고 계좌이체로도 결제가 되는지, 매달 세금계산서를 받을 수 있는지 알려 주세요.</div>
+              </div>
+              <div class="card sec">
+                <h2><i class="fa-solid fa-reply"></i>답변</h2>
+                <div class="answered">
+                  <div class="meta"><span><i class="fa-solid fa-paper-plane"></i> 보냄 2026-10-11 10:20</span><span><i class="fa-regular fa-user"></i> 답변 관리자 계정</span><span><i class="fa-solid fa-check"></i> 고객 메일 발송 성공</span></div>
+                  <div class="txt">이도윤 님, 문의 주셔서 감사합니다.
+회원 요금은 계좌이체로도 결제하실 수 있고, 결제하신 달마다 세금계산서를 발행해 드립니다.
+가입 후 회사 정보에 사업자등록번호를 넣어 주시면 그 정보로 발행합니다.</div>
+                </div>
+              </div>
+            </div>
+            <div class="card sec">
+              <h2><i class="fa-regular fa-user"></i>문의자</h2>
+              <dl>
+                <dt>이름</dt><dd>이도윤</dd>
+                <dt>이메일</dt><dd>doyoon@hanbit-fm.example.com</dd>
+                <dt>구분</dt><dd><span class="pill p-mem">회원</span> <a href="#">한빛시설관리</a></dd>
+                <dt>접수 일시</dt><dd>2026-10-11 08:15</dd>
+                <dt>관리자 알림</dt><dd class="ng"><i class="fa-solid fa-triangle-exclamation"></i> 실패 08:15</dd>
+              </dl>
+              <div class="note" style="margin-top:14px">알림 메일이 실패해도 문의는 저장되어 이 목록에 남습니다.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  function show(s) {
+    document.querySelectorAll('.screen').forEach(function (e) { e.classList.toggle('on', e.id === 's-' + s); });
+    document.querySelectorAll('.switch button').forEach(function (b) { b.classList.toggle('on', b.dataset.s === s); });
+  }
+  document.querySelectorAll('[data-s]').forEach(function (b) { b.addEventListener('click', function () { show(b.dataset.s); }); });
+  document.querySelectorAll('[data-go]').forEach(function (r) { r.addEventListener('click', function () { show(r.dataset.go); }); });
+</script>
+</body>
+</html>

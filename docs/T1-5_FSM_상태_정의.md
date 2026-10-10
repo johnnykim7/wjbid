@@ -1,6 +1,6 @@
 # SAM.gov Bidding Agency Platform FSM 상태 정의
 
-> 설계 버전: 1.2 | 최종 수정: 2026-05-29 | 관련 CR: CR-003, CR-018
+> 설계 버전: 1.3 | 최종 수정: 2026-10-11 | 관련 CR: CR-003, CR-018, CR-132
 
 > 단계: 1. Requirements | 설계
 >
@@ -14,6 +14,7 @@
 | OpportunityAnalysis (공고 분석) | PENDING → ANALYZING → COMPLETED / FAILED (CR-003) |
 | BidRequest (입찰 요청) | CREATED → DOCS_PENDING → DOCS_RECEIVED → ANALYZING → GENERATING → REVIEW → CONFIRMED → SUBMITTED → AWARDED / NOT_AWARDED, (각 단계) → CLOSED (CR-018) |
 | BidDocument (입찰 문서) | DRAFT → LOCKED → ARCHIVED |
+| Inquiry (1:1 문의) | RECEIVED, ANSWERED (CR-132) |
 
 ---
 
@@ -37,6 +38,24 @@ stateDiagram-v2
 - **진입 조건**: OpportunityAnalysis가 COMPLETED 상태 + 관리자 승인
 - **허용 다음 상태**: HIDDEN (비노출 복귀 가능)
 - **관련 기능 ID**: BID-OPP-008, BID-BROWSE-001
+
+---
+
+## Inquiry 문의 상태 (CR-132)
+
+```mermaid
+stateDiagram-v2
+    [*] --> RECEIVED : 고객이 1:1 문의를 보냄
+    RECEIVED --> ANSWERED : 관리자 답변 메일 발송 성공
+```
+
+### RECEIVED | 미답변
+- **진입**: 문의 저장
+- **나가는 전이**: ANSWERED(답변 메일 발송 성공). 메일이 실패하면 RECEIVED 에 머문다(BIZ-024)
+
+### ANSWERED | 답변완료
+- **진입**: 답변 메일 발송 성공. 답변 본문, 보낸 시각, 보낸 관리자를 함께 남긴다
+- **금지 전이**: ANSWERED 에서 RECEIVED 로 되돌리기, ANSWERED 에 다시 답변. 요청하면 409
 
 ---
 

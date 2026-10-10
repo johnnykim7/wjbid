@@ -1,6 +1,6 @@
 # SAM.gov Bidding Agency Platform API 설계
 
-> 설계 버전: 1.6 | 최종 수정: 2026-10-10 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131
+> 설계 버전: 1.7 | 최종 수정: 2026-10-11 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132
 
 > 단계: 3. Detail Design | 실행스펙 섹션 3에 포함
 >
@@ -263,6 +263,90 @@
 
 ---
 
+## Q. 고객센터 1:1 문의 (CR-132)
+
+| 메서드 | 경로 | 설명 | 인증 | 기능 ID |
+|--------|------|------|------|---------|
+| GET | /inquiries/types | 문의 유형 목록(사용 중인 것만, 순서대로) | | BID-SUPPORT-001 |
+| POST | /inquiries | 문의 등록. 로그인 토큰이 있으면 회원과 묶는다 | 선택 | BID-SUPPORT-001 |
+| GET | /admin/inquiries | 문의 목록. `status`(RECEIVED, ANSWERED, 없으면 전체), `typeCode`, `page`, `size`. 최근 접수가 위 | 🔒 ADMIN | BID-SUPPORT-003 |
+| GET | /admin/inquiries/counts | 상태별 건수(목록 거르기, 메뉴 미답변 숫자) | 🔒 ADMIN | BID-SUPPORT-003 |
+| GET | /admin/inquiries/{id} | 문의 상세(관리자 알림 결과, 답변 포함) | 🔒 ADMIN | BID-SUPPORT-003 |
+| POST | /admin/inquiries/{id}/answer | 답변 보내기. 고객 메일 발송이 성공하면 답변완료(BIZ-024) | 🔒 ADMIN | BID-SUPPORT-003 |
+
+**GET /inquiries/types 응답**
+
+```json
+[{ "code": "SERVICE", "label": "서비스 이용 문의" }, { "code": "CONSULTING", "label": "서비스 상담" }]
+```
+
+**POST /inquiries 요청 / 응답(201)**
+
+```json
+{ "typeCode": "CONSULTING", "title": "등록 대행 상담 신청", "content": "...", "name": "홍길동", "email": "you@example.com" }
+```
+
+```json
+{ "id": "6f1c...", "status": "RECEIVED", "createdAt": "2026-10-11T09:42:10" }
+```
+
+| 필드 | 제약 |
+|------|------|
+| typeCode | 필수. 사용 중인 유형 코드 |
+| title | 필수, 200자 이하 |
+| content | 필수, 5000자 이하 |
+| name | 필수, 100자 이하 |
+| email | 필수, 이메일 형식, 255자 이하 |
+
+**GET /admin/inquiries 응답**: `Page<T>`, 항목
+
+```json
+{ "id": "6f1c...", "createdAt": "2026-10-11T09:42:10", "typeCode": "SAM_REGISTRATION", "typeLabel": "SAM.gov 등록 문의",
+  "title": "...", "name": "박서연", "email": "...", "member": false, "status": "RECEIVED" }
+```
+
+**GET /admin/inquiries/counts 응답**
+
+```json
+{ "all": 24, "received": 3, "answered": 21 }
+```
+
+**GET /admin/inquiries/{id} 응답**
+
+```json
+{ "id": "6f1c...", "typeCode": "PAYMENT", "typeLabel": "결제·환불 문의", "title": "...", "content": "...",
+  "name": "이도윤", "email": "...", "memberId": "a1b2...", "memberCompanyName": "한빛시설관리",
+  "status": "ANSWERED", "createdAt": "2026-10-11T08:15:02",
+  "adminNotice": { "total": 2, "success": 2, "lastSentAt": "2026-10-11T08:15:03" },
+  "answer": "...", "answeredAt": "2026-10-11T10:20:44", "answeredByEmail": "admin@..." }
+```
+
+- `adminNotice` 는 알림 이력(reference_type=Inquiry)에서 센다. 보낸 적이 없으면 total 0.
+- 비로그인 문의는 `memberId`, `memberCompanyName` 이 null. 미답변이면 답변 세 칸이 null.
+
+**POST /admin/inquiries/{id}/answer 요청 / 응답(200)**
+
+```json
+{ "answer": "..." }
+```
+
+응답은 상세와 같은 모양(답변완료로 바뀐 뒤).
+
+**오류**
+
+| 상황 | 상태 | `error` |
+|------|------|---------|
+| 칸 검사 실패(필수 빠짐, 길이 넘침, 이메일 형식) | 400 | (Spring 검사 오류) |
+| 없거나 사용하지 않는 유형 코드 | 400 | INQUIRY_TYPE_INVALID |
+| 없는 문의 | 404 | INQUIRY_NOT_FOUND |
+| 답변완료 문의에 다시 답변 | 409 | INQUIRY_ALREADY_ANSWERED |
+| 답변 본문이 비었거나 5000자 넘음 | 400 | (Spring 검사 오류) |
+| 고객 답변 메일 발송 실패 | 502 | INQUIRY_ANSWER_MAIL_FAILED (상태는 미답변 그대로) |
+
+오류 본문은 `{ "error": "<코드>", "message": "<설명>" }` (CR-131 이메일 중복과 같은 모양).
+
+---
+
 ## P. 성공 제안서 패턴 — Admin (RFP Pattern) — CR-013
 
 ### P-1. 성공 제안서 등록/조회
@@ -406,13 +490,14 @@ app.aimbase:
 | J. 문서 편집 | 7 | 7 |
 | K. 회원 관리 (Admin) | 1 | — |
 | L. 요금 안내 | 1 | 7 |
+| Q. 고객센터 1:1 문의 | 6 | CR-132 |
 | M. FlowGuard 연동 | 5 | — (CR-001) |
 | B-2. 공고 관리 (Admin) | 8 | CR-003 |
 | P. 성공 제안서 패턴 (Admin) | 13 | CR-013 |
 | MCP Tools | 13 | 5, CR-003, CR-013 |
 | MCP SSE 엔드포인트 | 2 | CR-002 |
 | Aimbase 워크플로우 호출 | 2 | CR-002 |
-| **합계** | **REST 77 + MCP 13 + SSE 2 + Aimbase 2** | |
+| **합계** | **REST 83 + MCP 13 + SSE 2 + Aimbase 2** | |
 
 ---
 

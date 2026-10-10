@@ -1,6 +1,6 @@
 # 실행 지시서: SAM.gov Bidding Agency Platform
 
-> 설계 버전: 1.1 | 최종 수정: 2026-03-28 | 관련 CR: CR-003
+> 설계 버전: 1.2 | 최종 수정: 2026-10-11 | 관련 CR: CR-003, CR-132
 
 > **프로젝트:** bidding-agency-platform (미군 조달 입찰 AI 대행 서비스)
 > **프로젝트 유형:** 풀스택 (BE: Java 17 + Spring Boot 3.2 / FE: React 19 × 2)
@@ -110,6 +110,7 @@ SAM.gov에 올라오는 미군(USFK) 조달 입찰 공고를 자동 수집하고
 | L. 요금 | 2 | 요금 안내 | — |
 | M. 관리자 | 4 | 회원/입찰/수집/**공고** 관리 (CR-003) | — |
 | N. 인증 가이드 | 1 | 정적 가이드 페이지 | — |
+| O. 고객센터 | 3 | 1:1 문의 접수, 관리자 알림, 관리자 조회·답변 (CR-132) | bp-notification |
 
 ---
 
@@ -117,8 +118,8 @@ SAM.gov에 올라오는 미군(USFK) 조달 입찰 공고를 자동 수집하고
 
 > 상세: `docs/T3-1_데이터_모델.md`
 
-- **엔티티 16개**: Member, Opportunity, OpportunityAttachment, **OpportunityAnalysis** (CR-003), OpportunityRequirementItem, BidRequest, ClientDocument, BidDocument, BidDocumentVersion, DocumentTemplate, RequirementFulfillmentMap, Bookmark, NotificationLog, CollectorRun, KeywordGroup, EventLog
-- **FSM 관리 엔티티**: BidRequest (9상태), BidDocument (3상태), **Opportunity (2상태: HIDDEN/VISIBLE)**, **OpportunityAnalysis (4상태)** (CR-003)
+- **엔티티 16개**: Member, Opportunity, OpportunityAttachment, **OpportunityAnalysis** (CR-003), OpportunityRequirementItem, BidRequest, ClientDocument, BidDocument, BidDocumentVersion, DocumentTemplate, RequirementFulfillmentMap, Bookmark, NotificationLog, CollectorRun, KeywordGroup, EventLog / CR-132: Inquiry, InquiryType 추가(T3-1)
+- **FSM 관리 엔티티**: BidRequest (9상태), BidDocument (3상태), **Opportunity (2상태: HIDDEN/VISIBLE)**, **OpportunityAnalysis (4상태)** (CR-003), **Inquiry (2상태: RECEIVED/ANSWERED)** (CR-132)
 - **핵심 원칙**: UUID PK, JSON 컬럼(stateHistory, rawJson, contentJson), 문서 버전 불변성, 콘텐츠 해시 중복 검출
 
 ---
