@@ -1,64 +1,59 @@
 /**
- * WJbid Theme — 미군·연방 조달 입찰 대행 (풀 밀리터리 네이비)
- *
- * DS globals.css(Metronic 기본)에서 브랜드 색상만 교체한 테마.
- * banpoom.css 패턴을 따른다. main.tsx에서 DS style.css 다음에 import.
- *
- * @example
- *   import '@therecommerce-develop/ds-ui/dist/style.css';
- *   import './wjbid-theme.css';
- *
- * 컨셉 정본: docs/ui-mockup/customer-portal-military-poc.html
- *   navy #13294f · gnb #1b3a72 · accent #2b50b4 · soft #eef3fb · Noto Sans KR
+ * WJbid Theme. 디자인시스템(ds-ui) 부품의 색 변수를 고객 포털 색 이름표(index.css @theme)에 잇는다.
+ * 색 값은 여기 두지 않는다. 색을 바꿀 때는 index.css 의 강조색 묶음만 바꾼다.
+ * main.tsx 에서 DS style.css 다음에 import.
  */
 
 :root {
-  /* 브랜드 primary: 밀리터리 네이비 */
-  --primary: #13294f;
-  --primary-foreground: #ffffff;
+  --background: white;
+  --foreground: var(--color-ink);
+  --card: white;
+  --card-foreground: var(--color-ink);
+  --popover: white;
+  --popover-foreground: var(--color-ink);
 
-  /* 포커스 링: 액센트 블루 */
-  --ring: #2b50b4;
+  --primary: var(--color-brand);
+  --primary-foreground: white;
 
-  /* 연한 블루 정보 박스(나라장터식 유의사항) */
-  --accent: #eef3fb;
-  --accent-foreground: #1b3a72;
+  --muted: var(--color-surface);
+  --muted-foreground: var(--color-ink-mute);
 
-  /* 사이드바(로그인 후 일부 화면 — 서류/제안서 섹션 트리 등) */
-  --sidebar: #ffffff;
-  --sidebar-foreground: #1f2937;
-  --sidebar-accent: #eef3fb;
-  --sidebar-accent-foreground: #1b3a72;
-  --sidebar-border: #e2e8f0;
-  --sidebar-ring: #2b50b4;
+  --accent: var(--color-brand-soft);
+  --accent-foreground: var(--color-brand-strong);
 
-  /* 모서리: poc의 절제된 라운드 */
+  --destructive: var(--color-danger);
+  --destructive-foreground: white;
+
+  --border: var(--color-line);
+  --input: var(--color-line);
+  --ring: var(--color-brand);
+
+  --sidebar: white;
+  --sidebar-foreground: var(--color-ink);
+  --sidebar-primary: var(--color-brand);
+  --sidebar-primary-foreground: white;
+  --sidebar-accent: var(--color-brand-soft);
+  --sidebar-accent-foreground: var(--color-brand-strong);
+  --sidebar-border: var(--color-line);
+  --sidebar-ring: var(--color-brand);
+
   --radius: 0.5rem;
 }
 
-.dark {
-  --primary: #24447d;
-  --primary-foreground: #ffffff;
-  --ring: #4a73c4;
-}
-
-/* 폰트 — 나라장터식 둥근 안정감 (Noto Sans KR)
-   CR-127: 업무 포털 무게감 확보 — 기본 15px/500 웨이트, 제목은 900(font-black).
-   기존 14px/400 은 화면이 얕고 흐려 보인다는 피드백. */
 html {
   font-size: 16px;
 }
 
+/* 기본 15px/500 은 08-17 화면의 무게감 피드백을 지킨 값이다. 홈과 공통 틀은 자기 크기를 따로 준다 */
 body {
-  font-family: 'Noto Sans KR', system-ui, -apple-system, sans-serif;
+  font-family: var(--font-sans);
   letter-spacing: -0.01em;
   font-size: 15px;
   font-weight: 500;
-  color: #1f2937;
+  color: var(--color-ink);
 }
 
-/* 제목류는 900 — Noto Sans KR Black 로드됨 */
 h1, h2, h3, h4 {
-  font-weight: 900;
+  font-weight: 800;
   letter-spacing: -0.02em;
 }
