@@ -11,7 +11,7 @@
 | CR-128 | [화면] 홈 밖 고객 화면의 박힌 색을 CR-127 색 이름표로 바꾸기 | bidding-agency-platform | a8ef3294 | 계획 | 완료 |
 | CR-129 | [화면] 회원 요금 월 5만원 반영(요금 설계와 요금 화면) | bidding-agency-platform | 8af2e274 | 추가 | 완료 |
 | CR-130 | 서버 오류가 로그인으로 튕기는 기존 결함 | bidding-agency-platform | c02ea582 | 추가 | 완료 |
-| CR-131 | [화면] 로그인·회원가입 화면을 홈 컨셉으로(사용자 22:17, 22:20 /전승) | bidding-agency-platform | 3bb39c2c | 추가 | 착수전 |
+| CR-131 | [화면] 로그인·회원가입 화면을 홈 컨셉으로(사용자 22:17, 22:20 /전승) | bidding-agency-platform | 3bb39c2c | 추가 | 완료 |
 
 ## 순서와 경계
 
