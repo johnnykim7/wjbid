@@ -1,42 +1,41 @@
-import { cva, type VariantProps } from 'class-variance-authority'
+// CR-124 — 로컬 Badge 어댑터: 내부를 DS Badge로 위임. 기존 variant(active/closing/...) → DS variant 매핑.
+import { Badge as DsBadge } from '@therecommerce-develop/ds-ui'
 import { cn } from '../../lib/utils'
 
-const badgeVariants = cva(
-  'inline-flex items-center font-semibold rounded-full',
-  {
-    variants: {
-      variant: {
-        active: 'bg-green-100 text-green-800',
-        closing: 'bg-yellow-100 text-yellow-800',
-        closed: 'bg-gray-100 text-gray-600',
-        pending: 'bg-blue-100 text-blue-800',
-        secondary: 'bg-gray-100 text-gray-700',
-        info: 'bg-sky-100 text-sky-800',
-        draft: 'bg-green-100 text-green-800',
-        review: 'bg-yellow-100 text-yellow-800',
-        final: 'bg-blue-100 text-blue-800',
-      },
-      size: {
-        sm: 'px-2 py-0.5 text-xs leading-5',
-        md: 'px-2.5 py-1 text-xs leading-5',
-      },
-    },
-    defaultVariants: {
-      variant: 'active',
-      size: 'md',
-    },
-  }
-)
+type LocalVariant =
+  | 'active' | 'closing' | 'closed' | 'pending'
+  | 'secondary' | 'info' | 'draft' | 'review' | 'final'
+type LocalSize = 'sm' | 'md'
 
-interface BadgeProps
-  extends React.HTMLAttributes<HTMLSpanElement>,
-    VariantProps<typeof badgeVariants> {}
+// 로컬 variant → DS Badge variant (appearance=light 톤 유지)
+const VARIANT_MAP: Record<LocalVariant, string> = {
+  active: 'success',
+  closing: 'warning',
+  closed: 'secondary',
+  pending: 'info',
+  secondary: 'secondary',
+  info: 'info',
+  draft: 'success',
+  review: 'warning',
+  final: 'primary',
+}
+const SIZE_MAP: Record<LocalSize, string> = { sm: 'sm', md: 'md' }
 
-export function Badge({ className, variant, size, ...props }: BadgeProps) {
+interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
+  variant?: LocalVariant
+  size?: LocalSize
+}
+
+export function Badge({ className, variant = 'active', size = 'md', ...props }: BadgeProps) {
   return (
-    <span
+    <DsBadge
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      variant={VARIANT_MAP[variant] as any}
+      appearance="light"
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      size={SIZE_MAP[size] as any}
       data-slot="badge"
-      className={cn(badgeVariants({ variant, size }), className)}
+      className={cn(className)}
       {...props}
     />
   )

@@ -139,6 +139,45 @@ export const uploadToSlot = (bidRequestId: string, requirementItemId: string, fi
 export const unmapSlot = (bidRequestId: string, requirementItemId: string) =>
   api.delete(`/bid-requests/${bidRequestId}/required-document-slots/${requirementItemId}`)
 
+// CR-125 2단계: 서류함에서 미충족 슬롯 일괄 자동채움
+export const autoFillSlots = (bidRequestId: string) =>
+  api.post(`/bid-requests/${bidRequestId}/required-document-slots/auto-fill`)
+
+// Member Documents (CR-125: 회사 공통 서류함)
+export const getMemberDocumentVault = () => api.get('/member-documents')
+
+export const uploadMemberDocument = (
+  file: File,
+  category: string,
+  displayName?: string,
+  description?: string,
+) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('category', category)
+  if (displayName) formData.append('displayName', displayName)
+  if (description) formData.append('description', description)
+  return api.post('/member-documents', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+}
+
+export const replaceMemberDocument = (
+  id: string,
+  opts: { file?: File; displayName?: string; description?: string },
+) => {
+  const formData = new FormData()
+  if (opts.file) formData.append('file', opts.file)
+  if (opts.displayName) formData.append('displayName', opts.displayName)
+  if (opts.description !== undefined) formData.append('description', opts.description)
+  return api.put(`/member-documents/${id}`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+}
+
+export const deleteMemberDocument = (id: string) =>
+  api.delete(`/member-documents/${id}`)
+
 // Notifications (CR-006: 고객 인앱 알림)
 export const getNotifications = (page = 0, size = 20) =>
   api.get('/notifications', { params: { page, size } })

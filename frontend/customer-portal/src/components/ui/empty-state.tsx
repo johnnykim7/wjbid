@@ -1,3 +1,12 @@
+// CR-124 — 로컬 EmptyState 어댑터: 내부를 DS Empty 조립으로 위임. 기존 props(icon/title/description/action) 보존.
+import {
+  Empty as DsEmpty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription,
+  EmptyContent,
+} from '@therecommerce-develop/ds-ui'
 import { cn } from '../../lib/utils'
 
 interface EmptyStateProps {
@@ -10,15 +19,17 @@ interface EmptyStateProps {
 
 export function EmptyState({ icon, title, description, action, className }: EmptyStateProps) {
   return (
-    <div className={cn('flex flex-col items-center justify-center py-16 text-center', className)}>
-      {icon && (
-        <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center mb-4">
-          <i className={cn(icon, 'text-2xl text-gray-400')} />
-        </div>
-      )}
-      <h3 className="text-base font-semibold text-gray-700 mb-1">{title}</h3>
-      {description && <p className="text-sm text-gray-500 max-w-sm">{description}</p>}
-      {action && <div className="mt-4">{action}</div>}
-    </div>
+    <DsEmpty className={cn('py-16', className)}>
+      <EmptyHeader>
+        {icon && (
+          <EmptyMedia variant="icon">
+            <i className={cn(icon, 'text-2xl text-gray-400')} />
+          </EmptyMedia>
+        )}
+        <EmptyTitle>{title}</EmptyTitle>
+        {description && <EmptyDescription>{description}</EmptyDescription>}
+      </EmptyHeader>
+      {action && <EmptyContent>{action}</EmptyContent>}
+    </DsEmpty>
   )
 }

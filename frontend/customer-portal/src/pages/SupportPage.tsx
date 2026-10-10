@@ -65,10 +65,10 @@ export default function SupportPage() {
 
   return (
     <div className="flex-1 overflow-y-auto">
-      {/* Hero (네이비) */}
-      <div className="bg-[#0c1e3d] text-white px-6 py-14 text-center">
-        <h1 className="text-2xl md:text-3xl font-extrabold mb-3">고객센터</h1>
-        <p className="text-gray-300 max-w-2xl mx-auto leading-relaxed">
+      {/* 페이지 헤더 (제목 + 부제 — 전 페이지 통일) */}
+      <div className="text-center mb-10 pt-2">
+        <h1 className="text-2xl font-bold text-[#0c1e3d]">고객센터</h1>
+        <p className="mt-2 text-slate-500">
           자주 묻는 질문을 먼저 확인하시고, 해결되지 않으면 1:1 문의를 남겨 주세요.
         </p>
       </div>

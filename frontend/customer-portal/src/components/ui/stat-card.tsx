@@ -1,3 +1,5 @@
+// CR-124 — 로컬 StatCard 어댑터: 컨테이너를 DS Card로 위임(DS에 1:1 StatCard 없음). 기존 props 전부 보존.
+import { Card as DsCard } from '@therecommerce-develop/ds-ui'
 import { cn } from '../../lib/utils'
 
 interface StatCardProps {
@@ -26,13 +28,11 @@ export function StatCard({
   className,
 }: StatCardProps) {
   return (
-    <div
+    <DsCard
       data-slot="stat-card"
       className={cn(
-        'rounded-xl border p-4 shadow-sm',
-        dark
-          ? 'bg-gradient-to-r from-primary to-slate-800 border-gray-700 text-white'
-          : 'bg-white border-gray-200',
+        'p-4',
+        dark ? 'bg-gradient-to-r from-primary to-slate-800 border-gray-700 text-white' : '',
         className
       )}
     >
@@ -54,6 +54,6 @@ export function StatCard({
         {badge && <div>{badge}</div>}
         {action && <div>{action}</div>}
       </div>
-    </div>
+    </DsCard>
   )
 }

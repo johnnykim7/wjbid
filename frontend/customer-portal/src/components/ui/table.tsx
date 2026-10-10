@@ -1,50 +1,35 @@
+// CR-124 — 로컬 Table 어댑터: 내부를 DS Table로 위임. 기존 API(Table/TableHeader/TableBody/TableRow/TableHead/TableCell) 보존.
+import {
+  Table as DsTable,
+  TableHeader as DsTableHeader,
+  TableBody as DsTableBody,
+  TableRow as DsTableRow,
+  TableHead as DsTableHead,
+  TableCell as DsTableCell,
+} from '@therecommerce-develop/ds-ui'
 import { cn } from '../../lib/utils'
 
 export function Table({ className, ...props }: React.HTMLAttributes<HTMLTableElement>) {
-  return (
-    <table
-      data-slot="table"
-      className={cn('min-w-full divide-y divide-gray-200', className)}
-      {...props}
-    />
-  )
+  return <DsTable data-slot="table" className={cn('min-w-full', className)} {...props} />
 }
 
 export function TableHeader({ className, ...props }: React.HTMLAttributes<HTMLTableSectionElement>) {
-  return <thead className={cn('bg-gray-50', className)} {...props} />
+  return <DsTableHeader className={className} {...props} />
 }
 
 export function TableBody({ className, ...props }: React.HTMLAttributes<HTMLTableSectionElement>) {
-  return <tbody className={cn('bg-white divide-y divide-gray-200', className)} {...props} />
+  return <DsTableBody className={className} {...props} />
 }
 
 export function TableRow({ className, ...props }: React.HTMLAttributes<HTMLTableRowElement>) {
-  return (
-    <tr
-      className={cn('hover:bg-blue-50/50 transition-colors', className)}
-      {...props}
-    />
-  )
+  // DS 기본 구분선(border-border)이 진해 연한 톤으로 덮음
+  return <DsTableRow className={cn('!border-gray-100', className)} {...props} />
 }
 
 export function TableHead({ className, ...props }: React.ThHTMLAttributes<HTMLTableCellElement>) {
-  return (
-    <th
-      scope="col"
-      className={cn(
-        'px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider',
-        className
-      )}
-      {...props}
-    />
-  )
+  return <DsTableHead className={cn('!border-gray-100', className)} {...props} />
 }
 
 export function TableCell({ className, ...props }: React.TdHTMLAttributes<HTMLTableCellElement>) {
-  return (
-    <td
-      className={cn('px-6 py-4 text-sm text-gray-700', className)}
-      {...props}
-    />
-  )
+  return <DsTableCell className={className} {...props} />
 }

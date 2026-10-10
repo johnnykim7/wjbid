@@ -42,8 +42,23 @@
   --ring: #4a73c4;
 }
 
-/* 폰트 — 나라장터식 둥근 안정감 (Noto Sans KR) */
+/* 폰트 — 나라장터식 둥근 안정감 (Noto Sans KR)
+   CR-127: 업무 포털 무게감 확보 — 기본 15px/500 웨이트, 제목은 900(font-black).
+   기존 14px/400 은 화면이 얕고 흐려 보인다는 피드백. */
+html {
+  font-size: 16px;
+}
+
 body {
   font-family: 'Noto Sans KR', system-ui, -apple-system, sans-serif;
   letter-spacing: -0.01em;
+  font-size: 15px;
+  font-weight: 500;
+  color: #1f2937;
+}
+
+/* 제목류는 900 — Noto Sans KR Black 로드됨 */
+h1, h2, h3, h4 {
+  font-weight: 900;
+  letter-spacing: -0.02em;
 }

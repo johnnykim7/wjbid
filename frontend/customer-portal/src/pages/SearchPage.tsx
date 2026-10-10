@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { StatCard } from '../components/ui/stat-card'
-import { Badge } from '../components/ui/badge'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/table'
 import { Pagination } from '../components/ui/pagination'
 import { LoadingSpinner } from '../components/ui/loading-spinner'
@@ -24,6 +23,7 @@ import {
   getMyBidRequests,
 } from '../api/client'
 import type { Opportunity } from '../types'
+import { DdayBadge } from '../utils/dday'
 
 const AGENCIES = [
   '모든 발주처 (Agency)',
@@ -35,19 +35,17 @@ const AGENCIES = [
   'Dept. of Air Force',
 ]
 
-function getDeadlineBadgeVariant(deadline: string): 'closing' | 'active' {
-  const days = Math.ceil((new Date(deadline).getTime() - Date.now()) / 86400000)
-  return days <= 14 ? 'closing' : 'active'
-}
-
 export default function SearchPage() {
   const navigate = useNavigate()
+  // CR-127 — 홈 검색바가 /search?keyword=... 로 넘겨준 키워드를 초기값으로 사용
+  const [searchParams] = useSearchParams()
+  const initialKeyword = searchParams.get('keyword') ?? ''
   const [items, setItems] = useState<Opportunity[]>([])
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
   const [totalElements, setTotalElements] = useState(0)
-  const [keyword, setKeyword] = useState('')
+  const [keyword, setKeyword] = useState(initialKeyword)
   const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set())
   const [stats, setStats] = useState({ total: 0, bookmarks: 0, proposals: 0 })
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -103,7 +101,7 @@ export default function SearchPage() {
   }
 
   useEffect(() => {
-    fetchData(0)
+    fetchData(0, initialKeyword)
   }, [])
 
   const handleSearch = (e: React.FormEvent) => {
@@ -234,9 +232,11 @@ export default function SearchPage() {
               <Table>
                 <TableHeader>
                   <tr>
-                    <TableHead className="w-48">Notice ID / NAICS</TableHead>
-                    <TableHead>Title / Agency</TableHead>
-                    <TableHead className="w-32">Deadline</TableHead>
+                    <TableHead className="w-48">공고번호 / NAICS</TableHead>
+                    <TableHead>공고명 / 발주처</TableHead>
+                    <TableHead className="w-28">공고유형</TableHead>
+                    <TableHead className="w-28">공고일</TableHead>
+                    <TableHead className="w-36">마감일</TableHead>
                     <TableHead className="w-24 text-center">관심</TableHead>
                   </tr>
                 </TableHeader>
@@ -262,10 +262,17 @@ export default function SearchPage() {
                           {bid.agencyName}
                         </div>
                       </TableCell>
+                      <TableCell className="align-top text-sm text-gray-600">
+                        {bid.type || '-'}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap align-top text-sm text-gray-600">
+                        {bid.postedDate || '-'}
+                      </TableCell>
                       <TableCell className="whitespace-nowrap align-top">
-                        <Badge variant={getDeadlineBadgeVariant(bid.responseDeadline)}>
-                          {bid.responseDeadline}
-                        </Badge>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-sm text-gray-700">{bid.responseDeadline}</span>
+                          <DdayBadge deadline={bid.responseDeadline} />
+                        </div>
                       </TableCell>
                       <TableCell className="text-center align-middle">
                         <Button

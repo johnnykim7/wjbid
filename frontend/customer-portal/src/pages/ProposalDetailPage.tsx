@@ -13,6 +13,7 @@ import {
   uploadClientDocument,
   deleteClientDocument,
   transitionBidRequestState,
+  autoFillSlots,
 } from '../api/client'
 import { STATE_LABEL, STATE_BADGE } from '../types'
 import type { BidRequest, StateTransition } from '../types'
@@ -120,6 +121,9 @@ export default function ProposalDetailPage() {
   const [uploadingDoc, setUploadingDoc] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  // CR-125: 서류함 자동채움
+  const [autoFilling, setAutoFilling] = useState(false)
+  const [autoFillMsg, setAutoFillMsg] = useState<string | null>(null)
 
   const loadClientDocs = async (bidId: string) => {
     const res = await getClientDocuments(bidId)
@@ -191,6 +195,27 @@ export default function ProposalDetailPage() {
       await deleteClientDocument(id, docId)
       await loadClientDocs(id)
     } catch { /* ignore */ }
+  }
+
+  // CR-125: 회사 공통 서류함에서 미충족 슬롯 일괄 자동채움
+  const handleAutoFill = async () => {
+    if (!id) return
+    setAutoFilling(true)
+    setAutoFillMsg(null)
+    try {
+      const { data } = await autoFillSlots(id)
+      await loadClientDocs(id)
+      const count = data?.filledCount ?? 0
+      if (count > 0) {
+        setAutoFillMsg(`서류함에서 ${count}건을 자동으로 채웠습니다.`)
+      } else {
+        setAutoFillMsg('서류함에서 채울 수 있는 서류가 없습니다. 서류함에 공통 서류를 먼저 등록해 주세요.')
+      }
+    } catch {
+      setAutoFillMsg('자동 채우기에 실패했습니다.')
+    } finally {
+      setAutoFilling(false)
+    }
   }
 
   // CR-033: 고객 업로드 슬롯 카드 (FACTOR 트리·평면 양쪽에서 재사용)
@@ -473,23 +498,45 @@ export default function ProposalDetailPage() {
             ) : (
               <>
                 {/* 충족 요약 — 고객이 업로드할 슬롯 기준 */}
-                <div className="bg-white border border-gray-200 rounded-xl p-4 flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-800">필수 서류 충족 현황</p>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      {fulfilledMandatory} / {mandatoryDocs.length} 건 업로드 완료
+                <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-800">필수 서류 충족 현황</p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {fulfilledMandatory} / {mandatoryDocs.length} 건 업로드 완료
+                      </p>
+                    </div>
+                    <div className="w-32 h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-secondary transition-all"
+                        style={{
+                          width: mandatoryDocs.length > 0
+                            ? `${(fulfilledMandatory / mandatoryDocs.length) * 100}%`
+                            : '100%',
+                        }}
+                      />
+                    </div>
+                  </div>
+                  {/* CR-125: 서류함에서 자동 채우기 */}
+                  <div className="flex items-center justify-between gap-3 border-t border-gray-100 pt-3">
+                    <p className="text-xs text-gray-500">
+                      <i className="fa-solid fa-folder-open mr-1.5 text-secondary" />
+                      서류함에 등록한 공통 서류(사업자등록증 등)를 한 번에 채울 수 있습니다.
                     </p>
+                    <DsButton variant="outline" size="sm" onClick={handleAutoFill} disabled={autoFilling}>
+                      {autoFilling ? (
+                        <><i className="fa-solid fa-spinner fa-spin mr-1.5" /> 채우는 중…</>
+                      ) : (
+                        <><i className="fa-solid fa-wand-magic-sparkles mr-1.5" /> 서류함에서 자동 채우기</>
+                      )}
+                    </DsButton>
                   </div>
-                  <div className="w-32 h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-secondary transition-all"
-                      style={{
-                        width: mandatoryDocs.length > 0
-                          ? `${(fulfilledMandatory / mandatoryDocs.length) * 100}%`
-                          : '100%',
-                      }}
-                    />
-                  </div>
+                  {autoFillMsg && (
+                    <p className="text-xs text-gray-600 bg-gray-50 rounded-lg px-3 py-2">
+                      <i className="fa-solid fa-circle-info mr-1.5 text-gray-400" />
+                      {autoFillMsg}
+                    </p>
+                  )}
                 </div>
 
                 {/* CR-033: FACTOR 트리 (있으면) — FACTOR 헤더 > subfactor. CLIENT_UPLOAD만 업로드, 나머지 읽기전용 */}

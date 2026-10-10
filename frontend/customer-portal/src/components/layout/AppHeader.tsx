@@ -11,9 +11,9 @@ import { useAuth } from '../../context/AuthContext'
 // 비로그인 상단 메뉴
 const PUBLIC_NAV = [
   { label: '서비스 소개', href: '/#about' },
+  { label: '이용 안내', href: '/guide' },
   { label: '요금 안내', href: '/pricing' },
   { label: '공지사항', href: '/notices' },
-  { label: 'FAQ', href: '/faq' },
   { label: '고객센터', href: '/support' },
 ]
 
@@ -32,6 +32,23 @@ export function AppHeader() {
   const { isAuthenticated, userEmail, logout } = useAuth()
   const [userMenuOpen, setUserMenuOpen] = useState(false)
 
+  // 해시(/#about)면 홈 이동 후 섹션 스크롤, 아니면 일반 navigate
+  const handleNav = (href: string) => {
+    const [path, hash] = href.split('#')
+    if (hash) {
+      const scrollToHash = () =>
+        document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth' })
+      if (location.pathname === (path || '/')) {
+        scrollToHash()
+      } else {
+        navigate(path || '/')
+        setTimeout(scrollToHash, 100) // 페이지 마운트 후 스크롤
+      }
+    } else {
+      navigate(href)
+    }
+  }
+
   // 현재 경로 기반 GNB active
   const activeId = (() => {
     const p = location.pathname
@@ -48,7 +65,7 @@ export function AppHeader() {
 
   return (
     <header className="bg-[#1b3a72] text-white shrink-0 sticky top-0 z-50">
-      <div className="max-w-[1280px] mx-auto px-6 h-[60px] flex items-center">
+      <div className="max-w-[1600px] mx-auto px-6 lg:px-10 h-[60px] flex items-center">
         {/* 로고 */}
         <div className="flex items-center gap-2.5 mr-10 cursor-pointer"
              onClick={() => navigate('/')}>
@@ -63,7 +80,7 @@ export function AppHeader() {
             return (
               <a
                 key={item.label}
-                onClick={() => navigate(item.href)}
+                onClick={() => handleNav(item.href)}
                 className={
                   'relative flex items-center h-full px-6 cursor-pointer hover:bg-white/5 ' +
                   (isActive

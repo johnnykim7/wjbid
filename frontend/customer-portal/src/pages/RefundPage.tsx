@@ -32,10 +32,10 @@ const SECTIONS = [
 export default function RefundPage() {
   return (
     <div className="flex-1 overflow-y-auto">
-      {/* Hero */}
-      <div className="bg-gradient-to-br from-[#0c1e3d] via-[#0c1e3d] to-[#10264d] text-white px-6 py-16 text-center">
-        <h1 className="text-3xl md:text-4xl font-extrabold mb-4">환불 정책</h1>
-        <p className="text-gray-300 max-w-2xl mx-auto text-lg leading-relaxed">
+      {/* 페이지 헤더 (제목 + 부제 — 전 페이지 통일) */}
+      <div className="text-center mb-10 pt-2">
+        <h1 className="text-2xl font-bold text-[#0c1e3d]">환불 정책</h1>
+        <p className="mt-2 text-slate-500">
           건당 과금 기준에 따른 단계별 환불 가능·불가 시점을 안내합니다.
         </p>
       </div>

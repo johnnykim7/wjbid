@@ -42,10 +42,10 @@ const ARTICLES = [
 export default function TermsPage() {
   return (
     <div className="flex-1 overflow-y-auto">
-      {/* Hero */}
-      <div className="bg-gradient-to-br from-[#0c1e3d] via-[#0c1e3d] to-[#10264d] text-white px-6 py-16 text-center">
-        <h1 className="text-3xl md:text-4xl font-extrabold mb-4">이용약관</h1>
-        <p className="text-gray-300 max-w-2xl mx-auto text-lg leading-relaxed">
+      {/* 페이지 헤더 (제목 + 부제 — 전 페이지 통일) */}
+      <div className="text-center mb-10 pt-2">
+        <h1 className="text-2xl font-bold text-[#0c1e3d]">이용약관</h1>
+        <p className="mt-2 text-slate-500">
           WJbid 미군·연방 조달 입찰 대행 서비스 이용약관입니다.
         </p>
       </div>

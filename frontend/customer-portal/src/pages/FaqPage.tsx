@@ -50,10 +50,10 @@ const FAQS = [
 export default function FaqPage() {
   return (
     <div className="flex-1 overflow-y-auto">
-      {/* Hero (네이비) */}
-      <div className="bg-[#0c1e3d] text-white px-6 py-14 text-center">
-        <h1 className="text-2xl md:text-3xl font-extrabold mb-3">자주 묻는 질문</h1>
-        <p className="text-gray-300 max-w-2xl mx-auto leading-relaxed">
+      {/* 페이지 헤더 (제목 + 부제 — 전 페이지 통일) */}
+      <div className="text-center mb-10 pt-2">
+        <h1 className="text-2xl font-bold text-[#0c1e3d]">자주 묻는 질문</h1>
+        <p className="mt-2 text-slate-500">
           미군(USFK)·연방 조달 입찰에 대해 자주 묻는 질문을 모았습니다.
         </p>
       </div>

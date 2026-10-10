@@ -71,20 +71,17 @@ export default function GuidePage() {
 
   return (
     <div className="flex-1 overflow-y-auto">
-      {/* Hero */}
-      <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white px-6 py-16 text-center">
-        <h1 className="text-3xl md:text-4xl font-extrabold mb-4">
-          입찰 대행 서비스 가이드
-        </h1>
-        <p className="text-gray-300 max-w-2xl mx-auto text-lg leading-relaxed">
-          SAM.gov 미군(USFK) 정부 조달 입찰을 전문가가 분석하고<br className="hidden md:block" />
-          제안서를 작성해드립니다.
+      {/* 페이지 헤더 (제목 + 부제 — 전 페이지 통일) */}
+      <div className="text-center mb-8 pt-2">
+        <h1 className="text-2xl font-bold text-[#0c1e3d]">입찰 대행 서비스 가이드</h1>
+        <p className="mt-2 text-slate-500">
+          SAM.gov 미군(USFK) 정부 조달 입찰을 전문가가 분석하고 제안서를 작성해드립니다.
         </p>
-        <div className="flex justify-center gap-3 mt-8">
-          <Button variant="accent" onClick={() => navigate('/search')}>
+        <div className="flex justify-center gap-3 mt-6">
+          <Button onClick={() => navigate('/search')}>
             <i className="fa-solid fa-magnifying-glass mr-2" /> 공고 검색하기
           </Button>
-          <Button variant="outline" onClick={() => navigate('/pricing')} className="!text-white !border-gray-600 hover:!bg-gray-700">
+          <Button variant="outline" onClick={() => navigate('/pricing')}>
             요금제 보기
           </Button>
         </div>
