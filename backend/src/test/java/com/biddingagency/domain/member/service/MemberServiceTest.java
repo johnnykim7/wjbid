@@ -1,5 +1,6 @@
 package com.biddingagency.domain.member.service;
 
+import com.biddingagency.domain.member.EmailAlreadyExistsException;
 import com.biddingagency.domain.member.entity.Member;
 import com.biddingagency.domain.member.entity.MemberConsent;
 import com.biddingagency.domain.member.repository.MemberConsentRepository;
@@ -86,15 +87,14 @@ class MemberServiceTest {
     // TC-AUTH-002: 중복 이메일 가입 시도
     @Test
     @DisplayName("중복이메일_가입시도_예외발생_BIZ008")
-    void 이미존재하는이메일_회원가입_IllegalArgumentException() {
+    void 이미존재하는이메일_회원가입_EmailAlreadyExistsException() {
         // given
         given(memberRepository.existsByEmail(TEST_EMAIL)).willReturn(true);
 
         // when & then
         assertThatThrownBy(() -> memberService.register(TEST_EMAIL, TEST_PASSWORD, TEST_COMPANY, TEST_CONTACT, TEST_PHONE,
                 TEST_BRN, true, true, false))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Email already exists");
+                .isInstanceOf(EmailAlreadyExistsException.class);
 
         then(memberRepository).should(never()).save(any());
     }

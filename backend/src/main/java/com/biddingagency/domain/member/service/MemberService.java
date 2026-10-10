@@ -1,5 +1,6 @@
 package com.biddingagency.domain.member.service;
 
+import com.biddingagency.domain.member.EmailAlreadyExistsException;
 import com.biddingagency.domain.member.entity.Member;
 import com.biddingagency.domain.member.entity.MemberConsent;
 import com.biddingagency.domain.member.repository.MemberConsentRepository;
@@ -37,7 +38,7 @@ public class MemberService {
                            String phone, String businessRegistrationNumber,
                            boolean agreeTerms, boolean agreePrivacy, boolean agreeMarketing) {
         if (memberRepository.existsByEmail(email)) {
-            throw new IllegalArgumentException("Email already exists: " + email);
+            throw new EmailAlreadyExistsException();
         }
         if (!agreeTerms || !agreePrivacy) {
             throw new IllegalArgumentException("이용약관 및 개인정보처리방침 동의가 필요합니다");
