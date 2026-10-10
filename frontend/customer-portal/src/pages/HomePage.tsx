@@ -1,430 +1,420 @@
-import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Button, Input } from '@therecommerce-develop/ds-ui'
-import { getOpportunities } from '../api/client'
-import { DdayBadge } from '../utils/dday'
+import { Fragment, useEffect, useState } from 'react'
+import { Link, useOutletContext } from 'react-router-dom'
+import { Button } from '@therecommerce-develop/ds-ui'
+import { getNearDeadline, getOpportunities } from '../api/client'
+import { useAuth } from '../context/AuthContext'
+import { MEMBER_PRICE_PENDING_LABEL, formatWon, usePricing } from '../hooks/usePricing'
+import { Icon } from '../components/layout/Icon'
+import { comingSoonHref } from '../components/layout/menu'
+import type { MemberSummary } from '../components/layout/useMemberSummary'
+import { daysUntil, ddayLabel } from '../utils/dday'
 import type { Opportunity } from '../types'
+import {
+  BENEFIT_CALENDAR,
+  BENEFIT_FIT,
+  BENEFIT_TRANSLATE,
+  FAQ_TITLES,
+  FLOW,
+  FREE_BENEFITS,
+  HELP_LINKS,
+  IMAGES,
+  LIST_ROWS,
+  NOTICE_TITLES,
+  PLAN_CONSULT,
+  PLAN_FREE,
+  PLAN_MEMBER,
+  PROMOS,
+  RELATED_SITES,
+  SAMPLE_NOTICE,
+  SERVICE_MAP,
+  SOON_DAYS,
+  TIER_LABEL,
+  TIER_NOTE,
+  type Tier,
+} from '../data/homeContent'
 
-/* CR-127 — 메인 전면 개편: 마케팅 랜딩 → 업무용 포털(나라장터 홈 격자형)
- *  격자: [좌] 시작하기 + 알림판 / [중] 공고문 / [우] 공지사항 + 관련사이트·고객센터
- *  나라장터 홈은 공고 목록이 아니라 공지·안내 허브 구조 — 그 골격을 그대로 따르되
- *  중앙 자리(나라장터=공지사항)에 우리 핵심 콘텐츠인 공고문을 배치.
- *  전체 검색·필터·페이징은 /search(SearchPage)가 담당하고 여기선 진입만 시킨다.
+/*
+ * 홈 (CR-127). 화면 정본 홈시안_파랑.html 의 #s0(공고 0건), #s1(공고 있음), #s2(회원)를 한 화면에서 상태로 가른다.
+ * 클래스 이름은 정본과 같게 두어 wjbid-aida.css 규칙이 그대로 걸린다.
+ * 맞춤 판정은 기능이 없어 같은 자리에 준비 중 안내를 둔다(사용자 2026-10-10 18:50 승인).
  */
 
-// 좌상단 "시작하기" — 나라장터 5버튼 구성 대응. 로그인 여부와 무관하게 고정.
-// 아직 없는 페이지(동영상 매뉴얼·SAM 등록 가이드)는 임시로 /guide 로 연결.
-const START_MENU = [
-  { label: '이용자 등록', icon: 'fa-user-plus', to: '/register', tone: 'solid' },
-  { label: '이용 안내', icon: 'fa-circle-info', to: '/guide', tone: 'soft' },
-  { label: '동영상 매뉴얼', icon: 'fa-circle-play', to: '/guide', tone: 'soft' },
-  { label: 'SAM.gov 등록 가이드', icon: 'fa-clipboard-check', to: '/guide', tone: 'dark' },
-  { label: '요금 안내', icon: 'fa-won-sign', to: '/pricing', tone: 'dark' },
-]
+const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
+const pad = (n: number) => String(n).padStart(2, '0')
 
-// 알림판 배너 — 이미지 자산 확보 전까지 텍스트 기반 컬러 배너로 자리를 잡는다.
-const BANNERS = [
-  { tag: '필독', title: 'SAM.gov 등록 갱신', desc: '매년 갱신하지 않으면 입찰 참여가 제한됩니다', bg: 'linear-gradient(135deg,#13294f,#2b50b4)' },
-  { tag: 'AI', title: '제안서 자동 작성', desc: '공고 요건 분석부터 초안 작성까지', bg: 'linear-gradient(135deg,#134e4a,#0d9488)' },
-  { tag: '안내', title: 'USFK 입찰 첫걸음', desc: 'UEI·CAGE 발급부터 순서대로', bg: 'linear-gradient(135deg,#5b21b6,#7c3aed)' },
-  { tag: '알림', title: '마감 임박 공고 알림', desc: '관심 공고를 저장하면 메일로 알려드립니다', bg: 'linear-gradient(135deg,#9a3412,#ea580c)' },
-]
+/** "2026-10-13" 을 "10.13" 과 요일로. 날짜 문자열을 그대로 읽어 브라우저 시간대에 흔들리지 않게 한다 */
+function deadlineParts(s?: string | null) {
+  const [y, m, d] = (s ?? '').slice(0, 10).split('-').map(Number)
+  if (!y || !m || !d) return null
+  return { md: `${pad(m)}.${pad(d)}`, dow: WEEKDAYS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()] }
+}
 
-// 공지사항 — BE 미연동. NoticesPage 더미와 동일 소스.
-const NOTICES = [
-  { id: 6, title: 'SAM.gov 등록 갱신 안내 — 매년 갱신 필수', date: '2026-06-25', important: true },
-  { id: 5, title: 'WJbid 제안서 작성 AI 엔진 v3 업데이트', date: '2026-06-18', important: false },
-  { id: 4, title: '서버 정기 점검 안내 (06/30 02:00~04:00 KST)', date: '2026-06-15', important: true },
-  { id: 3, title: 'NAICS 코드 기반 공고 추천 기능 추가', date: '2026-06-08', important: false },
-  { id: 2, title: '요금제 개편 안내 (Basic / Professional / Enterprise)', date: '2026-05-30', important: false },
-]
+function todayMd() {
+  const t = new Date()
+  return `${pad(t.getMonth() + 1)}.${pad(t.getDate())}`
+}
 
-const RELATED_SITES = [
-  { label: 'SAM.gov', desc: '미 연방 조달 포털', href: 'https://sam.gov' },
-  { label: 'PIEE', desc: '국방부 전자조달', href: 'https://piee.eb.mil' },
-  { label: 'DLA', desc: '국방군수국', href: 'https://www.dla.mil' },
-]
-
-// 이용 절차 3단계 — 중앙 하단 채움 겸 신규 이용자 동선 안내
-const STEPS = [
-  { icon: 'fa-magnifying-glass', title: '공고 검색', desc: 'SAM.gov 공고를 한글로 확인', to: '/search' },
-  { icon: 'fa-file-pen', title: '제안서 작성', desc: 'AI가 요건 분석 후 초안 작성', to: '/proposals' },
-  { icon: 'fa-paper-plane', title: '서류 준비·제출', desc: '필수 서류 확인 후 최종 제출', to: '/documents' },
-]
-
-// 신고·문의 배너 2칸
-const QUICK_BANNERS = [
-  { icon: 'fa-headset', title: '문의하기', desc: '입찰·서비스 관련 상담', to: '/support' },
-  { icon: 'fa-circle-question', title: '자주 묻는 질문', desc: 'FAQ에서 먼저 찾아보세요', to: '/faq' },
-]
-
-const LIST_SIZE = 7
-
-/** 섹션 헤더 — 나라장터식 좌측 컬러바 + 굵은 제목 + 우측 더보기 */
-function PanelHead({ title, onMore }: { title: string; onMore?: () => void }) {
+function BidRow({ o, member }: { o: Opportunity; member: boolean }) {
+  const days = daysUntil(o.responseDeadline)
+  const dl = deadlineParts(o.responseDeadline)
   return (
-    <div className="flex items-center justify-between px-4 h-[52px] border-b-2 border-[#13294f]">
-      <h2 className="flex items-center gap-2 text-[18px] font-black text-[#13294f] tracking-tight">
-        <span className="w-[4px] h-[17px] bg-[#2b50b4]" />
-        {title}
-      </h2>
-      {onMore && (
-        <button
-          onClick={onMore}
-          className="w-6 h-6 grid place-items-center rounded-full border border-gray-300 text-gray-500 hover:bg-[#13294f] hover:border-[#13294f] hover:text-white transition-colors"
-          title="더보기"
-        >
-          <i className="fa-solid fa-plus text-[10px]" />
-        </button>
-      )}
-    </div>
+    <li>
+      <span className={`dd ${days !== null && days <= SOON_DAYS ? 'u' : 'n'}`}>{ddayLabel(days)}</span>
+      <Link className="t" to={`/search/${o.id}`}>
+        <b>{o.title}</b>
+        <span>
+          <i className="mono">{o.solicitationNumber}</i>
+          {member && <em className="fit no">판정 준비 중</em>}
+        </span>
+      </Link>
+      <span>{o.type && <span className="bd r">{o.type}</span>}</span>
+      <span className="loc">{o.placeOfPerformance && <b><Icon name="pin" />{o.placeOfPerformance}</b>}</span>
+      <span className="dl">{dl && <>{dl.md}<small>({dl.dow})</small></>}</span>
+    </li>
   )
 }
 
 export default function HomePage() {
-  const navigate = useNavigate()
+  const { isAuthenticated } = useAuth()
+  const member = useOutletContext<MemberSummary>()
+  const { memberMonthlyPrice: price, loading: priceLoading } = usePricing()
 
-  const [items, setItems] = useState<Opportunity[]>([])
+  const [loaded, setLoaded] = useState(false)
+  const [failed, setFailed] = useState(false)
   const [total, setTotal] = useState(0)
-  const [loading, setLoading] = useState(true)
-  const [keyword, setKeyword] = useState('')
-  const [banner, setBanner] = useState(0)
+  const [latest, setLatest] = useState<Opportunity[]>([])
+  const [soon, setSoon] = useState<Opportunity[]>([])
+  const [tab, setTab] = useState<'soon' | 'latest'>('soon')
+  const [helpTab, setHelpTab] = useState<'faq' | 'notice'>('faq')
 
   useEffect(() => {
-    getOpportunities(0, LIST_SIZE)
-      .then((res) => {
-        setItems(res.data.content ?? [])
-        setTotal(res.data.totalElements ?? 0)
-      })
-      .catch(() => setItems([]))
-      .finally(() => setLoading(false))
+    let alive = true
+    Promise.allSettled([getOpportunities(0, LIST_ROWS), getNearDeadline(SOON_DAYS)]).then(([all, near]) => {
+      if (!alive) return
+      if (all.status === 'fulfilled') {
+        setLatest(all.value.data.content ?? [])
+        setTotal(all.value.data.totalElements ?? 0)
+      } else {
+        setFailed(true)
+      }
+      if (near.status === 'fulfilled') setSoon(near.value.data ?? [])
+      setLoaded(true)
+    })
+    return () => {
+      alive = false
+    }
   }, [])
 
-  // 알림판 자동 롤링
-  useEffect(() => {
-    const t = setInterval(() => setBanner((i) => (i + 1) % BANNERS.length), 4500)
-    return () => clearInterval(t)
-  }, [])
+  // 금액 자리. 불러오는 동안은 비워 두고, 금액이 없으면 요금 출처의 안내 문구를 쓴다(CR-129 4.2.1)
+  const monthly = priceLoading ? ' ' : price != null ? `월 ${formatWon(price)}` : MEMBER_PRICE_PENDING_LABEL
+  const rows = tab === 'soon' ? soon.slice(0, LIST_ROWS) : latest
+  const showEmpty = loaded && !failed && total === 0
+  const countText = (n: number | null) => (n == null ? '-' : n)
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    const kw = keyword.trim()
-    navigate(kw ? `/search?keyword=${encodeURIComponent(kw)}` : '/search')
-  }
+  const left = showEmpty ? (
+    <div className="st">
+      <div className="ph">
+        <h3>마감 전 공고</h3>
+        <span className="cnt">공개된 한글 공고문 <b>0건</b> · {todayMd()} 기준</span>
+      </div>
+      <div className="empty">
+        <div className="tx">
+          <span className="tag">준비 중</span>
+          <h3>마감 전 공고를<br />한글 공고문으로 정리하고 있습니다</h3>
+          <p>올라오는 대로 이 자리에 마감순으로 보입니다.</p>
+          <Link className="smp" to={comingSoonHref('공고문 예시')}>
+            <small>{SAMPLE_NOTICE.caption}</small>
+            <b>{SAMPLE_NOTICE.title}</b>
+            <i className="mono">{SAMPLE_NOTICE.number}</i>
+            <dl>
+              {SAMPLE_NOTICE.facts.map((f) => (
+                <div key={f.label}><dt>{f.label}</dt><dd>{f.value}</dd></div>
+              ))}
+            </dl>
+          </Link>
+          <div className="lk">
+            <Link to={isAuthenticated ? '/notifications' : '/register'}>새 공고 알림 받기<Icon name="cr" /></Link>
+            <Link to={comingSoonHref('공고문 예시')}>공고문 예시 전체 보기<Icon name="cr" /></Link>
+          </div>
+        </div>
+        <img src={IMAGES.empty} alt="" />
+      </div>
+    </div>
+  ) : (
+    <div className="st">
+      <section className="lstw">
+        <div className="ph">
+          <h3>마감 전 공고</h3>
+          <div className="tabs">
+            <Button className={`wj-reset${tab === 'soon' ? ' on' : ''}`} onClick={() => setTab('soon')}>마감 임박</Button>
+            <Button className={`wj-reset${tab === 'latest' ? ' on' : ''}`} onClick={() => setTab('latest')}>최신 공고</Button>
+          </div>
+          {loaded && !failed && (
+            <span className="cnt">{total}건 · {SOON_DAYS}일 안 마감 <b>{soon.length}건</b></span>
+          )}
+        </div>
+        <ul className="bids">
+          {rows.map((o) => <BidRow key={o.id} o={o} member={isAuthenticated} />)}
+          {loaded && rows.length === 0 && (
+            <li className="none">
+              {failed ? '공고를 불러오지 못했습니다. 잠시 뒤 다시 열어 주세요.' : `${SOON_DAYS}일 안에 마감하는 공고가 없습니다. 최신 공고를 보세요.`}
+            </li>
+          )}
+        </ul>
+        {loaded && !failed && (
+          <div className="lft">
+            <span>한글 공고문 · SAM.gov 원문 함께 보기</span>
+            <Link to="/search">마감 전 공고 {total}건 모두 보기<Icon name="cr" /></Link>
+          </div>
+        )}
+      </section>
+    </div>
+  )
 
-  const b = BANNERS[banner]
+  const right = isAuthenticated ? (
+    <div className="st side">
+      <div className="today me">
+        <h4>{member.companyName ?? ''} 님<span>회원 · 오늘 확인할 것</span></h4>
+        <div className="g">
+          <Link to="/bookmarks"><b>{countText(member.bookmarkCount)}</b><span>관심 공고</span></Link>
+          <Link to="/proposals"><b>{countText(member.bidRequestCount)}</b><span>입찰 신청</span></Link>
+          <Link to="/notifications"><b className="r">{member.unreadCount}</b><span>새 알림</span></Link>
+        </div>
+      </div>
+      <div className="mine">
+        <h4>우리 회사 맞춤 판정<Link to="/profile">회사 정보 고치기</Link></h4>
+        <div className="fitwait">
+          <span className="tag">준비 중</span>
+          <p>공고마다 우리 회사가 참여할 수 있는지, 무엇이 모자란지 판정하는 기능을 준비하고 있습니다.</p>
+          <p>회사 정보를 미리 넣어 두시면 기능이 열릴 때 바로 판정해 드립니다.</p>
+          <Link to="/profile">회사 정보 넣기<Icon name="cr" /></Link>
+        </div>
+      </div>
+      <div className="qk">
+        <Link to="/documents"><span className="fi"><Icon name="folder" /></span>서류함</Link>
+        <Link to={comingSoonHref('재발주 달력')}><span className="fi"><Icon name="cal" /></span>재발주 달력</Link>
+      </div>
+    </div>
+  ) : (
+    <div className="st side">
+      <div className="intro">
+        <div className="im"><img src={IMAGES.intro} alt="" /><span className="tag">USFK 입찰 첫걸음</span></div>
+        <div className="bx">
+          <h3>주한미군 공사·용역 입찰,<br />한글로 찾고 순서대로 준비하세요</h3>
+          <div className="fr">
+            <b>무료 회원</b>
+            <ul>
+              {FREE_BENEFITS.map((t) => <li key={t}><Icon name="ok" />{t}</li>)}
+            </ul>
+          </div>
+          <div className="up">
+            <span>상세 번역·적격성 판정은 <b>회원</b></span>
+            <Link to="/pricing">{monthly}<Icon name="cr" /></Link>
+          </div>
+          <Link className="bigb" to="/register">무료로 시작</Link>
+          <div className="lg">이미 회원이신가요?<Link to="/login">로그인</Link></div>
+          <div className="sam">
+            <Icon name="check" />
+            <span>제출 때 SAM 등록이 필요할 수 있습니다</span>
+            <Link to={comingSoonHref('SAM 등록 대행')}>등록 대행<Icon name="cr" /></Link>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
 
   return (
-    <div className="space-y-4">
-      {/* ───────── 통합 검색 ───────── */}
-      <div className="bg-white border border-gray-300 p-4">
-        <form onSubmit={handleSearch} className="flex gap-2">
-          <div className="flex-1 relative">
-            <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm z-10" />
-            <Input
-              type="text"
-              placeholder="공고번호, 공고명, 발주기관으로 검색하세요"
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              className="w-full pl-11 h-12 rounded-none text-[15px]"
-            />
+    <div className="wj home">
+      <div className="wrap">
+        <div className="float">
+          <div className="box">
+            <Link to="/bookmarks"><Icon name="star" />관심 공고</Link>
+            <Link to="/pricing"><Icon name="file" />요금 안내</Link>
+            <Link to="/support"><Icon name="headset" />1:1 문의</Link>
           </div>
-          <Button type="submit" className="h-12 px-8 rounded-none font-bold text-[16px]">
-            검색
+          <Button className="wj-reset tp" aria-label="맨 위로" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+            <Icon name="cu" />
           </Button>
-        </form>
+        </div>
+        <div className="fs">
+          <div>{left}</div>
+          <div>{right}</div>
+        </div>
+        <div className="flow">
+          {FLOW.map((s) => (
+            <a key={s.no} href="#svc">
+              <span><b><em>{s.no}</em>{s.name}</b><span>{s.desc}</span></span>
+            </a>
+          ))}
+        </div>
       </div>
 
-      {/* ───────── 3열 격자 ───────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-[268px_1fr_320px] gap-4 items-start">
-        {/* ═══ 좌: 시작하기 + 알림판 ═══ */}
-        <div className="space-y-4">
-          <section className="bg-white border border-gray-300">
-            <PanelHead title="WJbid 시작하기" />
-            <div className="p-4">
-              <p className="text-[13.5px] text-gray-600 leading-relaxed mb-3.5">
-                미군·연방 조달 입찰이 처음이신 이용자를 위한 안내입니다.
-              </p>
-              <div className="grid grid-cols-2 gap-2">
-                {START_MENU.map((m, i) => {
-                  const cls =
-                    m.tone === 'solid'
-                      ? 'bg-[#2b50b4] text-white hover:bg-[#1b3a72] border-[#2b50b4]'
-                      : m.tone === 'dark'
-                        ? 'bg-[#4b5563] text-white hover:bg-[#374151] border-[#4b5563]'
-                        : 'bg-[#eef3fb] text-[#1b3a72] hover:bg-[#dce7f7] border-[#dce7f7]'
-                  return (
-                    <button
-                      key={m.label}
-                      onClick={() => navigate(m.to)}
-                      className={`border h-[70px] px-2 flex flex-col items-center justify-center gap-1.5 text-[13px] font-bold leading-tight text-center transition-colors ${cls} ${
-                        i === START_MENU.length - 1 && START_MENU.length % 2 === 1 ? 'col-span-2' : ''
-                      }`}
-                    >
-                      <i className={`fa-solid ${m.icon} text-[17px]`} />
-                      {m.label}
-                    </button>
-                  )
-                })}
+      <section className="band g" id="svc">
+        <div className="wrap">
+          <div className="bh"><small>서비스</small><h2>입찰하는 순서대로 도와 드립니다</h2><p>찾기부터 낙찰 뒤까지, 단계마다 필요한 것만 고르세요</p></div>
+          <div className="smap">
+            {SERVICE_MAP.map((c) => (
+              <div className="sc" key={c.no}>
+                <div className="hd2"><i>{c.no}</i><b>{c.name}</b></div>
+                <p>{c.desc}</p>
+                <ul>
+                  {c.items.map((it) => (
+                    <li key={it.name}>
+                      {it.name}<br />
+                      {it.tiers.map((t) => <Fragment key={t}><span className={`tier ${t}`}>{TIER_LABEL[t]}</span> </Fragment>)}
+                    </li>
+                  ))}
+                </ul>
               </div>
-            </div>
-          </section>
-
-          {/* 알림판 */}
-          <section className="bg-white border border-gray-300">
-            <div className="flex items-center justify-between px-4 h-[46px] border-b border-gray-200">
-              <h3 className="text-[16px] font-black text-[#13294f]">알림판</h3>
-              <div className="flex items-center gap-1.5">
-                <span className="text-[12px] text-gray-500 tabular-nums font-medium">
-                  {banner + 1} / {BANNERS.length}
-                </span>
-                <button
-                  onClick={() => setBanner((i) => (i - 1 + BANNERS.length) % BANNERS.length)}
-                  className="w-5 h-5 grid place-items-center text-gray-400 hover:text-[#13294f]"
-                >
-                  <i className="fa-solid fa-chevron-left text-[10px]" />
-                </button>
-                <button
-                  onClick={() => setBanner((i) => (i + 1) % BANNERS.length)}
-                  className="w-5 h-5 grid place-items-center text-gray-400 hover:text-[#13294f]"
-                >
-                  <i className="fa-solid fa-chevron-right text-[10px]" />
-                </button>
-              </div>
-            </div>
-            <button
-              onClick={() => navigate('/notices')}
-              className="block w-full text-left p-5 h-[150px] text-white transition-all"
-              style={{ background: b.bg }}
-            >
-              <span className="inline-block px-2 py-0.5 mb-2.5 text-[10px] font-bold bg-white/20 rounded-sm">
-                {b.tag}
-              </span>
-              <p className="text-[21px] font-black leading-snug mb-1.5">{b.title}</p>
-              <p className="text-[13px] text-white/85 leading-relaxed">{b.desc}</p>
-            </button>
-            <div className="flex justify-center gap-1.5 py-2.5 border-t border-gray-200">
-              {BANNERS.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setBanner(i)}
-                  className={`h-1.5 rounded-full transition-all ${
-                    i === banner ? 'w-4 bg-[#13294f]' : 'w-1.5 bg-gray-300'
-                  }`}
-                />
-              ))}
-            </div>
-          </section>
+            ))}
+          </div>
+          <div className="legend2">
+            {(['f', 'm', 'c', 'k'] as Tier[]).map((t) => (
+              <span key={t}><span className={`tier ${t}`}>{TIER_LABEL[t]}</span>{t === 'm' ? monthly : TIER_NOTE[t]}</span>
+            ))}
+          </div>
         </div>
+      </section>
 
-        {/* ═══ 중앙: 공고문 + 이용 절차 + 바로가기 ═══ */}
-        <div className="space-y-4">
-        <section className="bg-white border border-gray-300">
-          <PanelHead title="입찰 공고문" onMore={() => navigate('/search')} />
+      <section className="band">
+        <div className="wrap">
+          <div className="bh">
+            <small>회원 혜택</small>
+            <h2>회원은 한 걸음 더 봅니다</h2>
+            <p>{price != null ? `월 ${formatWon(price)}으로 ` : ''}공고를 끝까지 읽고, 할 수 있는 공고만 고릅니다</p>
+          </div>
+          <div className="b3">
+            <div className="fc">
+              <h3>{BENEFIT_TRANSLATE.title}</h3>
+              <p>{BENEFIT_TRANSLATE.desc}</p>
+              <div className="pv">
+                <div className="cmp">
+                  <div>
+                    <small>{BENEFIT_TRANSLATE.free.caption}</small>
+                    <p>{BENEFIT_TRANSLATE.free.title}</p>
+                    <p className="sub">{BENEFIT_TRANSLATE.free.sub}</p>
+                  </div>
+                  <div className="m">
+                    <small>{BENEFIT_TRANSLATE.member.caption}</small>
+                    <ul>{BENEFIT_TRANSLATE.member.items.map((t) => <li key={t}>{t}</li>)}</ul>
+                  </div>
+                </div>
+              </div>
+              <Link className="go" to={comingSoonHref('공고문 예시')}>{BENEFIT_TRANSLATE.link.label}<Icon name="cr" /></Link>
+            </div>
+            <div className="fc">
+              <h3>{BENEFIT_FIT.title}</h3>
+              <p>{BENEFIT_FIT.desc}</p>
+              <div className="pv">
+                <div className="co">{BENEFIT_FIT.company.map((t) => <span key={t}>{t}</span>)}</div>
+                <div className="rs2">
+                  {BENEFIT_FIT.rows.map((r) => (
+                    <div key={r.title}><b>{r.title}</b><span className={`fit ${r.fit}`}>{r.label}</span></div>
+                  ))}
+                </div>
+                <p className="ex">{BENEFIT_FIT.note}</p>
+              </div>
+              <Link className="go" to={BENEFIT_FIT.link.to}>{BENEFIT_FIT.link.label}<Icon name="cr" /></Link>
+            </div>
+            <div className="fc">
+              <h3>{BENEFIT_CALENDAR.title}</h3>
+              <p>{BENEFIT_CALENDAR.desc}</p>
+              <div className="pv">
+                <div className="cal2">
+                  {BENEFIT_CALENDAR.rows.map((r) => (
+                    <div key={r.month}>
+                      <em>{r.month}</em>
+                      <b>{r.title}<small>{r.sub}</small></b>
+                      <i><Icon name="eye" />{BENEFIT_CALENDAR.badge}</i>
+                    </div>
+                  ))}
+                </div>
+                <p className="ex">{BENEFIT_CALENDAR.note}</p>
+              </div>
+              <Link className="go" to={comingSoonHref('재발주 달력')}>{BENEFIT_CALENDAR.link.label}<Icon name="cr" /></Link>
+            </div>
+          </div>
+        </div>
+      </section>
 
-          {loading ? (
-            <div className="py-20 text-center text-sm text-gray-400">
-              <i className="fa-solid fa-spinner fa-spin mr-2" />
-              공고를 불러오는 중입니다
+      <section className="band g">
+        <div className="wrap">
+          <div className="bh"><small>요금</small><h2>무료로 시작하고, 필요할 때 넓히세요</h2><p>회원은 월 단위, 대행과 컨설팅은 건마다 상담합니다</p></div>
+          <div className="plans">
+            <div className="pc">
+              <h4>{PLAN_FREE.name}</h4>
+              <div className="pr">0<small>원</small></div>
+              <div className="who">{PLAN_FREE.who}</div>
+              <ul>{PLAN_FREE.items.map((t) => <li key={t}><Icon name="ok" />{t}</li>)}</ul>
+              <Link className="bigb o" to={PLAN_FREE.cta.to}>{PLAN_FREE.cta.label}</Link>
             </div>
-          ) : items.length === 0 ? (
-            <div className="py-20 text-center">
-              <i className="fa-solid fa-inbox text-2xl text-gray-300 mb-2" />
-              <p className="text-sm text-gray-500">노출 중인 공고가 없습니다</p>
+            <div className="pc on">
+              <span className="rec">추천</span>
+              <h4>{PLAN_MEMBER.name}</h4>
+              {price != null ? (
+                <div className="pr">{price.toLocaleString('ko-KR')}<small>원/월</small></div>
+              ) : (
+                <div className="pr s">{priceLoading ? ' ' : MEMBER_PRICE_PENDING_LABEL}</div>
+              )}
+              <div className="who">{PLAN_MEMBER.who}</div>
+              <ul>{PLAN_MEMBER.items.map((t) => <li key={t}><Icon name="ok" />{t}</li>)}</ul>
+              <Link className="bigb" to={PLAN_MEMBER.cta.to}>{PLAN_MEMBER.cta.label}</Link>
             </div>
-          ) : (
-            <>
-              <ul>
-                {items.map((bid) => (
-                  <li key={bid.id} className="border-b border-gray-100 last:border-0">
-                    <button
-                      onClick={() => navigate(`/search/${bid.id}`)}
-                      className="w-full text-left px-4 py-3.5 hover:bg-[#f7f9fc] transition-colors group"
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-[15.5px] font-bold text-gray-900 group-hover:text-[#2b50b4] line-clamp-1 mb-1.5">
-                            {bid.title}
-                          </p>
-                          <p className="text-[12.5px] text-gray-600 flex flex-wrap items-center gap-x-2.5 gap-y-0.5">
-                            <span className="font-bold text-[#2b50b4]">{bid.solicitationNumber}</span>
-                            {bid.agencyName && (
-                              <span className="truncate max-w-[300px]" title={bid.agencyName}>
-                                {bid.agencyName}
-                              </span>
-                            )}
-                          </p>
-                        </div>
-                        <div className="shrink-0 text-right leading-tight">
-                          <div className="flex items-center justify-end gap-1.5 mb-1">
-                            <span className="text-[13px] text-gray-700 tabular-nums font-medium">
-                              ~{bid.responseDeadline || '-'}
-                            </span>
-                            <DdayBadge deadline={bid.responseDeadline} />
-                          </div>
-                          {bid.postedDate && (
-                            <span className="text-[12px] text-gray-500 tabular-nums">
-                              게시 {bid.postedDate}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </button>
+            <div className="pc">
+              <h4>{PLAN_CONSULT.name}</h4>
+              <div className="pr s">{PLAN_CONSULT.price}</div>
+              <div className="who">{PLAN_CONSULT.who}</div>
+              <ul>{PLAN_CONSULT.items.map((t) => <li key={t}><Icon name="ok" />{t}</li>)}</ul>
+              <Link className="bigb o" to={PLAN_CONSULT.cta.to}>{PLAN_CONSULT.cta.label}</Link>
+            </div>
+          </div>
+          <div className="promos3">
+            {PROMOS.map((p) => (
+              <Link key={p.small} className={`promo ${p.tone}`} to={comingSoonHref(p.small)}>
+                <img src={p.img} alt="" />
+                <div className="tx"><small>{p.small}</small><b>{p.title}</b><span>{p.desc}</span></div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="band last">
+        <div className="wrap">
+          <div className="b2">
+            <div className="tbox">
+              <div className="tt">
+                <Button className={`wj-reset${helpTab === 'faq' ? ' on' : ''}`} onClick={() => setHelpTab('faq')}>자주 묻는 질문</Button>
+                <Button className={`wj-reset${helpTab === 'notice' ? ' on' : ''}`} onClick={() => setHelpTab('notice')}>공지사항</Button>
+                <Link className="more" to={helpTab === 'faq' ? '/faq' : '/notices'}>더 보기<Icon name="cr" /></Link>
+              </div>
+              <ul className="lst">
+                {(helpTab === 'faq' ? FAQ_TITLES : NOTICE_TITLES).map((t) => (
+                  <li key={t}>
+                    {helpTab === 'faq' && <span className="q">Q</span>}
+                    <Link className="t" to={helpTab === 'faq' ? '/faq' : '/notices'}>{t}</Link>
                   </li>
                 ))}
               </ul>
-              <div className="flex items-center justify-between px-4 py-2.5 bg-[#f7f9fc] border-t border-gray-200">
-                <span className="text-[13px] text-gray-600">
-                  전체 <b className="text-[#13294f]">{total.toLocaleString()}</b>건
-                </span>
-                <button
-                  onClick={() => navigate('/search')}
-                  className="text-[13px] font-bold text-[#2b50b4] hover:underline"
-                >
-                  공고 전체보기 <i className="fa-solid fa-angle-right text-[10px] ml-0.5" />
-                </button>
-              </div>
-            </>
-          )}
-        </section>
-
-        {/* 이용 절차 — 나라장터 중앙 하단 배너 자리 대응 */}
-        <section className="bg-white border border-gray-300">
-          <div className="px-4 h-[46px] flex items-center border-b border-gray-200">
-            <h3 className="text-[16px] font-black text-[#13294f]">이용 절차</h3>
-            <span className="ml-2 text-[12.5px] text-gray-500">공고 검색부터 입찰 제출까지</span>
+            </div>
+            <div className="help">
+              {HELP_LINKS.map((h) => (
+                <Link key={h.title} to={'to' in h ? h.to : comingSoonHref(h.title)}>
+                  <span className="fi"><Icon name={h.icon} /></span>
+                  <b>{h.title}<span>{h.desc}</span></b>
+                  <Icon name="cr" />
+                </Link>
+              ))}
+            </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-gray-200">
-            {STEPS.map((st, i) => (
-              <button
-                key={st.title}
-                onClick={() => navigate(st.to)}
-                className="flex items-start gap-3 p-4 text-left hover:bg-[#f7f9fc] transition-colors group"
-              >
-                <span className="shrink-0 w-9 h-9 grid place-items-center bg-[#eef3fb] text-[#1b3a72] group-hover:bg-[#2b50b4] group-hover:text-white transition-colors">
-                  <i className={`fa-solid ${st.icon} text-[15px]`} />
-                </span>
-                <span className="min-w-0">
-                  <span className="flex items-center gap-1.5 mb-1">
-                    <span className="text-[11px] font-black text-[#2b50b4] tabular-nums">
-                      STEP {i + 1}
-                    </span>
-                  </span>
-                  <span className="block text-[14px] font-bold text-gray-900 group-hover:text-[#2b50b4] mb-0.5">
-                    {st.title}
-                  </span>
-                  <span className="block text-[12px] text-gray-500 leading-relaxed">{st.desc}</span>
-                </span>
-              </button>
+          <div className="rel">
+            <h4>관련 사이트</h4>
+            {RELATED_SITES.map((s) => (
+              <a key={s.label} href={s.href} target="_blank" rel="noopener noreferrer">{s.label}<Icon name="ext" /></a>
             ))}
           </div>
-        </section>
-
-        {/* 신고·문의 배너 2칸 — 나라장터 신고센터 자리 대응 */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {QUICK_BANNERS.map((q) => (
-            <button
-              key={q.title}
-              onClick={() => navigate(q.to)}
-              className="flex items-center gap-3 bg-white border border-gray-300 px-4 py-4 text-left hover:border-[#2b50b4] hover:bg-[#f7f9fc] transition-colors group"
-            >
-              <span className="shrink-0 w-10 h-10 grid place-items-center bg-[#13294f] text-white">
-                <i className={`fa-solid ${q.icon} text-[16px]`} />
-              </span>
-              <span className="min-w-0">
-                <span className="block text-[14px] font-bold text-gray-900 group-hover:text-[#2b50b4]">
-                  {q.title}
-                </span>
-                <span className="block text-[12px] text-gray-500 mt-0.5">{q.desc}</span>
-              </span>
-              <i className="fa-solid fa-angle-right text-gray-300 ml-auto group-hover:text-[#2b50b4]" />
-            </button>
-          ))}
         </div>
-        </div>
-
-        {/* ═══ 우: 공지사항 + 관련사이트·고객센터 ═══ */}
-        <div className="space-y-4">
-          <section className="bg-white border border-gray-300">
-            <PanelHead title="공지사항" onMore={() => navigate('/notices')} />
-            <ul className="px-4 py-1.5">
-              {NOTICES.map((n) => (
-                <li key={n.id} className="border-b border-gray-100 last:border-0">
-                  <button
-                    onClick={() => navigate('/notices')}
-                    className="w-full text-left py-3 group flex items-start gap-2"
-                  >
-                    {n.important ? (
-                      <span className="shrink-0 mt-[3px] px-1.5 py-0.5 text-[11px] font-bold text-white bg-[#c0392b] rounded-sm">
-                        중요
-                      </span>
-                    ) : (
-                      <span className="shrink-0 mt-[7px] w-1 h-1 rounded-full bg-gray-400" />
-                    )}
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-[14px] text-gray-800 group-hover:text-[#2b50b4] line-clamp-1 font-medium">
-                        {n.title}
-                      </span>
-                      <span className="block text-[12px] text-gray-500 mt-1 tabular-nums">{n.date}</span>
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          {/* 관련 사이트 */}
-          <section className="bg-white border border-gray-300">
-            <div className="px-4 h-[46px] flex items-center border-b border-gray-200">
-              <h3 className="text-[16px] font-black text-[#13294f]">관련 사이트</h3>
-            </div>
-            <ul className="p-2">
-              {RELATED_SITES.map((s) => (
-                <li key={s.label}>
-                  <a
-                    href={s.href}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-2.5 px-2 py-2 hover:bg-[#f7f9fc] group"
-                  >
-                    <span className="w-7 h-7 shrink-0 grid place-items-center bg-[#eef3fb] text-[#1b3a72] rounded-sm">
-                      <i className="fa-solid fa-arrow-up-right-from-square text-[12px]" />
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block text-[14px] font-bold text-gray-800 group-hover:text-[#2b50b4]">
-                        {s.label}
-                      </span>
-                      <span className="block text-[12px] text-gray-500">{s.desc}</span>
-                    </span>
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          {/* 고객센터 */}
-          <section className="bg-[#13294f] text-white p-5">
-            <p className="text-[14px] text-white/70 mb-1">WJbid 이용이</p>
-            <p className="text-[19px] font-black mb-4">궁금하신가요?</p>
-            <div className="flex items-baseline gap-2 mb-1">
-              <span className="text-[12.5px] text-white/60">이메일</span>
-              <a href="mailto:support@wjbid.com" className="text-[14.5px] font-bold hover:underline">
-                support@wjbid.com
-              </a>
-            </div>
-            <div className="flex items-baseline gap-2 mb-4">
-              <span className="text-[12.5px] text-white/60">상담시간</span>
-              <span className="text-[14px] font-medium">평일 09:00 ~ 18:00</span>
-            </div>
-            <button
-              onClick={() => navigate('/support')}
-              className="w-full h-10 bg-white/15 hover:bg-white/25 text-[14px] font-bold transition-colors"
-            >
-              고객센터 바로가기
-            </button>
-          </section>
-        </div>
-      </div>
+      </section>
     </div>
   )
 }

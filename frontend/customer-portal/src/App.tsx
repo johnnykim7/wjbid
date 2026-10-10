@@ -24,6 +24,7 @@ import CalendarPage from './pages/CalendarPage'
 import SavedSearchesPage from './pages/SavedSearchesPage'
 import BillingPage from './pages/BillingPage'
 import DocumentsPage from './pages/DocumentsPage'
+import ComingSoonPage from './pages/ComingSoonPage'
 
 function ProtectedRoute() {
   const { isAuthenticated } = useAuth()
@@ -34,9 +35,14 @@ function ProtectedRoute() {
 function AppRoutes() {
   return (
     <Routes>
+      {/* 홈: 띠가 화면 끝까지 차도록 가운데 상자 없이 (CR-127) */}
+      <Route element={<AppLayout contained={false} />}>
+        <Route index element={<HomePage />} />
+      </Route>
+
       {/* 공개 페이지 (GNB 포함) */}
       <Route element={<AppLayout />}>
-        <Route index element={<HomePage />} />
+        <Route path="/coming-soon" element={<ComingSoonPage />} />
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/guide" element={<GuidePage />} />
         <Route path="/notices" element={<NoticesPage />} />

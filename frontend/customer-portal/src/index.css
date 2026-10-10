@@ -33,15 +33,6 @@
   --color-warning-soft: #fff4e5;
   --color-new:          #e8890c;
 
-  /* 옛 이름표. 지금 보이는 색을 지키는 별칭이며 CR-128 이 화면에서 걷어 낸 뒤 지운다 */
-  --color-navy:      var(--color-brand-deep);
-  --color-primary:   var(--color-brand-deep);
-  --color-blue:      var(--color-brand);
-  --color-secondary: var(--color-brand);
-  --color-brandBlue: var(--color-brand);
-  --color-accent:    var(--color-success);
-  --color-border:    var(--color-line);
-
   --font-sans: "Pretendard Variable", Pretendard, system-ui, -apple-system, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
 }
@@ -50,7 +41,7 @@
   --nav-height: 4rem;
 }
 
-/* CR-124 — 페이지마다 스크롤바 유무가 달라 본문 폭이 바뀌면서
+/* CR-124: 페이지마다 스크롤바 유무가 달라 본문 폭이 바뀌면서
    가운데 정렬된 헤더가 좌우로 움찔하는 현상 방지. 스크롤바 자리를 항상 확보. */
 html {
   scrollbar-gutter: stable;

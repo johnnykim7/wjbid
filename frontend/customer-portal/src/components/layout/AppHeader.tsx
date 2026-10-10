@@ -1,141 +1,152 @@
-import { useNavigate, useLocation } from 'react-router-dom'
-import { useState } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@therecommerce-develop/ds-ui'
 import { useAuth } from '../../context/AuthContext'
+import { Icon, LogoMark } from './Icon'
+import { MENU, menuHref } from './menu'
+import {
+  LOGO_SUB,
+  RECOMMENDED_KEYWORDS,
+  SEARCH_FIELDS,
+  SEARCH_PLACEHOLDER,
+  SERVICE_LINE,
+  searchHref,
+} from './siteContent'
+import type { MemberSummary } from './useMemberSummary'
 
 /**
- * CR-124 — 샘플 mock(customer-portal-military-poc.html) GNB 그대로 재현.
- * 짙은 네이비 바 + 흰 텍스트 GNB + 우측 알림/프로필. DS Header는 톤이 안 맞아 미사용.
- * 컨셉 정본: docs/ui-mockup/customer-portal-military-poc.html
+ * 공통 틀 위쪽: 유틸 띠, 머리말(로고·검색·아이콘), 메뉴 띠, 전체메뉴 (CR-127).
+ * 화면 정본과 클래스 이름을 맞춰 wjbid-aida.css 규칙이 그대로 걸리게 한다.
  */
-
-// 비로그인 상단 메뉴
-const PUBLIC_NAV = [
-  { label: '서비스 소개', href: '/#about' },
-  { label: '이용 안내', href: '/guide' },
-  { label: '요금 안내', href: '/pricing' },
-  { label: '공지사항', href: '/notices' },
-  { label: '고객센터', href: '/support' },
-]
-
-// 로그인 후 GNB 대분류
-const APP_NAV = [
-  { id: 'search', label: '공고 검색', href: '/search' },
-  { id: 'proposals', label: '내 제안서', href: '/proposals' },
-  { id: 'documents', label: '서류함', href: '/documents' },
-  { id: 'guide', label: '이용 안내', href: '/guide' },
-  { id: 'pricing', label: '요금 안내', href: '/pricing' },
-]
-
-export function AppHeader() {
+export function AppHeader({ member }: { member: MemberSummary }) {
   const navigate = useNavigate()
-  const location = useLocation()
-  const { isAuthenticated, userEmail, logout } = useAuth()
-  const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const { pathname, search } = useLocation()
+  const { isAuthenticated, logout } = useAuth()
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [field, setField] = useState(SEARCH_FIELDS[0].value)
+  const [keyword, setKeyword] = useState('')
+  const rootRef = useRef<HTMLDivElement>(null)
 
-  // 해시(/#about)면 홈 이동 후 섹션 스크롤, 아니면 일반 navigate
-  const handleNav = (href: string) => {
-    const [path, hash] = href.split('#')
-    if (hash) {
-      const scrollToHash = () =>
-        document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth' })
-      if (location.pathname === (path || '/')) {
-        scrollToHash()
-      } else {
-        navigate(path || '/')
-        setTimeout(scrollToHash, 100) // 페이지 마운트 후 스크롤
-      }
-    } else {
-      navigate(href)
+  useEffect(() => setMenuOpen(false), [pathname, search])
+
+  useEffect(() => {
+    if (!menuOpen) return
+    const onDown = (e: MouseEvent) => {
+      if (!rootRef.current?.contains(e.target as Node)) setMenuOpen(false)
     }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMenuOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [menuOpen])
+
+  const onSearch = (e: FormEvent) => {
+    e.preventDefault()
+    navigate(searchHref(keyword.trim()))
   }
 
-  // 현재 경로 기반 GNB active
-  const activeId = (() => {
-    const p = location.pathname
-    if (p.startsWith('/search') || p === '/bookmarks' || p === '/calendar' || p === '/saved-searches') return 'search'
-    if (p.startsWith('/proposals')) return 'proposals'
-    if (p.startsWith('/documents')) return 'documents'
-    if (p.startsWith('/guide')) return 'guide'
-    if (p.startsWith('/pricing')) return 'pricing'
-    return ''
-  })()
-
-  const navItems = isAuthenticated ? APP_NAV : PUBLIC_NAV.map((n, i) => ({ id: String(i), ...n }))
-  const initials = (userEmail ?? 'WJ').slice(0, 2).toUpperCase()
+  const count = (n: number | null) => (isAuthenticated && n ? <span className="n">{n}</span> : null)
 
   return (
-    <header className="bg-[#1b3a72] text-white shrink-0 sticky top-0 z-50">
-      <div className="max-w-[1600px] mx-auto px-6 lg:px-10 h-[60px] flex items-center">
-        {/* 로고 */}
-        <div className="flex items-center gap-2.5 mr-10 cursor-pointer"
-             onClick={() => navigate('/')}>
-          <div className="w-8 h-8 rounded bg-white/15 grid place-items-center font-bold">W</div>
-          <span className="font-semibold tracking-tight text-[17px]">WJbid</span>
-        </div>
-
-        {/* GNB */}
-        <nav className="flex items-center h-full text-[15px] font-medium">
-          {navItems.map((item) => {
-            const isActive = isAuthenticated && 'id' in item && item.id === activeId
-            return (
-              <a
-                key={item.label}
-                onClick={() => handleNav(item.href)}
-                className={
-                  'relative flex items-center h-full px-6 cursor-pointer hover:bg-white/5 ' +
-                  (isActive
-                    ? "text-white after:content-[''] after:absolute after:left-0 after:right-0 after:bottom-0 after:h-[3px] after:bg-white"
-                    : 'text-white/90 hover:text-white')
-                }
-              >
-                {item.label}
-              </a>
-            )
-          })}
-        </nav>
-
-        {/* 우측 */}
-        <div className="ml-auto flex items-center gap-4 text-sm">
+    <div ref={rootRef} className={`wj top${menuOpen ? ' menu-open' : ''}`}>
+      <div className="util">
+        <div className="wrap">
+          <span>{SERVICE_LINE}</span>
           {isAuthenticated ? (
-            <>
-              <button onClick={() => navigate('/notifications')}
-                className="relative text-white/80 hover:text-white">
-                <i className="fa-solid fa-bell" />
-                <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-400 rounded-full" />
-              </button>
-              <div className="relative">
-                <button onClick={() => setUserMenuOpen((v) => !v)}
-                  className="flex items-center gap-2 text-white/90 hover:text-white">
-                  <span className="w-7 h-7 rounded-full bg-white/15 grid place-items-center text-xs font-medium">{initials}</span>
-                  <span className="hidden md:inline">{userEmail ?? '내 계정'}</span>
-                  <i className="fa-solid fa-chevron-down text-[10px]" />
-                </button>
-                {userMenuOpen && (
-                  <>
-                    <div className="fixed inset-0 z-10" onClick={() => setUserMenuOpen(false)} />
-                    <div className="absolute right-0 mt-2 w-44 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-20 text-slate-700">
-                      <a onClick={() => { navigate('/profile'); setUserMenuOpen(false) }}
-                        className="block px-4 py-2 text-sm hover:bg-slate-50 cursor-pointer">기업 프로필</a>
-                      <a onClick={() => { navigate('/billing'); setUserMenuOpen(false) }}
-                        className="block px-4 py-2 text-sm hover:bg-slate-50 cursor-pointer">결제 내역</a>
-                      <div className="border-t border-slate-100 my-1" />
-                      <a onClick={() => { logout(); navigate('/'); setUserMenuOpen(false) }}
-                        className="block px-4 py-2 text-sm text-red-600 hover:bg-slate-50 cursor-pointer">로그아웃</a>
-                    </div>
-                  </>
-                )}
-              </div>
-            </>
+            <nav>
+              <Link className="b" to="/profile">{member.companyName ?? ''} 님</Link>
+              <Button className="wj-reset" onClick={logout}>로그아웃</Button>
+              <Link to="/support">고객센터</Link>
+            </nav>
           ) : (
-            <>
-              <button onClick={() => navigate('/login')}
-                className="text-white/90 hover:text-white">로그인</button>
-              <button onClick={() => navigate('/register')}
-                className="px-4 py-2 rounded bg-white text-[#1b3a72] font-medium hover:bg-slate-100">무료로 시작</button>
-            </>
+            <nav>
+              <Link className="b" to="/register">회원가입</Link>
+              <Link to="/login">로그인</Link>
+              <Link to="/guide">이용 안내</Link>
+              <Link to="/support">고객센터</Link>
+            </nav>
           )}
         </div>
       </div>
-    </header>
+      <header className="hd">
+        <div className="wrap">
+          <Link className="logo" to="/">
+            <small>{LOGO_SUB}</small>
+            <span className="mk">
+              <span className="sq"><LogoMark /></span>
+              <b>WJ<em>bid</em></b>
+            </span>
+          </Link>
+          <div className="sch">
+            <form className="box" onSubmit={onSearch} role="search">
+              <Select value={field} onValueChange={setField}>
+                <SelectTrigger className="wj-reset sel" aria-label="검색 구분">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SEARCH_FIELDS.map((f) => (
+                    <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input
+                className="wj-reset phd"
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
+                placeholder={SEARCH_PLACEHOLDER}
+                aria-label="검색어"
+              />
+              <Button type="submit" className="wj-reset go" aria-label="검색"><Icon name="search" /></Button>
+            </form>
+            <div className="kw">
+              <span>추천 검색어</span>
+              {RECOMMENDED_KEYWORDS.map((k) => (
+                <Link key={k} to={searchHref(k)}>{k}</Link>
+              ))}
+              <Link className="adv" to={searchHref()}>상세검색</Link>
+            </div>
+          </div>
+          <div className="hico">
+            <Link to="/bookmarks"><Icon name="star" />{count(member.bookmarkCount)}관심 공고</Link>
+            <Link to="/notifications"><Icon name="bell" />{count(member.unreadCount)}알림</Link>
+            <Link to="/documents"><Icon name="folder" />서류함</Link>
+          </div>
+        </div>
+        <div className="gnb">
+          <div className="wrap">
+            <Button className="wj-reset all" aria-expanded={menuOpen} onClick={() => setMenuOpen((o) => !o)}>
+              <Icon name="menu" />전체메뉴
+            </Button>
+            <nav>
+              {MENU.map((g) => (
+                <Link key={g.label} to={menuHref(g)}>{g.label}</Link>
+              ))}
+            </nav>
+            <Link className="price" to="/pricing">요금 안내</Link>
+          </div>
+        </div>
+        <div className="mega">
+          <div className="wrap">
+            {MENU.map((g) => (
+              <div className="col" key={g.label}>
+                <h5>{g.label}</h5>
+                <ul>
+                  {g.items.map((i) => (
+                    <li key={i.label}>
+                      <Link to={menuHref(i)} onClick={() => setMenuOpen(false)}>{i.label}</Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+      </header>
+    </div>
   )
 }
