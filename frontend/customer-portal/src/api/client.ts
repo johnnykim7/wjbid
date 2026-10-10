@@ -94,9 +94,14 @@ export const addBookmark = (opportunityId: string) =>
 export const removeBookmark = (opportunityId: string) =>
   api.delete(`/bookmarks/${opportunityId}`)
 
-// Pricing
+// Pricing (CR-129)
+export interface PricingInfo {
+  /** 회원 월 요금(원, 부가세 별도). 미정이면 null */
+  memberMonthlyPrice: number | null
+}
+
 export const getPricing = () =>
-  api.get('/pricing')
+  api.get<PricingInfo>('/pricing')
 
 // Members (Profile)
 export const getMyProfile = () =>
