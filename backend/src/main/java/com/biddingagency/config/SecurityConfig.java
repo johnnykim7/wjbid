@@ -1,6 +1,7 @@
 package com.biddingagency.config;
 
 import com.biddingagency.security.JwtAuthenticationFilter;
+import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -54,6 +55,11 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // 오류 응답을 쓰는 내부 재요청(/error)에는 JWT 필터가 돌지 않아 미인증으로 보인다.
+                        // 막으면 500·404·400 이 전부 401 로 바뀌어 FE 가 세션 만료로 처리한다(CR-130).
+                        // 권한 검사는 원래 요청에서 이미 끝났다. 밖에서 /error 를 직접 부르는 요청은 계속 인증 필요.
+                        .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
+
                         // Public endpoints
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/actuator/**").permitAll()

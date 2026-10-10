@@ -16,12 +16,15 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   async (err) => {
-    if (err.response?.status === 401) {
+    // 갱신 후 다시 보낸 요청이 또 401 이면 토큰 문제가 아니므로 더 갱신하지 않는다.
+    // 횟수 제한이 없으면 갱신과 재요청이 끝없이 돈다(CR-130).
+    if (err.response?.status === 401 && err.config && !err.config._retried) {
       const refreshToken = localStorage.getItem('refreshToken')
       if (refreshToken) {
         try {
           const { data } = await axios.post(`${BASE_URL}/auth/refresh?refreshToken=${refreshToken}`)
           localStorage.setItem('accessToken', data.accessToken)
+          err.config._retried = true
           err.config.headers.Authorization = `Bearer ${data.accessToken}`
           return api.request(err.config)
         } catch {
