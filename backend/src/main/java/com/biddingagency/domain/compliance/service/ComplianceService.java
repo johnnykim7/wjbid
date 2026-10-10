@@ -4,6 +4,7 @@ import com.biddingagency.domain.bid.entity.BidRequest;
 import com.biddingagency.domain.bid.entity.ClientDocument;
 import com.biddingagency.domain.bid.repository.BidRequestRepository;
 import com.biddingagency.domain.bid.repository.ClientDocumentRepository;
+import com.biddingagency.domain.compliance.dto.AutoFillResult;
 import com.biddingagency.domain.compliance.dto.ComplianceIssue;
 import com.biddingagency.domain.compliance.dto.RequiredDocumentSlot;
 import com.biddingagency.domain.compliance.dto.RequiredDocumentSlotsResponse;
@@ -15,7 +16,13 @@ import com.biddingagency.domain.compliance.repository.RequirementFulfillmentMapR
 import com.biddingagency.domain.document.entity.BidDocument;
 import com.biddingagency.domain.document.entity.DocumentStatus;
 import com.biddingagency.domain.document.repository.BidDocumentRepository;
+import com.biddingagency.domain.member.entity.DocumentCategory;
 import com.biddingagency.domain.member.entity.Member;
+import com.biddingagency.domain.member.entity.MemberDocument;
+import com.biddingagency.domain.member.service.MemberDocumentService;
+import com.biddingagency.domain.notice.entity.Notice;
+import com.biddingagency.domain.notice.repository.NoticeRepository;
+import com.biddingagency.domain.opportunity.dto.AnalysisResultDto;
 import com.biddingagency.domain.opportunity.entity.Opportunity;
 import com.biddingagency.domain.opportunity.entity.OpportunityRequirementItem;
 import com.biddingagency.domain.opportunity.repository.OpportunityRequirementItemRepository;
@@ -28,6 +35,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -48,6 +56,8 @@ public class ComplianceService {
     private final BidDocumentRepository documentRepository;
     private final ClientDocumentRepository clientDocumentRepository;
     private final StorageService storageService;
+    private final MemberDocumentService memberDocumentService;
+    private final NoticeRepository noticeRepository;
 
     /**
      * Validate bid request for submission readiness
@@ -348,6 +358,110 @@ public class ComplianceService {
             fulfillmentMapRepository.delete(map);
             log.info("Slot unmapped: bidRequest={}, requirement={}", bidRequestId, requirementItemId);
         }
+    }
+
+    /**
+     * CR-125 2단계: 회사 공통 서류함에서 미충족 서류 슬롯을 일괄 자동채움.
+     *
+     * ProposalDetailPage 경로에 정합 — 슬롯 = 공고분석 requiredDocuments(documents[].name +
+     * FACTOR>subfactor CLIENT_UPLOAD 명), 충족 = ClientDocument(documentCategory=서류명) 존재 여부.
+     *
+     * - 대상: 아직 같은 documentCategory의 ClientDocument가 없는 서류명만 (BIZ-125-4: 이미 올린 건 미덮어씀).
+     * - 매칭: 서류명 텍스트 → 서류함 고정 카테고리 키워드(DocumentCategory.matchByText).
+     * - 채움: MemberDocument를 ClientDocument로 복제(원본 보존, documentCategory=서류명).
+     */
+    @Transactional
+    public AutoFillResult autoFillFromVault(UUID bidRequestId, Member member) {
+        BidRequest bidRequest = bidRequestRepository.findById(bidRequestId)
+                .orElseThrow(() -> new IllegalArgumentException("Bid request not found: " + bidRequestId));
+
+        // 공고분석에서 고객이 올릴 서류명 목록 수집
+        List<String> slotNames = collectClientSlotNames(bidRequest.getOpportunity());
+
+        // 이미 올라온 documentCategory(=서류명) 집합
+        java.util.Set<String> alreadyUploaded = clientDocumentRepository.findByBidRequestId(bidRequestId)
+                .stream().map(ClientDocument::getDocumentCategory)
+                .filter(java.util.Objects::nonNull)
+                .collect(java.util.stream.Collectors.toSet());
+
+        List<String> filledNames = new ArrayList<>();
+        List<String> unmatchedNames = new ArrayList<>();
+
+        for (String name : slotNames) {
+            if (alreadyUploaded.contains(name)) {
+                continue; // 이미 업로드됨 (BIZ-125-4)
+            }
+            DocumentCategory category = DocumentCategory.matchByText(name);
+            if (category == null) {
+                continue; // 고정 카테고리와 무관한 서류 → 수동 업로드
+            }
+            MemberDocument vaultDoc = memberDocumentService.findFixed(member.getId(), category);
+            if (vaultDoc == null) {
+                unmatchedNames.add(name); // 서류함에 해당 서류 미보유
+                continue;
+            }
+
+            // 서류함 파일을 슬롯용 ClientDocument로 복제 (원본 보존, documentCategory=서류명)
+            byte[] content = storageService.load(vaultDoc.getStorageUrl());
+            String storageUrl = storageService.store(
+                    "client-docs/" + bidRequestId, vaultDoc.getFileName(), content);
+
+            clientDocumentRepository.save(ClientDocument.builder()
+                    .bidRequest(bidRequest)
+                    .member(member)
+                    .fileName(vaultDoc.getFileName())
+                    .fileSize(vaultDoc.getFileSize())
+                    .contentType(vaultDoc.getContentType())
+                    .storageUrl(storageUrl)
+                    .documentCategory(name)
+                    .build());
+
+            filledNames.add(name);
+            log.info("[CR-125] auto-filled slot: bidRequest={}, slot='{}', category={}, vaultDoc={}",
+                    bidRequestId, name, category, vaultDoc.getId());
+        }
+
+        log.info("[CR-125] auto-fill done: bidRequest={}, filled={}", bidRequestId, filledNames.size());
+        return AutoFillResult.builder()
+                .filledCount(filledNames.size())
+                .filledNames(filledNames)
+                .unmatchedNames(unmatchedNames)
+                .build();
+    }
+
+    /**
+     * 고객이 업로드할 서류명 목록 (ProposalDetailPage clientSlots 로직과 동일).
+     * FACTOR 트리가 있으면 CLIENT_UPLOAD subfactor명, 없으면 평면 documents[].name.
+     */
+    private List<String> collectClientSlotNames(Opportunity opportunity) {
+        List<Notice> notices = noticeRepository.findByOpportunityId(opportunity.getId());
+        if (notices.isEmpty()) {
+            return Collections.emptyList();
+        }
+        Notice notice = notices.get(0);
+        AnalysisResultDto.RequiredDocumentsDto rd =
+                AnalysisResultDto.RequiredDocumentsDto.from(notice.getRequiredDocumentsJson());
+        if (rd == null) {
+            return Collections.emptyList();
+        }
+
+        List<String> names = new ArrayList<>();
+        boolean hasFactors = rd.factors() != null && !rd.factors().isEmpty();
+        if (hasFactors) {
+            for (AnalysisResultDto.FactorDto f : rd.factors()) {
+                if (f.subfactors() == null) continue;
+                for (AnalysisResultDto.SubfactorDto s : f.subfactors()) {
+                    if ("CLIENT_UPLOAD".equals(s.fulfillmentParty()) && s.name() != null) {
+                        names.add(s.name());
+                    }
+                }
+            }
+        } else if (rd.documents() != null) {
+            for (AnalysisResultDto.RequiredDocumentItem d : rd.documents()) {
+                if (d.name() != null) names.add(d.name());
+            }
+        }
+        return names;
     }
 
     /**

@@ -181,6 +181,12 @@ public class NoticeService {
             return existingId;
         }
 
+        // 첨부파일이 없으면 공고문을 만들 수 없음 (FE 버튼 비활성화의 2차 방어선 — 직접 API 호출 차단)
+        long attachmentCount = attachmentRepository.countByOpportunityId(opportunityId);
+        if (attachmentCount == 0) {
+            throw new IllegalStateException("첨부파일이 있어야 공고문을 만들 수 있습니다.");
+        }
+
         Notice notice = noticeRepository.save(Notice.builder()
                 .opportunity(opportunity)
                 .createdBy(createdBy)

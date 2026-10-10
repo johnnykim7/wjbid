@@ -139,8 +139,16 @@ public class LLMPlatformClient {
      * Aimbase가 MCP save_opportunity_analysis 도구를 콜백하여 결과를 직접 저장.
      */
     public WorkflowRunResponse analyzeOpportunity(Map<String, Object> input) {
+        return analyzeOpportunity(input, null);
+    }
+
+    /**
+     * 공고 사전 분석 — run 시작 직후 runId 를 콜백으로 전달(진행 STEP 표시용, CR-115).
+     * onRunStarted 는 폴링 시작 전(run POST 성공·runId 확보 직후) 1회 호출 → 호출자가 Notice.workflowRunId 저장.
+     */
+    public WorkflowRunResponse analyzeOpportunity(Map<String, Object> input, java.util.function.Consumer<String> onRunStarted) {
         log.info("Aimbase: 공고 사전 분석 시작 opportunityId={}", input.get("opportunityId"));
-        return runWorkflowAndWait(opportunityAnalysisWorkflowId, input);
+        return runWorkflowAndWait(opportunityAnalysisWorkflowId, input, onRunStarted);
     }
 
     /**
@@ -467,6 +475,14 @@ public class LLMPlatformClient {
     // ─────────────────────────────────────────────────────────────────────────
 
     private WorkflowRunResponse runWorkflowAndWait(String workflowId, Map<String, Object> input) {
+        return runWorkflowAndWait(workflowId, input, null);
+    }
+
+    /**
+     * @param onRunStarted run 시작 직후(runId 확보, 폴링 전) 1회 호출되는 콜백. null 가능.
+     */
+    private WorkflowRunResponse runWorkflowAndWait(String workflowId, Map<String, Object> input,
+                                                   java.util.function.Consumer<String> onRunStarted) {
         String runUrl = baseUrl + "/api/v1/workflows/" + workflowId + "/run";
         String pollUrlTemplate = baseUrl + "/api/v1/workflows/" + workflowId + "/runs/";
 
@@ -495,6 +511,16 @@ public class LLMPlatformClient {
 
         String runId = runResponse.getId();
         log.info("Aimbase: 워크플로우 실행 시작됨 workflowId={}, runId={}", workflowId, runId);
+
+        // CR-115: run 시작 직후 runId 콜백 — 호출자가 Notice.workflowRunId 저장(진행 STEP 조회용).
+        // 콜백 예외는 본 흐름과 무관하게 삼킴(저장 실패해도 분석 자체는 계속).
+        if (onRunStarted != null) {
+            try {
+                onRunStarted.accept(runId);
+            } catch (Exception e) {
+                log.warn("Aimbase: onRunStarted 콜백 실패(무시) runId={}, reason={}", runId, e.getMessage());
+            }
+        }
 
         if (runResponse.isCompleted()) {
             log.info("Aimbase: 워크플로우 즉시 완료 runId={}", runId);
@@ -535,6 +561,14 @@ public class LLMPlatformClient {
 
             if (pollResponse.isFailed()) {
                 throw new LLMPlatformException("워크플로우 실행 실패: runId=" + runId + ", error=" + pollResponse.getErrorAsString());
+            }
+
+            // run 이 취소(cancelled)되면 completed/failed 가 아니므로 종료 조건에 명시적으로 포함한다.
+            // 누락 시 폴링 루프가 maxPollingAttempts 까지 llm-async 스레드를 점유 → 풀 고갈 →
+            // 후속 분석 트리거가 새 run POST 를 못 해 runId 가 저장되지 않는 좀비화가 발생한다.
+            if (pollResponse.isCancelled()) {
+                log.info("Aimbase: 워크플로우 취소됨 — 폴링 종료 runId={}", runId);
+                throw new LLMPlatformException("워크플로우 취소됨: runId=" + runId);
             }
         }
 

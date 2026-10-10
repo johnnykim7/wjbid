@@ -1,6 +1,10 @@
 package com.biddingagency.domain.opportunity.service;
 
+import com.biddingagency.domain.notice.entity.Notice;
+import com.biddingagency.domain.notice.entity.NoticeGenerationStatus;
+import com.biddingagency.domain.notice.repository.NoticeRepository;
 import com.biddingagency.domain.opportunity.entity.Opportunity;
+import com.biddingagency.domain.opportunity.entity.OpportunityVisibility;
 import com.biddingagency.domain.opportunity.repository.OpportunityRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -29,6 +33,9 @@ class OpportunityServiceTest {
     @Mock
     private OpportunityRepository opportunityRepository;
 
+    @Mock
+    private NoticeRepository noticeRepository;
+
     @InjectMocks
     private OpportunityService opportunityService;
 
@@ -49,7 +56,7 @@ class OpportunityServiceTest {
                     .build());
         }
         Page<Opportunity> page = new PageImpl<>(opportunities, pageable, 50);
-        given(opportunityRepository.findByActiveTrueOrderByPostedDateDescCreatedAtDesc(pageable)).willReturn(page);
+        given(opportunityRepository.findByActiveTrueAndDeletedAtIsNullOrderByPostedDateDescCreatedAtDesc(pageable)).willReturn(page);
 
         // when
         Page<Opportunity> result = opportunityService.findAllActive(pageable);
@@ -220,5 +227,84 @@ class OpportunityServiceTest {
         assertThat(outcome.opportunity().getRawJson()).isEqualTo(rawJson);
         assertThat(outcome.opportunity().getRawJson().get("notice_id")).isEqualTo("N-RAW");
         assertThat(outcome.result()).isEqualTo(OpportunityService.UpsertResult.NEW);
+    }
+
+    // === CR-042: 소프트 삭제 + 중복 차단 ===
+
+    private Notice noticeWith(NoticeGenerationStatus status, OpportunityVisibility visibility) {
+        return Notice.builder()
+                .generationStatus(status)
+                .visibility(visibility)
+                .build();
+    }
+
+    @Test
+    @DisplayName("연결공고문없음_softDelete_삭제됨_CR042")
+    void 연결공고문없음_softDelete_삭제됨() {
+        // given
+        UUID id = UUID.randomUUID();
+        Opportunity opp = Opportunity.builder()
+                .noticeId("N-DEL").title("t").active(true)
+                .firstSeenAt(LocalDateTime.now()).lastModifiedAt(LocalDateTime.now())
+                .build();
+        given(opportunityRepository.findById(id)).willReturn(Optional.of(opp));
+        given(noticeRepository.findByOpportunityId(id)).willReturn(List.of());
+
+        // when
+        opportunityService.softDelete(id);
+
+        // then
+        assertThat(opp.isDeleted()).isTrue();
+        assertThat(opp.getDeletedAt()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("노출중공고문연결_softDelete_거부_CR042")
+    void 노출중공고문연결_softDelete_거부() {
+        // given
+        UUID id = UUID.randomUUID();
+        Opportunity opp = Opportunity.builder()
+                .noticeId("N-VIS").title("t").active(true)
+                .firstSeenAt(LocalDateTime.now()).lastModifiedAt(LocalDateTime.now())
+                .build();
+        given(opportunityRepository.findById(id)).willReturn(Optional.of(opp));
+        given(noticeRepository.findByOpportunityId(id)).willReturn(
+                List.of(noticeWith(NoticeGenerationStatus.COMPLETED, OpportunityVisibility.VISIBLE)));
+
+        // when & then
+        assertThatThrownBy(() -> opportunityService.softDelete(id))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("노출 중");
+        assertThat(opp.isDeleted()).isFalse();
+    }
+
+    @Test
+    @DisplayName("분석중공고문연결_softDelete_거부_CR042")
+    void 분석중공고문연결_softDelete_거부() {
+        // given
+        UUID id = UUID.randomUUID();
+        Opportunity opp = Opportunity.builder()
+                .noticeId("N-ANL").title("t").active(true)
+                .firstSeenAt(LocalDateTime.now()).lastModifiedAt(LocalDateTime.now())
+                .build();
+        given(opportunityRepository.findById(id)).willReturn(Optional.of(opp));
+        given(noticeRepository.findByOpportunityId(id)).willReturn(
+                List.of(noticeWith(NoticeGenerationStatus.ANALYZING, OpportunityVisibility.HIDDEN)));
+
+        // when & then
+        assertThatThrownBy(() -> opportunityService.softDelete(id))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("분석 중");
+        assertThat(opp.isDeleted()).isFalse();
+    }
+
+    @Test
+    @DisplayName("동일해시_existsLiveByContentHash_위임반환_CR042")
+    void 동일해시_중복판정_위임() {
+        // given
+        given(opportunityRepository.existsByContentHashAndDeletedAtIsNull("h1")).willReturn(true);
+
+        // when & then
+        assertThat(opportunityService.existsLiveByContentHash("h1")).isTrue();
     }
 }

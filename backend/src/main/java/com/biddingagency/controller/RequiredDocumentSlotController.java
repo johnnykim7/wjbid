@@ -1,5 +1,6 @@
 package com.biddingagency.controller;
 
+import com.biddingagency.domain.compliance.dto.AutoFillResult;
 import com.biddingagency.domain.compliance.dto.RequiredDocumentSlot;
 import com.biddingagency.domain.compliance.dto.RequiredDocumentSlotsResponse;
 import com.biddingagency.domain.compliance.service.ComplianceService;
@@ -56,5 +57,14 @@ public class RequiredDocumentSlotController {
             @PathVariable UUID requirementItemId) {
         complianceService.unmapSlot(bidRequestId, requirementItemId);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/auto-fill")
+    @Operation(summary = "서류함에서 미충족 슬롯 일괄 자동채움 (CR-125)")
+    public ResponseEntity<AutoFillResult> autoFill(
+            @PathVariable UUID bidRequestId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        return ResponseEntity.ok(
+                complianceService.autoFillFromVault(bidRequestId, userDetails.getMember()));
     }
 }

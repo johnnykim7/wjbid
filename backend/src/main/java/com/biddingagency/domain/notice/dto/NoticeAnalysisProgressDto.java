@@ -43,6 +43,7 @@ public record NoticeAnalysisProgressDto(
         STEP_LABELS.put("fetch_opportunity", "공고 정보 불러오는 중");
         STEP_LABELS.put("write_description", "공고 본문 준비 중");
         STEP_LABELS.put("download_attachments", "첨부파일 받는 중");
+        STEP_LABELS.put("read_fulltext", "공고 원문 정독 중");
         STEP_LABELS.put("extract_facts", "공고 내용 분석 중");
         STEP_LABELS.put("verify_and_gapcheck", "분석 결과 검증 중");
         STEP_LABELS.put("save", "저장 중");

@@ -115,14 +115,20 @@ public class OpportunityAdminController {
     public ResponseEntity<Map<String, String>> createNotice(
             @PathVariable UUID id,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
-        UUID noticeId = noticeService.createNotice(id, userDetails.getMember().getId());
-        log.info("공고문 생성(게이트①): opportunityId={}, noticeId={}", id, noticeId);
-        return ResponseEntity.accepted().body(Map.of(
-                "status", "ACCEPTED",
-                "message", "공고문 생성 및 한글화가 시작되었습니다.",
-                "opportunityId", id.toString(),
-                "noticeId", noticeId.toString()
-        ));
+        try {
+            UUID noticeId = noticeService.createNotice(id, userDetails.getMember().getId());
+            log.info("공고문 생성(게이트①): opportunityId={}, noticeId={}", id, noticeId);
+            return ResponseEntity.accepted().body(Map.of(
+                    "status", "ACCEPTED",
+                    "message", "공고문 생성 및 한글화가 시작되었습니다.",
+                    "opportunityId", id.toString(),
+                    "noticeId", noticeId.toString()
+            ));
+        } catch (IllegalStateException e) {
+            log.warn("공고문 생성 거부: opportunityId={}, reason={}", id, e.getMessage());
+            return ResponseEntity.status(org.springframework.http.HttpStatus.CONFLICT)
+                    .body(Map.of("status", "REJECTED", "reason", e.getMessage()));
+        }
     }
 
     @DeleteMapping("/{id}")

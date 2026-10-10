@@ -78,6 +78,7 @@ public class OpportunityCollectorService {
         int targetCreated = 0;
         int changed = 0;
         int unchanged = 0;
+        int duplicate = 0;
         int errors = 0;
         int offset = 0;
         int limit = 1000;
@@ -125,6 +126,7 @@ public class OpportunityCollectorService {
                             }
                             case CHANGED -> changed++;   // CR-009: 기존이지만 contentHash 변경
                             case UNCHANGED -> unchanged++; // CR-009: 변동 없음
+                            case DUPLICATE -> duplicate++; // CR-042: 동일 content_hash 재게시 차단
                         }
                     } catch (Exception e) {
                         log.error("Error processing opportunity: {}", data.getNoticeId(), e);
@@ -145,10 +147,10 @@ public class OpportunityCollectorService {
             errors++;
         }
 
-        log.info("Collection completed for keyword '{}': {} new ({} target), {} changed, {} unchanged, {} errors",
-                keyword, created, targetCreated, changed, unchanged, errors);
+        log.info("Collection completed for keyword '{}': {} new ({} target), {} changed, {} unchanged, {} duplicate, {} errors",
+                keyword, created, targetCreated, changed, unchanged, duplicate, errors);
 
-        return new CollectionResult(created, targetCreated, changed, unchanged, errors);
+        return new CollectionResult(created, targetCreated, changed, unchanged, duplicate, errors);
     }
 
     /**
@@ -195,6 +197,15 @@ public class OpportunityCollectorService {
 
         // Calculate content hash for change detection
         String contentHash = calculateHash(data);
+
+        // CR-042: 중복 재게시 차단. noticeId 신규인데 동일 content_hash(제목·유형·게시일·마감일·기관 일치)가
+        // 살아있는 공고에 이미 있으면 INSERT하지 않고 DUPLICATE로 집계.
+        // (기존 noticeId 매칭 건은 amendment 갱신 경로라 여기서 막지 않는다 — createOrUpdate가 CHANGED/UNCHANGED 처리)
+        if (!opportunityService.existsByNoticeId(noticeId)
+                && opportunityService.existsLiveByContentHash(contentHash)) {
+            log.info("[CR-042] 중복 재게시 skip: noticeId={}, contentHash={}", noticeId, contentHash);
+            return new ProcessResult(OpportunityService.UpsertResult.DUPLICATE, null, null);
+        }
 
         // CR-014: 사업유형 자동분류 (BIZ-018). naics/PSC/title 기반, 미매칭 시 null
         IndustryType industryType = industryClassifier.classify(
@@ -303,9 +314,10 @@ public class OpportunityCollectorService {
     /**
      * Collection result.
      * collected = 전체 신규(NEW), targetNew = 그중 IndustryClassifier 매칭(시설관리 타깃) 신규 (CR-015),
-     * changed = 기존이지만 contentHash 변경(CR-009 실제 갱신), unchanged = 변동 없음.
+     * changed = 기존이지만 contentHash 변경(CR-009 실제 갱신), unchanged = 변동 없음,
+     * duplicate = 동일 content_hash 재게시 차단(CR-042).
      */
-    public record CollectionResult(int collected, int targetNew, int changed, int unchanged, int errors) {
+    public record CollectionResult(int collected, int targetNew, int changed, int unchanged, int duplicate, int errors) {
     }
 
     /** processOpportunity 결과: upsert 결과(NEW/CHANGED/UNCHANGED) + 분류된 사업유형(미분류 시 null). */

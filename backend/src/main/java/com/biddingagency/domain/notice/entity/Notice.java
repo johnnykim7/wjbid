@@ -186,6 +186,14 @@ public class Notice extends BaseEntity {
         this.errorMessage = null;
     }
 
+    /**
+     * CR-115: run 시작 직후 runId 만 채운다(상태·시작시각 불변).
+     * markAnalyzing(null) 로 이미 ANALYZING 진입한 뒤, Aimbase run POST 성공 시점에 호출.
+     */
+    public void attachWorkflowRunId(String workflowRunId) {
+        this.workflowRunId = workflowRunId;
+    }
+
     /** CR-039: ANALYZING 상태에서만 강제 중단 가능 여부. */
     public boolean isAnalyzing() {
         return this.generationStatus == NoticeGenerationStatus.ANALYZING;
