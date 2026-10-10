@@ -25,7 +25,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.*;
 
 /**
- * CR-132 1:1 문의 접수 관리자 알림 (TC-INQ-009~012).
+ * CR-132 1:1 문의 접수 관리자 알림 (TC-INQ-009~013).
  */
 @ExtendWith(MockitoExtension.class)
 class InquiryNotificationListenerTest {
@@ -108,5 +108,23 @@ class InquiryNotificationListenerTest {
         assertThat(keys.getAllValues()).containsExactly(
                 "INQUIRY_RECEIVED_" + inquiryId + "_a@x.com",
                 "INQUIRY_RECEIVED_" + inquiryId + "_b@x.com");
+    }
+
+    @Test
+    @DisplayName("TC-INQ-013 고객이 쓴 값은 HTML 이스케이프하고 줄바꿈을 줄 나눔으로 넘긴다")
+    @SuppressWarnings("unchecked")
+    void HTML섞인문의_문의접수_이스케이프해넘김() {
+        given(systemSettingService.findValue(SettingKey.INQUIRY_NOTIFY_EMAILS)).willReturn(Optional.of("a@x.com"));
+        given(memberRepository.findByEmail(any())).willReturn(Optional.empty());
+
+        listener.onInquiryReceived(new InquiryReceivedEvent(inquiryId, "서비스 이용 문의", "제목",
+                "<a href=\"x\">눌러</a>\n둘째 줄", "홍길동", "guest@example.com", null,
+                LocalDateTime.of(2026, 10, 11, 10, 0)));
+
+        ArgumentCaptor<java.util.Map<String, Object>> vars = ArgumentCaptor.forClass(java.util.Map.class);
+        then(notificationService).should().sendNotification(any(), any(), any(), any(), vars.capture(), any(),
+                any(), any());
+        assertThat(vars.getValue().get("inquiryContent"))
+                .isEqualTo("&lt;a href=&quot;x&quot;&gt;눌러&lt;/a&gt;<br>둘째 줄");
     }
 }

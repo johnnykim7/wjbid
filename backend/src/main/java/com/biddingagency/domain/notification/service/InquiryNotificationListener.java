@@ -58,7 +58,7 @@ public class InquiryNotificationListener {
         for (Map.Entry<String, UUID> to : recipients().entrySet()) {
             try {
                 notificationService.sendNotification(NotificationType.INQUIRY_RECEIVED,
-                        to.getKey(), to.getValue(), event.getTitle(), vars,
+                        to.getKey(), to.getValue(), event.getTitle(), MailHtmlValues.escape(vars),
                         event.getEntityId(), Inquiry.REFERENCE_TYPE,
                         "INQUIRY_RECEIVED_" + event.getEntityId() + "_" + to.getKey());
             } catch (Exception e) {

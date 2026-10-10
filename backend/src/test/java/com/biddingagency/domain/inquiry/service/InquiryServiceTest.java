@@ -38,7 +38,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.*;
 
 /**
- * CR-132 고객센터 1:1 문의 접수·답변 (TC-INQ-001~008).
+ * CR-132 고객센터 1:1 문의 접수·답변 (TC-INQ-001~008, 014).
  */
 @ExtendWith(MockitoExtension.class)
 class InquiryServiceTest {
@@ -160,6 +160,25 @@ class InquiryServiceTest {
         inquiryService.answer(id, " 답변입니다 ", member(adminId));
 
         then(inquiryRepository).should().markAnswered(id, "답변입니다", LocalDateTime.now(CLOCK), adminId);
+    }
+
+    @Test
+    @DisplayName("TC-INQ-014 답변 메일에는 이스케이프하고 줄 나눔한 답변을 넘긴다")
+    @SuppressWarnings("unchecked")
+    void HTML섞인답변_답변메일_이스케이프해넘김() {
+        UUID id = UUID.randomUUID();
+        UUID adminId = UUID.randomUUID();
+        given(inquiryRepository.findById(id)).willReturn(Optional.of(inquiry(id, InquiryStatus.RECEIVED)));
+        given(notificationService.sendNotification(any(), any(), any(), any(), anyMap(), any(), any(), any()))
+                .willReturn(true);
+        given(inquiryRepository.markAnswered(any(), any(), any(), any())).willReturn(1);
+
+        inquiryService.answer(id, "첫 줄\n<b>둘째</b>", member(adminId));
+
+        ArgumentCaptor<java.util.Map<String, Object>> vars = ArgumentCaptor.forClass(java.util.Map.class);
+        then(notificationService).should().sendNotification(any(), any(), any(), any(), vars.capture(), any(),
+                any(), any());
+        assertThat(vars.getValue().get("answer")).isEqualTo("첫 줄<br>&lt;b&gt;둘째&lt;/b&gt;");
     }
 
     @Test

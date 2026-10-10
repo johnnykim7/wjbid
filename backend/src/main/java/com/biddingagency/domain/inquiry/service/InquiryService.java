@@ -15,6 +15,7 @@ import com.biddingagency.domain.member.repository.MemberRepository;
 import com.biddingagency.domain.notification.entity.NotificationLog;
 import com.biddingagency.domain.notification.entity.NotificationType;
 import com.biddingagency.domain.notification.repository.NotificationLogRepository;
+import com.biddingagency.domain.notification.service.MailHtmlValues;
 import com.biddingagency.domain.notification.service.NotificationService;
 import com.biddingagency.dto.InquiryResponses;
 import com.biddingagency.dto.InquirySubmitRequest;
@@ -148,7 +149,7 @@ public class InquiryService {
         vars.put("answer", body);
 
         boolean sent = notificationService.sendNotification(NotificationType.INQUIRY_ANSWERED,
-                i.getEmail(), i.getMemberId(), i.getTitle(), vars, i.getId(), Inquiry.REFERENCE_TYPE,
+                i.getEmail(), i.getMemberId(), i.getTitle(), MailHtmlValues.escape(vars), i.getId(), Inquiry.REFERENCE_TYPE,
                 "INQUIRY_ANSWERED_" + i.getId() + "_" + clock.millis());
         if (!sent) {
             throw new InquiryAnswerMailFailedException();
