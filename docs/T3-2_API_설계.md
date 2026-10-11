@@ -1,6 +1,6 @@
 # SAM.gov Bidding Agency Platform API 설계
 
-> 설계 버전: 1.12 | 최종 수정: 2026-10-12 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-144, CR-146, CR-147
+> 설계 버전: 1.13 | 최종 수정: 2026-10-12 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-144, CR-146, CR-147
 
 > 단계: 3. Detail Design | 실행스펙 섹션 3에 포함
 >
@@ -44,7 +44,7 @@
 | POST | /auth/refresh | Refresh 토큰으로 Access 토큰 갱신 | | BID-AUTH-003 |
 | POST | /auth/email-codes | 인증번호 보내기 `{email}`. 200 `{expiresInSeconds, resendAfterSeconds}`. 이미 가입된 메일 409 `EMAIL_ALREADY_EXISTS`, 간격 전 429 `EMAIL_CODE_TOO_SOON`(`retryAfterSeconds`), 하루 한도 429 `EMAIL_CODE_DAILY_LIMIT`, 메일 실패 502 `EMAIL_SEND_FAILED` (CR-146, POL-037) | | BID-AUTH-005 |
 | POST | /auth/email-codes/verify | 인증번호 확인 `{email, code}`. 200. 틀림 400 `EMAIL_CODE_MISMATCH`(`remainingAttempts`), 시간 지남 410 `EMAIL_CODE_EXPIRED`, 횟수 넘음 429 `EMAIL_CODE_LOCKED` (CR-146) | | BID-AUTH-005 |
-| GET | /auth/sns/providers | 키가 설정된 SNS 목록 `[NAVER, KAKAO, GOOGLE]` 중 일부 (CR-146) | | BID-AUTH-006 |
+| GET | /auth/sns/providers | 키가 설정된 SNS 목록 `[NAVER, KAKAO]` 중 일부(GOOGLE 은 보류) (CR-146) | | BID-AUTH-006 |
 | GET | /oauth2/authorization/{provider} | SNS 로그인 시작. 스프링 기본 주소, SNS 로그인 화면으로 보낸다 (CR-146) | | BID-AUTH-006, BID-AUTH-007 |
 | GET | /login/oauth2/code/{provider} | SNS 가 돌려보내는 주소(SNS 앱에 등록). 이어진 회원이면 LOGIN 표를 만들어 화면 `/auth/sns/done?ticket=`, 처음이면 SIGNUP 표로 `/register/sns?ticket=`, SNS 이메일로 가입된 회원이 있으면 `/login?sns=EMAIL_IN_USE`, 취소 `/login?sns=CANCELLED`, 실패 `/login?sns=FAILED` 로 보낸다 (CR-146, BIZ-063) | | BID-AUTH-006, BID-AUTH-007 |
 | POST | /auth/sns/login | LOGIN 표 `{ticket}` 를 Access, Refresh 토큰으로 바꾼다. 한 번만. 쓴 표, 시간 지난 표 410 `SNS_TICKET_EXPIRED` (CR-146, POL-038) | | BID-AUTH-007 |

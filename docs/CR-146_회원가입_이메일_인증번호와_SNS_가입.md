@@ -3,7 +3,7 @@
 - CR-ID: CR-146
 - 작성일: 2026-10-11
 - 규모: 대 (외부 연동 세 곳 추가, 회원 표 변경과 새 표 세 개, 새 API 일곱 개, 새 화면 두 개, 다른 레포 메일 틀 요청)
-- 상태: 설계 완료(정할 것 5장은 사용자 10/11 19:47 /전승으로 모두 1). 뼈대 구현과 로컬 확인 완료(10/12, 네이버와 카카오, 키 대기). 이메일 가입 인증번호 강제와 운영 배포는 남음(10장)
+- 상태: 설계 완료(정할 것 5장은 사용자 10/11 19:47 /전승으로 모두 1). 뼈대 구현과 로컬 확인 완료(10/12, 네이버와 카카오, 키 대기). 구글은 보류(10.5). 이메일 가입 인증번호 강제와 운영 배포는 남음(10장)
 - 세션명: bidding-agency-platform-52225
 - 착수: 2026-10-11 16:58
 - 앞 CR: CR-124 (가입 동의 이력), CR-131 (로그인, 회원가입 화면)
@@ -36,9 +36,9 @@
 
 정책값(유효 시간, 다시 받기 간격, 틀릴 수 있는 횟수, 하루 보낼 수 있는 횟수, 확인 뒤 가입까지 남는 시간)은 DB 설정이다 (6.1 POL-037).
 
-### 3.2 SNS 가입과 로그인 (네이버, 카카오, 구글)
+### 3.2 SNS 가입과 로그인 (네이버, 카카오. 구글은 보류)
 
-1. 로그인 화면과 가입 화면에 "네이버로 시작하기", "카카오로 시작하기", "Google 로 시작하기" 단추를 둔다. 키가 설정된 곳만 보인다.
+1. 로그인 화면과 가입 화면에 "네이버로 시작하기", "카카오로 시작하기" 단추를 둔다. "Google 로 시작하기" 는 보류다(10.5). 키가 설정된 곳만 보인다.
 2. 단추를 누르면 그 회사 로그인 화면으로 갔다가 우리 서버로 돌아온다.
 3. 이미 그 SNS 로 가입한 회원이면 바로 로그인되어 공고 검색으로 간다.
 4. 처음이면 SNS 가입 화면으로 간다. SNS 가 넘긴 이메일이 채워져 있고, 회사 정보 네 칸과 약관 동의를 받는다. 비밀번호는 받지 않는다.
@@ -126,7 +126,7 @@ SNS 에서 돌아온 직후 잠깐 보이는 빈 화면. "로그인하는 중" �
 ### 6.3 T3-1 데이터
 
 - members: `password_hash` 비어도 됨, `email_verified_at` DATETIME(6) NULL 추가(인증번호 또는 SNS 확인 시각, 기존 회원은 비어 있음).
-- member_social_accounts (새): id, member_id(FK members), provider(Enum `SnsProvider` NAVER, KAKAO, GOOGLE), provider_user_id, provider_email(NULL), created_at, last_login_at. UNIQUE(provider, provider_user_id), UNIQUE(member_id, provider).
+- member_social_accounts (새): id, member_id(FK members), provider(Enum `SnsProvider` NAVER, KAKAO. GOOGLE 은 보류), provider_user_id, provider_email(NULL), created_at, last_login_at. UNIQUE(provider, provider_user_id), UNIQUE(member_id, provider).
 - email_verification_codes (새): id, email, code_hash, expires_at, attempts, verified_at(NULL), consumed_at(NULL), created_at. 인덱스(email, created_at).
 - sns_tickets (새): id, token_hash(UNIQUE), kind(Enum LOGIN, SIGNUP), provider, provider_user_id, provider_email(NULL), email_verified_by_provider, member_id(NULL, LOGIN 일 때), expires_at, used_at(NULL), created_at. 한 번 쓰면 used_at 을 채우고 다시 받지 않는다.
 - 마이그레이션 V52(CR-147 이 V51 을 먼저 써서 V50 에서 옮김). 시각 비교는 존을 명시한 Clock 하나로 한다.
@@ -165,24 +165,24 @@ TC-AUTH-009~ 로 더한다. 인증번호 보내기(정상, 가입된 메일, 간
 
 woojinusbid.com 에 https 가 켜져야 구글 로그인을 운영에서 쓸 수 있다. 네이버, 카카오도 https 주소로 등록한다. 로컬 확인은 http://localhost 로 한다.
 
-### 7.3 사업자가 SNS 세 곳에 할 등록
+### 7.3 사업자가 SNS 에 할 등록
 
 | SNS | 사이트 | 할 일 | 돌아올 주소 |
 |-----|--------|------|------------|
 | 네이버 | developers.naver.com | 애플리케이션 등록, 사용 API "네이버 로그인", 제공 정보 이메일. 화면이 다 되면 가입 화면 캡처로 검수 요청(검수 전에는 등록한 사람만 로그인된다) | https://woojinusbid.com/api/login/oauth2/code/naver |
 | 카카오 | developers.kakao.com | 앱 만들기, 카카오 로그인 켜기, 비즈 앱 전환(사업자 정보), 동의항목 카카오계정(이메일) | https://woojinusbid.com/api/login/oauth2/code/kakao |
-| 구글 | console.cloud.google.com | OAuth 동의 화면, OAuth 클라이언트 ID(웹), 범위 openid, email, profile | https://woojinusbid.com/api/login/oauth2/code/google |
+| 구글(보류) | console.cloud.google.com | OAuth 동의 화면, OAuth 클라이언트 ID(웹), 범위 openid, email, profile | https://woojinusbid.com/api/login/oauth2/code/google |
 
-로컬 확인용으로 같은 앱에 http://localhost:8183/api/login/oauth2/code/{naver, kakao, google} 도 등록한다. 받은 클라이언트 ID 와 비밀키는 운영 서버 환경변수로 넣는다(레포에 두지 않는다).
+로컬 확인용으로 같은 앱에 http://localhost:8183/api/login/oauth2/code/{naver, kakao} 도 등록한다(구글을 붙일 때 google). 받은 클라이언트 ID 와 비밀키는 운영 서버 환경변수로 넣는다(레포에 두지 않는다).
 
 ## 8. 완료 조건
 
 - 이메일 가입은 인증번호 확인 없이 끝나지 않는다(화면과 서버 둘 다).
-- 세 SNS 로 처음 가입, 다시 로그인이 로컬에서 된다(키가 있는 곳).
+- 네이버, 카카오로 처음 가입, 다시 로그인이 로컬에서 된다(키가 있는 곳). 구글은 보류.
 - SNS 가입 회원은 회원 표, SNS 연결 표, 동의 이력이 모두 남는다.
 - 키가 없는 SNS 는 단추가 보이지 않는다.
 - T3-5 TC-AUTH 새 항목이 모두 통과한다.
-- 운영: https 켜진 뒤 배포, 세 SNS 와 인증번호 메일을 운영에서 한 번씩 확인. 네이버는 검수 통과 뒤 일반 고객에게 열린다.
+- 운영: https 켜진 뒤 배포, 네이버, 카카오와 인증번호 메일을 운영에서 한 번씩 확인. 네이버는 검수 통과 뒤 일반 고객에게 열린다.
 
 ## 9. 설계서 반영 (2026-10-11)
 
@@ -190,7 +190,7 @@ T1-1(BID-AUTH-001 변경, BID-AUTH-005~007), T1-2(인증 7개, 합계 94), T1-3(
 
 ## 10. 구현 (2026-10-12, 뼈대)
 
-사용자 10/12 00:12 "우선 SNS회원가입 뼈대만 만들어주세요 키값은 언제올지 몰라서". 앞서 "우선,. 카카오와 네이버만 할건데" 라고 해 구글은 이번 구현에서 뺐다. 설계서의 구글 줄을 보류로 둘지 뺄지는 사용자 결정 대기다.
+사용자 10/12 00:12 "우선 SNS회원가입 뼈대만 만들어주세요 키값은 언제올지 몰라서". 앞서 "우선,. 카카오와 네이버만 할건데" 라고 해 구글은 이번 구현에서 뺐다. 설계서의 구글 줄은 사용자 10/12 06:09 결정으로 보류로 남긴다(10.5).
 
 ### 10.1 들어간 것
 
@@ -229,6 +229,10 @@ T1-1(BID-AUTH-001 변경, BID-AUTH-005~007), T1-2(인증 7개, 합계 94), T1-3(
 | 8 | 다른 이메일 쓰기 | 빈 이메일 칸과 인증번호 받기로 바뀜 |
 | 9 | 없는 표 | "다시 SNS 로 시작해 주세요." 와 로그인 단추 |
 | 10 | 이메일 가입 | 지금과 같이 가입 뒤 로그인 화면 안내 |
+
+### 10.5 구글 보류 (10/12)
+
+사용자 10/12 06:09 "1"(보류로 표시해 두고 나중에 붙인다). 설계서의 구글 줄은 지우지 않고 보류로 표시했다(T1-1 BID-AUTH-006, T1-7, T2-1, T3-1 SnsProvider, T3-2, execution-spec). 코드에는 구글이 없다(SnsProvider 값, 키 칸, 사용자 정보 읽기, 화면 단추 모두 없음). 붙일 때는 https 주소로 구글 앱을 등록한 뒤 이 넷과 시험을 더한다.
 
 ## 이슈
 
