@@ -3,7 +3,7 @@
 - CR-ID: CR-146
 - 작성일: 2026-10-11
 - 규모: 대 (외부 연동 세 곳 추가, 회원 표 변경과 새 표 세 개, 새 API 일곱 개, 새 화면 두 개, 다른 레포 메일 틀 요청)
-- 상태: 설계 완료, 구현 대기 (정할 것 5장은 사용자 10/11 19:47 /전승으로 모두 1)
+- 상태: 설계 완료(정할 것 5장은 사용자 10/11 19:47 /전승으로 모두 1). 뼈대 구현과 로컬 확인 완료(10/12, 네이버와 카카오, 키 대기). 이메일 가입 인증번호 강제와 운영 배포는 남음(10장)
 - 세션명: bidding-agency-platform-52225
 - 착수: 2026-10-11 16:58
 - 앞 CR: CR-124 (가입 동의 이력), CR-131 (로그인, 회원가입 화면)
@@ -129,7 +129,7 @@ SNS 에서 돌아온 직후 잠깐 보이는 빈 화면. "로그인하는 중" �
 - member_social_accounts (새): id, member_id(FK members), provider(Enum `SnsProvider` NAVER, KAKAO, GOOGLE), provider_user_id, provider_email(NULL), created_at, last_login_at. UNIQUE(provider, provider_user_id), UNIQUE(member_id, provider).
 - email_verification_codes (새): id, email, code_hash, expires_at, attempts, verified_at(NULL), consumed_at(NULL), created_at. 인덱스(email, created_at).
 - sns_tickets (새): id, token_hash(UNIQUE), kind(Enum LOGIN, SIGNUP), provider, provider_user_id, provider_email(NULL), email_verified_by_provider, member_id(NULL, LOGIN 일 때), expires_at, used_at(NULL), created_at. 한 번 쓰면 used_at 을 채우고 다시 받지 않는다.
-- 마이그레이션 V50. 시각 비교는 존을 명시한 Clock 하나로 한다.
+- 마이그레이션 V52(CR-147 이 V51 을 먼저 써서 V50 에서 옮김). 시각 비교는 존을 명시한 Clock 하나로 한다.
 
 ### 6.4 T3-2 API
 
@@ -187,6 +187,48 @@ woojinusbid.com 에 https 가 켜져야 구글 로그인을 운영에서 쓸 수
 ## 9. 설계서 반영 (2026-10-11)
 
 T1-1(BID-AUTH-001 변경, BID-AUTH-005~007), T1-2(인증 7개, 합계 94), T1-3(BIZ-062~064), T1-4(POL-037, POL-038), T1-7(Sprint 1 세 줄), T2-1(spring-boot-starter-oauth2-client), T3-1(members 두 칸, Enum 둘, 표 셋), T3-2(A 절 여덟 줄과 가입 줄 변경), T3-3(라우트 둘, 화면 절), T3-4(시나리오 5~8), T3-5(TC-AUTH-009~030), execution-spec(3장, 8-3), 메일 틀 원본 docs/templates/mail/BID_EMAIL_CODE.json. T1-5 FSM, T1-6 이벤트, T2-2 CLAUDE.md 는 영향 없음을 확인했다.
+
+## 10. 구현 (2026-10-12, 뼈대)
+
+사용자 10/12 00:12 "우선 SNS회원가입 뼈대만 만들어주세요 키값은 언제올지 몰라서". 앞서 "우선,. 카카오와 네이버만 할건데" 라고 해 구글은 이번 구현에서 뺐다. 설계서의 구글 줄을 보류로 둘지 뺄지는 사용자 결정 대기다.
+
+### 10.1 들어간 것
+
+- 서버: 회원 두 칸과 표 셋(V52), 정책값 일곱(system_settings), 인증번호 보내기와 확인 API, SNS 목록, 로그인, 가입 화면 값, 가입 API, SNS 왕복. 로그인 요청은 서명한 쿠키에 담고 세션과 SNS 토큰은 남기지 않는다.
+- 키가 없는 SNS 는 등록하지 않는다. 목록이 비면 화면이 단추를 숨기고, 그 SNS 시작 주소는 404 다.
+- 화면: 로그인 단추 아래 "또는" 과 SNS 단추, SNS 에서 돌아온 안내 셋. 회원가입 맨 위 "SNS 로 간편 가입". SNS 가입(/register/sns), SNS 로그인 처리(/auth/sns/done).
+- 시험: TC-AUTH-009~017, 021~030 과 SNS 왕복 부품 시험(쿠키 서명, 돌려보낼 곳, 사용자 정보 읽기, 키 없는 SNS). 서버 전체 시험 통과.
+
+### 10.2 아직 안 한 것
+
+- 이메일 가입(/register)의 인증번호 강제(TC-AUTH-018~020, 화면 인증번호 칸). 알림 서버에 BID_EMAIL_CODE 틀이 들어가기 전에 켜면 운영 가입이 막히므로 틀이 들어간 뒤 켠다. 인증번호 칸 부품은 SNS 가입 화면에서 이미 쓴다.
+- 운영 환경변수: SNS_NAVER_CLIENT_ID, SNS_NAVER_CLIENT_SECRET, SNS_KAKAO_CLIENT_ID, SNS_KAKAO_CLIENT_SECRET. https 가 켜진 뒤 SNS_REDIRECT_URI(https://woojinusbid.com/api/login/oauth2/code/{registrationId})와 SNS_PORTAL_BASE_URL.
+- 개인정보처리방침에 SNS 로 받는 항목(네이버, 카카오 회원 식별값과 이메일)을 더하는 것.
+- 네이버 검수(가입 화면 캡처).
+
+### 10.3 설계에서 달라진 것
+
+- 마이그레이션 V50 을 V52 로.
+- 새 오류 코드 SNS_ACCOUNT_IN_USE(409). SNS 가입 표를 받은 뒤 같은 SNS 계정이 다른 창에서 먼저 가입을 마친 경우다. 화면 문구 "이 SNS 계정은 이미 가입되어 있습니다. 로그인 화면에서 SNS 로 로그인해 주세요." (T3-2, T3-4 6-3)
+- 인증번호 확인이 그 밖의 오류로 끝나면 "인증번호를 확인하지 못했습니다. 잠시 뒤 다시 시도해 주세요." (T3-4 5-9)
+- 인증번호 확인 단추는 6자리를 다 넣어야 눌린다.
+
+### 10.4 로컬 확인 (10/12)
+
+가짜 SNS 서버(카카오, 네이버 응답 모양)와 가짜 메일 수신기를 두고 로컬 서버와 고객 화면으로 확인했다.
+
+| 순번 | 확인 | 결과 |
+|------|------|------|
+| 1 | 키 없음 | 로그인, 회원가입에 SNS 단추와 구분선이 없다. 시작 주소 404, 서버 정상 기동 |
+| 2 | 카카오 처음 가입(카카오 확인 메일) | 회색 이메일과 "카카오에서 확인된 이메일", 회사 정보와 동의 뒤 공고 검색으로 간다 |
+| 3 | 카카오 다시 로그인 | "로그인하는 중" 뒤 공고 검색 |
+| 4 | 네이버 처음 가입(인증번호) | 인증 전 가입 막힘, 10:00 부터 줄어드는 시간, 다시 받기 60초 대기, 틀린 번호 "4번 더", 맞는 번호 뒤 가입 |
+| 5 | 동의 취소 | "SNS 로그인을 취소했습니다." |
+| 6 | 같은 메일 회원 있음 | "이 이메일은 이미 가입되어 있습니다." 안내, 잇지 않음 |
+| 7 | SNS 로만 가입한 회원의 비밀번호 로그인 | 틀린 비밀번호와 같은 안내 |
+| 8 | 다른 이메일 쓰기 | 빈 이메일 칸과 인증번호 받기로 바뀜 |
+| 9 | 없는 표 | "다시 SNS 로 시작해 주세요." 와 로그인 단추 |
+| 10 | 이메일 가입 | 지금과 같이 가입 뒤 로그인 화면 안내 |
 
 ## 이슈
 
