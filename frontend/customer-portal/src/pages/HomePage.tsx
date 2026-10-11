@@ -210,7 +210,7 @@ export default function HomePage() {
       </div>
       <div className="qk">
         <Link to="/documents"><span className="fi"><Icon name="folder" /></span>서류함</Link>
-        <Link to={comingSoonHref('recompete-calendar')}><span className="fi"><Icon name="cal" /></span>재발주 달력</Link>
+        <Link to={itemHref('recompete', 'recompete-calendar')}><span className="fi"><Icon name="cal" /></span>재발주 달력</Link>
       </div>
     </div>
   ) : showEmpty ? (
@@ -346,7 +346,7 @@ export default function HomePage() {
                 </div>
                 <p className="ex">{BENEFIT_CALENDAR.note}</p>
               </div>
-              <Link className="go" to={comingSoonHref('recompete-calendar')}>{BENEFIT_CALENDAR.link.label}<Icon name="cr" /></Link>
+              <Link className="go" to={itemHref('recompete', 'recompete-calendar')}>{BENEFIT_CALENDAR.link.label}<Icon name="cr" /></Link>
             </div>
           </div>
         </div>

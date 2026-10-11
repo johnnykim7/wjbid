@@ -373,29 +373,9 @@ export const COMING_SOON_GENERIC = {
 
 export const PENDING: PendingInfo[] = [
   {
-    key: 'next-month', tier: 'm', photo: PHOTO.meeting,
-    desc: ['지난 계약이 끝나는 때를 보고, 다음 달 다시 나올 것으로 보이는 계약을', '그 근거와 함께 보여 드립니다.'],
-    alts: [ALT.open, ALT.bookmarks, ALT.materials],
-  },
-  {
-    key: 'recompete-calendar', tier: 'm', photo: PHOTO.meeting,
-    desc: ['지난 계약 기간과 옵션이 끝나는 때로, 같은 일이 다시 공고될 시기를', '달력에 보여 드립니다.'],
-    alts: [ALT.open, ALT.bookmarks, ALT.materials],
-  },
-  {
-    key: 'option-alert', tier: 'm', photo: PHOTO.meeting,
-    desc: ['우리 회사 계약의 옵션 연장과 재발주 시기를 미리 알려 드립니다.'],
-    alts: [ALT.open, ALT.bookmarks, ALT.profile],
-  },
-  {
     key: 'awardees', photo: PHOTO.meeting,
     desc: ['업체마다 미군 계약을 몇 건, 얼마에 따냈는지 모아 보여 드립니다.'],
     alts: [ALT.open, ALT.bookmarks, ALT.materials],
-  },
-  {
-    key: 'award-range', tier: 'm', photo: PHOTO.meeting,
-    desc: ['비슷한 공고가 지난번 얼마에 낙찰됐는지 범위로 보여 드립니다.', '가격을 정할 때 참고할 수 있습니다.'],
-    alts: [ALT.open, ALT.forms, ALT.materials],
   },
   {
     key: 'base-map', tier: 'f', photo: PHOTO.hall,

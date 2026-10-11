@@ -44,6 +44,10 @@ import NoticeSamplePage from './pages/NoticeSamplePage'
 import RecentAwardsPage from './pages/RecentAwardsPage'
 import MonthlyTrendPage from './pages/MonthlyTrendPage'
 import NaicsTrendPage from './pages/NaicsTrendPage'
+import NextMonthPage from './pages/NextMonthPage'
+import RecompeteCalendarPage from './pages/RecompeteCalendarPage'
+import OptionAlertPage from './pages/OptionAlertPage'
+import AwardRangePage from './pages/AwardRangePage'
 
 function ProtectedRoute() {
   const { isAuthenticated } = useAuth()
@@ -94,6 +98,11 @@ function AppRoutes() {
         <Route path="/fit/eligibility/:noticeId" element={<EligibilityDetailPage />} />
         {/* 공고별 판정도 비로그인에게 뜻과 로그인 안내를 보인다(CR-140) */}
         <Route path="/fit/verdicts" element={<VerdictPage />} />
+        {/* 미 연방 계약 자료로 여는 화면은 비로그인에게 로그인 안내를 보이고, 로그인하면 이 화면으로 돌아온다(CR-142) */}
+        <Route path="/recompete/next-month" element={<NextMonthPage />} />
+        <Route path="/recompete/calendar" element={<RecompeteCalendarPage />} />
+        <Route path="/recompete/option-alert" element={<OptionAlertPage />} />
+        <Route path="/awards/range" element={<AwardRangePage />} />
 
         {/* 로그인 / 회원가입도 공통 틀 안에 (CR-131) */}
         <Route path="/login" element={<LoginPage />} />

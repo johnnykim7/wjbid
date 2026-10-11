@@ -46,9 +46,9 @@ export const MENU: MenuGroup[] = [
     key: 'recompete',
     label: '재발주 예측',
     items: [
-      { key: 'next-month', label: '다음 달 공고' },
-      { key: 'recompete-calendar', label: '재발주 달력' },
-      { key: 'option-alert', label: '옵션 연장 알림' },
+      { key: 'next-month', label: '다음 달 공고', to: '/recompete/next-month' },
+      { key: 'recompete-calendar', label: '재발주 달력', to: '/recompete/calendar' },
+      { key: 'option-alert', label: '옵션 연장 알림', to: '/recompete/option-alert' },
     ],
   },
   {
@@ -57,7 +57,7 @@ export const MENU: MenuGroup[] = [
     items: [
       { key: 'recent-awards', label: '최근 낙찰', to: '/awards/recent' },
       { key: 'awardees', label: '낙찰 업체', to: '/awards/awardees' },
-      { key: 'award-range', label: '낙찰가 범위' },
+      { key: 'award-range', label: '낙찰가 범위', to: '/awards/range' },
     ],
   },
   {
