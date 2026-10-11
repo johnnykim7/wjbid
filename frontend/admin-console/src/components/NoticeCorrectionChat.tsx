@@ -7,16 +7,11 @@ import { issueWidgetToken } from '../api/client'
  * 관리자가 COMPLETED 공고 분석 결과를 자연어로 부분 교정하는 채팅. Aimbase 위젯(UMD)을
  * <script> 동적 로드하여 마운트한다. 위젯이 chat/completions 를 호출하면 Aimbase LLM 이
  * 우리 MCP 도구(get_opportunity_analysis → 수정 → save_opportunity_analysis)를 직접 부른다.
- *
- * ⚠️ 전제 (실측): 현재 배포된 Aimbase 위젯 번들은 connectionId/actionsEnabled 를 chat body 로
- *    전송하지 않는다(widget.ts sendMessage 호출이 6필드만 전달). 따라서 이 컴포넌트는
- *    Aimbase 위젯 패키지가 connectionId/actionsEnabled 옵션을 지원하도록 수정·재배포된 뒤에야
- *    실제 교정이 동작한다. 그 전까지는 위젯이 connection_id 없이 호출 → placeholder 키 401 → 400.
- *    (지시서: /tmp/aimbase-widget-correction-task.md)
  */
 
-const AIMBASE_BASE_URL =
-  import.meta.env.VITE_AIMBASE_BASE_URL || 'http://59.8.160.12:8280'
+// CR-148: 운영 웹 서버가 /aimbase 아래로 위젯 파일과 채팅 경로만 Aimbase 에 넘긴다.
+// 화면과 같은 주소라 https 화면에서 http 호출로 막히지 않고, 서버를 옮겨도 이 값은 그대로다.
+const AIMBASE_BASE_URL = import.meta.env.VITE_AIMBASE_BASE_URL || '/aimbase'
 
 // bidding_system 테넌트의 Anthropic connection (bidding-claude-sonnet).
 // connection_id 없으면 BE 가 전역 placeholder 키로 폴백 → 401.
@@ -27,9 +22,12 @@ const AIMBASE_CONNECTION_ID =
 const WIDGET_SCRIPT_URL = `${AIMBASE_BASE_URL}/widget/v1/aimbase-chat.umd.global.js`
 const SCRIPT_ID = 'aimbase-chat-umd'
 
-/** UMD 번들이 노출하는 전역 (tsup globalName: "AimbaseChat"). */
+/**
+ * UMD 번들이 노출하는 전역 (tsup globalName: "AimbaseChat").
+ * UMD 는 본체(esm)를 받아 오는 로더라 createWidget 을 직접 노출하지 않고 init 으로 감싸 준다.
+ */
 interface AimbaseChatGlobal {
-  createWidget: (options: AimbaseWidgetOptions) => AimbaseWidgetHandle
+  init: (options: AimbaseWidgetOptions) => Promise<AimbaseWidgetHandle>
 }
 interface AimbaseWidgetOptions {
   baseUrl: string
@@ -38,7 +36,6 @@ interface AimbaseWidgetOptions {
   target?: string | HTMLElement
   sessionId?: string
   contextProvider?: () => Record<string, unknown>
-  // ⚠️ 아래 3개는 Aimbase 위젯 패키지 수정 후 지원되는 옵션 (현재 번들엔 미존재).
   connectionId?: string
   actionsEnabled?: boolean
   model?: string
@@ -122,7 +119,7 @@ export default function NoticeCorrectionChat({ noticeId }: Props) {
     loadWidgetScript()
       .then((AimbaseChat) => {
         if (cancelled || !containerRef.current) return
-        handleRef.current = AimbaseChat.createWidget({
+        return AimbaseChat.init({
           baseUrl: AIMBASE_BASE_URL,
           authResolver: async () => {
             const { data } = await issueWidgetToken()
@@ -138,6 +135,15 @@ export default function NoticeCorrectionChat({ noticeId }: Props) {
             onError: (err) => setError(err.message),
           },
         })
+      })
+      .then((handle) => {
+        if (!handle) return
+        // 위젯 본체를 받는 사이 패널이 닫혔으면 붙이지 않고 바로 거둔다.
+        if (cancelled) {
+          handle.destroy()
+          return
+        }
+        handleRef.current = handle
       })
       .catch((e) => !cancelled && setError(e instanceof Error ? e.message : '위젯 초기화 실패'))
       .finally(() => !cancelled && setLoading(false))

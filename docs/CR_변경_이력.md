@@ -1054,3 +1054,15 @@
 - **다른 곳**: 알림 서버 레포에 BID_CONTRACT_END 틀을 더는 부르지 않는다고 알린다(지우는 것은 그 레포가 정한다). 마이그레이션 V51 은 CR-146 의 V50 과 순서를 맞춘다. 이 CR 을 먼저 배포하면 CR-146 창에 V50 을 V52 로 바꾸라고 알린다
 - **규모**: 대(메뉴 두 묶음 정리, 화면 셋과 전용 서버 기능 삭제, 표 하나 삭제, 서류함 분류와 국문·영문 칸). 문서 [CR-147_우진비드_긴급점검_화면_정리.md](CR-147_우진비드_긴급점검_화면_정리.md)
 - **상태**: 구현과 로컬 확인 완료(10/12, 커밋 a848aa3, 서버 시험 347건 통과, V51 은 Flyway 로 적용 확인). 상용(AWS) 배포는 CI/CD 를 갖춘 뒤 한다(사용자 10/12 00:06 "이젠 aws는 상용이기때문에 CI/CD배포로 가야할거 같습니다")
+
+### CR-148: AWS 이전 뒤 관리자 공고문 수정 채팅 복구 (2026-10-12)
+
+- **배경(사용자)**: 10/11 운영을 AWS(54.116.150.247)로 옮기고 https 를 붙인 뒤, 관리자 공고문 수정 채팅이 옛 서버 http 주소에서 위젯을 불러 https 화면에서 막히는 것을 확인. 10/12 00:01 "ㄱ1"(채팅을 https 주소로 열고 관리자 화면이 그 주소를 부르게 고침), 00:06 /전승
+- **대상**: 관리자 공고문 수정 채팅. 원인 셋. (1) 위젯을 옛 서버 http://59.8.160.12:8280 에서 불러 https 화면에서 막힘 (2) Aimbase widget.allowed-origins 와 앱의 위젯 토큰 origin 이 http://woojinusbid.com 뿐 (3) 화면이 위젯 전역의 createWidget 을 부르지만 UMD 로더는 init 만 내놓아 옮기기 전부터 열리지 않음
+- **변경**: 관리자 화면 NoticeCorrectionChat 은 위젯 주소 기본값을 같은 주소 /aimbase 로 바꾸고 createWidget 대신 init 을 부른다. AWS 웹 서버는 /aimbase/widget/ 과 채팅 경로(chat, workflows/runs/{id}/subscribe, knowledge-sources/{id}/chunks)만 Aimbase 로 넘기고 그 밖의 /aimbase 는 404. AWS Aimbase global_config widget.allowed-origins 에 https://woojinusbid.com 추가. AWS 앱 실행 설정 WIDGET_ALLOWED_ORIGIN=https://woojinusbid.com
+- **변경 타입**: 변경(결함 수정과 운영 설정)
+- **영향 모듈**: 관리자 공고문 관리(교정 채팅), Aimbase 위젯 연동
+- **영향 설계서**: 없음(새 API, 화면, 표 없음). 설계서의 59.8.160.12 서버 주소 표기는 AWS 이전 기록에서 함께 정리한다
+- **다른 곳**: 59.8.160.12 는 이제 시험 서버다. 그 서버에서 이 채팅을 쓰려면 그 서버 웹 설정에도 같은 /aimbase 경로가 필요하다. AWS 는 배포 파이프라인이 아직 없어 관리자 화면 파일을 직접 복사해 올린다
+- **규모**: 소(화면 파일 하나와 운영 설정)
+- **상태**: 운영 반영 완료(10/12 00:12 승인). 공개 경로, 허용 주소, 위젯 토큰 발급, 채팅 요청이 Aimbase 까지 닿는 것 확인. 답은 Anthropic API 키 크레딧 부족(400 credit balance is too low)으로 비어 온다, 별건
