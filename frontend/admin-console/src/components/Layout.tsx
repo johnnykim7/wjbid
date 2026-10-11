@@ -11,6 +11,7 @@ const NAV = [
   { to: '/notices', icon: 'fa-solid fa-bullhorn', label: '공고문 관리' },
   { to: '/collection', icon: 'fa-solid fa-satellite-dish', label: 'SAM.gov 수집' },
   { to: '/bases', icon: 'fa-solid fa-location-dot', label: '기지 관리' },
+  { to: '/site-photos', icon: 'fa-solid fa-images', label: '고객 화면 사진' },
   { to: '/templates', icon: 'fa-solid fa-file-lines', label: '문서 템플릿' },
   { to: '/rfp-samples', icon: 'fa-solid fa-trophy', label: '성공 제안서 패턴' },
   { to: '/inquiries', icon: 'fa-solid fa-headset', label: '1:1 문의' },

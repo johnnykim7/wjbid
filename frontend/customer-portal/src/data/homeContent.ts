@@ -6,17 +6,19 @@
  * 화면이 아직 없는 곳은 메뉴 항목 key 로 항목별 준비 안내에 보낸다(CR-133).
  */
 import { comingSoonHref, serviceHref } from '../components/layout/menu'
+import type { SitePhotoSlot } from '../hooks/useSitePhoto'
 
 /** 첫 화면 공고 목록 줄 수와 "N일 안 마감" 기준 */
 export const LIST_ROWS = 7
 export const SOON_DAYS = 7
 
+/** 사진 칸의 자리 키. 사진은 관리자 화면에서 자리마다 올린 묶음에서 방문마다 고른다(CR-153) */
 export const IMAGES = {
-  empty: '/img/mil-carrier-busan.jpg',
-  intro: '/img/mil-airlift-dawn.jpg',
-  login: '/img/biz-handshake.jpg',
-  register: '/img/biz-laptop.jpg',
-}
+  empty: 'HOME_EMPTY',
+  intro: 'HOME_INTRO',
+  login: 'LOGIN',
+  register: 'REGISTER',
+} satisfies Record<string, SitePhotoSlot>
 
 /** 공고 0건일 때 보여 주는 마감된 공고 예시 */
 export const SAMPLE_NOTICE = {
@@ -138,9 +140,9 @@ export const PLAN_CONSULT = {
   cta: { label: '상담 신청', to: '/support' },
 }
 
-export const PROMOS = [
-  { tone: 'a', img: '/img/mil-f16-taxi.jpg', small: '등록 대행', title: 'SAM.gov·PIEE 등록, 맡기세요', desc: '처음 등록하는 회사도 순서대로', to: serviceHref('sam-registration') },
-  { tone: 'b', img: '/img/mil-destroyer-busan.jpg', small: '현장 지원', title: '설명회 동행과 기지 출입', desc: '출입 절차부터 통역까지', to: serviceHref('site-visit') },
+export const PROMOS: { tone: string; photo: SitePhotoSlot; small: string; title: string; desc: string; to: string }[] = [
+  { tone: 'a', photo: 'HOME_PROMO_REGISTRATION', small: '등록 대행', title: 'SAM.gov·PIEE 등록, 맡기세요', desc: '처음 등록하는 회사도 순서대로', to: serviceHref('sam-registration') },
+  { tone: 'b', photo: 'HOME_PROMO_SITE_VISIT', small: '현장 지원', title: '설명회 동행과 기지 출입', desc: '출입 절차부터 통역까지', to: serviceHref('site-visit') },
 ]
 
 export const HELP_LINKS = [

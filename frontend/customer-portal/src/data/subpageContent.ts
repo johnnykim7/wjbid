@@ -7,6 +7,7 @@
 import type { SubIconName } from '../components/subpage/SubIcon'
 import { academyHref, serviceHref } from '../components/layout/menu'
 import type { Tier } from './homeContent'
+import type { SitePhotoSlot } from '../hooks/useSitePhoto'
 
 export const SUB_FRAME = {
   pendingTag: '준비 중',
@@ -28,13 +29,13 @@ export const inquiryHref = (type: InquiryType, title: string, content?: string) 
   `/support?type=${type}&title=${encodeURIComponent(title)}${content ? `&content=${encodeURIComponent(content)}` : ''}`
 export const consultTitle = (name: string) => `${name} 상담 신청`
 
+/** 머리 사진 칸의 자리 키. 사진은 관리자 화면에서 자리마다 올린 묶음에서 방문마다 고른다(CR-153) */
 const PHOTO = {
-  desk: '/img/biz-handshake.jpg',
-  piee: '/img/biz-laptop.jpg',
-  meeting: '/img/biz-meeting.jpg',
-  hall: '/img/biz-seminar.jpg',
-}
-export const ACADEMY_PHOTO = PHOTO.hall
+  desk: 'SERVICE_DESK',
+  piee: 'SERVICE_ONLINE',
+  meeting: 'SERVICE_MEETING',
+  hall: 'SERVICE_SEMINAR',
+} satisfies Record<string, SitePhotoSlot>
 
 /* 서비스 안내 */
 
@@ -42,7 +43,7 @@ export interface ServiceInfo {
   key: string
   tier: Tier
   lead: string[]
-  photo: string
+  photo: SitePhotoSlot
   /** 함께 보는 서비스 카드의 한 줄 */
   summary: string
   who: { icon: SubIconName; lines: string[] }[]
@@ -350,7 +351,7 @@ export interface PendingInfo {
   tier?: Tier
   desc: string[]
   alts: AltCard[]
-  photo: string
+  photo: SitePhotoSlot
 }
 
 export const PENDING_TEXT = {

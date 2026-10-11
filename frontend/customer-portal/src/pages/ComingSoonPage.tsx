@@ -1,6 +1,7 @@
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { Button } from '@therecommerce-develop/ds-ui'
 import { findPendingItem } from '../components/layout/menu'
+import { SitePhoto } from '../components/SitePhoto'
 import { SubIcon } from '../components/subpage/SubIcon'
 import { ApplyBand, Lines, SubPageFrame } from '../components/subpage/SubPageFrame'
 import { TIER_LABEL } from '../data/homeContent'
@@ -32,7 +33,7 @@ export default function ComingSoonPage() {
           <p className="ld"><Lines lines={pending.desc} /></p>
           <span className="st"><SubIcon name="hour" />{PENDING_TEXT.status}</span>
         </div>
-        <div className="im"><img src={pending.photo} alt="" /></div>
+        <div className="im"><SitePhoto slot={pending.photo} /></div>
       </section>
 
       <section className="cbx pad">

@@ -80,6 +80,9 @@ public class SecurityConfig {
                         // Public read endpoints (pricing)
                         .requestMatchers(HttpMethod.GET, "/pricing/**").permitAll()
 
+                        // CR-153: 고객 화면 사진 목록과 올린 사진 파일은 로그인 전 화면에도 나온다
+                        .requestMatchers(HttpMethod.GET, "/site-photos/**").permitAll()
+
                         // CR-132: 1:1 문의는 비로그인도 접수한다. 토큰이 있으면 필터가 인증을 넣어 회원과 묶인다
                         .requestMatchers(HttpMethod.GET, "/inquiries/types").permitAll()
                         .requestMatchers(HttpMethod.POST, "/inquiries").permitAll()
