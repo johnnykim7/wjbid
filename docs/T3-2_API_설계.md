@@ -1,6 +1,6 @@
 # SAM.gov Bidding Agency Platform API 설계
 
-> 설계 버전: 1.9 | 최종 수정: 2026-10-11 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141
+> 설계 버전: 1.9 | 최종 수정: 2026-10-11 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142
 
 > 단계: 3. Detail Design | 실행스펙 섹션 3에 포함
 >
@@ -119,6 +119,18 @@
 
 ---
 
+## B-5. 미 연방 계약 받기 (Admin, CR-142)
+
+| 메서드 | 경로 | 설명 | 인증 | 기능 ID |
+|--------|------|------|------|---------|
+| POST | /admin/federal-contracts/sync | 받기 바로 실행. 본문 `mode`(FULL, DAILY). 회차를 만들고 뒤에서 돌린 뒤 202 와 회차 id 를 준다 | 🔒 ADMIN | BID-MKT-027 |
+| GET | /admin/federal-contracts/sync-runs | 최근 받기 회차 `size`건(기본 20, 최대 100), 최근 시작순. 줄은 T3-1 federal_contract_sync_runs 칸 그대로 | 🔒 ADMIN | BID-MKT-027 |
+
+- 돌고 있는 회차가 있으면 409. mode 가 없거나 다른 값이면 400.
+- 매일 받기는 스케줄러(POL-032)가 같은 처리를 부른다. 관리자 화면은 두지 않는다.
+
+---
+
 ## C. 공고 열람 (Opportunity Browse) — Sprint 3
 
 | 메서드 | 경로 | 설명 | 인증 | 기능 ID |
@@ -212,6 +224,71 @@
 | bases[] | id, nameKo, nameEn, region, latitude, longitude(없으면 null), opportunityCount(공고번호 수), awardCount(낙찰 공지 수), openCount(마감 전 공고번호 수, 마감 전 판정은 C 의 마감 전 공고와 같다). 기지 목록 순서대로. 기지가 없으면 빈 배열 |
 
 기지 찾기는 BIZ-031. 한 공고가 여러 기지에 걸리면 각 기지에 세므로 기지별 합은 totalNumbers 보다 클 수 있다. 없는 baseId 는 404.
+
+---
+
+## C-4. 미 연방 계약 자료 (CR-142)
+
+메뉴 속 화면 4묶음(다음 달 공고, 재발주 달력, 낙찰가 범위)이 쓴다. federal_contracts 만 읽고 우리 공고와 섞지 않는다. 로그인 회원만 연다. 달과 오늘은 Asia/Seoul 날짜다.
+
+| 메서드 | 경로 | 설명 | 인증 | 기능 ID |
+|--------|------|------|------|---------|
+| GET | /federal-contracts/recompete | 고른 달 계약. `month`(YYYY-MM, 기본 다음 달), `category`(RecompeteCategory, 없으면 전부), `naics`(6자리), `sort`(END 그 달 날짜순 기본, AMOUNT 금액 큰 순), `page`, `size`(기본 20, 최대 100) | 🔒 | BID-MKT-028, 029 |
+| GET | /federal-contracts/recompete/calendar | 이번 달부터 POL-033 달 수만큼 달마다 구분별 수. `naics` | 🔒 | BID-MKT-030 |
+| GET | /federal-contracts/award-range | 낙찰가 범위. `noticeNumber`(우리 공고번호) 또는 `naics` 하나는 필수, `q`(작업 설명 낱말) | 🔒 | BID-MKT-034 |
+| GET | /federal-contracts/naics | 업종 고르기 목록. `q`(코드나 이름 일부). 업종마다 code, name, count(계약 수), 계약 수 많은 순 50건 | 🔒 | BID-MKT-029, 034 |
+
+**자료 기준 (`source`, 네 응답 공통)**
+
+| 필드 | 설명 |
+|------|------|
+| totalCount | 표에 있는 계약 수 |
+| lastSyncedAt | 마지막으로 성공한 받기의 끝난 시각(+09:00 붙인 ISO). 한 번도 없으면 null, 화면은 "자료를 받고 있습니다" |
+| lagDays | 자료가 늦게 올라오는 날 수(POL-036 FEDERAL_DATA_LAG_DAYS) |
+| dataFrom | 받는 시작일(POL-031) |
+
+**계약 줄**
+
+| 필드 | 설명 |
+|------|------|
+| id, piid, parentPiid | parentPiid 는 상위 계약이 없으면 null |
+| awardType | FederalAwardType |
+| description, recipientName, amountUsd | amountUsd 는 숫자, 없으면 null |
+| naicsCode, naicsName | |
+| startDate, endDate, potentialEndDate | potentialEndDate 는 아직 받지 않았으면 null |
+| solicitationNumber | 원래 공고번호, 없으면 null |
+| noticeOpportunityId | 원래 공고번호가 우리 공고에 있으면 그 공고 id, 없으면 null |
+| category | RecompeteCategory(BIZ-050) |
+| basisDateKind, basisDate | 그 달에 걸린 날짜와 종류(ContractDateKind). 화면은 이 둘과 awardType, parentPiid 로 근거 한 줄을 만든다 |
+| oneTimeConstruction | 한 번짜리 공사 꼬리표(BIZ-051) |
+| usaspendingUrl | USAspending 계약 쪽 주소. 앞부분은 설정 `app.federal-contract.award-page-url` |
+
+**응답**
+- recompete: `month`, `counts`(RECOMPETE, EXTENDABLE, IN_PARENT, UNCONFIRMED 마다 수, 업종 거르기는 반영하고 category 거르기는 반영하지 않는다), `items`(계약 줄), `page`, `size`, `totalElements`, `source`.
+- calendar: `months[]`(month, RECOMPETE, EXTENDABLE, IN_PARENT, UNCONFIRMED 수), `source`.
+- award-range: `naicsCode`, `naicsName`, `noticeNumber`(받았으면), `rows[]`(group STANDALONE 상위 계약 없는 계약 또는 ORDER 상위 계약 안 주문, count 쓴 계약 수, excludedCount 0 이하라 뺀 수, minCount POL-034, min, p25, p50, p75, max. count 가 minCount 미만이면 다섯 값은 null), `evidence[]`(쓴 계약 줄 20건, 최근 시작순, category 와 basis 칸은 비움), `source`.
+
+**검증**: month 형식이 틀리거나 이번 달부터 POL-033 달 수 밖이면 400. award-range 에 noticeNumber 와 naics 가 모두 없으면 400. noticeNumber 공고가 없으면 404, 그 공고에 업종 코드가 없으면 422(화면은 업종을 고르라고 안내).
+
+---
+
+## C-5. 회원 계약과 옵션 연장 알림 (CR-142)
+
+옵션 연장 알림 화면이 쓴다. 로그인 회원 본인 계약만. 남의 계약 id 는 404.
+
+| 메서드 | 경로 | 설명 | 인증 | 기능 ID |
+|--------|------|------|------|---------|
+| GET | /member-contracts | 내 계약 목록과 알림 설정 | 🔒 | BID-MKT-032 |
+| GET | /member-contracts/lookup | 계약번호로 찾기. `piid`. 표에 없으면 받는 범위 안에서 USAspending 검색 1회, 옵션 끝날짜를 아직 받지 않았으면 상세 1회 | 🔒 | BID-MKT-031 |
+| POST | /member-contracts | 등록. 본문 `piid`, `endDate?`, `potentialEndDate?`, `description?`. 계약을 찾으면 PUBLIC 으로 등록하고 본문 날짜는 쓰지 않는다. 못 찾으면 MANUAL 이고 endDate 필수 | 🔒 | BID-MKT-031 |
+| PATCH | /member-contracts/{id} | MANUAL 계약의 `endDate`, `potentialEndDate`, `description` 고치기 | 🔒 | BID-MKT-032 |
+| DELETE | /member-contracts/{id} | 지우기 | 🔒 | BID-MKT-032 |
+
+**목록 응답**: `alertDays[]`(POL-035, 꺼져 있으면 빈 배열), `today`, `contracts[]`(id, piid, description, source, endDate, potentialEndDate, endDaysLeft, potentialDaysLeft, nextAlertOn, nextAlertKind, datesChangedOn, lastAlertedAt, federalContract 찾은 계약 줄 또는 null). 지금 끝날짜가 가까운 순.
+
+**찾기 응답**: `found`(참·거짓), `contract`(계약 줄, 못 찾았으면 null), `alreadyRegistered`(이미 내 계약이면 참).
+
+**검증**: 계약번호는 앞뒤 공백·하이픈·빈칸을 빼고 대문자로 맞춘 뒤 비면 400. 같은 계약번호 두 번째 등록 409. MANUAL 인데 endDate 가 없으면 400. potentialEndDate 가 endDate 보다 앞이면 400. PUBLIC 계약 날짜 고치기 409. USAspending 이 실패하면 찾기는 502, 화면은 직접 넣기로 안내.
 
 ---
 
@@ -660,6 +737,9 @@ app.aimbase:
 | C. 공고 열람 | 8 | 3 |
 | C-2. 모은 공고 목록과 집계 | 6 | CR-135 |
 | C-3. 낙찰 업체와 기지별 집계 | 3 | CR-136 |
+| C-4. 미 연방 계약 자료 | 4 | CR-142 |
+| C-5. 회원 계약과 옵션 연장 알림 | 5 | CR-142 |
+| B-5. 미 연방 계약 받기 (Admin) | 2 | CR-142 |
 | B-4. 기지 관리와 지난 낙찰 다시 받기 (Admin) | 6 | CR-136 |
 | N. 회사 공통 서류함 | 7 | CR-125, CR-136 |
 | D. 즐겨찾기 | 4 | 3 |
@@ -678,7 +758,7 @@ app.aimbase:
 | MCP Tools | 12 | 5, CR-003, CR-013, CR-141 |
 | MCP SSE 엔드포인트 | 2 | CR-002 |
 | Aimbase 워크플로우 호출 | 2 | CR-002 |
-| **합계** | **REST 113 + MCP 12 + SSE 2 + Aimbase 2** | |
+| **합계** | **REST 124 + MCP 12 + SSE 2 + Aimbase 2** | |
 
 > CR-141: G 는 문서 3, 슬롯 3(올리기, 서류함에서 고르기, 빼기. 목록 조회는 걷어냄), 제출 전 검사 2 다. 그전에는 슬롯을 세지 않았다.
 

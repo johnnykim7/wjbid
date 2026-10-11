@@ -1,6 +1,6 @@
 # 실행 지시서: SAM.gov Bidding Agency Platform
 
-> 설계 버전: 1.5 | 최종 수정: 2026-10-11 | 관련 CR: CR-003, CR-132, CR-133, CR-135, CR-136, CR-137, CR-140, CR-141
+> 설계 버전: 1.5 | 최종 수정: 2026-10-11 | 관련 CR: CR-003, CR-132, CR-133, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142
 
 > **프로젝트:** bidding-agency-platform (미군 조달 입찰 AI 대행 서비스)
 > **프로젝트 유형:** 풀스택 (BE: Java 17 + Spring Boot 3.2 / FE: React 19 × 2)
@@ -112,6 +112,7 @@ SAM.gov에 올라오는 미군(USFK) 조달 입찰 공고를 자동 수집하고
 | N. 인증 가이드 | 1 | 정적 가이드 페이지 | — |
 | O. 고객센터 | 5 | 1:1 문의 접수, 관리자 알림, 관리자 조회·답변 (CR-132), 공지사항, 자주 묻는 질문 (CR-133) | bp-notification |
 | P. 메뉴 속 화면 | 21 | 속페이지 틀, 항목별 준비 안내, 등록·컨설팅 서비스 안내, 입찰 교실 4화면 (CR-133, T1-1 R 모듈). 있는 데이터로 여는 6화면과 모은 공고 목록·집계 API 6개 (CR-135). 낙찰 업체 저장과 지난 낙찰 다시 받기, 낙찰 업체, 기지 관리와 기지별 지도, 서류 만료일과 유효기간 알림, 만료 메일 (CR-136, T1-1 T 모듈) | O. 고객센터(상담 신청), B. 공고 수집(모은 공고 읽기만, CR-136 은 낙찰 칸 저장), H. 알림(만료 메일, bp-notification) |
+| V. 미 연방 계약 자료 | 10 | USAspending 매일 받기와 옵션 끝날짜 받기, 받기 기록, 계약 구분(예측)과 근거, 다음 달 공고, 재발주 달력, 회원 계약과 옵션 연장 알림, 계약 끝 메일, 낙찰가 범위 (CR-142, T1-1 V 모듈) | USAspending.gov API, H. 알림(계약 끝 메일, bp-notification), C. 공고 열람(공고 업종 코드 읽기) |
 | U. 제출 전 검사 | 5 | 요구 항목을 공고 분석에서 채우기, 내 입찰 건과 건별 제출 전 검사, 요구 서류 올리기와 서류함에서 고르기, 형식·쪽수 판정 (CR-141, T1-1 U 모듈). AI 요구사항 추출과 MCP save_requirements 걷어냄 | MinIO, O. 고객센터(검토 신청) |
 
 ---
@@ -120,7 +121,7 @@ SAM.gov에 올라오는 미군(USFK) 조달 입찰 공고를 자동 수집하고
 
 > 상세: `docs/T3-1_데이터_모델.md`
 
-- **엔티티 16개**: Member, Opportunity, OpportunityAttachment, **OpportunityAnalysis** (CR-003), OpportunityRequirementItem, BidRequest, ClientDocument, BidDocument, BidDocumentVersion, DocumentTemplate, RequirementFulfillmentMap, Bookmark, NotificationLog, CollectorRun, KeywordGroup, EventLog / CR-132: Inquiry, InquiryType 추가(T3-1) / CR-136: MilitaryBase 추가, Opportunity 낙찰 칸 3개, MemberDocument 만료일(T3-1) / CR-137: EligibilityAnswer 추가(T3-1) / CR-141: ClientDocument 쪽수 칸(T3-1)
+- **엔티티 16개**: Member, Opportunity, OpportunityAttachment, **OpportunityAnalysis** (CR-003), OpportunityRequirementItem, BidRequest, ClientDocument, BidDocument, BidDocumentVersion, DocumentTemplate, RequirementFulfillmentMap, Bookmark, NotificationLog, CollectorRun, KeywordGroup, EventLog / CR-132: Inquiry, InquiryType 추가(T3-1) / CR-136: MilitaryBase 추가, Opportunity 낙찰 칸 3개, MemberDocument 만료일(T3-1) / CR-137: EligibilityAnswer 추가(T3-1) / CR-141: ClientDocument 쪽수 칸(T3-1) / CR-142: FederalContract, FederalContractSyncRun, MemberContract 추가(T3-1)
 - **FSM 관리 엔티티**: BidRequest (9상태), BidDocument (3상태), **Opportunity (2상태: HIDDEN/VISIBLE)**, **OpportunityAnalysis (4상태)** (CR-003), **Inquiry (2상태: RECEIVED/ANSWERED)** (CR-132)
 - **핵심 원칙**: UUID PK, JSON 컬럼(stateHistory, rawJson, contentJson), 문서 버전 불변성, 콘텐츠 해시 중복 검출
 
@@ -211,7 +212,7 @@ SAM.gov에 올라오는 미군(USFK) 조달 입찰 공고를 자동 수집하고
 | 2 | `docs/T3-1_데이터_모델.md` | Opportunity, OpportunityRequirementItem, Bookmark |
 | 3 | `docs/T1-1_기능요구사항_명세서.md` | BID-BROWSE, BID-QUAL |
 | 4 | `docs/T3-2_API_설계.md` | C. 공고 열람, D. 즐겨찾기, E. 자격 진단 |
-| 5 | `docs/T3-5_단위테스트_명세.md` | TC-BROWSE, TC-BM, TC-QUAL(CR-137, CR-140), TC-PRE(CR-141) |
+| 5 | `docs/T3-5_단위테스트_명세.md` | TC-BROWSE, TC-BM, TC-QUAL(CR-137, CR-140), TC-PRE(CR-141), TC-FED(CR-142) |
 
 #### FE 참조
 
@@ -452,6 +453,9 @@ flowchart LR
     DOC --> TPL[G. 템플릿]
     EDIT[F. 편집] --> DOC
     NOTIFY[H. 알림] --> SMTP[SMTP]
+    FED[V. 미 연방 계약] --> USA[USAspending.gov API]
+    FED --> NOTIFY
+    FED --> OPP_DB
 ```
 
 ### 8-2. 핵심 데이터 흐름
@@ -528,6 +532,10 @@ sequenceDiagram
 | 요금 안내 | `GET /pricing` | CR-129. CR-133 에서 속페이지 틀 안 |
 | 적격성 진단, 공고별 진단 (CR-137) | `GET /eligibility/notices`, `GET /eligibility/notices/{noticeId}`, `PUT /eligibility/notices/{noticeId}/answers/{itemNo}` | 로그인. 자격은 공고문 분석 결과를 읽고, 답만 저장(BIZ-032, BIZ-033) |
 | 공고별 판정, 공고 검색 판정 칸, 공고 상세 판정 상자, 증빙 서류 붙이기 (CR-140) | `GET /eligibility/notices`, `GET /eligibility/notices/{noticeId}`, `PUT /eligibility/notices/{noticeId}/answers/{itemNo}/document`, `GET /member-documents` | 로그인. 판정은 답과 붙인 서류로만 조회 때 낸다(BIZ-040~044). 저장하지 않는다 |
+| 다음 달 공고, 재발주 달력 (CR-142) | `GET /federal-contracts/recompete`, `/recompete/calendar`, `/naics` | 로그인. 구분은 조회 때 BIZ-050 으로 낸 예측. 자료 기준일과 90일 늦음을 밝힌다 |
+| 옵션 연장 알림 (CR-142) | `GET /member-contracts`, `GET /member-contracts/lookup`, `POST /member-contracts`, `PATCH/DELETE /member-contracts/{id}` | 로그인, 본인 계약만. 찾기는 표에 없을 때만 USAspending 1회. 메일은 매일 09:00 Asia/Seoul 스케줄러 |
+| 낙찰가 범위 (CR-142) | `GET /federal-contracts/award-range`, `/naics` | 로그인. 금액 0 이하 제외, 건수가 설정값 미만이면 범위를 내지 않음(BIZ-054) |
+| 관리자 미 연방 계약 받기 (CR-142) | `POST /admin/federal-contracts/sync`, `GET /admin/federal-contracts/sync-runs` | 화면 없음. 매일 05:00 Asia/Seoul 스케줄러와 같은 처리 |
 | 제출 전 검사, 입찰 건별 제출 전 검사, 입찰 상세 제출 서류 (CR-141) | `GET /bid-requests/my/pre-check`, `GET /bid-requests/{id}/pre-check`, `POST/DELETE /bid-requests/{id}/required-document-slots/{itemId}[/upload, /from-vault]`, `GET /member-documents`, `PATCH /bid-requests/{id}/state` | 로그인, 자기 입찰 건만(BIZ-049). 필수 서류 빠지면 서류 접수 넘기기 막고 형식·쪽수는 경고만(BIZ-046~048) |
 
 ### 8-4. 리뷰 체크리스트

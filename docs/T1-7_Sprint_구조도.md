@@ -1,6 +1,6 @@
 # SAM.gov Bidding Agency Platform Sprint 구조도
 
-> 설계 버전: 1.2 | 최종 수정: 2026-10-11 | 관련 CR: CR-137, CR-140, CR-141
+> 설계 버전: 1.2 | 최종 수정: 2026-10-11 | 관련 CR: CR-137, CR-140, CR-141, CR-142
 
 > 단계: 1. Requirements | 설계
 
@@ -44,6 +44,10 @@ flowchart LR
 | BID-NOTIFY-001 | 이메일 발송 인프라 | Sprint 1 | 테스트 이메일 발송 성공, 발송 이력 DB 기록 | BE | |
 | BID-OPP-004 | 수집 완료 이메일 알림 | BID-OPP-001, BID-NOTIFY-001 | 신규 공고 수집 시 관리자 이메일 수신 확인 | BE | |
 | BID-OPP-002 | 수동 수집 트리거 | BID-OPP-001 | Admin API 호출 → 즉시 수집 실행 | BE | |
+| BID-MKT-025 | 미 연방 계약 받기 (CR-142) | Sprint 1 | USAspending Mock 으로 전체·매일 받기, 같은 계약 키 덮어쓰기, 100건 미만 쪽에서 멈춤 | BE | |
+| BID-MKT-026 | 옵션 끝날짜와 원래 공고번호 받기 (CR-142) | BID-MKT-025 | 범위 안 구매 주문·단독 계약만 상세 호출, 실패한 계약은 다음 회차에 다시 | BE | |
+| BID-MKT-027 | 받기 실행과 기록 (CR-142) | BID-MKT-025 | 관리자 실행, 회차 기록, 도는 중 409 | BE | |
+| BID-MKT-033 | 계약 끝 메일 알림 (CR-142) | BID-MKT-031, BID-NOTIFY-001 | 90·30일 전 한 번만, 두 날짜가 같으면 한 통 | BE | |
 
 ### Sprint 3: 공고 열람 + 자격 진단
 
@@ -54,6 +58,12 @@ flowchart LR
 | BID-BROWSE-003 | 필요 문서 목록 표시 | BID-BROWSE-002 | 카테고리별 분류, BLOCKER 표시, 체크리스트 형태 | FE | |
 | BID-QUAL-001 | 적격성 진단 (CR-137) | BID-BROWSE-002, BID-OPP-006 | 공고 참가 자격마다 회원 답 저장, 답별 개수 요약 표시 | BE+FE | |
 | BID-QUAL-002 | 필수 인증/서류 가이드 | Sprint 1 | 가이드 페이지 정적 콘텐츠 표시 | FE | |
+| BID-MKT-028 | 계약 구분과 근거 (CR-142) | BID-MKT-026 | BIZ-050 네 구분과 근거 한 줄, 공사 꼬리표 | BE | |
+| BID-MKT-029 | 다음 달 공고 (CR-142) | BID-MKT-028 | 숫자 세 칸, 거르기·정렬, 자료 기준 | BE+FE | |
+| BID-MKT-030 | 재발주 달력 (CR-142) | BID-MKT-028 | 달 칸 12개, 달 고르면 목록 | BE+FE | |
+| BID-MKT-031 | 회원 계약 찾기와 등록 (CR-142) | BID-MKT-025 | 표에서 찾기, 없으면 USAspending 검색 1회, 못 찾으면 직접 넣기 | BE+FE | |
+| BID-MKT-032 | 옵션 연장 알림 (CR-142) | BID-MKT-031 | 내 계약 표, 직접 넣은 날짜만 고치기, 지우기 | BE+FE | |
+| BID-MKT-034 | 낙찰가 범위 (CR-142) | BID-MKT-025 | 두 줄 범위, 최소 건수 미만 숨김, 근거 계약 | BE+FE | |
 | BID-MKT-019 | 판정 계산과 근거 (CR-140) | BID-QUAL-001 | 판정 네 가지와 걸린 자격을 BIZ-040 순서로 냄 | BE | |
 | BID-MKT-018 | 증빙 서류 붙이기 (CR-140) | BID-QUAL-001, 서류함(CR-125) | 있음 답에 내 서류 붙이고 떼기, 남의 서류 거부 | BE+FE | |
 | BID-MKT-015 | 공고별 판정 (CR-140) | BID-MKT-019 | 판정별 개수와 거르기, 줄에서 공고별 진단으로 | FE | |
