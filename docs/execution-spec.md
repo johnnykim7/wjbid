@@ -1,6 +1,6 @@
 # 실행 지시서: SAM.gov Bidding Agency Platform
 
-> 설계 버전: 1.5 | 최종 수정: 2026-10-11 | 관련 CR: CR-003, CR-132, CR-133, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142
+> 설계 버전: 1.5 | 최종 수정: 2026-10-11 | 관련 CR: CR-003, CR-132, CR-133, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143
 
 > **프로젝트:** bidding-agency-platform (미군 조달 입찰 AI 대행 서비스)
 > **프로젝트 유형:** 풀스택 (BE: Java 17 + Spring Boot 3.2 / FE: React 19 × 2)
@@ -515,8 +515,8 @@ sequenceDiagram
 | 공고 검색 | `GET /opportunities`, `/search`, `/near-deadline` | 필터, 페이징 |
 | 공고 상세 | `GET /opportunities/{id}`, `/requirements`, `/attachments` | |
 | 입찰 신청 | `POST /bid-requests` | 서비스 레벨 선택 |
-| 내 입찰 현황 | `GET /bid-requests/my`, `/{id}`, `/{id}/history` | |
-| 문서 업로드 | `POST /bid-requests/{id}/client-documents` | multipart |
+| 내 입찰 현황 | `GET /bid-requests/my`, `/{id}`, `/{id}/history` | 자기 입찰 건만, 남의 건 404 (BIZ-060) |
+| 문서 업로드 | `POST /bid-requests/{id}/client-documents` | multipart, 자기 입찰 건만 (BIZ-060) |
 | 즐겨찾기 | `GET/POST/DELETE /bookmarks/{id}` | |
 | Admin 대시보드 | `GET /admin/bid-requests/stats` | |
 | Admin 입찰 관리 | `GET/POST /admin/bid-requests/*` | FSM 전이 |

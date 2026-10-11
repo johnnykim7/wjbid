@@ -1,6 +1,6 @@
 # SAM.gov Bidding Agency Platform API 설계
 
-> 설계 버전: 1.9 | 최종 수정: 2026-10-11 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142
+> 설계 버전: 1.9 | 최종 수정: 2026-10-11 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143
 
 > 단계: 3. Detail Design | 실행스펙 섹션 3에 포함
 >
@@ -354,6 +354,8 @@ CR-137 전에 있던 `POST /opportunities/{id}/qualification-check`(AI 자격 �
 | GET | /bid-requests/{id}/next-states | 허용 다음 상태 목록 | 🔒 | BID-FSM-001 |
 | PATCH | /bid-requests/{id}/state | 상태 전이 실행 (고객: 취소만) | 🔒 | BID-FSM-001 |
 
+> CR-143: `{id}` 가 붙은 위 경로는 그 입찰 건을 낸 회원과 관리자만 쓴다. 남의 입찰 건과 없는 입찰 건은 똑같이 404 "입찰 건을 찾을 수 없습니다"(BIZ-060). 상태 전이는 고객 허용 상태 확인(403) 다음에 주인을 본다.
+
 ---
 
 ## G. 고객 문서 제출 (Client Documents) — Sprint 4
@@ -363,6 +365,8 @@ CR-137 전에 있던 `POST /opportunities/{id}/qualification-check`(AI 자격 �
 | POST | /bid-requests/{id}/client-documents | 문서 업로드 (multipart) | 🔒 | BID-REQ-002 |
 | GET | /bid-requests/{id}/client-documents | 제출 문서 목록 | 🔒 | BID-REQ-002 |
 | DELETE | /bid-requests/{id}/client-documents/{docId} | 제출 문서 삭제 | 🔒 | BID-REQ-002 |
+
+> CR-143: 그 입찰 건을 낸 회원과 관리자만 쓴다. 남의 입찰 건이면 404(BIZ-060). 삭제는 그 서류가 경로의 입찰 건 것일 때만 하고 아니면 404 "서류를 찾을 수 없습니다". 올리기 크기 한도는 `spring.servlet.multipart.max-file-size`(BIZ-011, 지금 50MB)를 따르고 넘으면 400.
 
 ### G-1. 요구사항 슬롯 (CR-010)
 
@@ -723,7 +727,7 @@ app.aimbase:
 | GET | /validation/opportunities/{id} | Opportunity 조회 | | Probe용 읽기 전용 |
 | GET | /validation/bid-documents?bidRequestId= | BidDocument 목록 조회 | | Probe용 읽기 전용 |
 
-> Validation API는 내부 네트워크 전용. 운영 환경에서는 방화벽/네트워크 정책으로 보호.
+> Validation API 는 설정 `app.validation-api.enabled` 가 켜진 곳에서만 열린다(CR-143). 기본값이 꺼짐이라 운영에는 경로가 없고(404), 로컬은 application-local.yml 에서 켠다. 인증은 없다.
 > X-Flow-Id 헤더는 FlowIdFilter에서 전체 요청에 대해 자동 수신·전파.
 
 ---
