@@ -72,7 +72,7 @@ export const FAQS: FaqItem[] = [
     category: 'registration',
     q: 'SAM.gov 등록에 비용이 드나요?',
     a: [
-      'SAM.gov 등록과 갱신 자체는 무료입니다. 등록은 해마다 갱신해야 합니다. 등록이나 갱신을 맡기시면 건별 견적으로 안내합니다. ',
+      '등록이나 갱신을 맡기시면 상담 뒤 건별 견적으로 안내합니다. 등록은 해마다 갱신해야 합니다. ',
       { label: 'SAM 갱신', to: serviceHref('sam-renewal') },
     ],
   },

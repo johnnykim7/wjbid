@@ -114,7 +114,7 @@ export const ARTICLES: Article[] = [
           rows: [
             { name: 'NCAGE 코드', en: 'NATO Commercial and Government Entity Code', desc: '미국 밖 회사가 받는 업체 코드입니다. SAM.gov 등록 전에 받습니다.' },
             { name: 'Login.gov 계정', desc: 'SAM.gov 에 들어갈 때 쓰는 본인 인증 계정입니다.' },
-            { name: 'SAM.gov 등록', en: 'System for Award Management', desc: '미 연방 계약을 하려면 등록해야 합니다. 등록하면 UEI 를 받고, 해마다 갱신합니다. 등록은 무료입니다.' },
+            { name: 'SAM.gov 등록', en: 'System for Award Management', desc: '미 연방 계약을 하려면 등록해야 합니다. 등록하면 UEI 를 받고, 해마다 갱신합니다.' },
             { name: 'PIEE 계정', en: 'Procurement Integrated Enterprise Environment', desc: '미 국방부 조달 시스템입니다. 견적·제안 제출과 낙찰 뒤 대금 청구에 씁니다.' },
           ],
         },
@@ -215,7 +215,7 @@ export const TERMS: Term[] = [
   { abbr: 'PWS', en: 'Performance Work Statement', ko: '수행 업무 기술서', desc: '무엇을 어떤 수준으로 해야 하는지 적은 문서입니다. 공고 첨부에 들어 있고, 견적과 제안의 바탕이 됩니다.' },
   { abbr: 'RFP', en: 'Request for Proposal', ko: '제안 요청', desc: '기술 제안서와 가격을 함께 내 달라는 요청입니다. 가격과 함께 기술과 실적을 평가할 때 씁니다.' },
   { abbr: 'RFQ', en: 'Request for Quotation', ko: '견적 요청', desc: '가격 견적을 내 달라는 요청입니다. 제안 요청(RFP)보다 간단한 구매에 많이 씁니다.', related: { label: '서식 모음', to: academyHref('forms') } },
-  { abbr: 'SAM', en: 'System for Award Management', ko: '미 연방 조달 업체 등록 시스템', desc: '미 연방 정부와 계약하려는 회사가 등록하는 공식 사이트(SAM.gov)입니다. 등록은 무료이고 해마다 갱신합니다.', related: { label: 'SAM 등록 대행', to: serviceHref('sam-registration') } },
+  { abbr: 'SAM', en: 'System for Award Management', ko: '미 연방 조달 업체 등록 시스템', desc: '미 연방 정부와 계약하려는 회사가 등록하는 공식 사이트(SAM.gov)입니다. 해마다 갱신합니다.', related: { label: 'SAM 등록 대행', to: serviceHref('sam-registration') } },
   { abbr: 'SOW', en: 'Statement of Work', ko: '작업 기술서', desc: '해야 할 일과 방법을 적은 문서입니다. 수행 업무 기술서(PWS)처럼 공고 첨부에 들어 있습니다.' },
   { abbr: 'UEI', en: 'Unique Entity ID', ko: '고유 업체 번호', desc: 'SAM.gov 가 등록한 회사에 주는 열두 자리 번호입니다. 미 연방 계약에서 회사를 가리킬 때 씁니다.', related: { label: 'SAM 등록 대행', to: serviceHref('sam-registration') } },
   { abbr: 'WAWF', en: 'Wide Area WorkFlow', ko: '전자 청구', desc: 'PIEE 안에서 미 국방부 계약 대금을 청구하고 납품을 확인하는 기능입니다.', related: { label: '대금 청구', to: serviceHref('invoicing') } },

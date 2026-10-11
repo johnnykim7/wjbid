@@ -176,7 +176,7 @@ export const SERVICES: ServiceInfo[] = [
       ],
       vault: false,
     },
-    cost: { ...QUOTE_COST, fact: { strong: 'SAM.gov 갱신 자체도 무료입니다.' } },
+    cost: { ...QUOTE_COST, fact: { strong: '영문 입력과 확인까지 혼자 하기 어려운 갱신을 대신 처리합니다.', rest: '비용은 상담 뒤 건별로 정합니다.' } },
     inquiryType: INQUIRY_TYPE.samRegistration,
     related: ['sam-registration', 'piee-registration', 'translation'],
   },
