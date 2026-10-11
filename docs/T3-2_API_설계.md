@@ -1,6 +1,6 @@
 # SAM.gov Bidding Agency Platform API 설계
 
-> 설계 버전: 1.14 | 최종 수정: 2026-10-12 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-144, CR-146, CR-147, CR-152
+> 설계 버전: 1.15 | 최종 수정: 2026-10-12 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-144, CR-146, CR-147, CR-152, CR-153
 
 > 단계: 3. Detail Design | 실행스펙 섹션 3에 포함
 >
@@ -136,6 +136,25 @@
 
 - 돌고 있는 회차가 있으면 409. mode 가 없거나 다른 값이면 400.
 - 매일 받기는 스케줄러(POL-032)가 같은 처리를 부른다. 관리자 화면은 두지 않는다.
+
+---
+
+## B-6. 고객 화면 사진 (Admin, CR-153)
+
+| 메서드 | 경로 | 설명 | 인증 | 기능 ID |
+|--------|------|------|------|---------|
+| GET | /admin/site-photos | 사진 자리 목록(sort_order 순)과 자리마다 모든 사진(숨긴 것 포함, 넣은 순), 올리기 규칙 | 🔒 ADMIN | BID-SITE-001 |
+| POST | /admin/site-photos | 사진 올리기. multipart `slotKey`, `file`. 줄여 저장한 뒤 사진 한 장 정보(201) | 🔒 ADMIN | BID-SITE-001 |
+| PATCH | /admin/site-photos/{id} | 보임 바꾸기. 본문 `{ visible }` | 🔒 ADMIN | BID-SITE-001 |
+| DELETE | /admin/site-photos/{id} | 지우기(204). 올린 사진이면 저장 파일도 지운다 | 🔒 ADMIN | BID-SITE-001 |
+
+**목록 응답**: `rules`(`allowedTypes[]`, `maxUploadMb`, `maxMegapixels`, `minWidth`, `saveWidth`, `saveMaxKb`, POL-039 의 지금 값), `slots[]`(`key`, `name`, `location`, `photos[]`).
+
+**사진 한 장**: `id`, `slotKey`, `url`, `fileName`, `width`, `height`, `originalWidth`(함께 배포된 사진은 null), `originalHeight`, `sizeBytes`, `bundled`(함께 배포된 사진이면 참), `visible`, `createdAt`.
+
+**올리기 오류**: 자리가 없으면 404. 400 은 사유 문구와 함께: 받는 형식이 아니거나 그림으로 읽을 수 없음, 무게 상한 넘음, 화소 수 상한 넘음, 가로 최소보다 좁음(BIZ-068, POL-039). 파일이 비었거나 없으면 400.
+
+**사진 주소(url)**: 함께 배포된 사진은 bundled_path 그대로(`/img/...`), 올린 사진은 `<context-path>/site-photos/{id}/image`(운영 `/api/site-photos/{id}/image`).
 
 ---
 
@@ -302,6 +321,18 @@
 **찾기 응답**: `found`(참·거짓), `contract`(계약 줄, 못 찾았으면 null), `alreadyRegistered`(이미 내 계약이면 참).
 
 **검증**: 계약번호는 앞뒤 공백·하이픈·빈칸을 빼고 대문자로 맞춘 뒤 비면 400. 같은 계약번호 두 번째 등록 409. MANUAL 인데 endDate 가 없으면 400. potentialEndDate 가 endDate 보다 앞이면 400. PUBLIC 계약 날짜 고치기 409. USAspending 이 실패하면 찾기는 502, 화면은 직접 넣기로 안내.
+
+---
+
+## C-6. 고객 화면 사진 (CR-153)
+
+| 메서드 | 경로 | 설명 | 인증 | 기능 ID |
+|--------|------|------|------|---------|
+| GET | /site-photos | 자리별 보이는 사진 주소 목록. `{ slots: { <자리 키>: [url, ...] } }`. 모든 자리 키가 있고 보이는 사진이 없으면 빈 배열. 넣은 순 | | BID-SITE-002 |
+| GET | /site-photos/{id}/image | 올린 사진 파일(image/jpeg). 없거나 함께 배포된 사진이면 404 | | BID-SITE-002 |
+
+- 목록은 `Cache-Control: no-cache`. 고객 포털이 받은 목록을 브라우저에 남겨 두고 다음 방문에 쓴다(T3-4).
+- 사진 파일은 한 번 저장되면 바뀌지 않으므로 `Cache-Control: public, max-age=31536000, immutable`.
 
 ---
 
@@ -777,6 +808,8 @@ app.aimbase:
 | ~~C-5. 회원 계약과 옵션 연장 알림~~ | ~~5~~ 0 | CR-142, CR-147 폐기 |
 | B-5. 미 연방 계약 받기 (Admin) | 2 | CR-142 |
 | B-4. 기지 관리와 지난 낙찰 다시 받기 (Admin) | 6 | CR-136 |
+| B-6. 고객 화면 사진 (Admin) | 4 | CR-153 |
+| C-6. 고객 화면 사진 | 2 | CR-153 |
 | N. 회사 공통 서류함 | 7 | CR-125, CR-136 |
 | D. 즐겨찾기 | 4 | 3 |
 | E. 자격 진단 | 4 | 3, CR-137, CR-140 |
@@ -794,11 +827,13 @@ app.aimbase:
 | MCP Tools | 12 | 5, CR-003, CR-013, CR-141 |
 | MCP SSE 엔드포인트 | 2 | CR-002 |
 | Aimbase 워크플로우 호출 | 2 | CR-002 |
-| **합계** | **REST 117 + MCP 12 + SSE 2 + Aimbase 2** | |
+| **합계** | **REST 123 + MCP 12 + SSE 2 + Aimbase 2** | |
 
 > CR-141: G 는 문서 3, 슬롯 3(올리기, 서류함에서 고르기, 빼기. 목록 조회는 걷어냄), 제출 전 검사 2 다. 그전에는 슬롯을 세지 않았다.
 
 > CR-147: REST 124 에서 재발주 조회 둘(C-4)과 회원 계약 다섯(C-5)을 빼 117 이다.
+
+> CR-153: 고객 화면 사진 관리자 4(B-6)와 공개 2(C-6)를 더해 123 이다.
 
 ---
 

@@ -1,6 +1,6 @@
 # 실행 지시서: SAM.gov Bidding Agency Platform
 
-> 설계 버전: 1.8 | 최종 수정: 2026-10-12 | 관련 CR: CR-003, CR-132, CR-133, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-146, CR-147
+> 설계 버전: 1.9 | 최종 수정: 2026-10-12 | 관련 CR: CR-003, CR-132, CR-133, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-146, CR-147, CR-153
 
 > **프로젝트:** bidding-agency-platform (미군 조달 입찰 AI 대행 서비스)
 > **프로젝트 유형:** 풀스택 (BE: Java 17 + Spring Boot 3.2 / FE: React 19 × 2)
@@ -512,7 +512,7 @@ sequenceDiagram
 
 | 화면 | 주요 API | 비고 |
 |------|---------|------|
-| 홈 | — | 정적 콘텐츠 |
+| 홈 | `GET /site-photos` | 문구는 정적 콘텐츠. 사진 자리 넷은 사진 목록에서 방문마다 한 장(CR-153) |
 | 회원가입 | `POST /auth/email-codes`, `/auth/email-codes/verify`, `/auth/register` | 이메일 인증번호 확인을 마친 주소만 가입 (BIZ-062, CR-146) |
 | SNS 가입·로그인 | `GET /auth/sns/providers`, `/oauth2/authorization/{provider}`, `/auth/sns/signup/{ticket}`, `POST /auth/sns/register`, `/auth/sns/login` | 네이버, 카카오(구글 보류). 키가 있는 곳만 (CR-146) |
 | 공고 검색 | `GET /opportunities`, `/search`, `/near-deadline` | 필터, 페이징. CR-147: 화면 이름 마감 전 공고, 속페이지 틀, 숫자 칸은 검색어와 상관없는 마감 전 공고 전체 건수, 빈 상태 두 가지 |
@@ -540,6 +540,8 @@ sequenceDiagram
 | 낙찰가 범위 (CR-142) | `GET /federal-contracts/award-range`, `/naics` | 로그인. 금액 0 이하 제외, 건수가 설정값 미만이면 범위를 내지 않음(BIZ-054) |
 | 관리자 미 연방 계약 받기 (CR-142) | `POST /admin/federal-contracts/sync`, `GET /admin/federal-contracts/sync-runs` | 화면 없음. 매일 05:00 Asia/Seoul 스케줄러와 같은 처리 |
 | 제출 전 검사, 입찰 건별 제출 전 검사, 입찰 상세 제출 서류 (CR-141) | `GET /bid-requests/my/pre-check`, `GET /bid-requests/{id}/pre-check`, `POST/DELETE /bid-requests/{id}/required-document-slots/{itemId}[/upload, /from-vault]`, `GET /member-documents`, `PATCH /bid-requests/{id}/state` | 로그인, 자기 입찰 건만(BIZ-049). 필수 서류 빠지면 서류 접수 넘기기 막고 형식·쪽수는 경고만(BIZ-046~048) |
+| 고객 화면 사진 자리(홈, 로그인, 회원가입, SNS 가입, 서비스 안내, 준비 안내) (CR-153) | `GET /site-photos`, `GET /site-photos/{id}/image` | 로그인 없이. 앱 시작 때 한 번 받고 브라우저에 남겨 둔다. 사진이 없거나 못 받으면 사진 없이(BIZ-067) |
+| 관리자 고객 화면 사진 (CR-153) | `GET/POST /admin/site-photos`, `PATCH/DELETE /admin/site-photos/{id}` | 올린 사진은 가로 1600, 400KB 안팎 JPEG 로 다시 저장(BIZ-068, POL-039) |
 
 ### 8-4. 리뷰 체크리스트
 
