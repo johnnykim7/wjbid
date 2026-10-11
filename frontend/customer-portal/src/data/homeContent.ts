@@ -12,10 +12,10 @@ export const LIST_ROWS = 7
 export const SOON_DAYS = 7
 
 export const IMAGES = {
-  empty: '/img/army_17a23e72.jpg',
-  intro: '/img/army_5decc7b0.jpg',
-  login: '/img/army_71dae7c5.jpg',
-  register: '/img/army_17a23e72.jpg',
+  empty: '/img/mil-carrier-busan.jpg',
+  intro: '/img/mil-airlift-dawn.jpg',
+  login: '/img/biz-handshake.jpg',
+  register: '/img/biz-laptop.jpg',
 }
 
 /** 공고 0건일 때 보여 주는 마감된 공고 예시 */
@@ -139,8 +139,8 @@ export const PLAN_CONSULT = {
 }
 
 export const PROMOS = [
-  { tone: 'a', img: '/img/army_71dae7c5.jpg', small: '등록 대행', title: 'SAM.gov·PIEE 등록, 맡기세요', desc: '처음 등록하는 회사도 순서대로', to: serviceHref('sam-registration') },
-  { tone: 'b', img: '/img/army_5decc7b0.jpg', small: '현장 지원', title: '설명회 동행과 기지 출입', desc: '출입 절차부터 통역까지', to: serviceHref('site-visit') },
+  { tone: 'a', img: '/img/mil-f16-taxi.jpg', small: '등록 대행', title: 'SAM.gov·PIEE 등록, 맡기세요', desc: '처음 등록하는 회사도 순서대로', to: serviceHref('sam-registration') },
+  { tone: 'b', img: '/img/mil-destroyer-busan.jpg', small: '현장 지원', title: '설명회 동행과 기지 출입', desc: '출입 절차부터 통역까지', to: serviceHref('site-visit') },
 ]
 
 export const HELP_LINKS = [
