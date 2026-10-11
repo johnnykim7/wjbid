@@ -39,6 +39,19 @@ public final class SettingKey {
     /** SNS 에서 돌아와 로그인을 마칠 시간(초). 비었거나 1 보다 작으면 60 (POL-038, CR-146) */
     public static final String SNS_LOGIN_TICKET_SECONDS = "SNS_LOGIN_TICKET_SECONDS";
 
+    /** 고객 화면 사진으로 받는 형식(쉼표로 나눔). 비어 있으면 image/jpeg,image/png (POL-039, CR-153) */
+    public static final String SITE_PHOTO_ALLOWED_TYPES = "SITE_PHOTO_ALLOWED_TYPES";
+    /** 고객 화면 사진 한 장 무게 상한(MB). 비었거나 1 보다 작으면 20 (POL-039, CR-153) */
+    public static final String SITE_PHOTO_MAX_UPLOAD_MB = "SITE_PHOTO_MAX_UPLOAD_MB";
+    /** 고객 화면 사진 원본 화소 수 상한(백만 화소). 비었거나 1 보다 작으면 50 (POL-039, CR-153) */
+    public static final String SITE_PHOTO_MAX_MEGAPIXELS = "SITE_PHOTO_MAX_MEGAPIXELS";
+    /** 고객 화면 사진 가로 최소. 비었거나 1 보다 작으면 1000 (POL-039, CR-153) */
+    public static final String SITE_PHOTO_MIN_WIDTH = "SITE_PHOTO_MIN_WIDTH";
+    /** 고객 화면 사진 저장 가로. 비었거나 1 보다 작으면 1600 (POL-039, CR-153) */
+    public static final String SITE_PHOTO_SAVE_WIDTH = "SITE_PHOTO_SAVE_WIDTH";
+    /** 고객 화면 사진 저장 무게 목표(KB). 비었거나 1 보다 작으면 400 (POL-039, CR-153) */
+    public static final String SITE_PHOTO_SAVE_MAX_KB = "SITE_PHOTO_SAVE_MAX_KB";
+
     private SettingKey() {
     }
 }

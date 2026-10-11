@@ -6,6 +6,7 @@ import MemberAdminPage from './pages/MemberAdminPage'
 import BidRequestAdminPage from './pages/BidRequestAdminPage'
 import CollectionPage from './pages/CollectionPage'
 import BaseAdminPage from './pages/BaseAdminPage'
+import SitePhotoAdminPage from './pages/SitePhotoAdminPage'
 import DocumentTemplatePage from './pages/DocumentTemplatePage'
 import DocumentEditPage from './pages/DocumentEditPage'
 import ProposalTreePage from './pages/ProposalTreePage'
@@ -49,6 +50,7 @@ export default function App() {
           <Route path="notices/:id" element={<NoticeAdminDetailPage />} />
           <Route path="collection" element={<CollectionPage />} />
           <Route path="bases" element={<BaseAdminPage />} />
+          <Route path="site-photos" element={<SitePhotoAdminPage />} />
           <Route path="templates" element={<DocumentTemplatePage />} />
           <Route path="rfp-samples" element={<RfpSamplePage />} />
           <Route path="rfp-samples/:id" element={<RfpSampleDetailPage />} />

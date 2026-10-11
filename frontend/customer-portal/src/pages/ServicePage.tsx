@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { Icon } from '../components/layout/Icon'
+import { SitePhoto } from '../components/SitePhoto'
 import { comingSoonHref, findMenuItem, menuHref } from '../components/layout/menu'
 import { COMPANY } from '../components/layout/siteContent'
 import { SubIcon } from '../components/subpage/SubIcon'
@@ -40,7 +41,7 @@ export default function ServicePage() {
             <a className="bigb o" href={`mailto:${COMPANY.email}`}>{COMPANY.email}</a>
           </div>
         </div>
-        <div className="im"><img src={service.photo} alt="" /></div>
+        <div className="im"><SitePhoto slot={service.photo} /></div>
       </section>
 
       <section className="cbx pad">

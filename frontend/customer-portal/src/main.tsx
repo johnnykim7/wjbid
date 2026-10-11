@@ -5,6 +5,10 @@ import '@therecommerce-develop/ds-ui/dist/style.css'
 import './index.css'
 import './wjbid-theme.css'
 import App from './App.tsx'
+import { startSitePhotos } from './hooks/useSitePhoto'
+
+// 화면 그리기를 기다리게 하지 않고 사진 목록을 먼저 받기 시작한다(CR-153)
+startSitePhotos()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

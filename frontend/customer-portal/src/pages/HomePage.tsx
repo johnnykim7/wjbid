@@ -5,6 +5,7 @@ import { getNearDeadline, getOpportunities } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import { MEMBER_PRICE_PENDING_LABEL, formatWon, usePricing } from '../hooks/usePricing'
 import { Icon } from '../components/layout/Icon'
+import { SitePhoto } from '../components/SitePhoto'
 import { comingSoonHref, findMenuItem, menuHref, serviceHref } from '../components/layout/menu'
 import type { MemberSummary } from '../components/layout/useMemberSummary'
 import { daysUntil, ddayLabel } from '../utils/dday'
@@ -154,7 +155,7 @@ export default function HomePage() {
             </dl>
           </Link>
         </div>
-        <img src={IMAGES.empty} alt="" />
+        <SitePhoto slot={IMAGES.empty} />
       </div>
     </div>
   ) : (
@@ -217,7 +218,7 @@ export default function HomePage() {
     <div className="st">
       <div className="ph"><h3>무료 회원</h3></div>
       <div className="intro join">
-        <div className="im"><img src={IMAGES.intro} alt="" /><span className="tag">USFK 입찰 첫걸음</span></div>
+        <div className="im"><SitePhoto slot={IMAGES.intro} /><span className="tag">USFK 입찰 첫걸음</span></div>
         <div className="bx">
           <div className="fr">{benefits}</div>
           {start}
@@ -227,7 +228,7 @@ export default function HomePage() {
   ) : (
     <div className="st side">
       <div className="intro">
-        <div className="im"><img src={IMAGES.intro} alt="" /><span className="tag">USFK 입찰 첫걸음</span></div>
+        <div className="im"><SitePhoto slot={IMAGES.intro} /><span className="tag">USFK 입찰 첫걸음</span></div>
         <div className="bx">
           <h3>{HEADLINE}</h3>
           <div className="fr"><b>무료 회원</b>{benefits}</div>
@@ -367,7 +368,7 @@ export default function HomePage() {
           <div className="promos2">
             {PROMOS.map((p) => (
               <Link key={p.small} className={`promo ${p.tone}`} to={p.to}>
-                <img src={p.img} alt="" />
+                <SitePhoto slot={p.photo} />
                 <div className="tx"><small>{p.small}</small><b>{p.title}</b><span>{p.desc}</span></div>
               </Link>
             ))}

@@ -60,6 +60,9 @@ dependencies {
     // DOCX Generation
     implementation 'org.apache.poi:poi-ooxml:5.2.5'
 
+    // CR-153: 고객 화면 사진의 촬영 방향(EXIF Orientation) 읽기
+    implementation 'com.drewnoakes:metadata-extractor:2.19.0'
+
     // Lombok
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'

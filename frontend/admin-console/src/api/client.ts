@@ -424,3 +424,54 @@ export const getUnmatchedOpportunities = () =>
 
 export const runAwardBackfill = (postedFrom: string, postedTo: string) =>
   api.post<AwardBackfillResult>('/admin/opportunities/award-backfill', { postedFrom, postedTo })
+
+// ── CR-153: 고객 화면 사진 ──
+
+/** 올리기 규칙(POL-039). 설정값에서 읽는다 */
+export interface SitePhotoRules {
+  allowedTypes: string[]
+  maxUploadMb: number
+  maxMegapixels: number
+  minWidth: number
+  saveWidth: number
+  saveMaxKb: number
+}
+
+export interface AdminSitePhoto {
+  id: string
+  slotKey: string
+  url: string
+  fileName: string
+  width: number
+  height: number
+  originalWidth: number | null
+  originalHeight: number | null
+  sizeBytes: number
+  bundled: boolean
+  visible: boolean
+  createdAt: string
+}
+
+export interface AdminSitePhotoSlot {
+  key: string
+  name: string
+  location: string
+  photos: AdminSitePhoto[]
+}
+
+export const getAdminSitePhotos = () =>
+  api.get<{ rules: SitePhotoRules; slots: AdminSitePhotoSlot[] }>('/admin/site-photos')
+
+export const uploadAdminSitePhoto = (slotKey: string, file: File) => {
+  const formData = new FormData()
+  formData.append('slotKey', slotKey)
+  formData.append('file', file)
+  return api.post<AdminSitePhoto>('/admin/site-photos', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+}
+
+export const setAdminSitePhotoVisible = (id: string, visible: boolean) =>
+  api.patch<AdminSitePhoto>(`/admin/site-photos/${id}`, { visible })
+
+export const deleteAdminSitePhoto = (id: string) => api.delete(`/admin/site-photos/${id}`)
