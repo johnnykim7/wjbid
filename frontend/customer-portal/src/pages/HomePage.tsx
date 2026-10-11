@@ -5,7 +5,7 @@ import { getNearDeadline, getOpportunities } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import { MEMBER_PRICE_PENDING_LABEL, formatWon, usePricing } from '../hooks/usePricing'
 import { Icon } from '../components/layout/Icon'
-import { comingSoonHref, serviceHref } from '../components/layout/menu'
+import { comingSoonHref, findMenuItem, menuHref, serviceHref } from '../components/layout/menu'
 import type { MemberSummary } from '../components/layout/useMemberSummary'
 import { daysUntil, ddayLabel } from '../utils/dday'
 import type { Opportunity } from '../types'
@@ -47,6 +47,12 @@ const HEADLINE = <>주한미군 공사·용역 입찰,<br />한글로 찾고 순
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
 const pad = (n: number) => String(n).padStart(2, '0')
+
+/** 홈 링크도 메뉴 정의를 따른다. 화면이 생기면 준비 안내 대신 그 화면으로 간다 */
+const itemHref = (groupKey: string, itemKey: string) => {
+  const found = findMenuItem(groupKey, itemKey)
+  return found ? menuHref(found.item) : comingSoonHref(itemKey)
+}
 
 /** "2026-10-13" 을 "10.13" 과 요일로. 날짜 문자열을 그대로 읽어 브라우저 시간대에 흔들리지 않게 한다 */
 function deadlineParts(s?: string | null) {
@@ -138,7 +144,7 @@ export default function HomePage() {
       <div className="empty">
         <div className="tx">
           <h3>{HEADLINE}</h3>
-          <Link className="smp" to={comingSoonHref('notice-sample')}>
+          <Link className="smp" to={itemHref('bids', 'notice-sample')}>
             <small>{SAMPLE_NOTICE.caption}</small>
             <b>{SAMPLE_NOTICE.title}</b>
             <i className="mono">{SAMPLE_NOTICE.number}</i>
@@ -309,7 +315,7 @@ export default function HomePage() {
                   </div>
                 </div>
               </div>
-              <Link className="go" to={comingSoonHref('notice-sample')}>{BENEFIT_TRANSLATE.link.label}<Icon name="cr" /></Link>
+              <Link className="go" to={itemHref('bids', 'notice-sample')}>{BENEFIT_TRANSLATE.link.label}<Icon name="cr" /></Link>
             </div>
             <div className="fc">
               <h3>{BENEFIT_FIT.title}</h3>
