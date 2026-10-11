@@ -1090,6 +1090,22 @@
 - **규모**: 소(배포 스크립트와 설정 사본)
 - **상태**: 완료. 첫 배포 10/12 00:25(커밋 62e53d6, all), BE 기동 확인 뒤 화면 교체, .prev 와 deploy-history.log 남는 것 확인. CUSTOMER_PORTAL_URL 줄(4ad3e8d)은 다음 배포에 올라간다
 
+### CR-150: Aimbase AI 작업을 Max 구독 연결로 옮김 (2026-10-12)
+
+- **배경(사용자)**: CR-148 확인 중 API 키 연결(bidding-claude-sonnet, haiku)이 Anthropic 크레딧 부족으로 거절되는 것을 확인. 10/12 00:22 "2번이죠 아까 키값 다 옮겨놧어요 붙이면되요"(9개 작업을 Max 구독 연결로), 06:10 "1"(4개는 바로 옮기고 도구가 필요한 5개와 수정 채팅은 시험 뒤 옮김), 07:23 "1"(Aimbase 결함을 Aimbase 레포에서 고치고 AWS 에 올린 뒤 5개와 수정 채팅 이동)
+- **대상**: AWS Aimbase bidding_system 테넌트의 워크플로 연결과 관리자 공고문 수정 채팅.
+  - 글만 주고받는 4개(correct-notice-analysis, requirement-extraction, summarize-opportunity-for-selection, type-pattern-extraction)는 cli-runner-bidding-001 로 옮김(06:11)
+  - 앱 도구를 부르는 5개(proposal-design, proposal-write-section, proposal-assemble, proposal-verify-fidelity, bid-document-generation)는 도구를 켠 새 연결 cli-runner-bidding-tools-001(tool_mode AIMBASE, 같은 계정과 모델)로 옮김(08:28). 테넌트에 API 키 연결을 쓰는 단계는 0개
+  - 관리자 공고문 수정 채팅의 연결 값을 cli-runner-bidding-tools-001 로 바꿈(NoticeCorrectionChat.tsx)
+- **Aimbase 결함**: 새 연결로 앱 도구 호출이 "Client failed to initialize" 로 실패했다. Aimbase 도구 서버(/mcp)가 처음 노출할 때의 연결 객체를 붙잡고 있어 앱 재기동 뒤에도 옛 객체로 불렀다. Aimbase CR-146(커밋 9b0b67e)으로 고쳐 AWS 에 08:22 반영, 앱 재기동과 재연결 뒤 도구 호출 성공 확인
+- **남은 것**: Aimbase 러너가 18분쯤 쉰 CLI 세션을 정리한 뒤 같은 세션의 첫 호출을 1회 실패시킨다(그다음은 정상). 워크플로는 해당 없고 수정 채팅만 걸린다. Aimbase 별건으로 처리 결정 대기
+- **변경 타입**: 운영 설정 변경(Aimbase 워크플로 연결, 새 연결 하나) + 관리자 화면 연결 값 한 줄
+- **영향 모듈**: 제안서 생성, 공고 요약, 유형 패턴 추출, 공고문 수정
+- **영향 설계서**: 없음(우리 앱 API, 표 변경 없음)
+- **되돌리기**: /opt/wjbid/aimbase/backup/workflows-connections-20261012-0611.sql(4개 전), workflows-20261012-pre-move5.sql(5개 전), 화면은 /opt/wjbid/app/admin-console.prev
+- **규모**: 소(운영 설정과 화면 값 한 줄)
+- **상태**: 진행중(화면 배포와 수정 채팅, 제안서 작업 확인 남음)
+
 ### CR-151: 메인과 곳곳 사진 교체 (2026-10-12)
 
 - **배경(사용자)**: 10/12 07:32 "메인화면하고 간간히 나오는 사진들을 보면 중국인가 하는 이상한 사진들이 잇어요 그거좀 세련된 유럽 미국인으로 변경해주시구요. 그리고 메인화면은. 아무래도 군사 관련이니 비행기나 배.. 뭐 그런것으로 해주세요" [origins/원본_사진교체_20261012.md](origins/원본_사진교체_20261012.md)
