@@ -255,9 +255,9 @@
 | awardType | FederalAwardType |
 | description, recipientName, amountUsd | amountUsd 는 숫자, 없으면 null |
 | naicsCode, naicsName | |
-| startDate, endDate, potentialEndDate | potentialEndDate 는 아직 받지 않았으면 null |
+| startDate, endDate, potentialEndDate | potentialEndDate 는 아직 받지 않았거나 USAspending 에 없으면 null |
 | solicitationNumber | 원래 공고번호, 없으면 null |
-| noticeOpportunityId | 원래 공고번호가 우리 공고에 있으면 그 공고 id, 없으면 null |
+| publicNoticeId | 원래 공고번호로 낸 공개 한글 공고문이 있으면 그 공고문 id(화면은 공고 상세로 보낸다), 없으면 null |
 | category | RecompeteCategory(BIZ-050) |
 | basisDateKind, basisDate | 그 달에 걸린 날짜와 종류(ContractDateKind). 화면은 이 둘과 awardType, parentPiid 로 근거 한 줄을 만든다 |
 | oneTimeConstruction | 한 번짜리 공사 꼬리표(BIZ-051) |
@@ -266,7 +266,7 @@
 **응답**
 - recompete: `month`, `counts`(RECOMPETE, EXTENDABLE, IN_PARENT, UNCONFIRMED 마다 수, 업종 거르기는 반영하고 category 거르기는 반영하지 않는다), `items`(계약 줄), `page`, `size`, `totalElements`, `source`.
 - calendar: `months[]`(month, RECOMPETE, EXTENDABLE, IN_PARENT, UNCONFIRMED 수), `source`.
-- award-range: `naicsCode`, `naicsName`, `noticeNumber`(받았으면), `rows[]`(group STANDALONE 상위 계약 없는 계약 또는 ORDER 상위 계약 안 주문, count 쓴 계약 수, excludedCount 0 이하라 뺀 수, minCount POL-034, min, p25, p50, p75, max. count 가 minCount 미만이면 다섯 값은 null), `evidence[]`(쓴 계약 줄 20건, 최근 시작순, category 와 basis 칸은 비움), `source`.
+- award-range: `naicsCode`, `naicsName`, `noticeNumber`·`noticeTitle`(공고번호로 찾았을 때만, 제목은 원문 제목), `rows[]`(group STANDALONE 상위 계약 없는 계약 또는 ORDER 상위 계약 안 주문, count 쓴 계약 수, excludedCount 0 이하라 뺀 수, minCount POL-034, min, p25, p50, p75, max. count 가 minCount 미만이면 다섯 값은 null), `evidence[]`(쓴 계약 줄 20건, 최근 시작순, category 와 basis 칸은 비움), `source`.
 
 **검증**: month 형식이 틀리거나 이번 달부터 POL-033 달 수 밖이면 400. award-range 에 noticeNumber 와 naics 가 모두 없으면 400. noticeNumber 공고가 없으면 404, 그 공고에 업종 코드가 없으면 422(화면은 업종을 고르라고 안내).
 
@@ -284,7 +284,7 @@
 | PATCH | /member-contracts/{id} | MANUAL 계약의 `endDate`, `potentialEndDate`, `description` 고치기 | 🔒 | BID-MKT-032 |
 | DELETE | /member-contracts/{id} | 지우기 | 🔒 | BID-MKT-032 |
 
-**목록 응답**: `alertDays[]`(POL-035, 꺼져 있으면 빈 배열), `today`, `contracts[]`(id, piid, description, source, endDate, potentialEndDate, endDaysLeft, potentialDaysLeft, nextAlertOn, nextAlertKind, datesChangedOn, lastAlertedAt, federalContract 찾은 계약 줄 또는 null). 지금 끝날짜가 가까운 순.
+**목록 응답**: `alertDays[]`(POL-035, 꺼져 있으면 빈 배열), `today`, `contracts[]`(id, piid, description, source, endDate, potentialEndDate, endDaysLeft, potentialDaysLeft, nextAlertOn, nextAlertKind, datesChangedOn, lastAlertedAt, federalContract 찾은 계약 줄 또는 null), `source`(C-4 와 같은 자료 기준, 찾은 계약 칸의 기준일과 늦음 안내에 쓴다). 지금 끝날짜가 가까운 순.
 
 **찾기 응답**: `found`(참·거짓), `contract`(계약 줄, 못 찾았으면 null), `alreadyRegistered`(이미 내 계약이면 참).
 
