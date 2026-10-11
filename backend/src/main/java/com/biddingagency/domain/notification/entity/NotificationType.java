@@ -25,7 +25,9 @@ public enum NotificationType {
     INQUIRY_RECEIVED("BID_INQUIRY_ADMIN"),
     INQUIRY_ANSWERED("BID_INQUIRY_ANSWER"),
     // CR-136: 공통 서류함 서류 만료 전 회원 메일
-    DOCUMENT_EXPIRY("BID_DOC_EXPIRY");
+    DOCUMENT_EXPIRY("BID_DOC_EXPIRY"),
+    // CR-142: 회원 계약 끝날짜와 옵션 끝날짜 전 회원 메일
+    CONTRACT_END("BID_CONTRACT_END");
 
     private final String templateCode;
 
