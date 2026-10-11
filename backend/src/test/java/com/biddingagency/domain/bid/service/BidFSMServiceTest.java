@@ -2,10 +2,12 @@ package com.biddingagency.domain.bid.service;
 
 import com.biddingagency.domain.bid.entity.BidRequest;
 import com.biddingagency.domain.bid.entity.BidRequestState;
+import com.biddingagency.domain.bid.BidRequestNotFoundException;
 import com.biddingagency.domain.bid.repository.BidRequestRepository;
 import com.biddingagency.domain.compliance.RequirementSlotsNotFulfilledException;
 import com.biddingagency.domain.compliance.service.ComplianceService;
 import com.biddingagency.domain.event.BidRequestStateChangedEvent;
+import com.biddingagency.domain.member.entity.Member;
 import com.biddingagency.domain.opportunity.entity.OpportunityRequirementItem;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -298,7 +300,7 @@ class BidFSMServiceTest {
 
         // when & then
         assertThatThrownBy(() -> fsmService.customerTransition(
-                bidRequestId, BidRequestState.AWARDED, UUID.randomUUID(), "customer", ""))
+                bidRequestId, BidRequestState.AWARDED, customer(), "customer", ""))
                 .isInstanceOf(com.biddingagency.domain.bid.CustomerTransitionNotAllowedException.class)
                 .hasMessageContaining("AWARDED");
         then(bidRequestRepository).should(never()).save(any());
@@ -382,11 +384,13 @@ class BidFSMServiceTest {
 
     // CR-017 ③: 고객 전이 화이트리스트
     @Test
-    @DisplayName("고객_DOCS_RECEIVED_customerTransition_허용_transition위임")
+    @DisplayName("TC-OWN-006 고객_DOCS_RECEIVED_customerTransition_허용_transition위임")
     void 고객_DOCS_RECEIVED_customerTransition_허용() {
         // given
         UUID bidRequestId = UUID.randomUUID();
+        Member owner = customer();
         BidRequest bidRequest = BidRequest.builder()
+                .member(owner)
                 .state(BidRequestState.DOCS_PENDING)
                 .stateHistory(new ArrayList<>())
                 .build();
@@ -396,7 +400,7 @@ class BidFSMServiceTest {
 
         // when
         BidRequest result = fsmService.customerTransition(
-                bidRequestId, BidRequestState.DOCS_RECEIVED, UUID.randomUUID(), "customer", "서류 제출");
+                bidRequestId, BidRequestState.DOCS_RECEIVED, owner, "customer", "서류 제출");
 
         // then
         assertThat(result.getState()).isEqualTo(BidRequestState.DOCS_RECEIVED);
@@ -410,9 +414,34 @@ class BidFSMServiceTest {
 
         // when & then
         assertThatThrownBy(() -> fsmService.customerTransition(
-                bidRequestId, BidRequestState.GENERATING, UUID.randomUUID(), "customer", ""))
+                bidRequestId, BidRequestState.GENERATING, customer(), "customer", ""))
                 .isInstanceOf(com.biddingagency.domain.bid.CustomerTransitionNotAllowedException.class)
                 .hasMessageContaining("GENERATING");
         then(bidRequestRepository).should(never()).save(any());
+    }
+
+    @Test
+    @DisplayName("TC-OWN-005 남의건_고객전이_404_저장없음")
+    void 남의건_customerTransition_막힘() {
+        // given
+        UUID bidRequestId = UUID.randomUUID();
+        BidRequest bidRequest = BidRequest.builder()
+                .member(customer())
+                .state(BidRequestState.DOCS_PENDING)
+                .stateHistory(new ArrayList<>())
+                .build();
+        given(bidRequestRepository.findByIdWithDetails(bidRequestId)).willReturn(Optional.of(bidRequest));
+
+        // when & then
+        assertThatThrownBy(() -> fsmService.customerTransition(
+                bidRequestId, BidRequestState.DOCS_RECEIVED, customer(), "other", ""))
+                .isInstanceOf(BidRequestNotFoundException.class);
+        then(bidRequestRepository).should(never()).save(any());
+    }
+
+    private static Member customer() {
+        Member member = Member.builder().build();
+        ReflectionTestUtils.setField(member, "id", UUID.randomUUID());
+        return member;
     }
 }

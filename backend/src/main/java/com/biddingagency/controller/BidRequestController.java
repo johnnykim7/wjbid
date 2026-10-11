@@ -68,8 +68,10 @@ public class BidRequestController {
 
     @GetMapping("/{id}")
     @Operation(summary = "입찰 요청 상세")
-    public ResponseEntity<BidRequestDto> getBidRequest(@PathVariable UUID id) {
-        BidRequest bidRequest = bidRequestService.findByIdWithDetails(id);
+    public ResponseEntity<BidRequestDto> getBidRequest(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        BidRequest bidRequest = bidRequestService.findAccessible(id, userDetails.getMember());
         return ResponseEntity.ok(BidRequestDto.withHistory(bidRequest, findLatestVisibleNotice(bidRequest)));
     }
 
@@ -82,7 +84,7 @@ public class BidRequestController {
         // CR-017 ③: 고객은 허용 화이트리스트(DOCS_RECEIVED) 전이만 가능. 관리자 전용 전이는 거부.
         BidRequest bidRequest = fsmService.customerTransition(
                 id, request.getToState(),
-                userDetails.getMember().getId(),
+                userDetails.getMember(),
                 userDetails.getUsername(),
                 request.getNotes()
         );
@@ -97,21 +99,28 @@ public class BidRequestController {
 
     @GetMapping("/{id}/next-states")
     @Operation(summary = "가능한 다음 상태 목록")
-    public ResponseEntity<List<com.biddingagency.domain.bid.entity.BidRequestState>> getValidNextStates(@PathVariable UUID id) {
-        BidRequest bidRequest = bidRequestService.findById(id);
+    public ResponseEntity<List<com.biddingagency.domain.bid.entity.BidRequestState>> getValidNextStates(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        BidRequest bidRequest = bidRequestService.findAccessible(id, userDetails.getMember());
         return ResponseEntity.ok(fsmService.getValidNextStates(bidRequest.getState()));
     }
 
     @GetMapping("/{id}/history")
     @Operation(summary = "상태 전환 이력")
-    public ResponseEntity<List<?>> getStateHistory(@PathVariable UUID id) {
-        BidRequest bidRequest = bidRequestService.findById(id);
+    public ResponseEntity<List<?>> getStateHistory(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        BidRequest bidRequest = bidRequestService.findAccessible(id, userDetails.getMember());
         return ResponseEntity.ok(bidRequest.getStateHistory());
     }
 
     @GetMapping("/{id}/documents")
     @Operation(summary = "입찰 요청의 문서 목록 (최신 버전 내용 포함)")
-    public ResponseEntity<List<java.util.Map<String, Object>>> getDocuments(@PathVariable UUID id) {
-        return ResponseEntity.ok(documentVersionService.getDocumentSummaries(id));
+    public ResponseEntity<List<java.util.Map<String, Object>>> getDocuments(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        BidRequest bidRequest = bidRequestService.findAccessible(id, userDetails.getMember());
+        return ResponseEntity.ok(documentVersionService.getDocumentSummaries(bidRequest.getId()));
     }
 }

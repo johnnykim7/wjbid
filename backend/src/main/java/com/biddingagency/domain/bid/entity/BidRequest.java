@@ -146,6 +146,13 @@ public class BidRequest extends BaseEntity {
     }
 
     /**
+     * 낸 회원과 관리자만 이 입찰 건을 본다 (BIZ-060)
+     */
+    public boolean isAccessibleBy(Member viewer) {
+        return viewer.isAdmin() || member.getId().equals(viewer.getId());
+    }
+
+    /**
      * Get current state name for display
      */
     public String getStateDisplay() {

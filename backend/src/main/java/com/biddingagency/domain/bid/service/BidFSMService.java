@@ -1,6 +1,7 @@
 package com.biddingagency.domain.bid.service;
 
 import com.biddingagency.domain.bid.CustomerTransitionNotAllowedException;
+import com.biddingagency.domain.bid.BidRequestNotFoundException;
 import com.biddingagency.domain.bid.entity.BidRequest;
 import com.biddingagency.domain.bid.entity.BidRequestState;
 import com.biddingagency.domain.bid.repository.BidRequestRepository;
@@ -10,6 +11,7 @@ import com.biddingagency.domain.document.entity.BidDocument;
 import com.biddingagency.domain.document.entity.DocumentType;
 import com.biddingagency.domain.document.service.BidDocumentService;
 import com.biddingagency.domain.event.BidRequestStateChangedEvent;
+import com.biddingagency.domain.member.entity.Member;
 import com.biddingagency.domain.opportunity.entity.OpportunityRequirementItem;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -212,17 +214,22 @@ public class BidFSMService {
     /**
      * CR-017 ③: 고객이 호출하는 상태 전이 — 허용 화이트리스트 검증 후 transition 위임.
      * 고객은 CUSTOMER_ALLOWED_TARGET_STATES(=DOCS_RECEIVED)만 가능. 그 외는 관리자 전용이라 거부.
+     * CR-143: 허용 상태를 본 다음 그 건을 낸 회원(또는 관리자)인지 본다. 남의 건은 없는 건과 같은 404 (BIZ-060).
      *
-     * @throws IllegalStateException 고객이 허용되지 않은 상태로 전이를 시도한 경우
+     * @throws CustomerTransitionNotAllowedException 고객이 허용되지 않은 상태로 전이를 시도한 경우
+     * @throws BidRequestNotFoundException 없거나 남의 입찰 건인 경우
      */
     @Transactional
     public BidRequest customerTransition(UUID bidRequestId, BidRequestState toState,
-                                          UUID userId, String username, String notes) {
+                                          Member actor, String username, String notes) {
         if (!CUSTOMER_ALLOWED_TARGET_STATES.contains(toState)) {
             log.warn("고객 전이 거부: bidRequestId={}, toState={} (관리자 전용 전이)", bidRequestId, toState);
             throw new CustomerTransitionNotAllowedException(toState);
         }
-        return transition(bidRequestId, toState, userId, username, notes);
+        bidRequestRepository.findByIdWithDetails(bidRequestId)
+                .filter(br -> br.isAccessibleBy(actor))
+                .orElseThrow(BidRequestNotFoundException::new);
+        return transition(bidRequestId, toState, actor.getId(), username, notes);
     }
 
     /**

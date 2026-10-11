@@ -1,6 +1,7 @@
 package com.biddingagency.domain.bid.service;
 
 import com.biddingagency.domain.bid.entity.BidRequest;
+import com.biddingagency.domain.bid.BidRequestNotFoundException;
 import com.biddingagency.domain.bid.entity.BidRequestState;
 import com.biddingagency.domain.bid.dto.BidRequestDto;
 import com.biddingagency.domain.bid.repository.BidRequestRepository;
@@ -107,6 +108,15 @@ public class BidRequestService {
     public BidRequest findByIdWithDetails(UUID id) {
         return bidRequestRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new IllegalArgumentException("Bid request not found: " + id));
+    }
+
+    /**
+     * 고객 화면이 여는 입찰 건. 남의 건은 없는 건과 같은 404 로 답해 그 번호의 건이 있는지 알리지 않는다 (BIZ-060)
+     */
+    public BidRequest findAccessible(UUID id, Member viewer) {
+        return bidRequestRepository.findByIdWithDetails(id)
+                .filter(br -> br.isAccessibleBy(viewer))
+                .orElseThrow(BidRequestNotFoundException::new);
     }
 
     /**

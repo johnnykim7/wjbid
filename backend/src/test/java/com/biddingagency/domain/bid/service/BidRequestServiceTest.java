@@ -2,6 +2,7 @@ package com.biddingagency.domain.bid.service;
 
 import com.biddingagency.domain.bid.entity.BidRequest;
 import com.biddingagency.domain.bid.entity.BidRequestState;
+import com.biddingagency.domain.bid.BidRequestNotFoundException;
 import com.biddingagency.domain.bid.repository.BidRequestRepository;
 import com.biddingagency.domain.member.entity.Member;
 import com.biddingagency.domain.member.repository.MemberRepository;
@@ -18,6 +19,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -170,5 +172,62 @@ class BidRequestServiceTest {
         // then
         assertThat(result).isNotNull();
         then(bidRequestRepository).should().findByMemberId(eq(memberId), any());
+    }
+
+    // TC-OWN-001 ~ TC-OWN-004: 입찰 건은 낸 회원과 관리자만 (BIZ-060)
+    @Test
+    @DisplayName("TC-OWN-001 본인건_열기_그입찰건")
+    void 본인건_findAccessible_열림() {
+        // given
+        UUID id = UUID.randomUUID();
+        Member owner = member(Member.Role.CUSTOMER);
+        BidRequest bidRequest = BidRequest.builder().member(owner).build();
+        given(bidRequestRepository.findByIdWithDetails(id)).willReturn(Optional.of(bidRequest));
+
+        // when & then
+        assertThat(bidRequestService.findAccessible(id, owner)).isSameAs(bidRequest);
+    }
+
+    @Test
+    @DisplayName("TC-OWN-002 남의건_열기_404")
+    void 남의건_findAccessible_막힘() {
+        // given
+        UUID id = UUID.randomUUID();
+        BidRequest bidRequest = BidRequest.builder().member(member(Member.Role.CUSTOMER)).build();
+        given(bidRequestRepository.findByIdWithDetails(id)).willReturn(Optional.of(bidRequest));
+
+        // when & then
+        assertThatThrownBy(() -> bidRequestService.findAccessible(id, member(Member.Role.CUSTOMER)))
+                .isInstanceOf(BidRequestNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("TC-OWN-003 관리자_남의건열기_그입찰건")
+    void 관리자_findAccessible_열림() {
+        // given
+        UUID id = UUID.randomUUID();
+        BidRequest bidRequest = BidRequest.builder().member(member(Member.Role.CUSTOMER)).build();
+        given(bidRequestRepository.findByIdWithDetails(id)).willReturn(Optional.of(bidRequest));
+
+        // when & then
+        assertThat(bidRequestService.findAccessible(id, member(Member.Role.ADMIN))).isSameAs(bidRequest);
+    }
+
+    @Test
+    @DisplayName("TC-OWN-004 없는건_열기_404")
+    void 없는건_findAccessible_막힘() {
+        // given
+        UUID id = UUID.randomUUID();
+        given(bidRequestRepository.findByIdWithDetails(id)).willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> bidRequestService.findAccessible(id, member(Member.Role.CUSTOMER)))
+                .isInstanceOf(BidRequestNotFoundException.class);
+    }
+
+    private static Member member(Member.Role role) {
+        Member member = Member.builder().role(role).build();
+        ReflectionTestUtils.setField(member, "id", UUID.randomUUID());
+        return member;
     }
 }

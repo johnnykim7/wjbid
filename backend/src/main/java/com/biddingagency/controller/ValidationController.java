@@ -7,6 +7,7 @@ import com.biddingagency.domain.document.repository.BidDocumentRepository;
 import com.biddingagency.domain.opportunity.entity.Opportunity;
 import com.biddingagency.domain.opportunity.repository.OpportunityRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -14,9 +15,11 @@ import java.util.*;
 /**
  * FlowGuard Validation API — 읽기 전용 상태 조회.
  * FlowGuard Probe가 비즈니스 시나리오 실행 결과를 검증하기 위해 사용한다.
+ * 인증 없이 모든 입찰 건을 보여 주므로 설정으로 켠 곳(로컬)에만 띄운다 (CR-143).
  */
 @RestController
 @RequestMapping("/validation")
+@ConditionalOnProperty(name = "app.validation-api.enabled", havingValue = "true")
 @RequiredArgsConstructor
 public class ValidationController {
 

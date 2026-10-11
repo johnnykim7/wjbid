@@ -118,6 +118,9 @@ springdoc:
 
 # Application-Specific Configuration
 app:
+  # FlowGuard 시나리오 확인용 무인증 조회 통로(/validation). 운영에서는 닫는다 (CR-143)
+  validation-api:
+    enabled: false
   # JWT Configuration
   jwt:
     secret: ${JWT_SECRET:your-secret-key-change-this-in-production-must-be-at-least-256-bits}
