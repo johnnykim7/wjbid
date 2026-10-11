@@ -69,7 +69,7 @@ public class PreCheckService {
     private static final ZoneId SERVICE_ZONE = ZoneId.of(DocumentExpiryService.SERVICE_ZONE);
     private static final String CLIENT_DOCS_PREFIX = "client-docs/";
     private static final int DOCUMENT_CATEGORY_MAX = 100;
-    /** 서류 접수로 넘기기 전까지만 서류를 잇고 바꾼다. 넘긴 뒤에는 판정만 보인다 */
+    /** 서류 접수로 전환하기 전까지만 서류를 잇고 바꾼다. 전환한 뒤에는 판정만 보인다 */
     private static final Set<BidRequestState> EDITABLE_STATES = EnumSet.of(BidRequestState.CREATED, BidRequestState.DOCS_PENDING);
 
     private final BidRequestRepository bidRequestRepository;
@@ -328,7 +328,7 @@ public class PreCheckService {
 
     private static void requireEditable(BidRequest br) {
         if (!EDITABLE_STATES.contains(br.getState())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "서류 접수로 넘긴 뒤에는 서류를 바꿀 수 없습니다");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "서류 접수로 전환한 뒤에는 서류를 바꿀 수 없습니다");
         }
     }
 
