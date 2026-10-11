@@ -406,7 +406,7 @@ CR-137 전에 있던 `POST /opportunities/{id}/qualification-check`(AI 자격 �
 
 ### G-2. 제출 전 검사 (CR-141)
 
-입찰 건마다 고객 올림 요구 항목과 올린 서류를 맞춰 판정한다. 그 입찰 건을 낸 회원만(BIZ-049). 응답은 ApiResponse 래퍼.
+입찰 건마다 고객 올림 요구 항목과 올린 서류를 맞춰 판정한다. 그 입찰 건을 낸 회원만(BIZ-049). 응답은 다른 API 와 같이 래퍼 없이 본문을 그대로 준다.
 
 | 메서드 | 경로 | 설명 | 인증 | 기능 ID |
 |--------|------|------|------|---------|
@@ -447,11 +447,14 @@ CR-137 전에 있던 `POST /opportunities/{id}/qualification-check`(AI 자격 �
   ],
   "platformItems": [ { "requirementItemId": "uuid", "title": "Technical Proposal", "fulfillmentParty": "PLATFORM_GENERATED", "sourceRef": "..." } ],
   "summary": { "required": 5, "uploaded": 3, "missing": 2, "mismatch": 1, "needsHuman": 2 },
-  "canTransition": false
+  "canTransition": false,
+  "editable": true,
+  "maxUploadMb": 50
 }
 ```
 - presence: UPLOADED, MISSING. format.verdict: MATCH, MISMATCH, NEEDS_HUMAN, NO_CONDITION, NOT_UPLOADED(BIZ-047). pages.verdict: MATCH, OVER, NEEDS_HUMAN, NO_CONDITION, NOT_UPLOADED(BIZ-048). basis 는 공고 조건 원문 그대로, allowed 와 limit 은 원문에서 읽어 낸 기준이고 읽지 못하면 빈 배열과 null.
 - canTransition 은 서류 대기 상태이고 필수 고객 서류가 모두 이어졌을 때 true(BIZ-046). 형식·쪽수 판정은 넣지 않는다.
+- editable 은 접수 전(CREATED)이나 서류 대기(DOCS_PENDING)일 때 true. false 면 G-1 의 올리기, 서류함에서 고르기, 빼기, 자동 채우기가 409 로 거부된다. maxUploadMb 는 올릴 수 있는 파일 한도(spring.servlet.multipart.max-file-size)라 화면이 숫자를 따로 갖지 않는다.
 
 ---
 
