@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getAdminOpportunities, getAdminOpportunityTypes, deleteOpportunity, translateOpportunityTitle, createManualOpportunity } from '../api/client'
+import { DdayBadge } from '../utils/dday'
 
 interface OpportunityAdmin {
   id: string
@@ -344,7 +345,12 @@ export default function OpportunityAdminPage() {
                     {opp.postedDate ? new Date(opp.postedDate).toLocaleDateString('ko') : '-'}
                   </td>
                   <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
-                    {opp.responseDeadline ? new Date(opp.responseDeadline).toLocaleDateString('ko') : '-'}
+                    {opp.responseDeadline ? (
+                      <div className="flex items-center gap-1.5">
+                        <span>{new Date(opp.responseDeadline).toLocaleDateString('ko')}</span>
+                        <DdayBadge deadline={opp.responseDeadline} />
+                      </div>
+                    ) : '-'}
                   </td>
                   <td className="px-4 py-3 text-center">
                     {opp.attachmentCount > 0 ? (

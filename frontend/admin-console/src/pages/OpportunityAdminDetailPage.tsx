@@ -112,8 +112,10 @@ export default function OpportunityAdminDetailPage() {
       const res = await createNotice(id)
       const noticeId = res?.data?.noticeId
       navigate(noticeId ? `/notices/${noticeId}` : '/notices')
-    } catch (err) {
+    } catch (err: any) {
       console.error('공고문 생성 실패:', err)
+      const reason = err?.response?.data?.reason
+      alert(reason || '공고문 생성에 실패했습니다.')
     } finally {
       setActionLoading(false)
     }
@@ -292,8 +294,9 @@ export default function OpportunityAdminDetailPage() {
           </button>
           <button
             onClick={handleCreateNotice}
-            disabled={actionLoading}
-            className="px-4 py-2 text-sm rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-40"
+            disabled={actionLoading || attachments.length === 0}
+            title={attachments.length === 0 ? '첨부파일이 있어야 공고문을 만들 수 있습니다' : undefined}
+            className="px-4 py-2 text-sm rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <i className="fa-solid fa-wand-magic-sparkles mr-1.5" />공고문 만들기
           </button>

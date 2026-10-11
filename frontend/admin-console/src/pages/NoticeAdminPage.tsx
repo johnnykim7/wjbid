@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getAdminNotices } from '../api/client'
+import { DdayBadge } from '../utils/dday'
 
 interface NoticeAdmin {
   id: string
@@ -8,7 +9,9 @@ interface NoticeAdmin {
   originTitle: string
   solicitationNumber?: string
   organizationName?: string
-  responseDeadline?: string
+  noticeTypeKo?: string       // 공고유형(한글)
+  postedDate?: string         // 공고일
+  responseDeadline?: string   // 마감일
   koreanTitle?: string
   generationStatus: 'PENDING' | 'ANALYZING' | 'COMPLETED' | 'FAILED'
   visibility: 'HIDDEN' | 'VISIBLE'
@@ -72,8 +75,11 @@ export default function NoticeAdminPage() {
         ) : (
           <table className="w-full text-sm table-fixed">
             <colgroup>
-              <col className="w-[45%]" />
+              <col className="w-[32%]" />
               <col />
+              <col className="w-28" />
+              <col className="w-24" />
+              <col className="w-28" />
               <col className="w-24" />
               <col className="w-20" />
             </colgroup>
@@ -81,6 +87,9 @@ export default function NoticeAdminPage() {
               <tr className="bg-gray-50 border-b border-gray-200">
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">공고문</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">기관</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">공고유형</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">공고일</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">마감일</th>
                 <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">진행상태</th>
                 <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">노출</th>
               </tr>
@@ -94,6 +103,20 @@ export default function NoticeAdminPage() {
                   </td>
                   <td className="px-4 py-3 text-gray-600">
                     <div className="truncate" title={n.organizationName || ''}>{n.organizationName || '-'}</div>
+                  </td>
+                  <td className="px-4 py-3 text-gray-600">
+                    <div className="truncate" title={n.noticeTypeKo || ''}>{n.noticeTypeKo || '-'}</div>
+                  </td>
+                  <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                    {n.postedDate ? new Date(n.postedDate).toLocaleDateString('ko') : '-'}
+                  </td>
+                  <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                    {n.responseDeadline ? (
+                      <div className="flex items-center gap-1.5">
+                        <span>{new Date(n.responseDeadline).toLocaleDateString('ko')}</span>
+                        <DdayBadge deadline={n.responseDeadline} />
+                      </div>
+                    ) : '-'}
                   </td>
                   <td className="px-4 py-3 text-center whitespace-nowrap">
                     <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${GEN_COLORS[n.generationStatus] || ''}`}>
