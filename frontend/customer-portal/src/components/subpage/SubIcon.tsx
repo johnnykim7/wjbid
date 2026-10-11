@@ -9,9 +9,10 @@ const EXTRA: Record<string, ReactNode> = {
   mail: <><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></>,
   hour: <path d="M6 2h12M6 22h12M7 2v4l5 6-5 6v4M17 2v4l-5 6 5 6v4" />,
   clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
+  user: <><circle cx="12" cy="8" r="4" /><path d="M4 20c1.5-3.5 4.5-5 8-5s6.5 1.5 8 5" /></>,
 }
 
-export type SubIconName = IconName | 'home' | 'flag' | 'globe' | 'mail' | 'hour' | 'clock'
+export type SubIconName = IconName | 'home' | 'flag' | 'globe' | 'mail' | 'hour' | 'clock' | 'user'
 
 export function SubIcon({ name, className }: { name: SubIconName; className?: string }) {
   if (!(name in EXTRA)) return <Icon name={name as IconName} />

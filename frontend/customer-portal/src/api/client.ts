@@ -1,4 +1,5 @@
 import axios from 'axios'
+import type { EligibilityAnswerValue, EligibilityDetail, EligibilityNoticeRow, EligibilitySaved } from '../types'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
@@ -213,3 +214,13 @@ export const getUnreadNotificationCount = () =>
 
 export const markNotificationAsRead = (id: string) =>
   api.patch(`/notifications/${id}/read`)
+
+// Eligibility (CR-137)
+export const getEligibilityNotices = () =>
+  api.get<EligibilityNoticeRow[]>('/eligibility/notices')
+
+export const getEligibilityDetail = (noticeId: string) =>
+  api.get<EligibilityDetail>(`/eligibility/notices/${noticeId}`)
+
+export const saveEligibilityAnswer = (noticeId: string, itemNo: number, answer: EligibilityAnswerValue) =>
+  api.put<EligibilitySaved>(`/eligibility/notices/${noticeId}/answers/${itemNo}`, { answer })

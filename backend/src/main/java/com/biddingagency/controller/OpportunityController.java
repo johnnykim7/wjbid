@@ -113,21 +113,6 @@ public class OpportunityController {
     }
 
     /**
-     * Qualification check (async via Aimbase)
-     */
-    @PostMapping("/{id}/qualification-check")
-    @Operation(summary = "AI 자격 진단 요청")
-    public ResponseEntity<java.util.Map<String, String>> qualificationCheck(@PathVariable UUID id) {
-        opportunityService.findById(id); // existence check
-        // TODO: Aimbase 연동 후 실제 AI 자격 진단 구현
-        return ResponseEntity.accepted().body(java.util.Map.of(
-                "status", "ACCEPTED",
-                "message", "Qualification check requested. Results will be available shortly.",
-                "opportunityId", id.toString()
-        ));
-    }
-
-    /**
      * Get recently posted opportunities
      */
     @GetMapping("/recent")

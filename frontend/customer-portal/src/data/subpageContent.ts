@@ -24,8 +24,8 @@ export const INQUIRY_TYPE = {
 } as const
 export type InquiryType = (typeof INQUIRY_TYPE)[keyof typeof INQUIRY_TYPE]
 
-export const inquiryHref = (type: InquiryType, title: string) =>
-  `/support?type=${type}&title=${encodeURIComponent(title)}`
+export const inquiryHref = (type: InquiryType, title: string, content?: string) =>
+  `/support?type=${type}&title=${encodeURIComponent(title)}${content ? `&content=${encodeURIComponent(content)}` : ''}`
 export const consultTitle = (name: string) => `${name} 상담 신청`
 
 const PHOTO = {
@@ -431,11 +431,6 @@ export const PENDING: PendingInfo[] = [
     key: 'naics-trend', photo: PHOTO.hall,
     desc: ['업종별로 공고가 얼마나 나왔는지와 최근 공고를 보여 드립니다.'],
     alts: [ALT.open, ALT.profile, ALT.glossary],
-  },
-  {
-    key: 'eligibility', tier: 'm', photo: PHOTO.desk,
-    desc: ['공고의 참가 자격을 우리 회사 정보에 맞춰 하나씩 확인해 드립니다.'],
-    alts: [ALT.profile, ALT.open, ALT.materials],
   },
   {
     key: 'opportunity-fit', tier: 'm', photo: PHOTO.desk,

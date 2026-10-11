@@ -21,6 +21,8 @@ export default function LoginPage() {
   const passwordRef = useRef<HTMLInputElement>(null)
   // 회원가입을 마치고 넘어오면 가입 완료 안내를 띄운다
   const registered = (location.state as { registered?: boolean } | null)?.registered === true
+  // 로그인해야 쓰는 화면에서 넘어오면 로그인 뒤 그 화면으로 돌려보낸다(CR-137)
+  const from = (location.state as { from?: string } | null)?.from
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -33,7 +35,7 @@ export default function LoginPage() {
     try {
       const { data } = await login(email.trim(), password)
       signIn(data.email ?? email.trim(), data.accessToken, data.refreshToken)
-      navigate('/search', { replace: true })
+      navigate(from?.startsWith('/') ? from : '/search', { replace: true })
     } catch {
       // 이메일은 남기고 비밀번호만 다시 넣게 한다
       setError('이메일 또는 비밀번호가 맞지 않습니다. 다시 확인해 주세요.')

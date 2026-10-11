@@ -45,6 +45,8 @@ export interface AnalysisRequiredDocuments {
     pageLimit?: string
     notes?: string
   }[]
+  /** 참가 자격. 공고 상세는 있는지만 보고 적격성 진단 단추를 띄운다(CR-137) */
+  eligibility?: { title?: string }[]
 }
 
 export interface AnalysisDocumentFormats {
@@ -152,4 +154,70 @@ export const STATE_BADGE: Record<string, 'draft' | 'review' | 'active' | 'final'
   AWARDED: 'active',
   NOT_AWARDED: 'closed',
   CLOSED: 'closing',
+}
+
+/** 적격성 진단 (CR-137, T3-2 「적격성 진단」). 답은 회원이 고른 것이고 서버는 참여 가능 판정을 하지 않는다(BIZ-032) */
+export type EligibilityAnswerValue = 'HAVE' | 'LACK' | 'UNSURE'
+
+export interface EligibilityNoticeRow {
+  noticeId: string
+  solicitationNumber: string
+  koreanTitle: string | null
+  responseDeadline: string | null
+  open: boolean
+  itemCount: number
+  answeredCount: number
+}
+
+export interface EligibilityNoticeHead {
+  noticeId: string
+  solicitationNumber: string
+  koreanTitle: string | null
+  organizationName: string | null
+  responseDeadline: string | null
+  open: boolean
+}
+
+export interface EligibilityVaultDocument {
+  id: string
+  name: string
+  uploadedAt: string
+}
+
+export interface EligibilityItem {
+  itemNo: number
+  title: string
+  description: string | null
+  mandatory: boolean
+  gate: boolean
+  sourceRef: string | null
+  evidenceBy: string | null
+  answer: EligibilityAnswerValue | null
+  /** 답한 뒤 공고 분석이 바뀌어 옛 답을 쓰지 않는다 */
+  stale: boolean
+  answeredAt: string | null
+  vaultCategory: string | null
+  vaultCategoryName: string | null
+  vaultDocuments: EligibilityVaultDocument[]
+}
+
+/** 개수는 통과 조건 자격만 센다. allCount 는 전체 자격 수 */
+export interface EligibilitySummary {
+  gateCount: number
+  have: number
+  lack: number
+  unsure: number
+  unanswered: number
+  allCount: number
+}
+
+export interface EligibilityDetail {
+  notice: EligibilityNoticeHead
+  items: EligibilityItem[]
+  summary: EligibilitySummary
+}
+
+export interface EligibilitySaved {
+  item: EligibilityItem
+  summary: EligibilitySummary
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { Link, useParams, useNavigate } from 'react-router-dom'
 import { Button } from '../components/ui/button'
 import { Button as DsButton } from '@therecommerce-develop/ds-ui'
 import { Badge } from '../components/ui/badge'
@@ -8,6 +8,7 @@ import { AiProposalModal } from '../components/modals/AiProposalModal'
 import { getOpportunity, checkBookmark, addBookmark, removeBookmark } from '../api/client'
 import type { Opportunity } from '../types'
 import NoticeDocumentView from '../components/NoticeDocumentView'
+import { ELIGIBILITY_TEXT, eligibilityHref } from '../data/eligibilityContent'
 
 export default function BidDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -194,7 +195,15 @@ export default function BidDetailPage() {
                         )}
                         {bid.analysis.summary.eligibility && (
                           <div className="bg-surface rounded-lg p-4 border border-line">
-                            <div className="text-xs font-semibold text-ink-mute uppercase mb-2">참여 자격</div>
+                            <div className="flex items-center justify-between gap-2 mb-2">
+                              <div className="text-xs font-semibold text-ink-mute uppercase">참여 자격</div>
+                              {/* 공고 분석에 참가 자격 목록이 있어야 진단할 수 있다(CR-137, BIZ-033) */}
+                              {(bid.analysis.requiredDocuments?.eligibility?.length ?? 0) > 0 && (
+                                <DsButton asChild variant="primary" size="sm" className="bg-brand hover:bg-brand-strong">
+                                  <Link to={eligibilityHref(bid.id)}>{ELIGIBILITY_TEXT.title}</Link>
+                                </DsButton>
+                              )}
+                            </div>
                             <p className="text-sm text-ink-sub leading-relaxed">{bid.analysis.summary.eligibility}</p>
                           </div>
                         )}

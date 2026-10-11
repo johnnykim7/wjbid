@@ -20,6 +20,8 @@ import TermsPage from './pages/TermsPage'
 import PrivacyPage from './pages/PrivacyPage'
 import RefundPage from './pages/RefundPage'
 import DisclaimerPage from './pages/DisclaimerPage'
+import EligibilityPage from './pages/EligibilityPage'
+import EligibilityDetailPage from './pages/EligibilityDetailPage'
 import CalendarPage from './pages/CalendarPage'
 import SavedSearchesPage from './pages/SavedSearchesPage'
 import BillingPage from './pages/BillingPage'
@@ -65,6 +67,11 @@ function AppRoutes() {
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/refund" element={<RefundPage />} />
         <Route path="/disclaimer" element={<DisclaimerPage />} />
+
+        {/* 적격성 진단은 비로그인에게도 안내를 보이고, 공고별 진단은 화면이 로그인으로 보낸다(CR-137) */}
+        <Route path="/fit/eligibility" element={<EligibilityPage />} />
+        <Route path="/fit/eligibility/:noticeId" element={<EligibilityDetailPage />} />
+
         {/* 로그인 / 회원가입도 공통 틀 안에 (CR-131) */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />

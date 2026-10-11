@@ -33,6 +33,7 @@ const EMPTY_FORM = { name: '', email: '', typeCode: '', title: '', content: '' }
 interface Prefilled {
   typeCode?: string
   title?: string
+  content?: string
 }
 
 function FieldLabel({ htmlFor, children }: { htmlFor: string; children: string }) {
@@ -60,14 +61,16 @@ export default function SupportPage() {
   useEffect(() => {
     const wantedType = params.get('type')
     const wantedTitle = params.get('title')
+    const wantedContent = params.get('content')
     getInquiryTypes()
       .then((res) => {
         const title = wantedTitle ? wantedTitle.slice(0, INQUIRY_MAX.title) : undefined
+        const content = wantedContent ? wantedContent.slice(0, INQUIRY_MAX.content) : undefined
         const typeCode = res.data.some((t) => t.code === wantedType) ? wantedType ?? undefined : undefined
         setTypes(res.data)
-        setForm((prev) => ({ ...prev, typeCode: defaultTypeCode(res.data), title: title ?? prev.title }))
-        if (typeCode || title) {
-          setPrefilled({ typeCode, title })
+        setForm((prev) => ({ ...prev, typeCode: defaultTypeCode(res.data), title: title ?? prev.title, content: content ?? prev.content }))
+        if (typeCode || title || content) {
+          setPrefilled({ typeCode, title, content })
           formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
         }
       })
@@ -167,7 +170,7 @@ export default function SupportPage() {
               </div>
               <div className="fld">
                 <FieldLabel htmlFor="inq-content">{t.label.content}</FieldLabel>
-                <Textarea id="inq-content" className="wj-reset in ta" value={form.content} onChange={set('content')} placeholder={t.placeholder.content} maxLength={INQUIRY_MAX.content} required />
+                <Textarea id="inq-content" className={`wj-reset in ta${filled('content')}`} value={form.content} onChange={set('content')} placeholder={t.placeholder.content} maxLength={INQUIRY_MAX.content} required />
               </div>
               {typesFailed && <div className="msg err" role="alert"><Icon name="alert" /><span>{t.typesFailed}</span></div>}
               {sendFailed && <div className="msg err" role="alert"><Icon name="alert" /><span>{t.sendFailed}</span></div>}
