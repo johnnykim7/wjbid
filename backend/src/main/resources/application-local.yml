@@ -23,5 +23,8 @@ app:
   aimbase:
     base-url: ${AIMBASE_URL:http://localhost:18133}
   self-base-url: ${SELF_BASE_URL:http://localhost:8183/api}
+  # 로컬 전용 시험 열쇠. 운영 열쇠는 서버 .env 의 MCP_API_KEY 에만 있다
+  mcp:
+    api-key: ${MCP_API_KEY:local-mcp-key}
   bp-notification:
     base-url: ${BP_NOTIFICATION_URL:http://localhost:18132/api/v1}

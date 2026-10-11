@@ -69,8 +69,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/health").permitAll()
                         .requestMatchers(HttpMethod.GET, "/validation/**").permitAll()
 
-                        // MCP Server — Aimbase에서 server-to-server 호출 (JWT 불필요)
-                        // HTTP POST + SSE 전송 모두 허용 (CR-002)
+                        // MCP Server — Aimbase에서 server-to-server 호출 (JWT 불필요, CR-002)
+                        // 로그인 대신 Aimbase 열쇠를 McpAccessFilter 가 확인한다 (CR-144, BIZ-061)
                         .requestMatchers("/mcp/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/mcp").permitAll()
 

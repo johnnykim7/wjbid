@@ -1,0 +1,535 @@
+{
+  "success": true,
+  "data": {
+    "id": "2176f92d-a167-476d-8ced-9687eb598e76",
+    "name": "bidding-agency-mcp",
+    "transport": "sse",
+    "config": {
+      "url": "http://host.docker.internal:8183/api/mcp"
+    },
+    "autoStart": true,
+    "status": "connected",
+    "toolsCache": [
+      {
+        "name": "get_opportunity",
+        "description": "입찰 공고 상세 정보를 조회합니다. 공고 ID로 제목, 기관명, 마감일, 공고 링크 등을 반환합니다.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "opportunityId"
+          ],
+          "properties": {
+            "opportunityId": {
+              "type": "string",
+              "description": "공고 UUID"
+            }
+          }
+        }
+      },
+      {
+        "name": "search_opportunities",
+        "description": "키워드로 입찰 공고를 검색합니다. 제목 기준으로 검색하며 최신순으로 반환합니다.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "keyword"
+          ],
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "description": "최대 결과 수 (기본 10, 최대 50)"
+            },
+            "keyword": {
+              "type": "string",
+              "description": "검색 키워드"
+            }
+          }
+        }
+      },
+      {
+        "name": "get_opportunity_requirements",
+        "description": "공고에 저장된 요구사항 목록을 조회합니다. 카테고리, 필수 여부, 상세 설명을 포함합니다.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "opportunityId"
+          ],
+          "properties": {
+            "opportunityId": {
+              "type": "string",
+              "description": "공고 UUID"
+            }
+          }
+        }
+      },
+      {
+        "name": "get_bid_request",
+        "description": "입찰 요청의 현재 상태, 연결된 공고 ID, 담당자 정보를 조회합니다.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "bidRequestId"
+          ],
+          "properties": {
+            "bidRequestId": {
+              "type": "string",
+              "description": "입찰 요청 UUID"
+            }
+          }
+        }
+      },
+      {
+        "name": "save_document_version",
+        "description": "LLM이 생성한 문서를 입찰 요청에 저장합니다. 해당 문서 타입이 없으면 새로 생성하고, 있으면 새 버전을 추가합니다.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "bidRequestId",
+            "documentType",
+            "contentJson"
+          ],
+          "properties": {
+            "contentJson": {
+              "type": "object",
+              "description": "TipTap JSON 형식의 문서 내용"
+            },
+            "bidRequestId": {
+              "type": "string",
+              "description": "입찰 요청 UUID"
+            },
+            "documentType": {
+              "type": "string",
+              "description": "COVER_LETTER | TECHNICAL_PROPOSAL | PAST_PERFORMANCE | COMPANY_PROFILE | COMPLIANCE_MATRIX | PRICING_SUMMARY | OTHER"
+            },
+            "changeSummary": {
+              "type": "string",
+              "description": "변경 요약 (optional)"
+            }
+          }
+        }
+      },
+      {
+        "name": "get_document_template",
+        "description": "문서 타입에 맞는 TipTap JSON 템플릿을 조회합니다. 문서를 생성할 때 반드시 이 템플릿 구조를 기반으로 작성하세요.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "documentType"
+          ],
+          "properties": {
+            "documentType": {
+              "type": "string",
+              "description": "COVER_LETTER | TECHNICAL_PROPOSAL | PAST_PERFORMANCE | COMPANY_PROFILE | COMPLIANCE_MATRIX | PRICING_SUMMARY | OTHER"
+            }
+          }
+        }
+      },
+      {
+        "name": "transition_bid_state",
+        "description": "입찰 요청의 상태를 전이합니다. FSM 화이트리스트 규칙에 따라 허용된 전이만 실행됩니다.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "bidRequestId",
+            "targetState"
+          ],
+          "properties": {
+            "notes": {
+              "type": "string",
+              "description": "전이 사유 (선택)"
+            },
+            "targetState": {
+              "type": "string",
+              "description": "전이할 상태 (CREATED, DOCS_PENDING, DOCS_RECEIVED, ANALYZING, GENERATING, REVIEW, CONFIRMED, SUBMITTED, CLOSED)"
+            },
+            "bidRequestId": {
+              "type": "string",
+              "description": "입찰 요청 UUID"
+            }
+          }
+        }
+      },
+      {
+        "name": "get_opportunity_analysis",
+        "description": "공고문(Notice) 한글화/요약 결과를 조회합니다 (요약, 문서양식, 필요서류, LLM 프롬프트 프리셋).",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "noticeId"
+          ],
+          "properties": {
+            "noticeId": {
+              "type": "string",
+              "description": "공고문 UUID"
+            }
+          }
+        }
+      },
+      {
+        "name": "save_opportunity_analysis",
+        "description": "공고문(Notice) 한글화/요약 결과를 저장합니다 (Aimbase 워크플로우 콜백용).",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "noticeId"
+          ],
+          "properties": {
+            "summary": {
+              "type": "object",
+              "properties": {
+                "scope": {
+                  "type": "string",
+                  "description": "작업 범위 (Scope of Work)"
+                },
+                "keyDates": {
+                  "type": "array",
+                  "description": "주요 일정 [{label, date, note}]"
+                },
+                "overview": {
+                  "type": "string",
+                  "description": "공고 핵심 요약 (2-3문장)"
+                },
+                "budgetInfo": {
+                  "type": "string",
+                  "description": "예산 정보"
+                },
+                "eligibility": {
+                  "type": "string",
+                  "description": "참여 자격 요건"
+                },
+                "specialNotes": {
+                  "type": "array",
+                  "description": "특이사항 목록"
+                },
+                "evaluationCriteria": {
+                  "type": "string",
+                  "description": "평가 기준"
+                }
+              },
+              "description": "공고 요약본"
+            },
+            "noticeId": {
+              "type": "string",
+              "description": "공고문 UUID"
+            },
+            "contentJson": {
+              "type": "object",
+              "description": "TipTap JSON 본문 — NOTICE_VIEW 템플릿 골격을 채워서 반환 (PDF 풍부도). 노드 타입: noticeHeader/metaGrid/kvTable/dataTable/groupedList/calloutList 등 커스텀 + heading/paragraph/bulletList 표준"
+            },
+            "koreanTitle": {
+              "type": "string",
+              "description": "한글화된 공고 제목"
+            },
+            "documentFormats": {
+              "type": "object",
+              "properties": {
+                "formats": {
+                  "type": "array",
+                  "description": "섹션별 양식 [{section, description, pageLimit, fileFormat, fontRequirements}]"
+                },
+                "submissionMethod": {
+                  "type": "string",
+                  "description": "제출 방법"
+                },
+                "generalInstructions": {
+                  "type": "string",
+                  "description": "전반적 양식 안내"
+                }
+              },
+              "description": "문서 양식 정보"
+            },
+            "llmPromptPreset": {
+              "type": "object",
+              "description": "LLM 프롬프트 프리셋 (내부용)"
+            },
+            "requiredDocuments": {
+              "type": "object",
+              "properties": {
+                "factors": {
+                  "type": "array",
+                  "description": "평가·제출 FACTOR 트리 [{factorId(예 'I'), factorTitle(예 'TECHNICAL'), subfactors:[{subfactorId(예 'I-1'), name, description, fulfillmentParty('CLIENT_UPLOAD'=고객업로드(사업자등록·업종허가·과거실적)/'PLATFORM_GENERATED'=플랫폼생성(기술·가격제안서)/'SYSTEM_FORM'=시스템양식(SF1449·SF30·52.212-3)), mandatory(boolean), format, pageLimit, sourceRef(근거 위치 예 'Addendum to 52.212-1 §4.1 Sub-Factor 1'), notes}]}]"
+                },
+                "documents": {
+                  "type": "array",
+                  "description": "[하위호환] 평면 서류 목록 [{name, description, mandatory, format, pageLimit, notes}] — fulfillmentParty=CLIENT_UPLOAD 항목만 채움"
+                },
+                "eligibility": {
+                  "type": "array",
+                  "description": "참여 자격요건 [{title, description, mandatory(boolean), evidenceBy(이 자격을 증빙하는 서류 슬롯 name — factors의 subfactor.name과 연결, 없으면 null), isGate(boolean — 미충족 시 평가 제외/입찰 부적격), sourceRef(근거 위치)}]"
+                }
+              },
+              "description": "필요 서류·제출물 (CR-033: FACTOR>Subfactor 정밀추출). Instructions to Offerors(52.212-1 Addendum)·PWS를 읽어 추출"
+            }
+          }
+        }
+      },
+      {
+        "name": "get_past_submissions",
+        "description": "특정 회원의 과거 제출(SUBMITTED) 입찰 이력과 문서 목록을 조회합니다.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "memberId"
+          ],
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "description": "최대 건수 (기본 10)"
+            },
+            "memberId": {
+              "type": "string",
+              "description": "회원 UUID"
+            }
+          }
+        }
+      },
+      {
+        "name": "get_reference_samples",
+        "description": "특정 공고유형(industryType)에 매칭되는 성공 제안서들의 원본 파일 메타와 다운로드 URL을 조회합니다. 각 파일의 fileName이 섹션 태그(예: 'FACTOR 3.PAST PERFORMANCE.pdf')이며, downloadUrl을 parse_document(url=...)로 필요한 부분만 읽어 패턴 추출 또는 제안서 작성의 few-shot 참조로 사용하세요. (사실은 복붙 금지 — 형식·전략만 참고)",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "industryType"
+          ],
+          "properties": {
+            "industryType": {
+              "type": "string",
+              "description": "공고유형 (예: GROUND_MAINTENANCE, CUSTODIAL, HVAC, LAUNDRY, WASTE)"
+            }
+          }
+        }
+      },
+      {
+        "name": "save_pattern_guide",
+        "description": "공고유형별 패턴 가이드 추출 결과를 저장합니다 (Aimbase 워크플로우 콜백용). source=HUMAN_EDITED인 가이드는 보호되어 저장이 스킵됩니다 (BIZ-017).",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "industryType",
+            "guide"
+          ],
+          "properties": {
+            "guide": {
+              "type": "object",
+              "properties": {
+                "notes": {
+                  "type": "string",
+                  "description": "한계/검수 포인트"
+                },
+                "taboos": {
+                  "type": "array",
+                  "description": "금기 사항 목록 (string 목록)"
+                },
+                "skeleton": {
+                  "type": "array",
+                  "description": "성공 골격 블록 목록 [{title, description}]"
+                },
+                "checklist": {
+                  "type": "array",
+                  "description": "성공 패턴 규칙 체크리스트 (string 목록)"
+                }
+              },
+              "description": "추출된 패턴 가이드"
+            },
+            "sampleCount": {
+              "type": "integer",
+              "description": "추출에 사용한 건수"
+            },
+            "industryType": {
+              "type": "string",
+              "description": "공고유형"
+            }
+          }
+        }
+      },
+      {
+        "name": "get_proposal_design_input",
+        "description": "제안서 구조 설계(design)에 필요한 입력을 조회합니다. documentId 로 연결된 공고의 한글화 요약·요구서류·공고 본문(content)과, 정제 시 도출된 FACTOR/Subfactor 트리(factorTree)를 반환합니다. factorTree 가 있으면 그대로 chapter/section 으로 복사·검증하고, 없으면(null) 공고 본문(noticeContent/opportunityText)의 Section L/M 에서 FACTOR/Subfactor 를 직접 발췌하세요.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "documentId"
+          ],
+          "properties": {
+            "documentId": {
+              "type": "string",
+              "description": "BidDocument UUID"
+            }
+          }
+        }
+      },
+      {
+        "name": "save_proposal_structure",
+        "description": "design 단계 결과인 chapter/section 트리를 저장합니다 (기존 트리를 비우고 통째 재생성). 공고가 박은 라벨·순서를 그대로 보존하세요(창작 금지). LOCKED section 이 하나라도 있으면 거부됩니다.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "documentId",
+            "chapters"
+          ],
+          "properties": {
+            "chapters": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "sections": {
+                    "type": "array",
+                    "description": "Subfactor 단위 section 배열. Subfactor 강제 안 한 FACTOR 는 section 1개(subfactorLabel=null)로 통합. 각 항목: {subfactorLabel, title, scope(작성 지침), requirementRefs(Section L/M 발췌 ID 배열), minWords(최소 단어 수)}"
+                  },
+                  "factorLabel": {
+                    "type": "string",
+                    "description": "공고가 박은 라벨 그대로 (예: 'I', 'A', 'Factor 1')"
+                  },
+                  "factorTitle": {
+                    "type": "string",
+                    "description": "FACTOR 제목"
+                  },
+                  "sourceSection": {
+                    "type": "string",
+                    "description": "NOTICE_L | NOTICE_M | SECTION_K (기본 NOTICE_M)"
+                  }
+                }
+              },
+              "description": "FACTOR 단위 chapter 배열 (공고 순서 그대로)"
+            },
+            "documentId": {
+              "type": "string",
+              "description": "BidDocument UUID"
+            }
+          }
+        }
+      },
+      {
+        "name": "get_section_context",
+        "description": "한 section 의 본문 작성에 필요한 컨텍스트를 조회합니다. section 의 scope(작성 지침)·title·minWords·requirementRefs 와, 소속 공고유형(industryType)에 매칭되는 참조 샘플 파일 목록(referenceSamples)을 반환합니다. referenceSamples 의 downloadUrl 을 parse_document(url=...)로 읽어 few-shot 으로 참조하되, 사실(회사명·실적·수치)은 복붙하지 마세요.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "sectionId"
+          ],
+          "properties": {
+            "sectionId": {
+              "type": "string",
+              "description": "ProposalSection UUID"
+            }
+          }
+        }
+      },
+      {
+        "name": "save_section_blocks",
+        "description": "write-section 단계 결과인 한 section 의 block 목록을 저장합니다 (해당 section 의 기존 block 을 전량 교체). section 이 LOCKED 이면 거부됩니다. 저장 후 section 상태는 DRAFTED 로 전이됩니다.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "sectionId",
+            "blocks"
+          ],
+          "properties": {
+            "blocks": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "blockType": {
+                    "type": "string",
+                    "description": "PARAGRAPH | BULLET_LIST | TABLE | IMAGE | EVIDENCE (기본 PARAGRAPH)"
+                  },
+                  "contentJson": {
+                    "type": "object",
+                    "description": "TipTap node JSON"
+                  },
+                  "sourceEvidence": {
+                    "type": "object",
+                    "description": "근거 출처 (어떤 client doc/sample 에서 가져왔는지, optional)"
+                  }
+                }
+              },
+              "description": "block 배열 (작성 순서대로)"
+            },
+            "sectionId": {
+              "type": "string",
+              "description": "ProposalSection UUID"
+            }
+          }
+        }
+      },
+      {
+        "name": "get_section_verify_input",
+        "description": "한 section 의 충실성 검증에 필요한 입력을 조회합니다 (CR-031). section 의 scope·요구사항(requirementRefs)·현재 작성된 본문(blocks 의 text 평탄화)·공고 본문 텍스트(opportunityText)·참조 샘플 목록을 반환합니다. 생성된 본문의 각 문장이 공고 본문/첨부에 근거하는지 검증하세요 — 근거 없는 문장은 환각입니다.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "sectionId"
+          ],
+          "properties": {
+            "sectionId": {
+              "type": "string",
+              "description": "ProposalSection UUID"
+            }
+          }
+        }
+      },
+      {
+        "name": "get_notice_verify_input",
+        "description": "공고문 정제 결과의 충실성 검증에 필요한 입력을 조회합니다 (CR-031). noticeId 로 한글 제목·요약(summary)·생성 본문(contentJson 평탄화)·요구서류와 원문 공고 텍스트(opportunityText)·첨부 파일 목록(attachmentFiles)을 반환합니다. 생성된 본문/요약의 각 사실이 원문/첨부에 근거하는지 검증하세요 — 근거 없는 내용은 환각입니다.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "noticeId"
+          ],
+          "properties": {
+            "noticeId": {
+              "type": "string",
+              "description": "Notice UUID"
+            }
+          }
+        }
+      },
+      {
+        "name": "save_verification_result",
+        "description": "충실성 검증 결과를 verification_log 에 저장합니다 (CR-031). 환각(근거 없는 문장)이 1건 이상이면 verdict=FAIL, 없으면 PASS. targetType 은 NOTICE(공고문) 또는 PROPOSAL_SECTION(제안서 section).",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "targetType",
+            "targetId",
+            "verdict"
+          ],
+          "properties": {
+            "attempt": {
+              "type": "integer",
+              "description": "자동 재시도 회차 (기본 1)"
+            },
+            "verdict": {
+              "type": "string",
+              "description": "PASS | FAIL"
+            },
+            "targetId": {
+              "type": "string",
+              "description": "noticeId 또는 sectionId UUID"
+            },
+            "wordCount": {
+              "type": "integer",
+              "description": "결과물 단어 수 (optional)"
+            },
+            "targetType": {
+              "type": "string",
+              "description": "NOTICE | PROPOSAL_SECTION"
+            },
+            "hallucinations": {
+              "type": "array",
+              "description": "근거 없는 문장 배열. 각 항목 {sentence, reason}"
+            },
+            "missingFromSource": {
+              "type": "array",
+              "description": "원문에 있는데 결과물에 누락된 항목 배열. 각 항목 {source_quote, reason}"
+            }
+          }
+        }
+      }
+    ],
+    "createdAt": "2026-03-28T06:44:36.246206Z",
+    "updatedAt": "2026-10-11T14:47:03.892376Z"
+  }
+}

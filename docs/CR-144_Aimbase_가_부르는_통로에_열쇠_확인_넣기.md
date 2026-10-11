@@ -3,7 +3,7 @@
 - CR-ID: CR-144
 - 작성일: 2026-10-11
 - 규모: 소(새 API, 화면, 표 없음. /mcp 로 들어오는 요청에 열쇠 확인 하나, Aimbase 에 건네는 내려받기 주소에 기한 서명). 승인 뒤 설계서(T1-3 BIZ-061, T3-2 MCP 절, T3-5 시험)를 먼저 고친다
-- 상태: 진행중 (방법 승인 10/11 12:28, 설계 반영, 구현 전)
+- 상태: 진행중 (구현과 로컬 확인 10/11 12:36. 운영 .env 열쇠와 Aimbase 등록 머리글 10/12 00:26. 커밋과 BE 배포는 새 서버 배포 스크립트로 진행 예정)
 - 세션: 83a79947 (컨타 043a2d19, 주입 이름 bidding-agency-platform-45467)
 - 착수: 2026-10-11 12:19
 - 앞 CR: CR-143 (범위 1 ①에서 Aimbase 통로를 이 CR 로 나눔), CR-002 (Aimbase 연동, MCP 서버), CR-013 (샘플 내려받기), CR-019·CR-041 (첨부 내려받기)
@@ -64,6 +64,15 @@ Aimbase 안의 Claude CLI 는 Aimbase 자신의 MCP(aimbase-server)에만 붙고
 - 보안 설정은 /mcp/** 를 로그인 없이 연다(SecurityConfig.java:74~75). 열쇠 확인이 없다.
 - 내려받기 주소는 번호만 바꾸면 다른 파일이 열린다(OpportunityAttachmentDownloadController.java:37, RfpFileDownloadController.java:35). 샘플(rfp-files)은 과거 제안서다.
 
+### 3.6 새 운영 서버 (2026-10-12 00:20, 읽기만)
+
+운영이 AWS(54.116.150.247, 앱 /opt/wjbid/app)로 옮겨졌다(컨타 10/12 00:18).
+
+- BE 는 127.0.0.1, 172.17.0.1 의 8183 에만 열려 있다. 그러나 nginx 가 /api/ 와 /api/mcp/sse 를 BE 로 넘겨, https://woojinusbid.com/api/mcp 에 열쇠 없이 tools/list 를 보내면 200 과 도구 목록이 오고 /api/mcp/sse 는 세션을 내준다.
+- Aimbase 등록 bidding-agency-mcp 는 sse, http://host.docker.internal:8183/api/mcp, connected, 도구 19개, 머리글 없음(수정 10/11 14:47 UTC).
+- 서버 compose(/opt/wjbid/app/docker-compose.yml)는 .env 를 env_file 로 읽는다. MCP_API_KEY 는 .env 한 줄로 들어가고 compose 수정은 필요 없다. 지금 .env 에는 SAM_GOV_API_KEY, DB_PASSWORD, REDIS_PASSWORD 만 있다.
+- BE 는 이 폴더의 bidding-agency.jar 를 띄운다. 배포는 deploy_aws.sh 가 커밋 하나를 깨끗한 worktree 로 빌드해 jar 와 docker-compose.aws.yml 을 올린다(CR-149). 옛 서버의 docker-compose.prod.yml, deploy.sh 는 쓰지 않는다.
+
 ## 4. 정할 것
 
 승인요청 [기록/승인요청_CR-144_열쇠_싣는_방법_20261011.md](기록/승인요청_CR-144_열쇠_싣는_방법_20261011.md)
@@ -91,6 +100,36 @@ Aimbase 창과 망 복구 창은 컨타가 연다. 규칙 번호 BIZ-061.
   - 내려받기 주소를 만드는 두 곳(NoticeService 첨부, ReferenceSampleService 샘플)이 McpAccessGuard 로 서명 주소를 받는다
   - 설정: app.mcp.api-key(${MCP_API_KEY:}), app.mcp.download-url-ttl(${MCP_DOWNLOAD_URL_TTL:PT1H}). 로컬은 application-local.yml 에 로컬 전용 시험 열쇠
 - 반영 순서: 승인요청 문서의 1~6
+- 운영 .env 에 MCP_API_KEY 가 없으면 /mcp 가 모두 막힌다(기동 경고만 남는다). 새 서버 compose(docker-compose.aws.yml)는 .env 를 env_file 로 읽어 고칠 것이 없고, 옛 서버 docker-compose.prod.yml 은 고치지 않는다. 다른 창이 develop HEAD 로 배포하므로, 코드 커밋은 서버 .env 에 열쇠를 넣은 뒤 배포 직전에 한다(컨타 12:33)
+
+## 7. 확인
+
+### 7.1 단위시험 (10/11 12:34)
+
+- McpAccessFilterTest TC-MCPKEY-001~010 10건 통과. 고친 곳과 닿는 ReferenceSampleServiceTest 3, NoticeServiceTest 11, McpServerControllerTest 6 통과
+
+### 7.2 로컬 (10/11 12:35, 포트 8194, 로컬 DB cr132-mariadb, application-local.yml 의 로컬 시험 열쇠)
+
+| 순번 | 요청 | 결과 |
+|------|------|------|
+| 1 | POST /api/mcp tools/list, 열쇠 없음 | 401 |
+| 2 | 같은 요청, 틀린 열쇠 | 401 |
+| 3 | 같은 요청, 맞는 열쇠 | 200, 도구 19개 |
+| 4 | GET /api/mcp/sse, 열쇠 없음, 틀린 열쇠 | 401, 401 |
+| 5 | GET /api/mcp/sse, 맞는 열쇠 | endpoint 이벤트와 세션 번호 |
+| 6 | POST /api/mcp/message, 열쇠 없음 | 401 |
+| 7 | 첨부, 샘플 내려받기, 서명 없음, 기한 지남, 틀린 서명, 다른 파일 서명 | 모두 401 |
+| 8 | 같은 경로, 맞는 서명(Python 으로 따로 계산), 머리글 열쇠 | 거름망 통과. 로컬 DB 에 파일이 없어 컨트롤러가 "파일을 찾을 수 없습니다"(500, 원래 동작) |
+| 9 | GET /api/opportunities (로그인 없이 여는 공고) | 200, 영향 없음 |
+
+- 막힌 요청마다 "MCP 열쇠 확인 실패: 방법 경로 from 주소" 경고가 남고 열쇠 값은 남지 않는다.
+
+### 7.3 운영 열쇠와 Aimbase 등록 (10/12 00:26, 컨타 승인)
+
+- 새 서버 /opt/wjbid/app/.env 에 MCP_API_KEY 한 줄을 넣었다. 값은 서버에서 만든 64자이고 어디에도 찍지 않았다. 고치기 전 파일은 .env.bak-pre-cr144 로 두었다(권한 600 유지).
+- Aimbase 등록 bidding-agency-mcp 에 config.headers X-API-Key 를 실어 고쳤다(PUT). 고치기 전 등록은 [기록/Aimbase_MCP_등록_백업_CR-144_새서버_20261012.json](기록/Aimbase_MCP_등록_백업_CR-144_새서버_20261012.json).
+- 다시 연결한 뒤 등록은 connected, 도구 19개, 머리글 값은 "****" 로 가려져 보인다. Aimbase 로그 "Registered 19 tool(s)" 와 BE 로그 "MCP SSE 연결" 이 같은 시각(00:26:52)에 남았다.
+- BE 는 아직 열쇠를 확인하지 않는 판이다. 확인은 배포 뒤 켜진다.
 
 ## 이슈
 

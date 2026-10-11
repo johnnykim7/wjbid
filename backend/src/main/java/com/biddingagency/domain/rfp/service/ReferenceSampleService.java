@@ -5,8 +5,8 @@ import com.biddingagency.domain.rfp.entity.RfpSample;
 import com.biddingagency.domain.rfp.entity.RfpSampleFile;
 import com.biddingagency.domain.rfp.repository.RfpSampleFileRepository;
 import com.biddingagency.domain.rfp.repository.RfpSampleRepository;
+import com.biddingagency.security.McpAccessGuard;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,9 +27,7 @@ public class ReferenceSampleService {
 
     private final RfpSampleRepository rfpSampleRepository;
     private final RfpSampleFileRepository fileRepository;
-
-    @Value("${app.self-base-url:http://59.8.160.12:8183/api}")
-    private String selfBaseUrl;
+    private final McpAccessGuard mcpAccessGuard;
 
     /**
      * 해당 유형의 성공 제안서 목록(각 원본 파일 메타 + 다운로드 URL) 수집.
@@ -53,7 +51,7 @@ public class ReferenceSampleService {
                 fm.put("fileId", f.getId().toString());
                 fm.put("fileName", f.getFileName());
                 fm.put("contentType", f.getContentType());
-                fm.put("downloadUrl", selfBaseUrl + "/mcp/rfp-files/" + f.getId() + "/download");
+                fm.put("downloadUrl", mcpAccessGuard.rfpFileUrl(f.getId()));
                 files.add(fm);
             }
             s.put("files", files);

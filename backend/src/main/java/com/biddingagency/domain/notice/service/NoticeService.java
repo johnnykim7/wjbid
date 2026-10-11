@@ -18,7 +18,6 @@ import com.biddingagency.integration.llmplatform.LLMPlatformException;
 import com.biddingagency.integration.llmplatform.dto.WorkflowRunResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -58,6 +57,7 @@ public class NoticeService {
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
     // CR-141: 분석 저장 때 요구 항목을 맞춘다(BIZ-045)
     private final com.biddingagency.domain.compliance.service.RequirementSyncService requirementSyncService;
+    private final com.biddingagency.security.McpAccessGuard mcpAccessGuard;
 
     /**
      * self-injection — @Async self-call이 AOP 프록시를 통과 못 해 동기 호출되는 함정 회피.
@@ -67,9 +67,6 @@ public class NoticeService {
     @org.springframework.context.annotation.Lazy
     @org.springframework.beans.factory.annotation.Autowired
     private NoticeService self;
-
-    @Value("${app.self-base-url:http://59.8.160.12:8183/api}")
-    private String selfBaseUrl;
 
     // ── 조회 ──────────────────────────────────────────────
 
@@ -526,7 +523,7 @@ public class NoticeService {
             f.put("attachmentId", a.getId().toString());
             f.put("fileName", a.getFileName());
             f.put("contentType", a.getContentType());
-            f.put("downloadUrl", selfBaseUrl + "/mcp/opportunity-attachments/" + a.getId() + "/download");
+            f.put("downloadUrl", mcpAccessGuard.opportunityAttachmentUrl(a.getId()));
             files.add(f);
         }
         return files;

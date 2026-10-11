@@ -6,7 +6,7 @@ import com.biddingagency.domain.rfp.entity.RfpSample;
 import com.biddingagency.domain.rfp.entity.RfpSampleFile;
 import com.biddingagency.domain.rfp.repository.RfpSampleFileRepository;
 import com.biddingagency.domain.rfp.repository.RfpSampleRepository;
-import org.junit.jupiter.api.BeforeEach;
+import com.biddingagency.security.McpAccessGuard;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,13 +34,11 @@ class ReferenceSampleServiceTest {
     @Mock
     private RfpSampleFileRepository fileRepository;
 
+    @Mock
+    private McpAccessGuard mcpAccessGuard;
+
     @InjectMocks
     private ReferenceSampleService referenceSampleService;
-
-    @BeforeEach
-    void setUp() {
-        ReflectionTestUtils.setField(referenceSampleService, "selfBaseUrl", "http://test:8183/api");
-    }
 
     @Test
     @DisplayName("유형매칭_PWS파일제외_제안서파일만수집")
@@ -71,6 +69,8 @@ class ReferenceSampleServiceTest {
                 .willReturn(List.of(sample));
         given(fileRepository.findByRfpSampleId(sampleId))
                 .willReturn(List.of(propFile, pwsFile));
+        given(mcpAccessGuard.rfpFileUrl(propFileId))
+                .willReturn("http://test:8183/api/mcp/rfp-files/" + propFileId + "/download?exp=1&sig=s");
 
         List<Map<String, Object>> result = referenceSampleService.collect(IndustryType.GROUND_MAINTENANCE);
 
@@ -86,7 +86,7 @@ class ReferenceSampleServiceTest {
         assertThat(files).hasSize(1);
         assertThat(files.get(0).get("fileName")).isEqualTo("FACTOR 3.PAST PERFORMANCE.pdf");
         assertThat(files.get(0).get("downloadUrl"))
-                .isEqualTo("http://test:8183/api/mcp/rfp-files/" + propFileId + "/download");
+                .isEqualTo("http://test:8183/api/mcp/rfp-files/" + propFileId + "/download?exp=1&sig=s");
     }
 
     @Test

@@ -267,6 +267,12 @@ app:
   # 플랫폼 자체 외부 접근 URL (CR-013: Aimbase가 패턴 추출 시 원본 파일을 다운로드할 base)
   self-base-url: ${SELF_BASE_URL:http://59.8.160.12:8183/api}
 
+  # CR-144: Aimbase 가 부르는 /mcp 통로의 열쇠(BIZ-061). 비어 있으면 /mcp 요청을 모두 막는다. 운영은 서버 .env 로만 둔다
+  mcp:
+    api-key: ${MCP_API_KEY:}
+    # Aimbase 에 건네는 내려받기 서명 주소의 기한. 이 플랫폼이 Aimbase 실행을 기다리는 한도(30분)보다 길게 둔다
+    download-url-ttl: ${MCP_DOWNLOAD_URL_TTL:PT1H}
+
   # CR-039: 공고문 한글화/분석 stuck 자동 정리 (POL-012)
   notice:
     analysis:
