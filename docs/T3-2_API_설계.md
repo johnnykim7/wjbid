@@ -171,7 +171,7 @@
 
 **낙찰 요약**: `total`, `amountKnownCount`, `amountSum`, `amountMax`, `awardeeKnownCount`(업체 이름 있는 공지 수, CR-136 전에는 0). 화면은 `awardeeKnownCount` 가 0 이면 업체 이름을 모으지 않는다고 밝히고, 1 이상이면 업체 칸을 보인다(CR-136 과 계약, 10/11).
 
-**금액**: 낙찰 금액은 공지에 적힌 문자열(예 `$60,700.00`)을 숫자로 읽어 합계·최대·금액순에 쓴다. 읽을 수 없거나 비면 금액 없음으로 센다. CR-136 이 금액 숫자 칸을 더하면 그 칸으로 바꾼다.
+**금액**: 합계·최대·금액순은 낙찰 금액 숫자 칸(`award_amount_usd`, CR-136)을 쓴다. 이미 모은 공지는 V44 가 금액 문자열(예 `$60,700.00`)을 읽어 채웠고, 이후는 수집이 SAM 금액 숫자로 채운다. 비면 금액 없음으로 센다.
 
 **업종 대분류**: 원본 공고의 업종 코드 앞 두 자리. 31~33, 44~45, 48~49 는 한 대분류. 코드가 없으면 `NONE`. 한글 이름은 NAICS 공식 대분류 20개 전부를 둔다.
 
@@ -195,6 +195,7 @@
 | totalAwards | 낙찰 공지 수 |
 | awardsWithAwardee | 그중 업체 이름이 있는 수. 0 이면 화면은 빈 상태 |
 | awardees[].key | 묶음 키. UEI 가 있으면 `UEI:<값>`, 없으면 `NAME:<정규화한 이름>` (BIZ-029) |
+| awardees[].rank | 고른 정렬로 전체 업체 중 몇 번째인지. `q` 로 찾아도 바뀌지 않는다 |
 | awardees[].name, uei | 표시 이름(가장 최근 공지의 이름), UEI(없으면 null) |
 | awardees[].awardCount | 낙찰 공지 수 |
 | awardees[].amountSum, amountCount | 금액 합계(달러, 금액이 있는 공지만 더함), 더한 공지 수 |
@@ -635,7 +636,7 @@ app.aimbase:
 | PUT | `/member-documents/{id}` (multipart) | 교체(파일 재업로드, displayName/description 갱신) |
 | DELETE | `/member-documents/{id}` | 삭제(StorageService 파일도 삭제) |
 | POST | `/bid-requests/{bidRequestId}/required-document-slots/auto-fill` | 서류함에서 같은 카테고리 서류를 미충족 슬롯에 일괄 자동매칭(CR-125 2단계) |
-| GET | `/member-documents/expiry` | 서류별 만료 상태(CR-136). 응답: `alertDays[]`(POL-016, 꺼져 있으면 빈 배열), `soonDays`(가장 큰 알림 날, 꺼져 있으면 null), `today`(Asia/Seoul 날짜), `summary`(expired, soon, noDate, total), `documents[]`(id, category, displayName, fileName, expiresOn, daysLeft, status, lastAlertedAt) |
+| GET | `/member-documents/expiry` | 서류별 만료 상태(CR-136). 응답: `alertDays[]`(POL-016, 꺼져 있으면 빈 배열), `soonDays`(가장 큰 알림 날, 꺼져 있으면 null), `today`(Asia/Seoul 날짜), `summary`(expired, soon, noDate, total), `documents[]`(id, category, categoryLabel, displayName, fileName, expiresOn, daysLeft, status, lastAlertedAt) |
 | PATCH | `/member-documents/{id}/expiry` | 만료일만 넣기·고치기·지우기(CR-136). 본문 `{"expiresOn": "YYYY-MM-DD" 또는 null}`. 응답 MemberDocumentDto |
 
 - 응답 DTO: `MemberDocumentDto`(LAZY 폭발 방지) / `MemberDocumentVaultResponse`(fixedSlots[] + others[]).

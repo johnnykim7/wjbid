@@ -940,7 +940,7 @@
 - **대상 기능 ID**: BID-MKT-007~014
 - **변경 타입**: 신규 (칸, 표, 조회 API, 화면, 수집 보강, 메일 알림)
 - **영향 모듈**: B. 공고 수집(낙찰 칸 저장, 지난 낙찰 다시 받기), H. 알림(만료 메일), P. 메뉴 속 화면, M. 관리자(기지 관리), 공통 서류함(만료일)
-- **영향 설계서**: T1-1(BID-MKT-007~014), T1-2, T1-3(BIZ-028~031), T1-4(POL-016), T1-6(DocumentExpiryApproaching), T3-1(V43 낙찰 칸 3개와 military_bases, V44 member_documents.expires_on 과 설정 행), T3-2(C-3, B-4, N), T3-3, T3-4, T3-5(TC-MKT-019~050), execution-spec. 확인하고 영향 없음: T1-5(상태 전이 없음), T1-7, T2-1(지도는 화면에 싣는 그림, 날짜 고르기 칸은 ds-ui, 새 라이브러리 없음)
+- **영향 설계서**: T1-1(BID-MKT-007~014), T1-2, T1-3(BIZ-028~031), T1-4(POL-016), T1-6(DocumentExpiryApproaching), T3-1(V44 낙찰 칸 3개와 military_bases, V45 member_documents.expires_on 과 설정 행), T3-2(C-3, B-4, N), T3-3, T3-4, T3-5(TC-MKT-019~050), execution-spec. 확인하고 영향 없음: T1-5(상태 전이 없음), T1-7, T2-1(지도는 화면에 싣는 그림, 날짜 고르기 칸은 ds-ui, 새 라이브러리 없음)
 - **계약**: 낙찰 공지(opportunities)에 awardee_name, awardee_uei, award_amount_usd 를 더한다. 기존 award_amount 표시 문자열은 그대로(CR-135 목록이 읽음). CR-135 최근 낙찰 응답의 awardeeKnownCount, awardeeName 을 이 CR 이 채운다(CR-135 [계약] 10/11). 만료 메일 틀 BID_DOC_EXPIRY 는 알림 서버(bp-notification)에 새로 만들어야 한다(컨타 경유 요청)
 - **규모**: 중(서류 만료일 칸, 낙찰 업체 칸, 기지 목록 표, 조회 API, 고객 화면 3개와 관리자 화면 1개). 문서 [CR-136_메뉴_속_화면_3묶음_칸과_수집_보강_3곳.md](CR-136_메뉴_속_화면_3묶음_칸과_수집_보강_3곳.md).
 - **상태**: 진행중(화면 컨셉 승인요청)
