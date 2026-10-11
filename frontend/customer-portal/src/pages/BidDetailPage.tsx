@@ -6,7 +6,7 @@ import { Badge } from '../components/ui/badge'
 import { LoadingSpinner } from '../components/ui/loading-spinner'
 import { AiProposalModal } from '../components/modals/AiProposalModal'
 import { isAxiosError } from 'axios'
-import { getOpportunity, checkBookmark, addBookmark, removeBookmark, getEligibilityDetail } from '../api/client'
+import { getOpportunity, getOriginOpportunity, checkBookmark, addBookmark, removeBookmark, getEligibilityDetail } from '../api/client'
 import type { EligibilityDetail, Opportunity } from '../types'
 import { Icon } from '../components/layout/Icon'
 import { VerdictBox } from '../components/verdict/VerdictBox'
@@ -14,8 +14,9 @@ import { VERDICT_BOX_TEXT } from '../data/verdictContent'
 import NoticeDocumentView from '../components/NoticeDocumentView'
 import { ELIGIBILITY_TEXT, eligibilityHref } from '../data/eligibilityContent'
 
-export default function BidDetailPage() {
-  const { id } = useParams<{ id: string }>()
+/** origin: 공개 공고문이 없는 모은 공고를 원문으로 보이는 원본 공고 상세 (CR-152) */
+export default function BidDetailPage({ origin = false }: { origin?: boolean }) {
+  const { id, opportunityId } = useParams<{ id: string; opportunityId: string }>()
   const navigate = useNavigate()
   const [bid, setBid] = useState<Opportunity | null>(null)
   const [loading, setLoading] = useState(true)
@@ -38,6 +39,16 @@ export default function BidDetailPage() {
     const load = async () => {
       setLoading(true)
       try {
+        if (origin) {
+          const res = await getOriginOpportunity(opportunityId!)
+          // 공고문이 공개되면 원본 주소로 들어와도 공고문 상세로 넘긴다
+          if (res.data.publicNoticeId) {
+            navigate(`/search/${res.data.publicNoticeId}`, { replace: true })
+            return
+          }
+          setBid(res.data)
+          return
+        }
         const res = await getOpportunity(id!)
         setBid(res.data)
         try {
@@ -51,7 +62,7 @@ export default function BidDetailPage() {
       }
     }
     load()
-  }, [id])
+  }, [id, opportunityId, origin, navigate])
 
   const toggleBookmark = async () => {
     if (!bid || bookmarkLoading) return
@@ -100,7 +111,8 @@ export default function BidDetailPage() {
       {/* Sticky Header */}
       <div className="sticky top-0 bg-white border-b border-line px-6 py-4 flex justify-between items-center shadow-sm z-10">
         <div className="flex items-center gap-4">
-          <DsButton variant="ghost" size="icon" onClick={() => navigate('/search')}>
+          {/* 모은 공고 화면에서도 들어오므로 온 곳으로 돌아간다. 주소로 바로 열었으면 마감 전 공고로 */}
+          <DsButton variant="ghost" size="icon" onClick={() => (window.history.state?.idx > 0 ? navigate(-1) : navigate('/search'))}>
             <i className="fa-solid fa-arrow-left text-xl" />
           </DsButton>
           <div>
@@ -108,21 +120,31 @@ export default function BidDetailPage() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={toggleBookmark}
-            disabled={bookmarkLoading}
-            className="hidden md:flex items-center gap-1"
-          >
-            {bookmarkLoading
-              ? <i className="fa-solid fa-spinner fa-spin" />
-              : <i className={isBookmarked ? 'fa-solid fa-bookmark text-brand' : 'fa-regular fa-bookmark'} />
-            }
-            {isBookmarked ? '저장됨' : '관심 공고 저장'}
-          </Button>
-          <Button variant="accent" onClick={() => setAiModalOpen(true)}>
-            <i className="fa-solid fa-wand-magic-sparkles mr-1" /> 제안서 작성
-          </Button>
+          {bid.samUrl && (
+            <Button variant="outline" onClick={() => window.open(bid.samUrl, '_blank', 'noopener,noreferrer')}>
+              <i className="fa-solid fa-arrow-up-right-from-square mr-1" /> SAM.gov 원문 보기
+            </Button>
+          )}
+          {/* 관심 공고와 제안서는 공고문에 붙는다. 원본 공고 상세에는 두지 않는다 */}
+          {!origin && (
+            <>
+              <Button
+                variant="outline"
+                onClick={toggleBookmark}
+                disabled={bookmarkLoading}
+                className="hidden md:flex items-center gap-1"
+              >
+                {bookmarkLoading
+                  ? <i className="fa-solid fa-spinner fa-spin" />
+                  : <i className={isBookmarked ? 'fa-solid fa-bookmark text-brand' : 'fa-regular fa-bookmark'} />
+                }
+                {isBookmarked ? '저장됨' : '관심 공고 저장'}
+              </Button>
+              <Button variant="accent" onClick={() => setAiModalOpen(true)}>
+                <i className="fa-solid fa-wand-magic-sparkles mr-1" /> 제안서 작성
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -141,6 +163,9 @@ export default function BidDetailPage() {
               <h1 className="text-2xl md:text-3xl font-extrabold text-ink leading-tight mb-4">
                 {bid.title}
               </h1>
+              {bid.originalTitle && bid.originalTitle !== bid.title && (
+                <p className="text-sm text-ink-mute -mt-2 mb-4">{bid.originalTitle}</p>
+              )}
               <div className="flex flex-wrap gap-6 text-sm text-ink-sub">
                 <div className="flex items-center gap-1">
                   <i className="fa-solid fa-building-columns text-ink-mute w-5" />
@@ -404,8 +429,8 @@ export default function BidDetailPage() {
                     ) : (
                       <p className="text-sm text-ink-mute mt-2">원본 본문이 제공되지 않은 공고입니다.</p>
                     )}
-                    {bid.uiLink && (
-                      <a href={bid.uiLink} target="_blank" rel="noopener noreferrer"
+                    {bid.samUrl && (
+                      <a href={bid.samUrl} target="_blank" rel="noopener noreferrer"
                         className="inline-flex items-center gap-2 mt-3 px-4 py-2 border border-line-strong rounded-lg text-sm text-ink-sub hover:bg-surface transition">
                         <i className="fa-solid fa-arrow-up-right-from-square" /> SAM.gov 원문 보기
                       </a>
@@ -416,6 +441,12 @@ export default function BidDetailPage() {
             ) : (
               /* ── 원본 표시 (분석 미완료 / fallback) ── */
               <div className="space-y-6">
+                {origin && (
+                  <div className="flex items-center gap-2 px-4 py-3 bg-brand-soft border border-brand-line rounded-lg">
+                    <i className="fa-solid fa-circle-info text-brand" />
+                    <span className="text-sm text-brand font-medium">아직 한글 공고문이 없는 공고라 원문을 보여 드립니다.</span>
+                  </div>
+                )}
                 {bid.analysis?.analysisStatus === 'ANALYZING' && (
                   <div className="flex items-center gap-2 px-4 py-3 bg-brand-soft border border-brand-line rounded-lg">
                     <i className="fa-solid fa-spinner fa-spin text-brand" />
@@ -433,9 +464,9 @@ export default function BidDetailPage() {
                     <div className="text-sm bg-surface p-5 rounded-lg border border-line flex items-start gap-3">
                       <i className="fa-solid fa-circle-info text-brand mt-0.5" />
                       <div>
-                        <p className="text-ink-sub mb-2">SAM.gov 수집 시 공고 본문이 제공되지 않은 공고입니다.</p>
-                        {bid.uiLink && (
-                          <a href={bid.uiLink} target="_blank" rel="noopener noreferrer"
+                        <p className="text-ink-sub mb-2">모아 둔 원문 본문이 없습니다. SAM.gov 원문에서 보세요.</p>
+                        {bid.samUrl && (
+                          <a href={bid.samUrl} target="_blank" rel="noopener noreferrer"
                             className="inline-flex items-center gap-1.5 text-brand hover:text-brand-strong font-medium">
                             <i className="fa-solid fa-arrow-up-right-from-square text-xs" />
                             SAM.gov에서 원문 보기
@@ -478,8 +509,8 @@ export default function BidDetailPage() {
                       <i className="fa-solid fa-circle-info text-brand mt-0.5" />
                       <div>
                         <p className="text-ink-sub mb-2">첨부 파일 정보가 없습니다.</p>
-                        {bid.uiLink && (
-                          <a href={bid.uiLink} target="_blank" rel="noopener noreferrer"
+                        {bid.samUrl && (
+                          <a href={bid.samUrl} target="_blank" rel="noopener noreferrer"
                             className="inline-flex items-center gap-1.5 text-brand hover:text-brand-strong font-medium">
                             <i className="fa-solid fa-arrow-up-right-from-square text-xs" />
                             SAM.gov에서 첨부 파일 확인
@@ -490,9 +521,9 @@ export default function BidDetailPage() {
                   )}
                 </div>
 
-                {bid.uiLink && (
+                {bid.samUrl && (
                   <div className="pt-2 border-t border-line-soft">
-                    <a href={bid.uiLink} target="_blank" rel="noopener noreferrer"
+                    <a href={bid.samUrl} target="_blank" rel="noopener noreferrer"
                       className="inline-flex items-center gap-2 px-4 py-2 border border-line-strong rounded-lg text-sm text-ink-sub hover:bg-surface transition">
                       <i className="fa-solid fa-arrow-up-right-from-square" />
                       SAM.gov 원문 보기
@@ -505,13 +536,15 @@ export default function BidDetailPage() {
         </div>
       </div>
 
-      <AiProposalModal
-        isOpen={aiModalOpen}
-        onClose={() => setAiModalOpen(false)}
-        opportunityId={bid.id}
-        noticeId={bid.solicitationNumber}
-        noticeTitle={bid.title}
-      />
+      {!origin && (
+        <AiProposalModal
+          isOpen={aiModalOpen}
+          onClose={() => setAiModalOpen(false)}
+          opportunityId={bid.id}
+          noticeId={bid.solicitationNumber}
+          noticeTitle={bid.title}
+        />
+      )}
     </div>
   )
 }

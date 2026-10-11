@@ -110,6 +110,10 @@ export const getOpportunities = (page = 0, size = 20) =>
 export const getOpportunity = (id: string) =>
   api.get(`/opportunities/${id}`)
 
+/** 원본 공고 상세 (CR-152). 공개 공고문이 있으면 publicNoticeId 가 온다 */
+export const getOriginOpportunity = (opportunityId: string) =>
+  api.get(`/opportunities/origin/${opportunityId}`)
+
 export const searchOpportunities = (keyword: string, page = 0) =>
   api.get('/opportunities/search', { params: { keyword, page, size: 20 } })
 

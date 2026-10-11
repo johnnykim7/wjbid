@@ -4,9 +4,8 @@
  */
 
 export const MARKET_COMMON = {
-  legend: { notice: 'WJbid 한글 공고문으로 갑니다', sam: 'SAM.gov 원문이 새 창으로 열립니다' },
+  legend: 'WJbid 공고 상세로 갑니다. SAM.gov 원문은 상세에서 엽니다',
   goNotice: 'WJbid 공고 상세',
-  goSam: 'SAM.gov 원문 새 창',
   loading: '불러오고 있습니다',
   loadFailTitle: '불러오지 못했습니다',
   retry: '다시 시도',
@@ -65,7 +64,6 @@ export const AMEND_TEXT = {
   version: (n: number) => `${n}판`,
   changed: '바뀜',
   goNotice: '공고 상세',
-  goSam: '원문',
 }
 
 export const SAMPLE_TEXT = {

@@ -108,7 +108,7 @@ public class MarketRowAssembler {
         );
     }
 
-    String samUrl(String noticeId) {
+    public String samUrl(String noticeId) {
         if (noticeId == null || noticeId.isBlank()) return null;
         return publicOpportunityUrl.replace(NOTICE_ID_PLACEHOLDER,
                 URLEncoder.encode(noticeId.trim(), StandardCharsets.UTF_8));

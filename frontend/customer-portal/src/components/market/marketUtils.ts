@@ -47,23 +47,22 @@ export function useNow() {
   return now
 }
 
-export type GoTarget = { kind: 'notice'; to: string } | { kind: 'sam'; href: string }
+/** 줄을 누르면 갈 화면 주소 */
+export type GoTarget = string
 
-/** 공개 공고문이 있으면 WJbid 공고 상세, 없으면 SAM.gov 원문 */
-export function targetOf(publicNoticeId: string | null, samUrl: string | null): GoTarget | null {
-  if (publicNoticeId) return { kind: 'notice', to: `/search/${publicNoticeId}` }
-  if (samUrl) return { kind: 'sam', href: samUrl }
+/** 공개 공고문이 있으면 공고 상세, 없으면 원본 공고 상세 (CR-152). SAM.gov 원문은 상세 화면의 단추로 연다 */
+export function targetOf(publicNoticeId: string | null, opportunityId: string | null): GoTarget | null {
+  if (publicNoticeId) return `/search/${publicNoticeId}`
+  if (opportunityId) return `/search/origin/${opportunityId}`
   return null
 }
 
-export const rowTarget = (row: MarketRow) => targetOf(row.publicNoticeId, row.samUrl)
+export const rowTarget = (row: MarketRow) => targetOf(row.publicNoticeId, row.id)
 
-/** 줄 누름 이동. 원문은 새 창 */
+/** 줄 누름 이동 */
 export function useGo() {
   const navigate = useNavigate()
   return useCallback((target: GoTarget | null) => {
-    if (!target) return
-    if (target.kind === 'notice') navigate(target.to)
-    else window.open(target.href, '_blank', 'noopener,noreferrer')
+    if (target) navigate(target)
   }, [navigate])
 }

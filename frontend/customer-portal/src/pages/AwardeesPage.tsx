@@ -37,8 +37,8 @@ function AwardLines({ awards }: { awards: AwardeeAward[] }) {
               <AmountCell value={w.awardAmountUsd} />
               <td className="go">
                 <GoLink className="ext" target={target}>
-                  {target?.kind === 'notice' ? T.goNotice : T.goSam}
-                  <Icon name={target?.kind === 'notice' ? 'cr' : 'ext'} />
+                  {T.goNotice}
+                  <Icon name="cr" />
                 </GoLink>
               </td>
             </tr>

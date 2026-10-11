@@ -91,7 +91,7 @@ export default function RecentAwardsPage() {
             <tbody>
               {rows.map((r) => {
                 const amount = parseAmount(r.awardAmount)
-                const original = r.originalId ? targetOf(r.originalPublicNoticeId, r.originalSamUrl) : null
+                const original = r.originalId ? targetOf(r.originalPublicNoticeId, r.originalId) : null
                 return (
                   <tr key={r.id} className="row" onClick={() => go(rowTarget(r))}>
                     <td className="dt">{fmtDate(r.postedDate)}</td>
@@ -101,7 +101,7 @@ export default function RecentAwardsPage() {
                     {amount != null ? <td className="am">{money(amount)}</td> : <td className="am na">{MARKET_COMMON.notDisclosed}</td>}
                     {original ? (
                       <td className="og">
-                        <GoLink target={original}>{t.original}<Icon name={original.kind === 'notice' ? 'cr' : 'ext'} /></GoLink>
+                        <GoLink target={original}>{t.original}<Icon name="cr" /></GoLink>
                       </td>
                     ) : <td className="og na">-</td>}
                     <GoCell target={rowTarget(r)} />

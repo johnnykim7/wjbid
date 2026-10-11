@@ -110,6 +110,7 @@ function AppRoutes() {
       <Route element={<ProtectedRoute />}>
         <Route path="/search" element={<SearchPage />} />
         <Route path="/search/:id" element={<BidDetailPage />} />
+        <Route path="/search/origin/:opportunityId" element={<BidDetailPage origin />} />
         <Route path="/proposals" element={<ProposalsPage />} />
         <Route path="/proposals/:id" element={<ProposalDetailPage />} />
         <Route path="/bookmarks" element={<BookmarksPage />} />
