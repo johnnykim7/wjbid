@@ -1,6 +1,6 @@
 # SAM.gov Bidding Agency Platform API 설계
 
-> 설계 버전: 1.9 | 최종 수정: 2026-10-11 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140
+> 설계 버전: 1.9 | 최종 수정: 2026-10-11 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141
 
 > 단계: 3. Detail Design | 실행스펙 섹션 3에 포함
 >
@@ -291,13 +291,16 @@ CR-137 전에 있던 `POST /opportunities/{id}/qualification-check`(AI 자격 �
 
 공고 분석으로 도출된 BLOCKER 요구사항을 슬롯으로 펼쳐서 1:1 업로드 매핑. DOCS_PENDING → DOCS_RECEIVED 전이의 사전 조건(BIZ-015).
 
+> CR-141: 슬롯은 공고 분석의 제출 서류에서 채운 요구 항목이다(BIZ-045). 모든 슬롯 API 는 그 입찰 건을 낸 회원만 쓴다. 남의 입찰 건이면 404(BIZ-049). 슬롯 목록 조회(GET)는 걷어내고 G-2 건별 제출 전 검사가 대신한다. 고객 올림이 아닌 항목(플랫폼 작성, 정부 양식)에 올리면 400.
+
 | 메서드 | 경로 | 설명 | 인증 | 기능 ID |
 |--------|------|------|------|---------|
-| GET | /bid-requests/{id}/required-document-slots | 의뢰의 요구사항 슬롯 목록 (각 슬롯: requirementItemId, title, description, isBlocker, status, mappedClientDocument 요약) | 🔒 | BID-REQ-002 |
-| POST | /bid-requests/{id}/required-document-slots/{requirementItemId}/upload | 슬롯에 직접 업로드 (multipart). 한 트랜잭션에서 ClientDocument 생성 + RequirementFulfillmentMap(`CLIENT_DOCUMENT`, `FULFILLED`) 생성/업데이트 | 🔒 | BID-REQ-002 |
-| DELETE | /bid-requests/{id}/required-document-slots/{requirementItemId} | 슬롯 매핑 해제. FulfillmentMap 삭제 (ClientDocument는 보존, 별도 DELETE 호출 시 제거) | 🔒 | BID-REQ-002 |
+| ~~GET~~ | ~~/bid-requests/{id}/required-document-slots~~ | 걷어냄 (CR-141). G-2 `GET /bid-requests/{id}/pre-check` 가 대신한다 | 🔒 | BID-REQ-002 |
+| POST | /bid-requests/{id}/required-document-slots/{requirementItemId}/upload | 슬롯에 직접 업로드 (multipart). 한 트랜잭션에서 ClientDocument 생성 + RequirementFulfillmentMap(`CLIENT_DOCUMENT`, `FULFILLED`) 생성/업데이트. CR-141: PDF 면 쪽수를 세어 page_count 에 넣고(세지 못하면 비움), 응답은 G-2 의 요구 항목 한 줄(clientItems[] 한 개) | 🔒 | BID-REQ-002, BID-MKT-023 |
+| POST | /bid-requests/{id}/required-document-slots/{requirementItemId}/from-vault | 공통 서류함 서류를 입찰 건 서류로 복사해 잇는다 (CR-141). 본문 `{"memberDocumentId": "uuid"}`. 저장소 파일을 복사해 ClientDocument(분류는 요구 항목 이름, 쪽수 셈)를 만들고 연결을 만든다. 자기 서류가 아니면 404. 응답은 upload 와 같다 | 🔒 | BID-MKT-023 |
+| DELETE | /bid-requests/{id}/required-document-slots/{requirementItemId} | 슬롯 매핑 해제. FulfillmentMap 삭제 (ClientDocument는 보존, 별도 DELETE 호출 시 제거) | 🔒 | BID-REQ-002, BID-MKT-023 |
 
-**응답 스키마 (GET 슬롯 목록)**:
+**응답 스키마 (GET 슬롯 목록, CR-141 에서 걷어냄)**:
 ```json
 {
   "data": [
@@ -319,6 +322,55 @@ CR-137 전에 있던 `POST /opportunities/{id}/qualification-check`(AI 자격 �
 **전이 차단 응답 (PATCH /bid-requests/{id}/state to DOCS_RECEIVED 미충족 시)**:
 - HTTP 409 Conflict
 - body: `{ "error": "REQUIREMENT_SLOTS_NOT_FULFILLED", "unfulfilledSlots": [{ "requirementItemId": "uuid", "title": "..." }] }`
+
+### G-2. 제출 전 검사 (CR-141)
+
+입찰 건마다 고객 올림 요구 항목과 올린 서류를 맞춰 판정한다. 그 입찰 건을 낸 회원만(BIZ-049). 응답은 ApiResponse 래퍼.
+
+| 메서드 | 경로 | 설명 | 인증 | 기능 ID |
+|--------|------|------|------|---------|
+| GET | /bid-requests/my/pre-check | 내 입찰 건별 요약. 마감일 가까운 순 | 🔒 | BID-MKT-021 |
+| GET | /bid-requests/{id}/pre-check | 입찰 건별 제출 전 검사. 남의 입찰 건이면 404 | 🔒 | BID-MKT-022 |
+
+**응답 스키마 (GET /bid-requests/my/pre-check)**:
+```json
+[
+  {
+    "bidRequestId": "uuid", "state": "DOCS_PENDING",
+    "solicitationNumber": "W90VN926RA081", "title": "...", "titleKo": "...",
+    "responseDeadline": "2026-10-20T14:00:00+09:00",
+    "analysisReady": true,
+    "summary": { "required": 5, "uploaded": 3, "missing": 2, "mismatch": 1, "needsHuman": 2 }
+  }
+]
+```
+- analysisReady 는 그 공고에 요구 항목이 있는지다. false 면 summary 는 null.
+- required 는 필수이고 고객 올림인 항목 수, uploaded 는 그중 이어진 수, missing 은 그 차. mismatch 는 형식 어긋남이거나 쪽수 넘음인 항목 수, needsHuman 은 형식이나 쪽수가 사람 확인인 항목 수(둘 다 이어진 항목만 센다).
+
+**응답 스키마 (GET /bid-requests/{id}/pre-check)**:
+```json
+{
+  "bidRequestId": "uuid", "state": "DOCS_PENDING",
+  "solicitationNumber": "...", "title": "...", "titleKo": "...", "responseDeadline": "...", "noticeId": "uuid|null",
+  "analysisReady": true,
+  "clientItems": [
+    {
+      "requirementItemId": "uuid", "title": "Past Performance Questionnaire", "description": "...",
+      "mandatory": true, "isBlocker": true, "sourceRef": "Solicitation p.38, Section 3.1.1", "notes": "...",
+      "formatText": "PDF/Word", "pageLimitText": "1 page",
+      "document": { "clientDocumentId": "uuid", "fileName": "ppq.pdf", "extension": "pdf", "pageCount": 2, "fileSize": 12345, "uploadedAt": "2026-10-11T12:00:00+09:00" },
+      "presence": "UPLOADED",
+      "format": { "verdict": "MATCH", "basis": "PDF/Word", "allowed": ["PDF", "WORD"] },
+      "pages": { "verdict": "OVER", "basis": "1 page", "limit": 1 }
+    }
+  ],
+  "platformItems": [ { "requirementItemId": "uuid", "title": "Technical Proposal", "fulfillmentParty": "PLATFORM_GENERATED", "sourceRef": "..." } ],
+  "summary": { "required": 5, "uploaded": 3, "missing": 2, "mismatch": 1, "needsHuman": 2 },
+  "canTransition": false
+}
+```
+- presence: UPLOADED, MISSING. format.verdict: MATCH, MISMATCH, NEEDS_HUMAN, NO_CONDITION, NOT_UPLOADED(BIZ-047). pages.verdict: MATCH, OVER, NEEDS_HUMAN, NO_CONDITION, NOT_UPLOADED(BIZ-048). basis 는 공고 조건 원문 그대로, allowed 와 limit 은 원문에서 읽어 낸 기준이고 읽지 못하면 빈 배열과 null.
+- canTransition 은 서류 대기 상태이고 필수 고객 서류가 모두 이어졌을 때 true(BIZ-046). 형식·쪽수 판정은 넣지 않는다.
 
 ---
 
@@ -544,7 +596,6 @@ CR-137 전에 있던 `POST /opportunities/{id}/qualification-check`(AI 자격 �
 | get_opportunity | 공고 상세 조회 | opportunityId | BID-MCP-002 |
 | search_opportunities | 키워드로 공고 검색 | keyword, limit | BID-MCP-002 |
 | get_opportunity_requirements | 공고 요구사항 목록 | opportunityId | BID-MCP-002 |
-| save_requirements | LLM 추출 요구사항 저장 | opportunityId, requirements[] | BID-MCP-002 |
 | get_bid_request | 입찰 요청 상세 + 문서 목록 | bidRequestId | BID-MCP-004 |
 | save_document_version | AI 생성 문서 저장 | bidRequestId, documentType, contentJson | BID-MCP-003 |
 | get_document_template | 문서 템플릿 조회 | documentType | BID-MCP-003 |
@@ -555,6 +606,7 @@ CR-137 전에 있던 `POST /opportunities/{id}/qualification-check`(AI 자격 �
 | get_reference_samples | 공고유형 매칭 성공 제안서 원본 파일 메타+다운로드URL 조회 (CR-013-R) | industryType | BID-RFP-003 |
 | save_pattern_guide | 공고유형별 패턴 가이드 저장 — Aimbase 콜백 (CR-013-R) | industryType, guide{골격/체크리스트/금기} | BID-RFP-003 |
 
+> CR-141: save_requirements(LLM 추출 요구사항 저장)를 걷어냈다. 요구 항목은 공고 분석에서 채운다(BIZ-045).
 > 모든 MCP Tool은 무상태(BIZ-013). 각 호출은 독립적으로 처리.
 > requestId를 멱등 키로 사용.
 
@@ -577,7 +629,6 @@ app.aimbase:
   polling.interval-ms: 3000
   polling.max-attempts: 60
   workflows:
-    requirement-extraction: requirement-extraction
     document-generation: bid-document-generation
     opportunity-analysis: ${AIMBASE_WF_OPP_ANALYSIS:...}
     slot-pattern-extraction: ${AIMBASE_WF_SLOT_PATTERN:placeholder-slot-pattern-workflow-id}  # CR-013
@@ -614,7 +665,7 @@ app.aimbase:
 | D. 즐겨찾기 | 4 | 3 |
 | E. 자격 진단 | 4 | 3, CR-137, CR-140 |
 | F. 입찰 접수 | 7 | 4 |
-| G. 고객 문서 제출 | 3 | 4 |
+| G. 고객 문서 제출 | 8 | 4, CR-010, CR-141 |
 | H. 입찰 관리 (Admin) | 6 | 4 |
 | I. 문서 템플릿 (Admin) | 5 | 6 |
 | J. 문서 편집 | 7 | 7 |
@@ -624,10 +675,12 @@ app.aimbase:
 | M. FlowGuard 연동 | 5 | — (CR-001) |
 | B-2. 공고 관리 (Admin) | 8 | CR-003 |
 | P. 성공 제안서 패턴 (Admin) | 13 | CR-013 |
-| MCP Tools | 13 | 5, CR-003, CR-013 |
+| MCP Tools | 12 | 5, CR-003, CR-013, CR-141 |
 | MCP SSE 엔드포인트 | 2 | CR-002 |
 | Aimbase 워크플로우 호출 | 2 | CR-002 |
-| **합계** | **REST 108 + MCP 13 + SSE 2 + Aimbase 2** | |
+| **합계** | **REST 113 + MCP 12 + SSE 2 + Aimbase 2** | |
+
+> CR-141: G 는 문서 3, 슬롯 3(올리기, 서류함에서 고르기, 빼기. 목록 조회는 걷어냄), 제출 전 검사 2 다. 그전에는 슬롯을 세지 않았다.
 
 ---
 
@@ -641,7 +694,7 @@ app.aimbase:
 | POST | `/member-documents` (multipart) | 업로드 — `file`, `category`, `displayName?`, `description?`(기타) |
 | PUT | `/member-documents/{id}` (multipart) | 교체(파일 재업로드, displayName/description 갱신) |
 | DELETE | `/member-documents/{id}` | 삭제(StorageService 파일도 삭제) |
-| POST | `/bid-requests/{bidRequestId}/required-document-slots/auto-fill` | 서류함에서 같은 카테고리 서류를 미충족 슬롯에 일괄 자동매칭(CR-125 2단계) |
+| POST | `/bid-requests/{bidRequestId}/required-document-slots/auto-fill` | 서류함에서 같은 카테고리 서류를 미충족 슬롯에 일괄 자동매칭(CR-125 2단계). CR-141: 슬롯 이름으로 서류함 분류를 찾고, 고객 올림 항목만, 그 입찰 건을 낸 회원만 |
 | GET | `/member-documents/expiry` | 서류별 만료 상태(CR-136). 응답: `alertDays[]`(POL-016, 꺼져 있으면 빈 배열), `soonDays`(가장 큰 알림 날, 꺼져 있으면 null), `today`(Asia/Seoul 날짜), `summary`(expired, soon, noDate, total), `documents[]`(id, category, categoryLabel, displayName, fileName, expiresOn, daysLeft, status, lastAlertedAt) |
 | PATCH | `/member-documents/{id}/expiry` | 만료일만 넣기·고치기·지우기(CR-136). 본문 `{"expiresOn": "YYYY-MM-DD" 또는 null}`. 응답 MemberDocumentDto |
 

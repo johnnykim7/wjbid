@@ -1,6 +1,6 @@
 # SAM.gov Bidding Agency Platform FSM 상태 정의
 
-> 설계 버전: 1.3 | 최종 수정: 2026-10-11 | 관련 CR: CR-003, CR-018, CR-132
+> 설계 버전: 1.3 | 최종 수정: 2026-10-11 | 관련 CR: CR-003, CR-018, CR-132, CR-141
 
 > 단계: 1. Requirements | 설계
 >
@@ -133,6 +133,7 @@ stateDiagram-v2
 - **진입 조건**: 관리자가 필요 문서 체크리스트를 확인/보완 후 고객에게 안내
 - **허용 다음 상태**: DOCS_RECEIVED, CLOSED
 - **DOCS_RECEIVED 전이 가드 (CR-010, BIZ-015)**: `ComplianceService.validateClientDocumentSlots(bidRequestId)` 호출 → 공고의 모든 BLOCKER 요구사항 슬롯이 `RequirementFulfillmentMap` 으로 충족(`ClientDocument` 또는 `DocumentSection`/`Attachment`)된 경우에만 전이 허용. 미충족 시 전이 차단 + 미충족 슬롯 목록 응답
+- **CR-141 (BIZ-045, BIZ-046)**: 슬롯은 공고 분석의 제출 서류에서 채운 요구 항목이고, BLOCKER 는 필수이고 고객 올림인 항목이다. 형식·쪽수 판정과 사람 확인은 가드에 넣지 않는다. 요구 항목이 없는 공고는 통과한다
 - **관련 기능 ID**: BID-REQ-002, BID-BROWSE-003
 
 ### DOCS_RECEIVED | 문서 접수 완료
@@ -147,6 +148,7 @@ stateDiagram-v2
 - **허용 다음 상태**: GENERATING
 - **관련 기능 ID**: BID-DOC-001
 - **비고**: Aimbase Workflow 비동기 실행. 실패 시 관리자에게 알림 후 ANALYZING에 머뭄
+- **변경 (CR-141)**: 진입 때 부르던 AI 요구사항 추출을 걷어낸다. 요구 항목은 공고 분석에서 이미 채워져 있다(BIZ-045). 진입 때 실행하는 AI 작업은 없고, 다음 상태로는 관리자가 넘긴다
 
 ### GENERATING | 문서 생성 중
 - **설명**: AI(Aimbase)가 제안서를 생성하는 상태
