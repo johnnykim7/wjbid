@@ -1,0 +1,194 @@
+# CR-146 회원가입 이메일 인증번호와 SNS 가입
+
+- CR-ID: CR-146
+- 작성일: 2026-10-11
+- 규모: 대 (외부 연동 세 곳 추가, 회원 표 변경과 새 표 세 개, 새 API 일곱 개, 새 화면 두 개, 다른 레포 메일 틀 요청)
+- 상태: 설계 완료, 구현 대기 (정할 것 5장은 사용자 10/11 19:47 /전승으로 모두 1)
+- 세션명: bidding-agency-platform-52225
+- 착수: 2026-10-11 16:58
+- 앞 CR: CR-124 (가입 동의 이력), CR-131 (로그인, 회원가입 화면)
+- 원본: docs/origins/원본_회원가입_인증과_SNS가입_20261011.md
+
+## 1. 근거
+
+- 사용자 10/11 16:55 "회원가입시 이메일 인증하나요?"
+- 사용자 10/11 16:58 "요즘 보안때문에 인증번호는 필수라"
+- 사용자 10/11 16:58 "인증부분과 sns가입까지 같이 설계를 해주세요"
+- 사용자 10/11 16:59 네이버, 카카오, 구글 세 곳
+- 사용자 10/11 17:13 woojinusbid.com 의 https 는 다른 창에서 고친다
+- 사용자 10/11 19:47 /전승: 5.1 은 1, 5.2 는 1, 5.3 은 1(컨셉만, 4장이 컨셉)
+
+## 2. 지금
+
+- 이메일 인증이 없다. 운영에서 없는 주소(qa-reg-1011@example.com)로 가입하고 바로 로그인됐다 (10/11 16:53 운영 확인). 코드와 설계서 어디에도 인증 메일, 인증번호가 없다.
+- 가입은 이메일과 비밀번호로만 한다. 회원 표의 비밀번호 칸이 비면 안 된다 (Member.java:24, T3-1 Member).
+- 메일은 알림 서버(bp-notification)의 틀(템플릿 코드)로만 보낸다 (BpNotificationClient.java:39). 인증번호용 틀은 없다.
+- woojinusbid.com 은 http 만 열려 있다. https 로 들어오면 같은 서버 다른 사이트의 인증서가 나와 막힌다 (10/11 17:08 확인). 구글은 로그인 뒤 돌아올 주소로 https 만 받는다.
+
+## 3. 무엇을 하나
+
+### 3.1 이메일 인증번호 (이메일 가입)
+
+1. 고객이 이메일을 넣고 "인증번호 받기" 를 누른다. 이미 가입된 메일이면 메일을 보내지 않고 "이미 가입된 이메일입니다" 로 안내한다.
+2. 서버가 6자리 숫자를 만들어 알림 서버 틀 `BID_EMAIL_CODE` 로 보낸다. 번호는 해시로만 저장한다.
+3. 고객이 번호를 넣고 "확인" 을 누른다. 맞으면 이메일 칸 아래 "이메일이 확인되었습니다" 가 뜨고 이메일 칸은 고칠 수 없게 된다("이메일 바꾸기" 로 처음부터).
+4. 가입 단추를 누르면 서버가 그 메일에 확인을 마친 번호가 있는지 다시 본다. 없으면 가입을 막는다. 번호는 가입 한 번에 쓰고 끝난다.
+
+정책값(유효 시간, 다시 받기 간격, 틀릴 수 있는 횟수, 하루 보낼 수 있는 횟수, 확인 뒤 가입까지 남는 시간)은 DB 설정이다 (6.1 POL-037).
+
+### 3.2 SNS 가입과 로그인 (네이버, 카카오, 구글)
+
+1. 로그인 화면과 가입 화면에 "네이버로 시작하기", "카카오로 시작하기", "Google 로 시작하기" 단추를 둔다. 키가 설정된 곳만 보인다.
+2. 단추를 누르면 그 회사 로그인 화면으로 갔다가 우리 서버로 돌아온다.
+3. 이미 그 SNS 로 가입한 회원이면 바로 로그인되어 공고 검색으로 간다.
+4. 처음이면 SNS 가입 화면으로 간다. SNS 가 넘긴 이메일이 채워져 있고, 회사 정보 네 칸과 약관 동의를 받는다. 비밀번호는 받지 않는다.
+   - SNS 가 확인을 마친 이메일(구글, 카카오의 확인 표시)을 그대로 쓰면 인증번호를 받지 않는다.
+   - 네이버 이메일, 이메일을 주지 않은 경우, 고객이 이메일을 바꾼 경우에는 3.1 과 같은 인증번호를 받는다.
+5. 가입을 마치면 바로 로그인되어 공고 검색으로 간다.
+6. SNS 가 넘긴 이메일로 이미 이메일 가입한 회원이 있으면 5.1 결정에 따른다.
+
+SNS 로 가입한 회원은 비밀번호가 없어 이메일과 비밀번호로는 로그인되지 않는다. 그때도 로그인 실패 안내는 지금과 같다(가입 방법을 드러내지 않는다).
+
+### 3.3 하지 않는 것
+
+- 이미 가입한 회원에게 이메일 인증을 다시 받지 않는다.
+- 내 정보에서 SNS 를 나중에 잇거나 끊는 기능, 비밀번호 찾기(BL-001)는 이번에 넣지 않는다.
+- 휴대폰 문자 인증은 넣지 않는다.
+
+## 4. 화면 컨셉 (T3-3 형식)
+
+색, 글자 크기, 단추 높이, 공통 틀은 CR-131 과 같다. 입력, 단추, 체크는 디자인시스템(ds-ui) 부품만 쓴다.
+
+### 회원가입 (`/register`, 바꿈)
+
+| 영역 | 표시/입력 데이터 | 주요 액션 |
+|------|-----------------|----------|
+| 간편 가입 (가입 상자 맨 위, 새로) | "SNS 로 간편 가입" 과 단추 세 개(설정된 곳만), 아래 "또는 이메일로 가입" 구분선 | 각 SNS 로 이동 |
+| 1 계정 | 이메일 칸 옆 "인증번호 받기"(테두리 단추). 보낸 뒤 인증번호 칸, 남은 시간 "9:59", "확인", "인증번호 다시 받기"(간격이 지나야 누를 수 있음), "메일이 오지 않으면 스팸함을 확인해 주세요". 확인 뒤 초록 줄 "이메일이 확인되었습니다" 와 "이메일 바꾸기". 비밀번호, 비밀번호 확인은 지금과 같다 | 인증번호 받기, 확인, 다시 받기, 이메일 바꾸기 |
+| 2 회사 정보, 3 약관 동의 | 지금과 같다 | 지금과 같다 |
+| 입력 오류 | 지금 오류에 "이메일 인증을 마쳐 주세요"(인증 전 가입), "인증번호가 맞지 않습니다. N번 더 넣을 수 있습니다", "인증 시간이 지났습니다. 다시 받아 주세요", "잠시 뒤 다시 받을 수 있습니다", "오늘 받을 수 있는 횟수를 넘었습니다. 내일 다시 시도해 주세요" 를 더한다 | 없음 |
+| 첫걸음 상자 | 지금과 같다 | 지금과 같다 |
+
+### SNS 가입 (`/register/sns`, 새로)
+
+| 영역 | 표시/입력 데이터 | 주요 액션 |
+|------|-----------------|----------|
+| 머리 | "네이버로 가입" 처럼 SNS 이름, "회사 정보만 넣으면 가입이 끝납니다" | 없음 |
+| 1 이메일 | SNS 가 준 이메일. SNS 확인 메일이면 회색 글자로 "네이버에서 확인된 이메일" 처럼 표시하고 "다른 이메일 쓰기" 를 누르면 3.1 인증번호 흐름으로 바뀐다. 확인되지 않았거나 없으면 처음부터 인증번호 흐름 | 인증번호 받기, 확인, 다른 이메일 쓰기 |
+| 2 회사 정보, 3 약관 동의 | 회원가입과 같다 | 같다 |
+| 가입 단추 | "가입하고 시작하기" | 가입 후 바로 로그인, 공고 검색으로 |
+| 시간 초과 | 가입 화면을 열고 오래 두어 SNS 확인이 끝나면 "다시 SNS 로 시작해 주세요" 와 로그인 화면 단추 | 로그인으로 |
+| 첫걸음 상자 | 회원가입과 같다 | 같다 |
+
+### 로그인 (`/login`, 바꿈)
+
+| 영역 | 표시/입력 데이터 | 주요 액션 |
+|------|-----------------|----------|
+| 간편 로그인 (로그인 단추 아래, 새로) | "또는" 구분선과 SNS 단추 세 개(설정된 곳만) | 각 SNS 로 이동 |
+| SNS 실패 안내 (로그인 상자 안, 새로) | 취소: "SNS 로그인을 취소했습니다." 실패: "SNS 로그인을 마치지 못했습니다. 잠시 뒤 다시 시도해 주세요." 이메일 겹침: 5.1 결정 문장 | 없음 |
+| 나머지 | 지금과 같다 | 지금과 같다 |
+
+### SNS 로그인 처리 (`/auth/sns/done`, 새로)
+
+SNS 에서 돌아온 직후 잠깐 보이는 빈 화면. "로그인하는 중" 한 줄만 보이고 끝나면 공고 검색(또는 로그인 전에 보던 화면)으로 간다. 실패하면 로그인 화면 SNS 실패 안내로 간다.
+
+## 5. 정할 것
+
+### 5.1 SNS 이메일로 이미 이메일 가입한 회원이 있을 때 (결정: 1)
+
+1. 자동으로 잇지 않고 로그인 화면에 "이 이메일은 이미 가입되어 있습니다. 이메일과 비밀번호로 로그인해 주세요." 를 띄운다 (권장). 남이 그 메일로 만든 SNS 계정으로 회원 계정이 넘어갈 길이 없다. 잇는 기능은 나중에 내 정보에서 비밀번호 확인 뒤 붙인다.
+2. SNS 가 확인한 이메일이면 기존 회원에 자동으로 이어 로그인시킨다. 고객은 편하지만 SNS 쪽 이메일 확인을 그대로 믿게 된다.
+
+### 5.2 SNS 가입자의 회사 정보 (결정: 1)
+
+1. 이메일 가입과 같이 회사명, 사업자등록번호, 담당자명, 전화번호를 가입 때 받는다 (권장). 회원 정보가 가입 방법과 상관없이 같다.
+2. SNS 가입은 이메일과 약관만 받고 회사 정보는 내 정보에서 나중에 넣는다. 가입은 빨라지지만 회사 정보 없는 회원이 생긴다.
+
+### 5.3 화면 컨셉 승인 방식 (결정: 1 컨셉만)
+
+1. 컨셉만 2. 컨셉+목업 3. 그냥 진행
+
+## 6. 설계
+
+### 6.1 T1
+
+- T1-1: BID-AUTH-001 회원가입에 이메일 인증 필수를 더한다. 새 기능 BID-AUTH-005 이메일 인증번호, BID-AUTH-006 SNS 가입, BID-AUTH-007 SNS 로그인. 인증 모듈 4개에서 7개.
+- T1-3: BIZ-062 가입 이메일은 인증번호 또는 SNS 확인을 거친 주소만(서버가 막는다). BIZ-063 SNS 계정 하나는 회원 하나에만 잇는다, 같은 이메일 기존 회원은 5.1 결정대로. BIZ-064 비밀번호 없는 회원은 이메일, 비밀번호 로그인이 되지 않는다.
+- T1-4: POL-037 인증번호 정책값. `system_settings` 의 `EMAIL_CODE_TTL_MINUTES`(처음 10), `EMAIL_CODE_RESEND_SECONDS`(60), `EMAIL_CODE_MAX_ATTEMPTS`(5), `EMAIL_CODE_DAILY_LIMIT`(메일 하나에 하루 10), `EMAIL_CODE_VERIFIED_MINUTES`(확인 뒤 가입까지 30). 비었거나 읽을 수 없으면 처음 값. POL-038 SNS 표 유효 시간 `SNS_SIGNUP_TICKET_MINUTES`(SNS 가입 화면 30), `SNS_LOGIN_TICKET_SECONDS`(로그인 넘김 60).
+- T1-5 FSM, T1-6 이벤트: 영향 없음(인증번호 메일은 이벤트가 아니라 요청 안에서 보낸다).
+- T1-7: Sprint 표에 BID-AUTH-005~007 줄을 더한다.
+
+### 6.2 T2
+
+- T2-1: `spring-boot-starter-oauth2-client` 를 더한다. 네이버, 카카오는 공급자 설정(주소)을 application.yml 에 둔다. 로그인 요청 보관은 세션 대신 쿠키로 한다(서버가 세션을 쓰지 않는다). SNS 키(클라이언트 ID, 비밀키)는 환경변수다.
+- T2-2 CLAUDE.md: 영향 없음.
+
+### 6.3 T3-1 데이터
+
+- members: `password_hash` 비어도 됨, `email_verified_at` DATETIME(6) NULL 추가(인증번호 또는 SNS 확인 시각, 기존 회원은 비어 있음).
+- member_social_accounts (새): id, member_id(FK members), provider(Enum `SnsProvider` NAVER, KAKAO, GOOGLE), provider_user_id, provider_email(NULL), created_at, last_login_at. UNIQUE(provider, provider_user_id), UNIQUE(member_id, provider).
+- email_verification_codes (새): id, email, code_hash, expires_at, attempts, verified_at(NULL), consumed_at(NULL), created_at. 인덱스(email, created_at).
+- sns_tickets (새): id, token_hash(UNIQUE), kind(Enum LOGIN, SIGNUP), provider, provider_user_id, provider_email(NULL), email_verified_by_provider, member_id(NULL, LOGIN 일 때), expires_at, used_at(NULL), created_at. 한 번 쓰면 used_at 을 채우고 다시 받지 않는다.
+- 마이그레이션 V50. 시각 비교는 존을 명시한 Clock 하나로 한다.
+
+### 6.4 T3-2 API
+
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| POST | /auth/email-codes | 인증번호 보내기 `{email}`. 200 `{expiresInSeconds, resendAfterSeconds}`. 이미 가입된 메일 409 `EMAIL_ALREADY_EXISTS`, 간격 전 429 `EMAIL_CODE_TOO_SOON`(retryAfterSeconds), 하루 한도 429 `EMAIL_CODE_DAILY_LIMIT`, 메일 실패 502 `EMAIL_SEND_FAILED` |
+| POST | /auth/email-codes/verify | 확인 `{email, code}`. 200. 틀림 400 `EMAIL_CODE_MISMATCH`(remainingAttempts), 시간 지남 410 `EMAIL_CODE_EXPIRED`, 횟수 넘음 429 `EMAIL_CODE_LOCKED` |
+| POST | /auth/register | (바꿈) 확인을 마친 번호가 없으면 400 `EMAIL_NOT_VERIFIED`. 가입하면 번호를 다 쓴 것으로 하고 `email_verified_at` 을 채운다 |
+| GET | /auth/sns/providers | 키가 설정된 SNS 목록 |
+| GET | /oauth2/authorization/{provider} | SNS 로그인 시작(스프링 기본 주소) |
+| GET | /login/oauth2/code/{provider} | SNS 가 돌려보내는 주소. 회원이면 LOGIN 표를 만들어 `/auth/sns/done?ticket=`, 처음이면 SIGNUP 표로 `/register/sns?ticket=`, 겹침, 취소, 실패는 `/login?sns=` 로 보낸다 |
+| POST | /auth/sns/login | `{ticket}` 를 Access, Refresh 토큰으로 바꾼다. 한 번만 |
+| GET | /auth/sns/signup/{ticket} | SNS 가입 화면 채울 값 `{provider, email, emailVerifiedByProvider}`. 시간 지남 410 `SNS_TICKET_EXPIRED` |
+| POST | /auth/sns/register | SNS 가입 `{ticket, email, companyName, businessRegistrationNumber, contactPerson, phone, agreeTerms, agreePrivacy, agreeMarketing}`. 이메일이 SNS 확인 메일과 다르거나 확인이 없으면 인증번호 확인이 있어야 한다. 성공하면 토큰을 준다 |
+
+인증 없이 열리는 주소에 `/oauth2/**`, `/login/oauth2/**` 를 더한다 (SecurityConfig).
+
+### 6.5 T3-3, T3-4 화면
+
+4장 컨셉을 T3-3 에, 인증번호 보내기, 확인, 시간 초과, 다시 받기, SNS 왕복과 실패 흐름을 T3-4 「로그인·회원가입」 에 시나리오로 더한다. 라우트 `/register/sns`, `/auth/sns/done` 을 더한다.
+
+### 6.6 T3-5 시험
+
+TC-AUTH-009~ 로 더한다. 인증번호 보내기(정상, 가입된 메일, 간격 전, 하루 한도), 확인(정상, 틀림, 다섯 번 틀림, 시간 지남), 확인 없는 가입 막힘, 번호 두 번 쓰기 막힘, SNS 처음(가입 표), 기존 SNS 회원(로그인 표), 표 두 번 쓰기 막힘, 표 시간 지남, SNS 이메일 겹침(5.1), 비밀번호 없는 회원 비밀번호 로그인 막힘, 정책값이 비었을 때 처음 값.
+
+## 7. 다른 곳에서 할 일
+
+### 7.1 알림 서버(bp-notification) 메일 틀
+
+틀 `BID_EMAIL_CODE` 를 알림 서버 레포 마이그레이션으로 넣어 달라고 그 레포 창에 요청한다(CR-132 와 같은 방법). 원본은 docs/templates/mail/BID_EMAIL_CODE.json 에 둔다. 제목 "[WJbid] 이메일 인증번호 {{code}}", 본문에 번호, 유효 시간, "가입하려 한 적이 없으면 이 메일을 지워 주세요". 틀 변수는 `code`(6자리), `validMinutes`(POL-037 유효 시간).
+
+### 7.2 https (다른 창)
+
+woojinusbid.com 에 https 가 켜져야 구글 로그인을 운영에서 쓸 수 있다. 네이버, 카카오도 https 주소로 등록한다. 로컬 확인은 http://localhost 로 한다.
+
+### 7.3 사업자가 SNS 세 곳에 할 등록
+
+| SNS | 사이트 | 할 일 | 돌아올 주소 |
+|-----|--------|------|------------|
+| 네이버 | developers.naver.com | 애플리케이션 등록, 사용 API "네이버 로그인", 제공 정보 이메일. 화면이 다 되면 가입 화면 캡처로 검수 요청(검수 전에는 등록한 사람만 로그인된다) | https://woojinusbid.com/api/login/oauth2/code/naver |
+| 카카오 | developers.kakao.com | 앱 만들기, 카카오 로그인 켜기, 비즈 앱 전환(사업자 정보), 동의항목 카카오계정(이메일) | https://woojinusbid.com/api/login/oauth2/code/kakao |
+| 구글 | console.cloud.google.com | OAuth 동의 화면, OAuth 클라이언트 ID(웹), 범위 openid, email, profile | https://woojinusbid.com/api/login/oauth2/code/google |
+
+로컬 확인용으로 같은 앱에 http://localhost:8183/api/login/oauth2/code/{naver, kakao, google} 도 등록한다. 받은 클라이언트 ID 와 비밀키는 운영 서버 환경변수로 넣는다(레포에 두지 않는다).
+
+## 8. 완료 조건
+
+- 이메일 가입은 인증번호 확인 없이 끝나지 않는다(화면과 서버 둘 다).
+- 세 SNS 로 처음 가입, 다시 로그인이 로컬에서 된다(키가 있는 곳).
+- SNS 가입 회원은 회원 표, SNS 연결 표, 동의 이력이 모두 남는다.
+- 키가 없는 SNS 는 단추가 보이지 않는다.
+- T3-5 TC-AUTH 새 항목이 모두 통과한다.
+- 운영: https 켜진 뒤 배포, 세 SNS 와 인증번호 메일을 운영에서 한 번씩 확인. 네이버는 검수 통과 뒤 일반 고객에게 열린다.
+
+## 9. 설계서 반영 (2026-10-11)
+
+T1-1(BID-AUTH-001 변경, BID-AUTH-005~007), T1-2(인증 7개, 합계 94), T1-3(BIZ-062~064), T1-4(POL-037, POL-038), T1-7(Sprint 1 세 줄), T2-1(spring-boot-starter-oauth2-client), T3-1(members 두 칸, Enum 둘, 표 셋), T3-2(A 절 여덟 줄과 가입 줄 변경), T3-3(라우트 둘, 화면 절), T3-4(시나리오 5~8), T3-5(TC-AUTH-009~030), execution-spec(3장, 8-3), 메일 틀 원본 docs/templates/mail/BID_EMAIL_CODE.json. T1-5 FSM, T1-6 이벤트, T2-2 CLAUDE.md 는 영향 없음을 확인했다.
+
+## 이슈
+
+- T1-2 모듈 현황 합계(94)와 T1-1 기능 요약 줄 수(107)가 CR-146 전부터 13개 어긋나 있다. B(5와 10), C(4와 6), J(3과 4), K(4와 5), P(T1-2 에 줄 없음, T1-1 에 4). 이번 CR 은 인증 줄만 고쳤다.
+- T3-1 에 가입 동의 이력 표(member_consents)와 회원 표의 uei, cage_code(CR-124, V38)가 빠져 있었다. SNS 가입도 이 표에 남기므로 이번에 T3-1 에 올렸다.

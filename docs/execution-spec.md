@@ -1,6 +1,6 @@
 # 실행 지시서: SAM.gov Bidding Agency Platform
 
-> 설계 버전: 1.5 | 최종 수정: 2026-10-11 | 관련 CR: CR-003, CR-132, CR-133, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143
+> 설계 버전: 1.6 | 최종 수정: 2026-10-11 | 관련 CR: CR-003, CR-132, CR-133, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-146
 
 > **프로젝트:** bidding-agency-platform (미군 조달 입찰 AI 대행 서비스)
 > **프로젝트 유형:** 풀스택 (BE: Java 17 + Spring Boot 3.2 / FE: React 19 × 2)
@@ -96,7 +96,7 @@ SAM.gov에 올라오는 미군(USFK) 조달 입찰 공고를 자동 수집하고
 
 | 모듈 | 기능 수 | 책임 | 외부 연동 |
 |------|---------|------|----------|
-| A. 인증 | 4 | 회원가입, 로그인, JWT 관리 | — |
+| A. 인증 | 7 | 회원가입(이메일 인증번호), 로그인, JWT 관리, SNS 가입·로그인 (CR-146) | 네이버, 카카오, 구글 로그인, 알림 서버 메일 틀 (CR-146) |
 | B. 공고 수집 | 8 | SAM.gov 수집 + **사전 분석 + 노출 관리** (CR-003) | SAM.gov API, **Aimbase** |
 | C. 공고 열람 | 4 | 검색, 상세, 필요 문서, 북마크 | — |
 | D. 입찰 접수 | 4 | 신청, 문서 업로드, 현황 조회 | MinIO |
@@ -512,6 +512,8 @@ sequenceDiagram
 | 화면 | 주요 API | 비고 |
 |------|---------|------|
 | 홈 | — | 정적 콘텐츠 |
+| 회원가입 | `POST /auth/email-codes`, `/auth/email-codes/verify`, `/auth/register` | 이메일 인증번호 확인을 마친 주소만 가입 (BIZ-062, CR-146) |
+| SNS 가입·로그인 | `GET /auth/sns/providers`, `/oauth2/authorization/{provider}`, `/auth/sns/signup/{ticket}`, `POST /auth/sns/register`, `/auth/sns/login` | 네이버, 카카오, 구글. 키가 있는 곳만 (CR-146) |
 | 공고 검색 | `GET /opportunities`, `/search`, `/near-deadline` | 필터, 페이징 |
 | 공고 상세 | `GET /opportunities/{id}`, `/requirements`, `/attachments` | |
 | 입찰 신청 | `POST /bid-requests` | 서비스 레벨 선택 |

@@ -1,6 +1,6 @@
 # SAM.gov Bidding Agency Platform Sprint 구조도
 
-> 설계 버전: 1.2 | 최종 수정: 2026-10-11 | 관련 CR: CR-137, CR-140, CR-141, CR-142
+> 설계 버전: 1.3 | 최종 수정: 2026-10-11 | 관련 CR: CR-137, CR-140, CR-141, CR-142, CR-146
 
 > 단계: 1. Requirements | 설계
 
@@ -34,6 +34,9 @@ flowchart LR
 | BID-AUTH-001 | 회원가입 API + 페이지 | 작업 1-2 | 회원가입 → DB 저장 → JWT 발급 | BE+FE | |
 | BID-AUTH-002 | 로그인 API + 페이지 | BID-AUTH-001 | 로그인 → JWT 발급 → 인증 필요 API 호출 성공 | BE+FE | |
 | BID-AUTH-003 | 토큰 갱신 | BID-AUTH-002 | Refresh Token으로 Access Token 재발급 성공 | BE | |
+| BID-AUTH-005 | 이메일 인증번호 API + 가입 화면 인증 칸 (CR-146) | BID-AUTH-001, 알림 서버 틀 BID_EMAIL_CODE | 번호 받기, 확인, 확인 없는 가입 막힘(BIZ-062) | BE+FE | 설계중 |
+| BID-AUTH-006 | SNS 가입 API + SNS 가입 화면 (CR-146) | BID-AUTH-005, SNS 세 곳 앱 등록 | 처음 SNS 로 가입하고 바로 로그인, SNS 이메일 겹침 안내(BIZ-063) | BE+FE | 설계중 |
+| BID-AUTH-007 | SNS 로그인 (CR-146) | BID-AUTH-006 | 가입한 SNS 로 다시 로그인, 표 두 번 쓰기 막힘 | BE+FE | 설계중 |
 
 ### Sprint 2: 공고 수집 + 알림
 
