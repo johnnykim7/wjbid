@@ -38,7 +38,7 @@ public class OpportunityCollectionScheduler {
 
     // 타깃: 411TH CSB 단일 키워드만 수집 (CR-026).
     // SAM의 fullParentPathName은 '411TH CSB' 대문자가 정본. phrase 검색 + organization 후필터 양쪽에 동일 토큰 사용.
-    private static final List<String> MAIN_KEYWORDS = List.of("411TH CSB");
+    public static final List<String> MAIN_KEYWORDS = List.of("411TH CSB");
 
     /**
      * Scheduled collection - runs at 06:00, 12:00, 18:00, 23:00 KST

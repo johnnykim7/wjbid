@@ -13,6 +13,8 @@ public final class SettingKey {
 
     /** 공고문 예시 화면에 보일 공개 공고문 id(UUID). 비었거나 숨김이면 빈 안내 (POL-015, CR-135) */
     public static final String NOTICE_SAMPLE_ID = "NOTICE_SAMPLE_ID";
+    /** 서류 만료 메일을 보내는 날(만료 며칠 전, 쉼표로 나눔). 비어 있거나 읽을 수 없으면 보내지 않음 (POL-016, CR-136) */
+    public static final String DOC_EXPIRY_ALERT_DAYS = "DOC_EXPIRY_ALERT_DAYS";
 
     private SettingKey() {
     }

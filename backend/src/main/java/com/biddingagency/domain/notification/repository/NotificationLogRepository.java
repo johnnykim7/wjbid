@@ -24,4 +24,7 @@ public interface NotificationLogRepository extends JpaRepository<NotificationLog
     long countByRecipientIdAndSuccessTrueAndReadAtIsNull(UUID recipientId);
 
     Optional<NotificationLog> findByIdAndRecipientId(UUID id, UUID recipientId);
+
+    // CR-136: 회원 서류의 만료 메일 중 보낸 것(마지막 알림 날)
+    List<NotificationLog> findByRecipientIdAndNotificationTypeAndSuccessTrue(UUID recipientId, NotificationType type);
 }

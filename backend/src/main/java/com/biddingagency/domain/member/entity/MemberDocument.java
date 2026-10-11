@@ -49,6 +49,14 @@ public class MemberDocument extends BaseEntity {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
+    /** 만료일(한국 날짜). null = 만료일 없음 (CR-136) */
+    @Column(name = "expires_on")
+    private java.time.LocalDate expiresOn;
+
+    public void changeExpiry(java.time.LocalDate expiresOn) {
+        this.expiresOn = expiresOn;
+    }
+
     /** 파일 교체 (storage_url 갱신 시 기존 파일은 서비스에서 삭제) */
     public void replaceFile(String fileName, Long fileSize, String contentType, String storageUrl) {
         this.fileName = fileName;

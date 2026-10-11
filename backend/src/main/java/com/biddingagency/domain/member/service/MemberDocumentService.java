@@ -12,6 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -39,7 +40,8 @@ public class MemberDocumentService {
 
     @Transactional
     public MemberDocument upload(UUID memberId, DocumentCategory category,
-                                 String displayName, String description, MultipartFile file) {
+                                 String displayName, String description, MultipartFile file,
+                                 ExpiryChange expiry) {
         validateFile(file);
 
         // 고정 카테고리: 기존 보유분 있으면 교체(파일 삭제 후 레코드 갱신)
@@ -47,7 +49,7 @@ public class MemberDocumentService {
             var existing = repository.findFirstByMemberIdAndCategory(memberId, category);
             if (existing.isPresent()) {
                 return replace(memberId, existing.get().getId(),
-                        category.getDisplayName(), null, file);
+                        category.getDisplayName(), null, file, expiry);
             }
         }
 
@@ -62,6 +64,7 @@ public class MemberDocumentService {
                 .storageUrl(storageUrl)
                 .displayName(resolveDisplayName(category, displayName))
                 .description(category.isFixed() ? null : description)
+                .expiresOn(expiry.keep() ? null : expiry.value())
                 .build();
 
         MemberDocument saved = repository.save(doc);
@@ -71,7 +74,8 @@ public class MemberDocumentService {
 
     @Transactional
     public MemberDocument replace(UUID memberId, UUID docId,
-                                  String displayName, String description, MultipartFile file) {
+                                  String displayName, String description, MultipartFile file,
+                                  ExpiryChange expiry) {
         MemberDocument doc = findOwned(memberId, docId);
 
         if (file != null && !file.isEmpty()) {
@@ -86,8 +90,32 @@ public class MemberDocumentService {
         doc.updateMeta(
                 resolveDisplayName(doc.getCategory(), displayName),
                 doc.getCategory().isFixed() ? null : description);
+        if (!expiry.keep()) {
+            doc.changeExpiry(expiry.value());
+        }
         log.info("[member-doc] replaced {} for member {}", docId, memberId);
         return doc;
+    }
+
+    /** CR-136: 만료일만 넣거나 고치거나 지운다(BID-MKT-012). 지난 날짜도 받는다 */
+    @Transactional
+    public MemberDocument changeExpiry(UUID memberId, UUID docId, LocalDate expiresOn) {
+        MemberDocument doc = findOwned(memberId, docId);
+        doc.changeExpiry(expiresOn);
+        log.info("[member-doc] expiry {} -> {} for member {}", docId, expiresOn, memberId);
+        return doc;
+    }
+
+    /**
+     * CR-136: 올리기·바꾸기에서 만료일을 어떻게 할지.
+     * keep 이면 그대로 두고(새 서류는 만료일 없음), 아니면 value 로 바꾼다(null 이면 지움).
+     */
+    public record ExpiryChange(boolean keep, LocalDate value) {
+        public static final ExpiryChange KEEP = new ExpiryChange(true, null);
+
+        public static ExpiryChange to(LocalDate value) {
+            return new ExpiryChange(false, value);
+        }
     }
 
     @Transactional

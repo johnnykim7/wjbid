@@ -31,18 +31,20 @@ import java.util.UUID;
 @Component
 public class SAMGovApiClient {
 
-    private static final String API_BASE_URL = "https://api.sam.gov/opportunities/v2/search";
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("MM/dd/yyyy");
 
+    private final String apiUrl;
     private final String apiKey;
     private final ObjectMapper objectMapper;
     private final CloseableHttpClient httpClient;
     private final SamQuotaLogger quotaLogger;
 
     public SAMGovApiClient(
+            @Value("${app.sam-gov.api-url}") String apiUrl,
             @Value("${app.sam-gov.api-key}") String apiKey,
             ObjectMapper objectMapper,
             SamQuotaLogger quotaLogger) {
+        this.apiUrl = apiUrl;
         this.apiKey = apiKey;
         this.objectMapper = objectMapper;
         this.quotaLogger = quotaLogger;
@@ -60,8 +62,17 @@ public class SAMGovApiClient {
      */
     public SAMOpportunityResponse searchOpportunities(String keyword, LocalDate postedFrom,
                                                       LocalDate postedTo, int limit, int offset) {
+        return searchOpportunities(keyword, postedFrom, postedTo, limit, offset, null);
+    }
+
+    /**
+     * CR-136: 공고 유형(SAM ptype, 예 낙찰 공지 a)으로 좁혀 검색한다. procurementType 이 null 이면 모든 유형.
+     */
+    public SAMOpportunityResponse searchOpportunities(String keyword, LocalDate postedFrom,
+                                                      LocalDate postedTo, int limit, int offset,
+                                                      String procurementType) {
         try {
-            String url = buildSearchUrl(keyword, postedFrom, postedTo, limit, offset);
+            String url = buildSearchUrl(keyword, postedFrom, postedTo, limit, offset, procurementType);
             log.info("Calling SAM.gov API: {}", url);
 
             HttpGet request = new HttpGet(url);
@@ -162,8 +173,8 @@ public class SAMGovApiClient {
      * Build search URL with parameters
      */
     private String buildSearchUrl(String keyword, LocalDate postedFrom, LocalDate postedTo,
-                                   int limit, int offset) {
-        StringBuilder url = new StringBuilder(API_BASE_URL);
+                                   int limit, int offset, String procurementType) {
+        StringBuilder url = new StringBuilder(apiUrl);
         url.append("?api_key=").append(apiKey);
 
         if (keyword != null && !keyword.isEmpty()) {
@@ -181,6 +192,10 @@ public class SAMGovApiClient {
 
         if (postedTo != null) {
             url.append("&postedTo=").append(postedTo.format(DATE_FORMATTER));
+        }
+
+        if (procurementType != null && !procurementType.isBlank()) {
+            url.append("&ptype=").append(encodeValue(procurementType));
         }
 
         url.append("&limit=").append(Math.min(limit, 1000)); // Max 1000 per request

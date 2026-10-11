@@ -103,7 +103,7 @@ public class OpportunityCollectorService {
                         if (!organizationMatches(data, keyword)) {
                             continue;
                         }
-                        ProcessResult result = processOpportunity(data);
+                        IngestOutcome result = ingest(data);
                         switch (result.result()) {
                             case NEW -> {
                                 created++;
@@ -111,17 +111,6 @@ public class OpportunityCollectorService {
                                 // q=korea 전문검색이 끌어오는 무관 부품조달(미분류)은 메일 카운트에서 제외.
                                 if (result.industryType() != null) {
                                     targetCreated++;
-                                }
-                                if (result.opportunity() != null) {
-                                    java.util.UUID oppId = result.opportunity().getId();
-                                    // CR-022 2차: 코드 매핑·금액·장소 메타 즉시 반영(동기). 실패해도 수집 방해 안 함.
-                                    try {
-                                        selectionEnricher.applyMeta(oppId, data);
-                                    } catch (Exception ex) {
-                                        log.warn("[CR-022-2] 선별 메타 반영 실패 id={}: {}", oppId, ex.getMessage());
-                                    }
-                                    // CR-022 (재구현): 신규 공고 제목/본문 비동기 번역.
-                                    translationService.translateAsync(oppId);
                                 }
                             }
                             case CHANGED -> changed++;   // CR-009: 기존이지만 contentHash 변경
@@ -154,11 +143,42 @@ public class OpportunityCollectorService {
     }
 
     /**
+     * 받은 공고 한 건을 넣거나 갱신한다. 새 공고면 선별 메타와 번역을 붙이고,
+     * 낙찰 정보가 오면 이미 있던 공고라도 업체와 금액을 채운다(CR-136, BID-MKT-007).
+     * 메타와 낙찰 정보 저장이 실패해도 수집은 이어 간다.
+     */
+    public IngestOutcome ingest(SAMOpportunityResponse.OpportunityData data) {
+        ProcessResult result = processOpportunity(data);
+        boolean awardChanged = false;
+        if (result.opportunity() != null) {
+            java.util.UUID oppId = result.opportunity().getId();
+            if (result.result() == OpportunityService.UpsertResult.NEW) {
+                // CR-022 2차: 코드 매핑·금액·장소 메타 즉시 반영(동기). 실패해도 수집 방해 안 함.
+                try {
+                    selectionEnricher.applyMeta(oppId, data);
+                } catch (Exception ex) {
+                    log.warn("[CR-022-2] 선별 메타 반영 실패 id={}: {}", oppId, ex.getMessage());
+                }
+                // CR-022 (재구현): 신규 공고 제목/본문 비동기 번역.
+                translationService.translateAsync(oppId);
+            }
+            if (data.getAward() != null) {
+                try {
+                    awardChanged = selectionEnricher.applyAward(oppId, data.getAward());
+                } catch (Exception ex) {
+                    log.warn("[CR-136] 낙찰 정보 저장 실패 id={}: {}", oppId, ex.getMessage());
+                }
+            }
+        }
+        return new IngestOutcome(result.result(), result.industryType(), awardChanged);
+    }
+
+    /**
      * CR-026: 키워드의 모든 토큰이 발주처(fullParentPathName)에 포함될 때만 통과.
      * SAM phrase 검색을 우회해 들어오는 무관 부서 공고(DLA, NAVSUP 등)를 차단.
      * 키워드가 비어있으면 통과.
      */
-    private boolean organizationMatches(SAMOpportunityResponse.OpportunityData data, String keyword) {
+    boolean organizationMatches(SAMOpportunityResponse.OpportunityData data, String keyword) {
         if (keyword == null || keyword.isBlank()) return true;
         String org = data.getOrganizationName();
         if (org == null || org.isBlank()) return false;
@@ -194,6 +214,9 @@ public class OpportunityCollectorService {
         rawJson.put("description", extractDescription(data.getDescription()));
         rawJson.put("placeOfPerformance", extractPlaceOfPerformance(data.getOfficeAddress()));
         rawJson.put("resourceLinks", data.getResourceLinks());
+        if (data.getAward() != null) {
+            rawJson.put("award", data.getAward()); // CR-136: 낙찰 정보도 원본에 남긴다(BIZ-004)
+        }
 
         // Calculate content hash for change detection
         String contentHash = calculateHash(data);
@@ -318,6 +341,10 @@ public class OpportunityCollectorService {
      * duplicate = 동일 content_hash 재게시 차단(CR-042).
      */
     public record CollectionResult(int collected, int targetNew, int changed, int unchanged, int duplicate, int errors) {
+    }
+
+    /** ingest 결과: upsert 결과, 분류된 사업유형(미분류 시 null), 낙찰 정보로 저장값이 바뀌었는지(CR-136). */
+    public record IngestOutcome(OpportunityService.UpsertResult result, IndustryType industryType, boolean awardChanged) {
     }
 
     /** processOpportunity 결과: upsert 결과(NEW/CHANGED/UNCHANGED) + 분류된 사업유형(미분류 시 null). */

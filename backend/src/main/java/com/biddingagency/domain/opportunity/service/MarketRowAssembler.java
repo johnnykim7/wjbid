@@ -98,7 +98,7 @@ public class MarketRowAssembler {
                 s.postedDate() == null ? null : s.postedDate().toLocalDate(),
                 s.responseDeadline() == null ? null : s.responseDeadline().atZone(KST).toOffsetDateTime(),
                 group == MarketGroup.AWARD ? s.awardAmount() : null,
-                null,
+                group == MarketGroup.AWARD ? s.awardeeName() : null,
                 ctx.publicNoticeByOpportunity().get(s.id()),
                 samUrl(s.noticeId()),
                 hasMainNotice,
@@ -117,7 +117,8 @@ public class MarketRowAssembler {
     static MarketSource sourceOf(Opportunity o) {
         return new MarketSource(o.getId(), o.getNoticeId(), o.getSolicitationNumber(), o.getTitle(),
                 o.getTitleKo(), o.getType(), o.getTypeKo(), o.getPostedDate(), o.getResponseDeadline(),
-                o.getAwardAmount(), o.getRawJson());
+                o.getAwardAmount(), o.getAwardAmountUsd(), o.getAwardeeName(), o.getAwardeeUei(),
+                o.getRawJson());
     }
 
     static boolean isOpen(MarketSource s, LocalDateTime nowKst) {

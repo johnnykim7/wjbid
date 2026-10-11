@@ -58,6 +58,22 @@ public class OpportunitySelectionEnricher {
     }
 
     /**
+     * CR-136: SAM 응답의 낙찰 정보에서 업체 이름, 업체 UEI, 금액을 저장한다(BID-MKT-007).
+     * 새 공고뿐 아니라 이미 있는 공고에도 부른다. 응답에 없는 값은 이미 있는 값을 지우지 않는다.
+     *
+     * @return 저장된 값이 바뀌었으면 true
+     */
+    @Transactional
+    public boolean applyAward(UUID opportunityId, Map<String, Object> award) {
+        if (award == null) return false;
+        Opportunity opp = opportunityRepository.findById(opportunityId).orElse(null);
+        if (opp == null) return false;
+        AwardInfo info = AwardInfo.from(award);
+        return opp.applyAward(info.awardeeName(), info.awardeeUei(), info.amountUsd(),
+                info.amountUsd() != null ? String.format("$%,.2f", info.amountUsd()) : null, award);
+    }
+
+    /**
      * 비동기 단계 — title 번역 + description 요약을 트리거.
      * NEW 행에 대해서만 호출.
      */

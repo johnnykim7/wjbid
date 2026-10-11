@@ -2,6 +2,7 @@ package com.biddingagency.controller;
 
 import com.biddingagency.domain.member.entity.DocumentCategory;
 import com.biddingagency.domain.member.entity.MemberDocument;
+import com.biddingagency.domain.member.service.DocumentExpiryService;
 import com.biddingagency.domain.member.service.MemberDocumentService;
 import com.biddingagency.security.CustomUserDetails;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -15,8 +16,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -36,6 +40,7 @@ import java.util.stream.Collectors;
 public class MemberDocumentController {
 
     private final MemberDocumentService service;
+    private final DocumentExpiryService documentExpiryService;
 
     /** 서류 응답 DTO (LAZY 폭발 방지 — ClientDocumentDto 패턴) */
     @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -50,6 +55,7 @@ public class MemberDocumentController {
             String storageUrl,
             String displayName,
             String description,
+            LocalDate expiresOn,
             LocalDateTime createdAt
     ) {
         public static MemberDocumentDto from(MemberDocument d) {
@@ -64,6 +70,7 @@ public class MemberDocumentController {
                     d.getStorageUrl(),
                     d.getDisplayName(),
                     d.getDescription(),
+                    d.getExpiresOn(),
                     d.getCreatedAt()
             );
         }
@@ -115,9 +122,11 @@ public class MemberDocumentController {
             @RequestParam("category") DocumentCategory category,
             @RequestParam(value = "displayName", required = false) String displayName,
             @RequestParam(value = "description", required = false) String description,
+            @RequestParam(value = "expiresOn", required = false) String expiresOn,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         UUID memberId = userDetails.getMember().getId();
-        MemberDocument saved = service.upload(memberId, category, displayName, description, file);
+        MemberDocument saved = service.upload(memberId, category, displayName, description, file,
+                expiryChange(expiresOn));
         return ResponseEntity.status(HttpStatus.CREATED).body(MemberDocumentDto.from(saved));
     }
 
@@ -128,10 +137,48 @@ public class MemberDocumentController {
             @RequestParam(value = "file", required = false) MultipartFile file,
             @RequestParam(value = "displayName", required = false) String displayName,
             @RequestParam(value = "description", required = false) String description,
+            @RequestParam(value = "expiresOn", required = false) String expiresOn,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         UUID memberId = userDetails.getMember().getId();
-        MemberDocument updated = service.replace(memberId, id, displayName, description, file);
+        MemberDocument updated = service.replace(memberId, id, displayName, description, file,
+                expiryChange(expiresOn));
         return ResponseEntity.ok(MemberDocumentDto.from(updated));
+    }
+
+    /** 만료일 본문. expiresOn 이 null 이면 지운다 (CR-136) */
+    public record ExpiryRequest(String expiresOn) {}
+
+    @GetMapping("/expiry")
+    @Operation(summary = "서류별 만료 상태 (CR-136)")
+    public ResponseEntity<DocumentExpiryService.ExpiryOverview> expiry(
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        return ResponseEntity.ok(documentExpiryService.overview(userDetails.getMember().getId()));
+    }
+
+    @PatchMapping("/{id}/expiry")
+    @Operation(summary = "만료일 넣기, 고치기, 지우기 (CR-136)")
+    public ResponseEntity<MemberDocumentDto> changeExpiry(
+            @PathVariable UUID id,
+            @RequestBody ExpiryRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        UUID memberId = userDetails.getMember().getId();
+        LocalDate expiresOn = request == null ? null : parseDate(request.expiresOn());
+        return ResponseEntity.ok(MemberDocumentDto.from(service.changeExpiry(memberId, id, expiresOn)));
+    }
+
+    /** 칸이 오지 않으면 그대로, 빈 값이면 지움, 날짜면 그 날로 */
+    private static MemberDocumentService.ExpiryChange expiryChange(String raw) {
+        if (raw == null) return MemberDocumentService.ExpiryChange.KEEP;
+        return MemberDocumentService.ExpiryChange.to(parseDate(raw));
+    }
+
+    private static LocalDate parseDate(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        try {
+            return LocalDate.parse(raw.trim());
+        } catch (DateTimeParseException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "만료일은 YYYY-MM-DD 형식이어야 합니다");
+        }
     }
 
     @DeleteMapping("/{id}")

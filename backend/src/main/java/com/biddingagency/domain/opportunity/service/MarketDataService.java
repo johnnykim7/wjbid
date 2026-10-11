@@ -173,7 +173,7 @@ public class MarketDataService {
 
     /**
      * 최근 낙찰 (BID-MKT-004). 요약은 달 거르기를 건 결과, 달별 건수와 자료 기간은 낙찰 공지 전부.
-     * 금액은 공지에 적힌 달러 문자열을 숫자로 읽고, 읽지 못하면 금액 없음으로 센다(BIZ-027).
+     * 금액은 낙찰 금액 숫자 칸(CR-136)을 쓰고, 비었으면 금액 없음으로 센다(BIZ-027).
      */
     public AwardsResponse awards(YearMonth month, AwardSort sort, int page, int size) {
         List<MarketSource> all = opportunityRepository.findMarketSources();
@@ -192,7 +192,7 @@ public class MarketDataService {
                 .toList();
         Map<UUID, BigDecimal> amounts = new HashMap<>();
         for (MarketSource s : filtered) {
-            BigDecimal amount = parseAmount(s.awardAmount());
+            BigDecimal amount = s.awardAmountUsd();
             if (amount != null) amounts.put(s.id(), amount);
         }
 
@@ -262,17 +262,6 @@ public class MarketDataService {
                 .sorted(Comparator.comparingLong(SectorStat::count).reversed().thenComparing(SectorStat::code))
                 .toList();
         return new NaicsResponse(sectors, none, all.size() - none, all.size(), firstPosted(all), lastPosted(all));
-    }
-
-    static BigDecimal parseAmount(String text) {
-        if (text == null) return null;
-        String digits = text.replace("$", "").replace(",", "").replaceAll("\\s", "");
-        if (digits.isEmpty()) return null;
-        try {
-            return new BigDecimal(digits);
-        } catch (NumberFormatException e) {
-            return null;
-        }
     }
 
     private AmendmentGroup amendmentGroup(String sol, List<MarketSource> versions, MarketRowAssembler.Context ctx,

@@ -138,7 +138,7 @@ public interface OpportunityRepository extends JpaRepository<Opportunity, UUID> 
 
     String MARKET_SOURCE_SELECT = "SELECT new com.biddingagency.domain.opportunity.dto.MarketSource("
             + "o.id, o.noticeId, o.solicitationNumber, o.title, o.titleKo, o.type, o.typeKo, "
-            + "o.postedDate, o.responseDeadline, o.awardAmount, o.rawJson) "
+            + "o.postedDate, o.responseDeadline, o.awardAmount, o.awardAmountUsd, o.awardeeName, o.awardeeUei, o.rawJson) "
             + "FROM Opportunity o WHERE o.deletedAt IS NULL";
 
     /** CR-135: 메뉴 속 화면이 읽는 모은 공고 전부(지운 것 제외), 목록과 집계에 쓰는 칸만 */

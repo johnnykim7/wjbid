@@ -23,7 +23,9 @@ public enum NotificationType {
     BID_AWARDED_CUSTOMER("BID_OPPORTUNITY_APPROVED"),
     // CR-132: 1:1 문의 접수 관리자 알림, 관리자 답변 고객 메일
     INQUIRY_RECEIVED("BID_INQUIRY_ADMIN"),
-    INQUIRY_ANSWERED("BID_INQUIRY_ANSWER");
+    INQUIRY_ANSWERED("BID_INQUIRY_ANSWER"),
+    // CR-136: 공통 서류함 서류 만료 전 회원 메일
+    DOCUMENT_EXPIRY("BID_DOC_EXPIRY");
 
     private final String templateCode;
 

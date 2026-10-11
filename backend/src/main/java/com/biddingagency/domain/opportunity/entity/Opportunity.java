@@ -102,6 +102,18 @@ public class Opportunity extends BaseEntity {
     @Column(name = "award_amount", length = 50)
     private String awardAmount;
 
+    /** CR-136: 낙찰 금액 숫자(달러). 합계와 금액순에 쓴다. null = 정보 없음 */
+    @Column(name = "award_amount_usd", precision = 15, scale = 2)
+    private java.math.BigDecimal awardAmountUsd;
+
+    /** CR-136: 낙찰 업체 이름(SAM award.awardee.name 그대로). null = 응답에 없음 */
+    @Column(name = "awardee_name", length = 255)
+    private String awardeeName;
+
+    /** CR-136: 낙찰 업체 SAM 고유번호(award.awardee.ueiSAM). 같은 업체를 묶는 키(BIZ-029) */
+    @Column(name = "awardee_uei", length = 20)
+    private String awardeeUei;
+
     /** CR-022 2차: 수행 장소 단답(City, ST). null = 정보 없음 */
     @Column(name = "place_of_performance_short", length = 200)
     private String placeOfPerformanceShort;
@@ -217,6 +229,40 @@ public class Opportunity extends BaseEntity {
         this.placeOfPerformanceShort = placeOfPerformanceShort;
         this.setAsideKo = setAsideKo;
         this.naicsLabelKo = naicsLabelKo;
+    }
+
+    /**
+     * CR-136: 낙찰 정보를 채운다. 응답에 없는 값(null)은 이미 있는 값을 지우지 않는다.
+     * 원본 보관(BIZ-004)에 낙찰 정보가 없던 공고는 받은 낙찰 정보를 원본에 더한다.
+     *
+     * @return 하나라도 바뀌었으면 true
+     */
+    public boolean applyAward(String awardeeName, String awardeeUei, java.math.BigDecimal amountUsd,
+                              String amountDisplay, Map<String, Object> rawAward) {
+        boolean changed = false;
+        if (awardeeName != null && !awardeeName.equals(this.awardeeName)) {
+            this.awardeeName = awardeeName;
+            changed = true;
+        }
+        if (awardeeUei != null && !awardeeUei.equals(this.awardeeUei)) {
+            this.awardeeUei = awardeeUei;
+            changed = true;
+        }
+        if (amountUsd != null && (this.awardAmountUsd == null || amountUsd.compareTo(this.awardAmountUsd) != 0)) {
+            this.awardAmountUsd = amountUsd;
+            changed = true;
+        }
+        if (amountDisplay != null && this.awardAmount == null) {
+            this.awardAmount = amountDisplay;
+            changed = true;
+        }
+        if (rawAward != null && (this.rawJson == null || !this.rawJson.containsKey("award"))) {
+            Map<String, Object> merged = this.rawJson == null ? new java.util.HashMap<>() : new java.util.HashMap<>(this.rawJson);
+            merged.put("award", rawAward);
+            this.rawJson = merged;
+            changed = true;
+        }
+        return changed;
     }
 
     public boolean isDeadlinePassed() {

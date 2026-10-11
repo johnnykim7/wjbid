@@ -2,6 +2,7 @@ package com.biddingagency.domain.opportunity.dto;
 
 import com.biddingagency.domain.opportunity.MarketGroup;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.UUID;
@@ -23,14 +24,18 @@ public record MarketSource(
         LocalDateTime postedDate,
         LocalDateTime responseDeadline,
         String awardAmount,
+        BigDecimal awardAmountUsd,
+        String awardeeName,
+        String awardeeUei,
         String naicsCode
 ) {
 
     public MarketSource(UUID id, String noticeId, String solicitationNumber, String title, String titleKo,
                         String type, String typeKo, LocalDateTime postedDate, LocalDateTime responseDeadline,
-                        String awardAmount, Map<String, Object> rawJson) {
+                        String awardAmount, BigDecimal awardAmountUsd, String awardeeName,
+                        String awardeeUei, Map<String, Object> rawJson) {
         this(id, noticeId, solicitationNumber, title, titleKo, type, typeKo, postedDate, responseDeadline,
-                awardAmount, naicsOf(rawJson));
+                awardAmount, awardAmountUsd, awardeeName, awardeeUei, naicsOf(rawJson));
     }
 
     public MarketGroup group() {

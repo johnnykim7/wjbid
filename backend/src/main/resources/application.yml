@@ -241,6 +241,10 @@ app:
   # 고객 포털 URL (CR-006: 알림 메일 내 공고 상세 링크 생성)
   customer-portal-url: ${CUSTOMER_PORTAL_URL:http://localhost:3183}
 
+  # CR-136: 서류 만료 메일 확인 시각(Asia/Seoul). 며칠 전에 보낼지는 DB 설정 DOC_EXPIRY_ALERT_DAYS (POL-016)
+  doc-expiry:
+    cron: ${DOC_EXPIRY_CRON:0 0 9 * * *}
+
   # 플랫폼 자체 외부 접근 URL (CR-013: Aimbase가 패턴 추출 시 원본 파일을 다운로드할 base)
   self-base-url: ${SELF_BASE_URL:http://59.8.160.12:8183/api}
 

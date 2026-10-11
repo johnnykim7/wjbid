@@ -16,4 +16,7 @@ public interface MemberDocumentRepository extends JpaRepository<MemberDocument, 
     Optional<MemberDocument> findFirstByMemberIdAndCategory(UUID memberId, DocumentCategory category);
 
     List<MemberDocument> findByMemberIdAndCategory(UUID memberId, DocumentCategory category);
+
+    /** CR-136: 만료일이 그날인 서류(만료 메일 대상) */
+    List<MemberDocument> findByExpiresOn(java.time.LocalDate expiresOn);
 }
