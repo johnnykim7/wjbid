@@ -21,12 +21,8 @@ public final class SettingKey {
 
     /** 낙찰가 범위를 보이는 최소 계약 수. 비었거나 1 보다 작으면 5 (POL-034, CR-142) */
     public static final String AWARD_RANGE_MIN_COUNT = "AWARD_RANGE_MIN_COUNT";
-    /** 계약 끝 메일을 보내는 날(끝날짜 며칠 전, 쉼표로 나눔). 비어 있거나 읽을 수 없으면 보내지 않음 (POL-035, CR-142) */
-    public static final String CONTRACT_END_ALERT_DAYS = "CONTRACT_END_ALERT_DAYS";
     /** 미 연방 계약 자료가 늦게 올라오는 날 수. 화면 안내에만 쓴다 (POL-036, CR-142) */
     public static final String FEDERAL_DATA_LAG_DAYS = "FEDERAL_DATA_LAG_DAYS";
-    /** 한 번짜리 공사 꼬리표를 붙이는 업종 코드 앞자리(쉼표로 나눔). 비어 있으면 꼬리표 없음 (POL-036, CR-142) */
-    public static final String RECOMPETE_ONE_TIME_NAICS_PREFIXES = "RECOMPETE_ONE_TIME_NAICS_PREFIXES";
 
     private SettingKey() {
     }

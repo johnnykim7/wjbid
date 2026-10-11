@@ -271,6 +271,11 @@ export interface VaultDocumentRow {
 }
 
 export interface VaultListResponse {
-  fixedSlots: { category: string; categoryLabel: string; document: VaultDocumentRow | null }[]
+  /** 국문·영문 칸은 files 가 KO, EN 두 줄, 다른 칸은 언어 없는 한 줄 (CR-147) */
+  fixedSlots: {
+    category: string
+    categoryLabel: string
+    files: { language: 'KO' | 'EN' | null; document: VaultDocumentRow | null }[]
+  }[]
   others: VaultDocumentRow[]
 }

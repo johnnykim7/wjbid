@@ -6,7 +6,7 @@ import { findMenuItem } from '../components/layout/menu'
 import { PageHead, SubPageFrame } from '../components/subpage/SubPageFrame'
 import { GLOSSARY_TEXT, INDEX_LETTERS, TERMS } from '../data/academyContent'
 
-const PLACE = findMenuItem('academy', 'glossary')
+const PLACE = findMenuItem('support', 'glossary')
 const HAVE = new Set(TERMS.map((t) => t.abbr[0]))
 
 /** 용어 사전 (CR-133, T3-3 「용어 사전」, 화면 정본 glossary). 찾는 말과 색인 글자는 함께 걸지 않는다(T3-4 시나리오 4) */

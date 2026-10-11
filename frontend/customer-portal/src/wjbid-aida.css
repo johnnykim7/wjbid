@@ -180,7 +180,7 @@ footer.wj .info span + span::before { content: ""; display: inline-block; width:
 .wj .mine li > div { min-width: 0px; }
 .wj .mine li b { font-size: 15.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
 .wj .mine li small { display: block; font-size: 13px; color: var(--color-ink-mute); }
-.wj .qk { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.wj .qk { display: grid; grid-template-columns: 1fr; gap: 10px; }
 .wj .qk a { display: flex; align-items: center; gap: 10px; height: 56px; padding: 0px 14px; border: 1px solid var(--color-line); border-radius: 12px; font-size: 15.5px; font-weight: 700; }
 .wj .qk .fi { width: 32px; height: 32px; }
 .wj .bh small { font-size: 15px; }
@@ -281,7 +281,7 @@ footer.wj { font-size: 14px; }
 .wj .tier.k { background: var(--color-surface); color: var(--color-ink-sub); }
 .wj .legend2 { display: flex; justify-content: center; gap: 16px; margin-top: 20px; font-size: 14.5px; color: var(--color-ink-sub); }
 .wj .legend2 span { display: flex; align-items: center; gap: 6px; }
-.wj .b3 { display: grid; grid-template-columns: repeat(3, minmax(0px, 1fr)); gap: 22px; }
+.wj .b2 { display: grid; grid-template-columns: repeat(2, minmax(0px, 1fr)); gap: 22px; }
 .wj .fc { border: 1px solid var(--color-line); border-radius: 14px; padding: 24px 24px 20px; display: flex; flex-direction: column; background: white; }
 .wj .fc .ic { width: 46px; height: 46px; border-radius: 13px; background: var(--color-brand-soft); color: var(--color-brand); display: grid; place-items: center; }
 .wj .fc .ic svg { width: 23px; height: 23px; }
@@ -299,12 +299,6 @@ footer.wj { font-size: 14px; }
 .wj .pv .rs2 div { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0px; border-top: 1px solid var(--color-line); }
 .wj .pv .rs2 b { font-size: 14.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .wj .pv .rs2 .fit { flex: 0 0 auto; display: inline-flex; align-items: center; height: 24px; padding: 0px 8px; border-radius: 5px; font-size: 13px; font-weight: 800; }
-.wj .pv .cal2 div { display: grid; grid-template-columns: 64px 1fr auto; gap: 10px; align-items: center; padding: 8px 0px; border-top: 1px solid var(--color-line); }
-.wj .pv .cal2 div:first-child { border-top: 0px; }
-.wj .pv .cal2 em { font-style: normal; font-weight: 800; color: var(--color-brand-deep); }
-.wj .pv .cal2 b { font-size: 14.5px; font-weight: 700; }
-.wj .pv .cal2 b small { display: block; font-size: 12.5px; font-weight: 500; color: var(--color-ink-mute); }
-.wj .pv .cal2 i { font-style: normal; height: 24px; padding: 0px 8px; border-radius: 5px; background: var(--color-brand-soft); color: var(--color-brand); font-size: 12.5px; font-weight: 800; display: flex; align-items: center; gap: 4px; }
 .wj .pv .ex { margin: 8px 0px 0px; font-size: 12.5px; color: var(--color-ink-mute); }
 .wj .fc .go { margin-top: 14px; display: inline-flex; align-items: center; font-size: 15px; font-weight: 800; color: var(--color-brand); }
 .wj .fc .go svg { width: 16px; height: 16px; stroke-width: 2.4; }
@@ -322,10 +316,10 @@ footer.wj { font-size: 14px; }
 .wj .pc li { display: flex; align-items: flex-start; gap: 8px; font-size: 15.5px; line-height: 1.45; }
 .wj .pc li svg { width: 17px; height: 17px; margin-top: 2px; color: var(--color-success); stroke-width: 2.6; }
 .wj .pc .bigb { margin-top: auto; width: 100%; height: 52px; font-size: 16.5px; }
-.wj .promos3 { display: grid; grid-template-columns: repeat(3, minmax(0px, 1fr)); gap: 18px; margin-top: 22px; }
-.wj .promos3 .promo { height: 170px; }
-.wj .promos3 .promo .tx { width: 58%; }
-.wj .promos3 .promo b { font-size: 20px; }
+.wj .promos2 { display: grid; grid-template-columns: repeat(2, minmax(0px, 1fr)); gap: 18px; margin-top: 22px; }
+.wj .promos2 .promo { height: 170px; }
+.wj .promos2 .promo .tx { width: 58%; }
+.wj .promos2 .promo b { font-size: 20px; }
 .wj .help { display: flex; flex-direction: column; gap: 12px; }
 .wj .help a { display: flex; align-items: center; gap: 14px; padding: 18px 20px; border: 1px solid var(--color-line); border-radius: 14px; }
 .wj .help .fi { width: 40px; height: 40px; background: var(--color-brand-soft); color: var(--color-brand); }

@@ -6,11 +6,8 @@ import com.biddingagency.domain.federal.entity.FederalContract;
 import com.biddingagency.domain.federal.entity.FederalContractSyncRun;
 import com.biddingagency.domain.federal.entity.FederalSyncMode;
 import com.biddingagency.domain.federal.entity.FederalSyncStatus;
-import com.biddingagency.domain.federal.entity.MemberContract;
-import com.biddingagency.domain.federal.entity.MemberContractSource;
 import com.biddingagency.domain.federal.repository.FederalContractRepository;
 import com.biddingagency.domain.federal.repository.FederalContractSyncRunRepository;
-import com.biddingagency.domain.federal.repository.MemberContractRepository;
 import com.biddingagency.integration.usaspending.UsaSpendingClient;
 import com.biddingagency.integration.usaspending.UsaSpendingException;
 import lombok.extern.slf4j.Slf4j;
@@ -56,7 +53,6 @@ public class FederalContractSyncService {
 
     private final FederalContractRepository contractRepository;
     private final FederalContractSyncRunRepository runRepository;
-    private final MemberContractRepository memberContractRepository;
     private final UsaSpendingClient client;
     private final FederalSettings settings;
     private final TransactionTemplate tx;
@@ -69,7 +65,6 @@ public class FederalContractSyncService {
 
     public FederalContractSyncService(FederalContractRepository contractRepository,
                                       FederalContractSyncRunRepository runRepository,
-                                      MemberContractRepository memberContractRepository,
                                       UsaSpendingClient client,
                                       FederalSettings settings,
                                       PlatformTransactionManager transactionManager,
@@ -79,7 +74,6 @@ public class FederalContractSyncService {
                                       @Value("${app.federal-contract.max-pages:1000}") int maxPages) {
         this.contractRepository = contractRepository;
         this.runRepository = runRepository;
-        this.memberContractRepository = memberContractRepository;
         this.client = client;
         this.settings = settings;
         this.tx = new TransactionTemplate(transactionManager);
@@ -134,10 +128,9 @@ public class FederalContractSyncService {
             FederalContractSyncRun run = runRepository.findById(runId).orElseThrow();
             fetchSearch(run, counter);
             fetchDetails(runId, counter);
-            int followed = followMemberContracts();
             finish(runId, counter, null);
-            log.info("미 연방 계약 받기 성공: mode={}, 검색 {}회, 상세 {}회, 넣음 {}, 덮음 {}, 회원 계약 날짜 바뀜 {}",
-                    run.getMode(), counter.searchCalls, counter.detailCalls, counter.inserted, counter.updated, followed);
+            log.info("미 연방 계약 받기 성공: mode={}, 검색 {}회, 상세 {}회, 넣음 {}, 덮음 {}",
+                    run.getMode(), counter.searchCalls, counter.detailCalls, counter.inserted, counter.updated);
         } catch (Exception e) {
             log.error("미 연방 계약 받기 실패: run={}", runId, e);
             finish(runId, counter, message(e));
@@ -204,7 +197,6 @@ public class FederalContractSyncService {
         LocalDate to = YearMonth.from(today).plusMonths(calendarMonths - 1L).atEndOfMonth();
         Map<UUID, FederalContract> targets = new LinkedHashMap<>();
         contractRepository.findDetailTargets(STANDALONE_TYPES, from, to).forEach(c -> targets.put(c.getId(), c));
-        contractRepository.findMemberDetailTargets().forEach(c -> targets.putIfAbsent(c.getId(), c));
         for (FederalContract c : targets.values()) {
             Map<String, Object> detail;
             counter.detailCalls++;
@@ -222,26 +214,6 @@ public class FederalContractSyncService {
                             FederalContractRows.detailRaw(detail), now)));
             saveProgress(runId, counter);
         }
-    }
-
-    /** 공개 자료로 등록한 회원 계약은 미 연방 계약 행의 날짜를 따라간다(BIZ-056) */
-    private int followMemberContracts() {
-        Integer changed = tx.execute(status -> {
-            List<MemberContract> members =
-                    memberContractRepository.findBySourceAndFederalContractIdIsNotNull(MemberContractSource.PUBLIC);
-            if (members.isEmpty()) return 0;
-            Map<UUID, FederalContract> contracts = new HashMap<>();
-            contractRepository.findAllById(members.stream().map(MemberContract::getFederalContractId).toList())
-                    .forEach(c -> contracts.put(c.getId(), c));
-            LocalDate today = settings.today();
-            int n = 0;
-            for (MemberContract m : members) {
-                FederalContract c = contracts.get(m.getFederalContractId());
-                if (c != null && m.followPublic(c.getEndDate(), c.getPotentialEndDate(), today)) n++;
-            }
-            return n;
-        });
-        return changed == null ? 0 : changed;
     }
 
     private void saveProgress(UUID runId, Counter counter) {

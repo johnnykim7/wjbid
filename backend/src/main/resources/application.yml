@@ -264,10 +264,6 @@ app:
     calendar-months: 12
     detail-lookback-days: 120
 
-  # CR-142: 계약 끝 메일 확인 시각(Asia/Seoul). 며칠 전에 보낼지는 DB 설정 CONTRACT_END_ALERT_DAYS (POL-035)
-  contract-end:
-    cron: ${CONTRACT_END_CRON:0 0 9 * * *}
-
   # 플랫폼 자체 외부 접근 URL (CR-013: Aimbase가 패턴 추출 시 원본 파일을 다운로드할 base)
   self-base-url: ${SELF_BASE_URL:http://59.8.160.12:8183/api}
 

@@ -4,7 +4,7 @@ import { findMenuItem } from '../components/layout/menu'
 import { PageHead, SubPageFrame } from '../components/subpage/SubPageFrame'
 import { BRING, FORMS, FORMS_TEXT } from '../data/academyContent'
 
-const PLACE = findMenuItem('academy', 'forms')
+const PLACE = findMenuItem('support', 'forms')
 
 /** 서식 모음 (CR-133, T3-3 「서식 모음」, 화면 정본 forms). 서식 원본은 GSA 서식 자료실을 새 창으로 연다 */
 export default function AcademyFormsPage() {

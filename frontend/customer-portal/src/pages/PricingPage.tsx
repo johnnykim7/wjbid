@@ -52,10 +52,9 @@ const FEATURES: FeatureRow[] = [
   { title: '공고 한글로 보기 (SAM 번역 수준)', free: true, member: true },
   { title: '관심 공고 저장', free: true, member: true },
   { title: '입찰 신청', free: true, member: true },
-  { title: '입찰 교육 자료, 무료 입찰 교실', free: true, member: true },
+  { title: '입찰 교육 자료', free: true, member: true },
   { title: '공고문 상세 번역 (첨부 포함)', free: false, member: true },
   { title: '적격성 진단 (우리 회사 맞춤 판정)', free: false, member: true },
-  { title: '재발주 예측 달력', free: false, member: true },
   { title: '새 공고 알림', free: false, member: true },
   { title: '서류함, 제출 전 검사', free: false, member: true },
 ]

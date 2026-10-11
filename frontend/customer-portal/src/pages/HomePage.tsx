@@ -10,7 +10,6 @@ import type { MemberSummary } from '../components/layout/useMemberSummary'
 import { daysUntil, ddayLabel } from '../utils/dday'
 import type { Opportunity } from '../types'
 import {
-  BENEFIT_CALENDAR,
   BENEFIT_FIT,
   BENEFIT_TRANSLATE,
   FLOW,
@@ -210,7 +209,6 @@ export default function HomePage() {
       </div>
       <div className="qk">
         <Link to="/documents"><span className="fi"><Icon name="folder" /></span>서류함</Link>
-        <Link to={itemHref('recompete', 'recompete-calendar')}><span className="fi"><Icon name="cal" /></span>재발주 달력</Link>
       </div>
     </div>
   ) : showEmpty ? (
@@ -298,7 +296,7 @@ export default function HomePage() {
             <h2>회원은 한 걸음 더 봅니다</h2>
             <p>{price != null ? `월 ${formatWon(price)}으로 ` : ''}공고를 끝까지 읽고, 할 수 있는 공고만 고릅니다</p>
           </div>
-          <div className="b3">
+          <div className="b2">
             <div className="fc">
               <h3>{BENEFIT_TRANSLATE.title}</h3>
               <p>{BENEFIT_TRANSLATE.desc}</p>
@@ -330,23 +328,6 @@ export default function HomePage() {
                 <p className="ex">{BENEFIT_FIT.note}</p>
               </div>
               <Link className="go" to={BENEFIT_FIT.link.to}>{BENEFIT_FIT.link.label}<Icon name="cr" /></Link>
-            </div>
-            <div className="fc">
-              <h3>{BENEFIT_CALENDAR.title}</h3>
-              <p>{BENEFIT_CALENDAR.desc}</p>
-              <div className="pv">
-                <div className="cal2">
-                  {BENEFIT_CALENDAR.rows.map((r) => (
-                    <div key={r.month}>
-                      <em>{r.month}</em>
-                      <b>{r.title}<small>{r.sub}</small></b>
-                      <i><Icon name="eye" />{BENEFIT_CALENDAR.badge}</i>
-                    </div>
-                  ))}
-                </div>
-                <p className="ex">{BENEFIT_CALENDAR.note}</p>
-              </div>
-              <Link className="go" to={itemHref('recompete', 'recompete-calendar')}>{BENEFIT_CALENDAR.link.label}<Icon name="cr" /></Link>
             </div>
           </div>
         </div>
@@ -383,7 +364,7 @@ export default function HomePage() {
               <Link className="bigb o" to={PLAN_CONSULT.cta.to}>{PLAN_CONSULT.cta.label}</Link>
             </div>
           </div>
-          <div className="promos3">
+          <div className="promos2">
             {PROMOS.map((p) => (
               <Link key={p.small} className={`promo ${p.tone}`} to={p.to}>
                 <img src={p.img} alt="" />

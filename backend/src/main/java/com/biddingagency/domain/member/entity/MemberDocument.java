@@ -7,7 +7,7 @@ import lombok.*;
 /**
  * 회사 공통 서류함 문서 (CR-125)
  *
- * member 종속 — 사업자등록증·CAGE 증빙 등 회사 공통 서류를 한 번 보관 후 매 공고 재사용.
+ * member 종속 — 사업자등록증·지명원 등 회사 공통 서류를 한 번 보관 후 매 공고 재사용.
  * ClientDocument(BidRequest 종속, "이 공고에 제출할 서류")와 별개.
  */
 @Entity
@@ -28,6 +28,11 @@ public class MemberDocument extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "category", nullable = false, length = 40)
     private DocumentCategory category;
+
+    /** 국문·영문 칸만 값이 있다(CR-147, BIZ-065) */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "language", length = 2)
+    private DocumentLanguage language;
 
     @Column(name = "file_name", nullable = false, length = 500)
     private String fileName;

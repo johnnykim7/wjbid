@@ -104,7 +104,7 @@ export const SERVICES: ServiceInfo[] = [
       ],
       vault: true,
     },
-    cost: { ...QUOTE_COST, fact: { strong: 'SAM.gov 등록 자체는 무료입니다.', rest: '등록비를 받는 곳은 미 정부 사이트가 아닙니다(SAM.gov 안내).' } },
+    cost: { ...QUOTE_COST, fact: { strong: '영문 입력, 본인 인증, 공증 서한까지 혼자 하기 어려운 등록을 대신 처리합니다.', rest: '비용은 상담 뒤 건별로 정합니다.' } },
     inquiryType: INQUIRY_TYPE.samRegistration,
     related: ['piee-registration', 'sam-renewal', 'translation'],
   },
@@ -343,7 +343,6 @@ const ALT: Record<string, AltCard> = {
   proposals: { icon: 'file', name: '공고별 서류', desc: '신청한 공고의 서류 보기', to: '/proposals' },
   notices: { icon: 'bell', name: '공지사항', desc: 'WJbid 서비스 소식', to: '/notices' },
   renewal: { icon: 'cal', name: 'SAM 갱신', desc: '해마다 하는 등록 갱신 대행', to: serviceHref('sam-renewal') },
-  klass: { icon: 'cal', name: '무료 입찰 교실', desc: '미군 입찰 기초를 온라인으로', to: academyHref('class') },
 }
 
 export interface PendingInfo {
@@ -395,7 +394,7 @@ export const PENDING: PendingInfo[] = [
   {
     key: 'proposal-review', tier: 'c', photo: PHOTO.piee,
     desc: ['고객이 직접 쓴 제안서를 전문가가 검토하고 보완할 점을 알려 드리는', '제안서 자문·검토 서비스입니다.'],
-    alts: [ALT.forms, ALT.materials, ALT.klass],
+    alts: [ALT.forms, ALT.materials, ALT.glossary],
   },
   {
     key: 'kakao', tier: 'm', photo: PHOTO.desk,

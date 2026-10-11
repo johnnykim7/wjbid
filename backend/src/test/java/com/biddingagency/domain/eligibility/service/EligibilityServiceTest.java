@@ -175,7 +175,7 @@ class EligibilityServiceTest {
     }
 
     private MemberDocument doc() {
-        return doc(me, DocumentCategory.SAM_REGISTRATION, null);
+        return doc(me, DocumentCategory.LICENSE, null);
     }
 
     // ---- CR-137 진단 목록과 상세 ----
@@ -244,20 +244,20 @@ class EligibilityServiceTest {
     @Test
     @DisplayName("TC-QUAL-007 증빙 서류 글에 서류함 분류 낱말이 있으면 그 분류와 내 서류를 보인다")
     void 증빙글에서류함낱말_공고별진단_분류와내서류() {
-        Notice n = notice(item("Active SAM", true, "SAM.gov registration printout"));
+        Notice n = notice(item("Waste collection", true, "Waste collection permit copy"));
         doc();
 
         Item i = service.detail(me, n.getId()).items().get(0);
 
         assertThat(tuple(i.vaultCategory(), i.vaultDocuments().size()))
-                .isEqualTo(tuple(DocumentCategory.SAM_REGISTRATION, 1));
+                .isEqualTo(tuple(DocumentCategory.LICENSE, 1));
     }
 
     @Test
     @DisplayName("TC-QUAL-008 증빙 서류 글과 자격 이름 모두 맞는 분류가 없으면 분류가 없다")
     void 증빙글맞는분류없음_공고별진단_분류없음() {
-        Notice n = notice(item("폐기물 허가증", true, "Waste permit copy"));
-        doc(me, DocumentCategory.PAST_PERFORMANCE, null);
+        Notice n = notice(item("Active SAM", true, "SAM.gov registration printout"));
+        doc(me, DocumentCategory.FINANCIAL_STATEMENT, null);
 
         Item i = service.detail(me, n.getId()).items().get(0);
 
@@ -391,7 +391,7 @@ class EligibilityServiceTest {
     void 붙인서류만료_판정_서류부족() {
         Notice n = notice(gate("A"));
         LocalDate expired = LocalDate.of(2026, 10, 10);
-        MemberDocument d0 = doc(me, DocumentCategory.CAGE, expired);
+        MemberDocument d0 = doc(me, DocumentCategory.BUSINESS_REGISTRATION, expired);
         have(n, 0, "A", d0);
 
         Detail d = service.detail(me, n.getId());
@@ -405,8 +405,8 @@ class EligibilityServiceTest {
     @DisplayName("TC-QUAL-021 만료일 당일과 만료일 없는 서류는 쓸 수 있어 참여 가능")
     void 만료일당일과만료일없음_판정_참여가능() {
         Notice n = notice(gate("A"), gate("B"));
-        have(n, 0, "A", doc(me, DocumentCategory.CAGE, LocalDate.of(2026, 10, 11)));
-        have(n, 1, "B", doc(me, DocumentCategory.SAM_REGISTRATION, null));
+        have(n, 0, "A", doc(me, DocumentCategory.BUSINESS_REGISTRATION, LocalDate.of(2026, 10, 11)));
+        have(n, 1, "B", doc(me, DocumentCategory.FINANCIAL_STATEMENT, null));
 
         Detail d = service.detail(me, n.getId());
 
@@ -490,7 +490,7 @@ class EligibilityServiceTest {
         Notice n = notice(gate("A"));
         MemberDocument mine = doc();
         EligibilityAnswer a = have(n, 0, "A", mine);
-        MemberDocument theirs = doc(other, DocumentCategory.SAM_REGISTRATION, null);
+        MemberDocument theirs = doc(other, DocumentCategory.LICENSE, null);
 
         Throwable t = catchThrowable(() -> service.attach(me, n.getId(), 0, theirs.getId()));
 
@@ -558,9 +558,9 @@ class EligibilityServiceTest {
     @Test
     @DisplayName("TC-QUAL-034 제안 서류마다 만료 여부를 싣는다. 만료일이 어제면 만료, 당일이면 아니다")
     void 맞은분류서류_공고별진단_만료여부() {
-        Notice n = notice(item("Active SAM", true, "SAM.gov registration printout"));
-        doc(me, DocumentCategory.SAM_REGISTRATION, LocalDate.of(2026, 10, 10));
-        doc(me, DocumentCategory.SAM_REGISTRATION, LocalDate.of(2026, 10, 11));
+        Notice n = notice(item("Waste collection", true, "Waste collection permit copy"));
+        doc(me, DocumentCategory.LICENSE, LocalDate.of(2026, 10, 10));
+        doc(me, DocumentCategory.LICENSE, LocalDate.of(2026, 10, 11));
 
         Item i = service.detail(me, n.getId()).items().get(0);
 

@@ -20,6 +20,7 @@ import {
 import { DatePick } from '../components/expiry/DatePick'
 import { daysLeftKst } from '../utils/kstDate'
 import { EXPIRY_TEXT, VAULT_EXPIRY_TEXT as XT } from '../data/expiryContent'
+import { VAULT_TEXT as VT } from '../data/vaultContent'
 
 const EXPIRY_PATH = '/documents/expiry'
 
@@ -38,12 +39,22 @@ interface MemberDocumentDto {
   /** CR-136: YYYY-MM-DD */
   expiresOn?: string
   createdAt: string
+  /** CR-147: 국문·영문 칸만 값이 있다 */
+  language?: Language | null
+}
+
+type Language = 'KO' | 'EN'
+
+/** 고정 칸 한 줄. 국문·영문 칸은 국문, 영문 두 줄이다 (CR-147, BIZ-065) */
+interface SlotFile {
+  language: Language | null
+  document: MemberDocumentDto | null
 }
 
 interface FixedSlot {
   category: string
   categoryLabel: string
-  document: MemberDocumentDto | null
+  files: SlotFile[]
 }
 
 interface VaultResponse {
@@ -70,6 +81,8 @@ function ExpiryLine({ doc, withLink }: { doc: MemberDocumentDto; withLink?: bool
   )
 }
 
+const slotKey = (category: string, language: Language | null) => `${category}:${language ?? ''}`
+
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
@@ -84,7 +97,7 @@ export default function DocumentsPage() {
 
   // 고정 슬롯 업로드용 숨은 input
   const fixedInputRef = useRef<HTMLInputElement>(null)
-  const pendingFixedCategory = useRef<string | null>(null)
+  const pendingFixed = useRef<{ category: string; language: Language | null } | null>(null)
 
   // 기타 추가 모달
   const [otherOpen, setOtherOpen] = useState(false)
@@ -112,27 +125,28 @@ export default function DocumentsPage() {
 
   const stats = useMemo(() => {
     if (!vault) return { stored: 0, fixedMissing: 0 }
-    const fixedFilled = vault.fixedSlots.filter((s) => s.document).length
+    const files = vault.fixedSlots.flatMap((s) => s.files)
+    const fixedFilled = files.filter((f) => f.document).length
     return {
       stored: fixedFilled + vault.others.length,
-      fixedMissing: vault.fixedSlots.length - fixedFilled,
+      fixedMissing: files.length - fixedFilled,
     }
   }, [vault])
 
   // ── 고정 슬롯: 파일만 업로드/교체 ──
-  const triggerFixedUpload = (category: string) => {
-    pendingFixedCategory.current = category
+  const triggerFixedUpload = (category: string, language: Language | null) => {
+    pendingFixed.current = { category, language }
     fixedInputRef.current?.click()
   }
 
   const handleFixedFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    const category = pendingFixedCategory.current
+    const target = pendingFixed.current
     e.target.value = '' // 같은 파일 재선택 허용
-    if (!file || !category) return
-    setBusyKey(category)
+    if (!file || !target) return
+    setBusyKey(slotKey(target.category, target.language))
     try {
-      await uploadMemberDocument(file, category)
+      await uploadMemberDocument(file, target.category, undefined, undefined, undefined, target.language ?? undefined)
       await load()
     } catch {
       setError('업로드에 실패했습니다.')
@@ -182,9 +196,8 @@ export default function DocumentsPage() {
       <div className="mb-6 flex items-end justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-ink">서류함</h2>
-          <p className="text-sm text-ink-mute mt-1">
-            사업자등록증·회사소개서 등 공통 서류를 한 번 등록해 두면 제안서 작성 시 자동으로 채워집니다.
-          </p>
+          <p className="text-sm text-ink-mute mt-1">{VT.desc}</p>
+          <p className="text-xs text-ink-mute mt-1">{VT.excluded}</p>
         </div>
         <Button variant="outline" size="sm" asChild>
           <Link to={EXPIRY_PATH}><i className="fa-regular fa-calendar mr-1.5" />{XT.shortcut}</Link>
@@ -237,68 +250,79 @@ export default function DocumentsPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {vault?.fixedSlots.map((slot) => {
-              const doc = slot.document
-              const done = !!doc
-              const busy = busyKey === slot.category || (doc && busyKey === doc.id)
+              const filled = slot.files.filter((f) => f.document).length
+              const hint = VT.slotHint[slot.category]
               return (
                 <Card key={slot.category} className="p-5 flex flex-col">
-                  <div className="flex items-start justify-between gap-2 mb-2">
+                  <div className="flex items-start justify-between gap-2">
                     <h4 className="text-sm font-bold text-ink truncate">{slot.categoryLabel}</h4>
-                    {done ? (
+                    {filled === slot.files.length ? (
                       <Badge variant="active" size="sm">
                         <i className="fa-solid fa-check mr-1" /> 완료
                       </Badge>
+                    ) : filled > 0 ? (
+                      <Badge variant="pending" size="sm">{VT.partial}</Badge>
                     ) : (
                       <Badge variant="closing" size="sm">
                         미등록
                       </Badge>
                     )}
                   </div>
+                  {hint && <p className="text-[11px] text-ink-mute mt-1">{hint}</p>}
 
-                  <div className="flex-1 my-3">
-                    {done ? (
-                      <div className="flex items-center gap-2 rounded-lg bg-surface border border-line-soft px-3 py-2">
-                        <i className="fa-solid fa-file-lines text-brand" />
-                        <div className="min-w-0">
-                          <p className="text-xs font-medium text-ink-sub truncate">{doc!.fileName}</p>
-                          <p className="text-[11px] text-ink-mute">
-                            {formatSize(doc!.fileSize)} · {doc!.createdAt?.slice(0, 10)}
-                          </p>
-                          <ExpiryLine doc={doc!} withLink />
+                  <div className="flex-1 mt-3 space-y-4">
+                    {slot.files.map((f) => {
+                      const key = slotKey(slot.category, f.language)
+                      const doc = f.document
+                      const busy = busyKey === key || (doc && busyKey === doc.id)
+                      return (
+                        <div key={key} className="space-y-2">
+                          {f.language && <p className="text-xs font-bold text-ink-sub">{VT.language[f.language]}</p>}
+                          {doc ? (
+                            <div className="flex items-center gap-2 rounded-lg bg-surface border border-line-soft px-3 py-2">
+                              <i className="fa-solid fa-file-lines text-brand" />
+                              <div className="min-w-0">
+                                <p className="text-xs font-medium text-ink-sub truncate">{doc.fileName}</p>
+                                <p className="text-[11px] text-ink-mute">
+                                  {formatSize(doc.fileSize)} · {doc.createdAt?.slice(0, 10)}
+                                </p>
+                                <ExpiryLine doc={doc} withLink />
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-center rounded-lg border border-dashed border-line px-3 py-4 text-xs text-ink-mute">
+                              <i className="fa-solid fa-cloud-arrow-up mr-1.5" /> 파일을 업로드하세요
+                            </div>
+                          )}
+                          <div className="flex gap-2">
+                            <Button
+                              variant={doc ? 'outline' : 'primary'}
+                              size="sm"
+                              className="flex-1"
+                              disabled={!!busy}
+                              onClick={() => triggerFixedUpload(slot.category, f.language)}
+                            >
+                              <i
+                                className={`fa-solid ${busy ? 'fa-spinner fa-spin' : doc ? 'fa-rotate' : 'fa-arrow-up-from-bracket'} mr-1.5`}
+                              />
+                              {doc ? '교체' : '업로드'}
+                            </Button>
+                            {doc && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-ink-mute hover:text-danger"
+                                title="삭제"
+                                disabled={!!busy}
+                                onClick={() => handleDelete(doc)}
+                              >
+                                <i className="fa-regular fa-trash-can" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center rounded-lg border border-dashed border-line px-3 py-4 text-xs text-ink-mute">
-                        <i className="fa-solid fa-cloud-arrow-up mr-1.5" /> 파일을 업로드하세요
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex gap-2">
-                    <Button
-                      variant={done ? 'outline' : 'primary'}
-                      size="sm"
-                      className="flex-1"
-                      disabled={!!busy}
-                      onClick={() => triggerFixedUpload(slot.category)}
-                    >
-                      <i
-                        className={`fa-solid ${busy ? 'fa-spinner fa-spin' : done ? 'fa-rotate' : 'fa-arrow-up-from-bracket'} mr-1.5`}
-                      />
-                      {done ? '교체' : '업로드'}
-                    </Button>
-                    {done && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-ink-mute hover:text-danger"
-                        title="삭제"
-                        disabled={!!busy}
-                        onClick={() => handleDelete(doc!)}
-                      >
-                        <i className="fa-regular fa-trash-can" />
-                      </Button>
-                    )}
+                      )
+                    })}
                   </div>
                 </Card>
               )

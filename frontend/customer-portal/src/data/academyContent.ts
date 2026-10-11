@@ -1,7 +1,7 @@
 /**
- * 입찰 교실 화면 정의 (CR-133). 무료 입찰 교실, 교육 자료 다섯 단계, 용어 사전, 서식 모음의 글을 이 한 곳에 둔다.
+ * 입찰 교육 화면 정의 (CR-133). 교육 자료 다섯 단계, 용어 사전, 서식 모음의 글을 이 한 곳에 둔다.
+ * 세 화면은 고객센터 묶음 아래에 있다(CR-147).
  * 글은 공식 안내(SAM.gov, NSPA, PIEE, FAR·DFARS, GSA 서식 자료실)로 확인한 것만 쓴다.
- * 교실 일정은 정해지면 schedule 에 넣는다. 비어 있으면 공지사항에 알린다는 말을 보인다.
  */
 import type { SubIconName } from '../components/subpage/SubIcon'
 import { academyHref, serviceHref } from '../components/layout/menu'
@@ -9,27 +9,6 @@ import { academyHref, serviceHref } from '../components/layout/menu'
 export interface LinkTo {
   label: string
   to: string
-}
-
-/* 무료 입찰 교실 */
-
-export const CLASS_INFO = {
-  lead: ['미군 입찰을 처음 하는 회사를 위해', '공고 찾기부터 낙찰 뒤까지 기초를 온라인으로 설명합니다.'],
-  primary: '참가 신청',
-  inquiryTitle: '무료 입찰 교실 참가 신청',
-  secondary: { label: '교육 자료 먼저 보기', to: academyHref('materials') },
-  factsTitle: '진행 방식',
-  facts: { method: { label: '방식', value: '온라인' }, cost: { label: '비용', value: '무료' } },
-  schedule: { label: '다음 일정', value: null as string | null, pending: '정해지면 공지사항에 알립니다' },
-  lessonsTitle: '배우는 것',
-  lessons: [
-    { title: '미군 공고는 어디에 올라오나요', desc: 'SAM.gov 와 공고 유형(사전 공고, 사전 수요 조사, 입찰 요청, 낙찰 공지)' },
-    { title: '입찰 전에 갖출 것', desc: 'NCAGE, SAM.gov 등록, PIEE 계정' },
-    { title: '공고문 읽는 법', desc: '작업 범위, 참가 자격, 제출 서류, 평가 방식 찾기' },
-    { title: '견적서와 제안서 내기', desc: '표준 서식, 가격표, 공고 변경 확인, 마감 시각' },
-    { title: '낙찰 뒤', desc: '계약 서류와 PIEE 대금 청구' },
-  ],
-  applyDesc: '회사 이름과 연락처를 남겨 주시면 일정이 정해질 때 이메일로 알려 드립니다',
 }
 
 /* 교육 자료 */
@@ -60,7 +39,7 @@ export const MATERIALS_STEP_PARAM = 'step'
 /** 첫 단계의 왼쪽 단추와 마지막 단계의 오른쪽 단추 */
 export const MATERIALS_EDGE = {
   first: { label: '용어 사전', to: academyHref('glossary') },
-  last: { label: '무료 입찰 교실', to: academyHref('class') },
+  last: { label: '1:1 문의', to: '/support' },
 }
 export const prevStepLabel = (no: number, name: string) => `${no}. ${name}`
 

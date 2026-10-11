@@ -40,8 +40,8 @@ class MemberDocumentServiceExpiryTest {
     private final UUID owner = UUID.randomUUID();
 
     private MemberDocument stored() {
-        MemberDocument d = MemberDocument.builder().memberId(owner).category(DocumentCategory.CAGE)
-                .fileName("cage.pdf").expiresOn(EXPIRES).build();
+        MemberDocument d = MemberDocument.builder().memberId(owner).category(DocumentCategory.BUSINESS_REGISTRATION)
+                .fileName("biz.pdf").expiresOn(EXPIRES).build();
         UUID id = UUID.randomUUID();
         ReflectionTestUtils.setField(d, "id", id);
         given(repository.findById(id)).willReturn(Optional.of(d));

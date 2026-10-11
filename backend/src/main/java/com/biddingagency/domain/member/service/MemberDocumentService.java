@@ -1,6 +1,7 @@
 package com.biddingagency.domain.member.service;
 
 import com.biddingagency.domain.member.entity.DocumentCategory;
+import com.biddingagency.domain.member.entity.DocumentLanguage;
 import com.biddingagency.domain.member.entity.MemberDocument;
 import com.biddingagency.domain.member.repository.MemberDocumentRepository;
 import com.biddingagency.integration.storage.StorageService;
@@ -20,6 +21,7 @@ import java.util.UUID;
  * 회사 공통 서류함 서비스 (CR-125)
  *
  * - 고정 카테고리(fixed=true): member당 1건. 재업로드=교체(기존 파일 삭제 후 갱신).
+ * - 국문·영문 칸(bilingual=true): 언어마다 1건. 같은 언어로 다시 올리면 그 언어 파일만 교체(BIZ-065).
  * - OTHER: 다건 허용. displayName(필수)·description(선택).
  * - 소유 검증: 모든 수정/삭제는 본인 memberId 일치 확인.
  */
@@ -29,6 +31,8 @@ import java.util.UUID;
 public class MemberDocumentService {
 
     private static final long MAX_FILE_SIZE = 50L * 1024 * 1024; // BIZ-011: 50MB
+    /** 국문·영문 칸에서 한 건을 고를 때 차례. 미 정부 제출은 영문이라 영문이 먼저다(BIZ-065) */
+    private static final List<DocumentLanguage> PICK_ORDER = List.of(DocumentLanguage.EN, DocumentLanguage.KO);
 
     private final MemberDocumentRepository repository;
     private final StorageService storageService;
@@ -39,14 +43,17 @@ public class MemberDocumentService {
     }
 
     @Transactional
-    public MemberDocument upload(UUID memberId, DocumentCategory category,
+    public MemberDocument upload(UUID memberId, DocumentCategory category, DocumentLanguage language,
                                  String displayName, String description, MultipartFile file,
                                  ExpiryChange expiry) {
+        DocumentLanguage lang = languageOf(category, language);
         validateFile(file);
 
         // 고정 카테고리: 기존 보유분 있으면 교체(파일 삭제 후 레코드 갱신)
         if (category.isFixed()) {
-            var existing = repository.findFirstByMemberIdAndCategory(memberId, category);
+            var existing = lang == null
+                    ? repository.findFirstByMemberIdAndCategory(memberId, category)
+                    : repository.findFirstByMemberIdAndCategoryAndLanguage(memberId, category, lang);
             if (existing.isPresent()) {
                 return replace(memberId, existing.get().getId(),
                         category.getDisplayName(), null, file, expiry);
@@ -58,11 +65,12 @@ public class MemberDocumentService {
         MemberDocument doc = MemberDocument.builder()
                 .memberId(memberId)
                 .category(category)
+                .language(lang)
                 .fileName(file.getOriginalFilename())
                 .fileSize(file.getSize())
                 .contentType(file.getContentType())
                 .storageUrl(storageUrl)
-                .displayName(resolveDisplayName(category, displayName))
+                .displayName(resolveDisplayName(category, lang, displayName))
                 .description(category.isFixed() ? null : description)
                 .expiresOn(expiry.keep() ? null : expiry.value())
                 .build();
@@ -88,7 +96,7 @@ public class MemberDocumentService {
         }
 
         doc.updateMeta(
-                resolveDisplayName(doc.getCategory(), displayName),
+                resolveDisplayName(doc.getCategory(), doc.getLanguage(), displayName),
                 doc.getCategory().isFixed() ? null : description);
         if (!expiry.keep()) {
             doc.changeExpiry(expiry.value());
@@ -127,13 +135,33 @@ public class MemberDocumentService {
         log.info("[member-doc] deleted {} for member {}", docId, memberId);
     }
 
-    /** CR-125 2단계 자동채움용 — 고정 카테고리별 보유 서류 1건 조회 (없으면 null) */
+    /** CR-125 2단계 자동채움용 — 고정 카테고리별 보유 서류 1건 조회 (없으면 null). 국문·영문 칸은 영문 먼저(BIZ-065) */
     @Transactional(readOnly = true)
     public MemberDocument findFixed(UUID memberId, DocumentCategory category) {
         if (!category.isFixed()) {
             return null;
         }
-        return repository.findFirstByMemberIdAndCategory(memberId, category).orElse(null);
+        if (!category.isBilingual()) {
+            return repository.findFirstByMemberIdAndCategory(memberId, category).orElse(null);
+        }
+        for (DocumentLanguage language : PICK_ORDER) {
+            var doc = repository.findFirstByMemberIdAndCategoryAndLanguage(memberId, category, language);
+            if (doc.isPresent()) {
+                return doc.get();
+            }
+        }
+        return null;
+    }
+
+    /** 국문·영문 칸은 언어가 있어야 하고, 다른 칸은 언어를 두지 않는다(BIZ-065) */
+    private static DocumentLanguage languageOf(DocumentCategory category, DocumentLanguage language) {
+        if (!category.isBilingual()) {
+            return null;
+        }
+        if (language == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "국문과 영문 중 어느 파일인지 골라 주세요");
+        }
+        return language;
     }
 
     /** CR-141 제출 전 검사의 서류함에서 고르기. 자기 서류만, 아니면 404 (BIZ-049) */
@@ -163,9 +191,11 @@ public class MemberDocumentService {
         }
     }
 
-    private String resolveDisplayName(DocumentCategory category, String displayName) {
+    private String resolveDisplayName(DocumentCategory category, DocumentLanguage language, String displayName) {
         if (category.isFixed()) {
-            return category.getDisplayName(); // 고정은 제목 강제
+            // 고정은 제목 강제. 국문·영문 칸은 언어를 붙여 서류함에서 고를 때 두 파일을 가른다
+            return language == null ? category.getDisplayName()
+                    : category.getDisplayName() + "(" + language.getLabel() + ")";
         }
         if (displayName == null || displayName.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "문서제목을 입력하세요");

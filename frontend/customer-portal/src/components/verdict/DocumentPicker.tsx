@@ -33,7 +33,7 @@ export function DocumentPicker({ item, onClose, onAttach }: {
   const fetchDocs = useCallback((target: EligibilityItem) => {
     getVaultDocuments()
       .then(({ data }) => {
-        const docs = [...data.fixedSlots.flatMap((s) => (s.document ? [s.document] : [])), ...data.others]
+        const docs = [...data.fixedSlots.flatMap((s) => s.files.flatMap((f) => (f.document ? [f.document] : []))), ...data.others]
         // 붙인 서류가 있으면 그것을, 없으면 맞은 분류의 첫 서류를 골라 둔다
         const current = target.attachedDocument?.id
         const first = docs.find((d) => d.category === target.vaultCategory)

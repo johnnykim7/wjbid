@@ -12,11 +12,10 @@ import {
   PopoverTrigger,
 } from '@therecommerce-develop/ds-ui'
 import { Icon, type IconName } from '../layout/Icon'
-import { BasisNote, Rich } from '../market/MarketParts'
-import { money } from '../market/marketUtils'
+import { BasisNote } from '../market/MarketParts'
 import { federalApi } from '../../api/federal'
-import { FEDERAL_COMMON as C, RULE_TEXT } from '../../data/recompeteContent'
-import type { ContractRow, FederalSource, NaicsOption, RecompeteCategory, RecompeteSort } from '../../types/federal'
+import { FEDERAL_COMMON as C } from '../../data/recompeteContent'
+import type { FederalSource, NaicsOption } from '../../types/federal'
 import '../../wjbid-market.css'
 import '../../wjbid-recompete.css'
 
@@ -26,8 +25,6 @@ import '../../wjbid-recompete.css'
  */
 
 const EXTRA = {
-  flag: <><path d="M4 22V4a1 1 0 0 1 .4-.8A6 6 0 0 1 8 2c3 0 5 2 8 2a6 6 0 0 0 3.6-1.2.5.5 0 0 1 .4.4V14a1 1 0 0 1-.4.8A6 6 0 0 1 16 16c-3 0-5-2-8-2a6 6 0 0 0-4 1.6" /></>,
-  mail: <><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></>,
   hour: <path d="M6 2h12M6 22h12M7 2v4l5 6-5 6v4M17 2v4l-5 6 5 6v4" />,
   user: <><circle cx="12" cy="8" r="4" /><path d="M4 20c1.5-3.5 4.5-5 8-5s6.5 1.5 8 5" /></>,
 }
@@ -62,157 +59,6 @@ export function SyncingBox({ desc }: { desc: string }) {
         <b>{C.syncing}</b>
         <span>{desc}</span>
       </div>
-    </section>
-  )
-}
-
-const PREDICTED: RecompeteCategory[] = ['RECOMPETE', 'EXTENDABLE']
-
-export function CategoryTag({ category }: { category: RecompeteCategory }) {
-  return (
-    <span className={`rc-tag ${category}`}>
-      {C.category[category]}
-      {PREDICTED.includes(category) && <i>{C.predict}</i>}
-    </span>
-  )
-}
-
-/** 근거 한 줄. 규칙에 쓴 날짜를 그대로 보인다 */
-function whyText(r: ContractRow): string {
-  const type = C.type[r.awardType]
-  switch (r.category) {
-    case 'RECOMPETE': return C.why.RECOMPETE(r.potentialEndDate ?? '', type)
-    case 'EXTENDABLE': return C.why.EXTENDABLE(r.endDate ?? '', r.potentialEndDate ?? '')
-    case 'IN_PARENT': return C.why.IN_PARENT(r.parentPiid, type)
-    default: return C.why.UNCONFIRMED
-  }
-}
-
-function DateLine({ label, date, basis }: { label: string; date: string | null; basis: boolean }) {
-  return (
-    <div className={`${basis ? 'k' : ''}${date ? '' : ' n'}`}>
-      <span>{label}</span>
-      <b>{date ?? C.date.unknown}</b>
-    </div>
-  )
-}
-
-const openAward = (url: string) => window.open(url, '_blank', 'noopener,noreferrer')
-
-/** USAspending 계약 쪽 고리. 줄 누름과 같은 곳으로 간다 */
-export function AwardLink({ row, children }: { row: ContractRow; children?: ReactNode }) {
-  return (
-    <a href={row.usaspendingUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
-      {children ?? C.awardPage}<Icon name="ext" />
-    </a>
-  )
-}
-
-/** 계약 목록 한 줄. 누르면 USAspending 계약 쪽이 새 창으로 열린다 */
-function ContractLine({ r }: { r: ContractRow }) {
-  return (
-    <tr className="row" onClick={() => openAward(r.usaspendingUrl)}>
-      <td className="ct">
-        {r.category && (
-          <div className="rc-tc">
-            <CategoryTag category={r.category} />
-            {r.oneTimeConstruction && <span className="rc-con">{C.oneTime}</span>}
-          </div>
-        )}
-        <b>{r.description || r.piid}</b>
-        <div className="rc-meta">
-          <span className="mono">{r.piid}</span>
-          <span>{C.type[r.awardType]}</span>
-          {r.recipientName && <span>{r.recipientName}</span>}
-          {r.naicsCode && <span>{C.naicsLabel} <span className="mono">{r.naicsCode}</span> {r.naicsName}</span>}
-        </div>
-        {r.category && (
-          <div className={`rc-why ${r.category}`}>
-            <RcIcon name="flag" />
-            <span>{whyText(r)}</span>
-          </div>
-        )}
-        <div className="rc-lk">
-          <AwardLink row={r} />
-          {r.solicitationNumber && <span>{C.solicitation} <span className="mono">{r.solicitationNumber}</span></span>}
-          {r.publicNoticeId && (
-            <Link to={`/search/${r.publicNoticeId}`} onClick={(e) => e.stopPropagation()}>{C.original}<Icon name="cr" /></Link>
-          )}
-        </div>
-      </td>
-      <td className="r">{r.amountUsd != null ? <span className="amt">{money(r.amountUsd)}</span> : '-'}</td>
-      <td>
-        <div className="rc-dt">
-          <DateLine label={C.date.start} date={r.startDate} basis={false} />
-          <DateLine label={C.kind.CURRENT_END} date={r.endDate} basis={r.basisDateKind === 'CURRENT_END'} />
-          <DateLine label={C.kind.POTENTIAL_END} date={r.potentialEndDate} basis={r.basisDateKind === 'POTENTIAL_END'} />
-        </div>
-      </td>
-    </tr>
-  )
-}
-
-/** 계약 목록 표. 비었으면 표 안에 한 줄로 알린다 */
-export function ContractTable({ rows, empty }: { rows: ContractRow[]; empty: ReactNode }) {
-  return (
-    <table className="tbl rc-list">
-      <thead>
-        <tr>
-          <th>{C.head.contract}</th>
-          <th style={{ width: 130, textAlign: 'right' }}>{C.head.amount}</th>
-          <th style={{ width: 200 }}>{C.head.dates}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.length > 0 ? rows.map((r) => <ContractLine key={r.id} r={r} />) : (
-          <tr><td colSpan={3}><div className="empty2"><b>{empty}</b></div></td></tr>
-        )}
-      </tbody>
-    </table>
-  )
-}
-
-/** 목록 위 건수. "재발주 후보 4건" 이나 "64건 중 1-20" */
-export function ListCount({ label, total, page, size }: { label: string | null; total: number; page: number; size: number }) {
-  const from = page * size + 1
-  const to = Math.min(total, (page + 1) * size)
-  return <span className="cnt"><Rich text={C.count(label, total, from, to)} /></span>
-}
-
-export function SortSeg({ value, onChange }: { value: RecompeteSort; onChange: (s: RecompeteSort) => void }) {
-  return (
-    <div className="seg">
-      {(['END', 'AMOUNT'] as RecompeteSort[]).map((s) => (
-        <Button key={s} className={`wj-reset${value === s ? ' on' : ''}`} aria-pressed={value === s} onClick={() => onChange(s)}>{C.sort[s]}</Button>
-      ))}
-    </div>
-  )
-}
-
-/** 구분 규칙 칸. 처음엔 접혀 있다 */
-export function RuleBox({ defaultOpen = false }: { defaultOpen?: boolean }) {
-  const [open, setOpen] = useState(defaultOpen)
-  const t = RULE_TEXT
-  return (
-    <section className="cbx rc-rule" id="rule">
-      <Button className="wj-reset hd2" aria-expanded={open} onClick={() => setOpen(!open)}>
-        <RcIcon name="flag" />{t.title}<small>{t.sub}</small>
-        <span className="tg">{open ? t.close : t.open}<Icon name={open ? 'cu' : 'cd'} /></span>
-      </Button>
-      {open && (
-        <>
-          <ol>
-            {t.rules.map((r, i) => (
-              <li key={r.category}>
-                <em>{i + 1}</em>
-                <span><CategoryTag category={r.category} /></span>
-                <span>{r.text}</span>
-              </li>
-            ))}
-          </ol>
-          <div className="ft2">{t.foot}</div>
-        </>
-      )}
     </section>
   )
 }

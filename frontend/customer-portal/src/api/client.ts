@@ -188,10 +188,13 @@ export const uploadMemberDocument = (
   displayName?: string,
   description?: string,
   expiresOn?: string,
+  /** 국문·영문 칸만 보낸다 (CR-147, BIZ-065) */
+  language?: 'KO' | 'EN',
 ) => {
   const formData = new FormData()
   formData.append('file', file)
   formData.append('category', category)
+  if (language) formData.append('language', language)
   if (displayName) formData.append('displayName', displayName)
   if (description) formData.append('description', description)
   if (expiresOn) formData.append('expiresOn', expiresOn)

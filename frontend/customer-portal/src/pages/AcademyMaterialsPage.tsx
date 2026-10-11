@@ -6,7 +6,7 @@ import { SubIcon } from '../components/subpage/SubIcon'
 import { PageHead, SubPageFrame } from '../components/subpage/SubPageFrame'
 import { ARTICLES, MATERIALS_EDGE, MATERIALS_HEAD, MATERIALS_STEP_PARAM, prevStepLabel } from '../data/academyContent'
 
-const PLACE = findMenuItem('academy', 'materials')
+const PLACE = findMenuItem('support', 'materials')
 
 const stepHref = (n: number) => `?${MATERIALS_STEP_PARAM}=${n}`
 

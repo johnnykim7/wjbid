@@ -43,15 +43,6 @@ export const MENU: MenuGroup[] = [
     ],
   },
   {
-    key: 'recompete',
-    label: '재발주 예측',
-    items: [
-      { key: 'next-month', label: '다음 달 공고', to: '/recompete/next-month' },
-      { key: 'recompete-calendar', label: '재발주 달력', to: '/recompete/calendar' },
-      { key: 'option-alert', label: '옵션 연장 알림', to: '/recompete/option-alert' },
-    ],
-  },
-  {
     key: 'awards',
     label: '낙찰정보',
     items: [
@@ -105,16 +96,6 @@ export const MENU: MenuGroup[] = [
     ],
   },
   {
-    key: 'academy',
-    label: '입찰 교실',
-    items: [
-      { key: 'class', label: '무료 입찰 교실', to: academyHref('class') },
-      { key: 'materials', label: '교육 자료', to: academyHref('materials') },
-      { key: 'glossary', label: '용어 사전', to: academyHref('glossary') },
-      { key: 'forms', label: '서식 모음', to: academyHref('forms') },
-    ],
-  },
-  {
     key: 'support',
     label: '고객센터',
     to: '/support',
@@ -122,6 +103,10 @@ export const MENU: MenuGroup[] = [
       { key: 'notices', label: '공지사항', to: '/notices' },
       { key: 'faq', label: '자주 묻는 질문', to: '/faq' },
       { key: 'inquiry', label: '1:1 문의', to: '/support' },
+      // 입찰 교실 묶음을 걷어내고 자료 세 화면만 고객센터로 옮겼다(CR-147). 주소는 그대로 둔다
+      { key: 'materials', label: '교육 자료', to: academyHref('materials') },
+      { key: 'glossary', label: '용어 사전', to: academyHref('glossary') },
+      { key: 'forms', label: '서식 모음', to: academyHref('forms') },
       { key: 'pricing', label: '요금 안내', to: '/pricing' },
       { key: 'kakao', label: '카카오톡 알림' },
     ],

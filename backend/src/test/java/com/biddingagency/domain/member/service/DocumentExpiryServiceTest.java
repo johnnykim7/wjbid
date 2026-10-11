@@ -65,8 +65,8 @@ class DocumentExpiryServiceTest {
     }
 
     private MemberDocument doc(LocalDate expiresOn) {
-        MemberDocument d = MemberDocument.builder().memberId(memberId).category(DocumentCategory.CAGE)
-                .fileName("cage.pdf").displayName("CAGE").expiresOn(expiresOn).build();
+        MemberDocument d = MemberDocument.builder().memberId(memberId).category(DocumentCategory.BUSINESS_REGISTRATION)
+                .fileName("biz.pdf").displayName("BIZ").expiresOn(expiresOn).build();
         ReflectionTestUtils.setField(d, "id", UUID.randomUUID());
         return d;
     }

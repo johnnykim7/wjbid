@@ -5,7 +5,7 @@
  * 회원 금액은 여기 두지 않는다. 요금 출처(hooks/usePricing)에서 읽는다.
  * 화면이 아직 없는 곳은 메뉴 항목 key 로 항목별 준비 안내에 보낸다(CR-133).
  */
-import { academyHref, comingSoonHref, serviceHref } from '../components/layout/menu'
+import { comingSoonHref, serviceHref } from '../components/layout/menu'
 
 /** 첫 화면 공고 목록 줄 수와 "N일 안 마감" 기준 */
 export const LIST_ROWS = 7
@@ -34,11 +34,11 @@ export const SAMPLE_NOTICE = {
 export const FREE_BENEFITS = ['마감 전 공고 한글로 보기', '관심 공고 저장', '입찰 신청']
 
 export const FLOW = [
-  { no: 1, name: '찾기', desc: '마감 전 공고, 알림, 재발주 예측' },
+  { no: 1, name: '찾기', desc: '마감 전 공고, 알림' },
   { no: 2, name: '판단', desc: '상세 번역, 우리 회사 맞춤 판정' },
   { no: 3, name: '준비', desc: '등록 대행, 서류함, 서류 영문 번역' },
   { no: 4, name: '제출', desc: '제안서 자문·검토, 제출 전 검사' },
-  { no: 5, name: '낙찰 뒤', desc: '대금 청구 대행, 옵션 연장 알림' },
+  { no: 5, name: '낙찰 뒤', desc: '대금 청구 대행' },
 ]
 
 /** 서비스 등급 꼬리표. f 무료, m 회원, c 건별, k 컨설팅 */
@@ -92,7 +92,6 @@ export const SERVICE_MAP: { no: number; name: string; desc: string; items: { nam
     no: 5, name: '낙찰 뒤', desc: '계약을 지키고 다음 공고로 잇습니다',
     items: [
       { name: '계약 서류·대금 청구 대행', tiers: ['c'] },
-      { name: '옵션 연장·재발주 알림', tiers: ['m'] },
     ],
   },
 ]
@@ -119,29 +118,16 @@ export const BENEFIT_FIT = {
   link: { label: '회사 정보 넣어 보기', to: '/profile' },
 }
 
-export const BENEFIT_CALENDAR = {
-  title: '재발주 예측 달력',
-  desc: '지난 계약이 끝나는 때를 계산해 같은 일이 다시 공고될 시기를 미리 알려 드립니다.',
-  rows: [
-    { month: '11월', title: '미화 용역', sub: '오산 · 지난 계약 끝 2026.12' },
-    { month: '12월', title: '시설 유지관리', sub: '험프리스 · 옵션 끝 2027.01' },
-    { month: '1월', title: '쓰레기 수거', sub: '대구 · 지난 계약 끝 2027.02' },
-  ],
-  badge: '회원 공개',
-  note: '화면 예시입니다. 실제 예측이 아닙니다',
-  link: { label: '재발주 달력 보기' },
-}
-
 export const PLAN_FREE = {
   name: '무료',
   who: '처음 둘러보는 회사',
-  items: ['마감 전 공고 한글로 보기 (SAM 번역 수준)', '관심 공고 저장', '입찰 신청', '입찰 교육 자료, 무료 입찰 교실'],
+  items: ['마감 전 공고 한글로 보기 (SAM 번역 수준)', '관심 공고 저장', '입찰 신청', '입찰 교육 자료'],
   cta: { label: '무료로 시작', to: '/register' },
 }
 export const PLAN_MEMBER = {
   name: '회원',
   who: '입찰을 꾸준히 하는 회사',
-  items: ['공고문 상세 번역 (첨부 포함)', '적격성 진단, 우리 회사 맞춤 판정', '재발주 예측 달력', '새 공고·카카오톡 알림', '서류함, 제출 전 검사'],
+  items: ['공고문 상세 번역 (첨부 포함)', '적격성 진단, 우리 회사 맞춤 판정', '새 공고·카카오톡 알림', '서류함, 제출 전 검사'],
   cta: { label: '회원으로 시작', to: '/pricing' },
 }
 export const PLAN_CONSULT = {
@@ -155,8 +141,6 @@ export const PLAN_CONSULT = {
 export const PROMOS = [
   { tone: 'a', img: '/img/army_71dae7c5.jpg', small: '등록 대행', title: 'SAM.gov·PIEE 등록, 맡기세요', desc: '처음 등록하는 회사도 순서대로', to: serviceHref('sam-registration') },
   { tone: 'b', img: '/img/army_5decc7b0.jpg', small: '현장 지원', title: '설명회 동행과 기지 출입', desc: '출입 절차부터 통역까지', to: serviceHref('site-visit') },
-  // 교실 일정은 정해지지 않아 무료 입찰 교실 안내와 같은 말을 쓴다
-  { tone: 'a', img: '/img/army_d68e5213.jpg', small: '무료 입찰 교실', title: '미군 입찰 기초를 온라인으로', desc: '일정은 정해지면 공지사항에 알립니다', to: academyHref('class') },
 ]
 
 export const HELP_LINKS = [

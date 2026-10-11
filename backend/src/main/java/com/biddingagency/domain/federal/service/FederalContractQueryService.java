@@ -1,22 +1,17 @@
 package com.biddingagency.domain.federal.service;
 
 import com.biddingagency.domain.federal.dto.FederalContractResponses.AwardRangeResponse;
-import com.biddingagency.domain.federal.dto.FederalContractResponses.CalendarMonth;
-import com.biddingagency.domain.federal.dto.FederalContractResponses.CalendarResponse;
 import com.biddingagency.domain.federal.dto.FederalContractResponses.ContractRow;
 import com.biddingagency.domain.federal.dto.FederalContractResponses.NaicsOption;
 import com.biddingagency.domain.federal.dto.FederalContractResponses.NaicsResponse;
 import com.biddingagency.domain.federal.dto.FederalContractResponses.RangeGroup;
 import com.biddingagency.domain.federal.dto.FederalContractResponses.RangeRow;
-import com.biddingagency.domain.federal.dto.FederalContractResponses.RecompeteResponse;
 import com.biddingagency.domain.federal.dto.FederalContractResponses.Source;
 import com.biddingagency.domain.federal.entity.FederalContract;
 import com.biddingagency.domain.federal.exception.FederalContractException;
 import com.biddingagency.domain.federal.entity.FederalSyncStatus;
-import com.biddingagency.domain.federal.entity.RecompeteCategory;
 import com.biddingagency.domain.federal.repository.FederalContractRepository;
 import com.biddingagency.domain.federal.repository.FederalContractSyncRunRepository;
-import com.biddingagency.domain.federal.service.RecompeteRule.Verdict;
 import com.biddingagency.domain.notice.repository.NoticeRepository;
 import com.biddingagency.domain.opportunity.dto.MarketSource;
 import com.biddingagency.domain.opportunity.entity.OpportunityVisibility;
@@ -29,23 +24,20 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.time.YearMonth;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
-import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * 미 연방 계약 자료 조회 (CR-142, BID-MKT-028, 029, 030, 034). federal_contracts 만 읽고 우리 공고와 섞지 않는다.
+ * 미 연방 계약 자료 조회 (CR-142, BID-MKT-034). federal_contracts 만 읽고 우리 공고와 섞지 않는다.
+ * 재발주 예측 조회(BID-MKT-028~030)는 CR-147 에서 걷어냈다.
  * 원래 공고번호가 우리 공고에 있을 때 공고 상세로 보낼 공고문 id 만 찾아 붙인다.
  */
 @Service
@@ -56,15 +48,12 @@ public class FederalContractQueryService {
     /** 낙찰가 범위 근거 계약 줄 수(T3-2 C-4) */
     private static final int EVIDENCE_LIMIT = 20;
 
-    public enum Sort { END, AMOUNT }
-
     private final FederalContractRepository contractRepository;
     private final FederalContractSyncRunRepository runRepository;
     private final OpportunityRepository opportunityRepository;
     private final NoticeRepository noticeRepository;
     private final FederalSettings settings;
     private final LocalDate dataFrom;
-    private final int calendarMonths;
     private final String awardPageUrl;
 
     public FederalContractQueryService(FederalContractRepository contractRepository,
@@ -73,7 +62,6 @@ public class FederalContractQueryService {
                                        NoticeRepository noticeRepository,
                                        FederalSettings settings,
                                        @Value("${app.federal-contract.data-from:2023-10-01}") LocalDate dataFrom,
-                                       @Value("${app.federal-contract.calendar-months:12}") int calendarMonths,
                                        @Value("${app.federal-contract.award-page-url:https://www.usaspending.gov/award/}") String awardPageUrl) {
         this.contractRepository = contractRepository;
         this.runRepository = runRepository;
@@ -81,7 +69,6 @@ public class FederalContractQueryService {
         this.noticeRepository = noticeRepository;
         this.settings = settings;
         this.dataFrom = dataFrom;
-        this.calendarMonths = calendarMonths;
         this.awardPageUrl = awardPageUrl;
     }
 
@@ -93,68 +80,6 @@ public class FederalContractQueryService {
                                 : r.getFinishedAt().atZone(FederalSettings.ZONE).toOffsetDateTime())
                         .orElse(null),
                 settings.lagDays(), dataFrom);
-    }
-
-    /** 이번 달부터 POL-033 달 수만큼. 기본 달(다음 달)을 정하는 데도 쓴다 */
-    public List<YearMonth> calendarMonths() {
-        YearMonth first = YearMonth.from(settings.today());
-        List<YearMonth> months = new ArrayList<>();
-        for (int i = 0; i < calendarMonths; i++) months.add(first.plusMonths(i));
-        return months;
-    }
-
-    /** 고른 달 계약(BID-MKT-029). 달이 예측 기간 밖이면 400 */
-    @Transactional(readOnly = true)
-    public RecompeteResponse recompete(YearMonth month, RecompeteCategory category, String naics, Sort sort,
-                                       int page, int size) {
-        if (!calendarMonths().contains(month)) {
-            throw FederalContractException.badRequest("FEDERAL_MONTH_INVALID",
-                    "month 는 이번 달부터 " + calendarMonths + "달 안이어야 합니다");
-        }
-        List<String> prefixes = settings.oneTimeNaicsPrefixes();
-        Map<RecompeteCategory, Integer> counts = new EnumMap<>(RecompeteCategory.class);
-        for (RecompeteCategory c : RecompeteCategory.values()) counts.put(c, 0);
-
-        List<Classified> rows = new ArrayList<>();
-        for (FederalContract c : contractRepository.findEndingBetween(month.atDay(1), month.atEndOfMonth())) {
-            if (naics != null && !naics.equals(c.getNaicsCode())) continue;
-            Optional<Verdict> v = RecompeteRule.classify(c, month);
-            if (v.isEmpty()) continue;
-            counts.merge(v.get().category(), 1, Integer::sum);
-            if (category == null || category == v.get().category()) rows.add(new Classified(c, v.get()));
-        }
-        Comparator<Classified> order = sort == Sort.AMOUNT
-                ? Comparator.comparing((Classified r) -> r.contract().getAmountUsd(),
-                        Comparator.nullsLast(Comparator.reverseOrder()))
-                : Comparator.comparing((Classified r) -> r.verdict().basisDate());
-        rows.sort(order.thenComparing(r -> r.contract().getPiid()));
-
-        int from = Math.min(page * size, rows.size());
-        List<Classified> slice = rows.subList(from, Math.min(from + size, rows.size()));
-        Map<String, UUID> notices = publicNotices(slice.stream()
-                .map(r -> r.contract().getSolicitationNumber()).filter(Objects::nonNull).collect(Collectors.toSet()));
-        List<ContractRow> items = slice.stream().map(r -> row(r.contract(), r.verdict(), prefixes, notices)).toList();
-        return new RecompeteResponse(month.toString(), counts, items, page, size, rows.size(), source());
-    }
-
-    /** 달마다 구분별 수(BID-MKT-030) */
-    @Transactional(readOnly = true)
-    public CalendarResponse calendar(String naics) {
-        List<YearMonth> months = calendarMonths();
-        List<FederalContract> contracts = contractRepository.findEndingBetween(months.get(0).atDay(1),
-                months.get(months.size() - 1).atEndOfMonth());
-        List<CalendarMonth> out = new ArrayList<>();
-        for (YearMonth m : months) {
-            Map<RecompeteCategory, Integer> n = new EnumMap<>(RecompeteCategory.class);
-            for (FederalContract c : contracts) {
-                if (naics != null && !naics.equals(c.getNaicsCode())) continue;
-                RecompeteRule.classify(c, m).ifPresent(v -> n.merge(v.category(), 1, Integer::sum));
-            }
-            out.add(new CalendarMonth(m.toString(), n.getOrDefault(RecompeteCategory.RECOMPETE, 0),
-                    n.getOrDefault(RecompeteCategory.EXTENDABLE, 0), n.getOrDefault(RecompeteCategory.IN_PARENT, 0),
-                    n.getOrDefault(RecompeteCategory.UNCONFIRMED, 0)));
-        }
-        return new CalendarResponse(out, source());
     }
 
     /**
@@ -198,7 +123,7 @@ public class FederalContractQueryService {
                 .toList();
         Map<String, UUID> notices = publicNotices(used.stream().map(FederalContract::getSolicitationNumber)
                 .filter(Objects::nonNull).collect(Collectors.toSet()));
-        List<ContractRow> evidence = used.stream().map(c -> row(c, null, List.of(), notices)).toList();
+        List<ContractRow> evidence = used.stream().map(c -> row(c, notices)).toList();
         String naicsName = contracts.stream().map(FederalContract::getNaicsName).filter(Objects::nonNull).findFirst()
                 .orElseGet(() -> contractRepository.findNaicsName(naicsCode).orElse(null));
         return new AwardRangeResponse(naicsCode, naicsName, noticeNumber, noticeTitle, rows, evidence, source());
@@ -214,14 +139,11 @@ public class FederalContractQueryService {
         return new NaicsResponse(items, source());
     }
 
-    /** 계약 줄. 달 기준 구분이 없으면 구분 칸을 비운다 */
-    ContractRow row(FederalContract c, Verdict v, List<String> prefixes, Map<String, UUID> notices) {
+    ContractRow row(FederalContract c, Map<String, UUID> notices) {
         return new ContractRow(c.getId(), c.getPiid(), c.getParentPiid(), c.getAwardType(), c.getDescription(),
                 c.getRecipientName(), c.getAmountUsd(), c.getNaicsCode(), c.getNaicsName(), c.getStartDate(),
                 c.getEndDate(), c.getPotentialEndDate(), c.getSolicitationNumber(),
                 c.getSolicitationNumber() == null ? null : notices.get(c.getSolicitationNumber().trim()),
-                v == null ? null : v.category(), v == null ? null : v.basisDateKind(), v == null ? null : v.basisDate(),
-                v != null && RecompeteRule.oneTimeConstruction(v.category(), c.getNaicsCode(), prefixes),
                 awardPageUrl + c.getAwardKey());
     }
 
@@ -268,8 +190,5 @@ public class FederalContractQueryService {
 
     private static boolean positive(FederalContract c) {
         return c.getAmountUsd() != null && c.getAmountUsd().signum() > 0;
-    }
-
-    private record Classified(FederalContract contract, Verdict verdict) {
     }
 }

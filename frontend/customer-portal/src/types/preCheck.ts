@@ -89,6 +89,6 @@ export interface PreCheckVaultDocument {
 }
 
 export interface PreCheckVaultResponse {
-  fixedSlots: { document: PreCheckVaultDocument | null }[]
+  fixedSlots: { files: { document: PreCheckVaultDocument | null }[] }[]
   others: PreCheckVaultDocument[]
 }

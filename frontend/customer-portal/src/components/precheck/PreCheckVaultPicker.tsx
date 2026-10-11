@@ -32,7 +32,7 @@ export function PreCheckVaultPicker({ item, onClose, onPick }: {
     getMemberDocumentVault()
       .then(({ data }) => {
         const vault = data as PreCheckVaultResponse
-        const docs = [...vault.fixedSlots.flatMap((s) => (s.document ? [s.document] : [])), ...vault.others]
+        const docs = [...vault.fixedSlots.flatMap((s) => s.files.flatMap((f) => (f.document ? [f.document] : []))), ...vault.others]
         setPicked('')
         setState({ target, load: { status: 'ok', docs } })
       })

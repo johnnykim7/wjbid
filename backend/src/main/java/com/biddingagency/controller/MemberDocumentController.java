@@ -1,6 +1,7 @@
 package com.biddingagency.controller;
 
 import com.biddingagency.domain.member.entity.DocumentCategory;
+import com.biddingagency.domain.member.entity.DocumentLanguage;
 import com.biddingagency.domain.member.entity.MemberDocument;
 import com.biddingagency.domain.member.service.DocumentExpiryService;
 import com.biddingagency.domain.member.service.MemberDocumentService;
@@ -22,6 +23,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -49,6 +51,7 @@ public class MemberDocumentController {
             String category,
             String categoryLabel,
             boolean fixed,
+            String language,
             String fileName,
             Long fileSize,
             String contentType,
@@ -64,6 +67,7 @@ public class MemberDocumentController {
                     d.getCategory().name(),
                     d.getCategory().getDisplayName(),
                     d.getCategory().isFixed(),
+                    d.getLanguage() != null ? d.getLanguage().name() : null,
                     d.getFileName(),
                     d.getFileSize(),
                     d.getContentType(),
@@ -76,14 +80,23 @@ public class MemberDocumentController {
         }
     }
 
-    /** 고정 슬롯 메타 (서류 없어도 카드를 그릴 수 있도록 비어있는 슬롯도 내려줌) */
+    /**
+     * 고정 슬롯 메타 (서류 없어도 카드를 그릴 수 있도록 비어있는 슬롯도 내려줌).
+     * 국문·영문 칸은 files 가 KO, EN 두 줄, 다른 칸은 언어 없는 한 줄이다(CR-147)
+     */
     public record FixedSlot(
             String category,
             String categoryLabel,
-            MemberDocumentDto document // null = 미등록
+            List<SlotFile> files
     ) {}
 
-    /** 서류함 전체 응답 — 고정 슬롯 6개(순서 고정) + 기타 목록 */
+    /** 칸 안 파일 한 줄. language 는 국문·영문 칸만, document 가 null 이면 미등록 */
+    public record SlotFile(
+            String language,
+            MemberDocumentDto document
+    ) {}
+
+    /** 서류함 전체 응답 — 고정 슬롯 다섯 개(순서 고정) + 기타 목록 */
     public record VaultResponse(
             List<FixedSlot> fixedSlots,
             List<MemberDocumentDto> others
@@ -95,16 +108,20 @@ public class MemberDocumentController {
         UUID memberId = userDetails.getMember().getId();
         List<MemberDocument> docs = service.list(memberId);
 
-        Map<DocumentCategory, MemberDocument> fixedByCategory = docs.stream()
+        Map<String, MemberDocument> fixedBySlot = docs.stream()
                 .filter(d -> d.getCategory().isFixed())
-                .collect(Collectors.toMap(MemberDocument::getCategory, d -> d, (a, b) -> a));
+                .collect(Collectors.toMap(d -> slotKey(d.getCategory(), d.getLanguage()), d -> d, (a, b) -> a));
 
         List<FixedSlot> fixedSlots = new ArrayList<>();
         for (DocumentCategory c : DocumentCategory.values()) {
             if (!c.isFixed()) continue;
-            MemberDocument d = fixedByCategory.get(c);
-            fixedSlots.add(new FixedSlot(c.name(), c.getDisplayName(),
-                    d != null ? MemberDocumentDto.from(d) : null));
+            List<DocumentLanguage> languages = c.isBilingual()
+                    ? List.of(DocumentLanguage.values()) : Collections.singletonList(null);
+            List<SlotFile> files = languages.stream().map(lang -> {
+                MemberDocument d = fixedBySlot.get(slotKey(c, lang));
+                return new SlotFile(lang != null ? lang.name() : null, d != null ? MemberDocumentDto.from(d) : null);
+            }).toList();
+            fixedSlots.add(new FixedSlot(c.name(), c.getDisplayName(), files));
         }
 
         List<MemberDocumentDto> others = docs.stream()
@@ -120,12 +137,13 @@ public class MemberDocumentController {
     public ResponseEntity<MemberDocumentDto> upload(
             @RequestParam("file") MultipartFile file,
             @RequestParam("category") DocumentCategory category,
+            @RequestParam(value = "language", required = false) DocumentLanguage language,
             @RequestParam(value = "displayName", required = false) String displayName,
             @RequestParam(value = "description", required = false) String description,
             @RequestParam(value = "expiresOn", required = false) String expiresOn,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         UUID memberId = userDetails.getMember().getId();
-        MemberDocument saved = service.upload(memberId, category, displayName, description, file,
+        MemberDocument saved = service.upload(memberId, category, language, displayName, description, file,
                 expiryChange(expiresOn));
         return ResponseEntity.status(HttpStatus.CREATED).body(MemberDocumentDto.from(saved));
     }
@@ -189,5 +207,9 @@ public class MemberDocumentController {
         UUID memberId = userDetails.getMember().getId();
         service.delete(memberId, id);
         return ResponseEntity.noContent().build();
+    }
+
+    private static String slotKey(DocumentCategory category, DocumentLanguage language) {
+        return language == null ? category.name() : category.name() + ":" + language.name();
     }
 }

@@ -1,6 +1,7 @@
 package com.biddingagency.domain.member.repository;
 
 import com.biddingagency.domain.member.entity.DocumentCategory;
+import com.biddingagency.domain.member.entity.DocumentLanguage;
 import com.biddingagency.domain.member.entity.MemberDocument;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -14,6 +15,10 @@ public interface MemberDocumentRepository extends JpaRepository<MemberDocument, 
 
     /** 고정 카테고리 1슬롯=1서류 — 기존 보유분 조회(교체 판단) */
     Optional<MemberDocument> findFirstByMemberIdAndCategory(UUID memberId, DocumentCategory category);
+
+    /** 국문·영문 칸은 언어마다 한 건(CR-147, BIZ-065) */
+    Optional<MemberDocument> findFirstByMemberIdAndCategoryAndLanguage(UUID memberId, DocumentCategory category,
+                                                                      DocumentLanguage language);
 
     List<MemberDocument> findByMemberIdAndCategory(UUID memberId, DocumentCategory category);
 
