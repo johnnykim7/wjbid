@@ -13,11 +13,12 @@ import { issueWidgetToken } from '../api/client'
 // 화면과 같은 주소라 https 화면에서 http 호출로 막히지 않고, 서버를 옮겨도 이 값은 그대로다.
 const AIMBASE_BASE_URL = import.meta.env.VITE_AIMBASE_BASE_URL || '/aimbase'
 
-// bidding_system 테넌트의 Anthropic connection (bidding-claude-sonnet).
-// connection_id 없으면 BE 가 전역 placeholder 키로 폴백 → 401.
+// CR-150: bidding_system 테넌트의 Max 구독 CLI 연결(bidding-claude-cli-tools). API 키 연결은 크레딧이 없고,
+// 채팅이 분석 결과를 읽고 저장하려면 앱 MCP 도구가 필요해 tool_mode AIMBASE 연결을 쓴다.
+// connection_id 없으면 BE 가 전역 placeholder 키로 폴백해 401 이 난다.
 const AIMBASE_CONNECTION_ID =
   import.meta.env.VITE_AIMBASE_CONNECTION_ID ||
-  'bb3bc8bc-d17d-4e8e-a15b-d9f077e83d18'
+  'cli-runner-bidding-tools-001'
 
 const WIDGET_SCRIPT_URL = `${AIMBASE_BASE_URL}/widget/v1/aimbase-chat.umd.global.js`
 const SCRIPT_ID = 'aimbase-chat-umd'
