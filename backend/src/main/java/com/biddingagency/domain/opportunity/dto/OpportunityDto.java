@@ -10,6 +10,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Opportunity DTO for API responses
@@ -33,7 +34,10 @@ public record OpportunityDto(
         String type,
         String uiLink,
         List<String> resourceLinks, // attachment URLs from SAM.gov
-        AnalysisResultDto analysis  // AI 사전 분석 결과 (상세 조회 시만)
+        AnalysisResultDto analysis, // AI 사전 분석 결과 (상세 조회 시만)
+        String originalTitle,       // 원문 제목 (원본 공고 상세만, CR-152)
+        String publicNoticeId,      // 같은 공고의 공개 공고문 id (원본 공고 상세만, CR-152)
+        String samUrl               // SAM.gov 원문 공개 주소. uiLink 는 SAM 로그인이 필요한 작업공간 주소다 (상세만, CR-152)
 ) {
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     /** 공고 시각은 서울 벽시계로 저장돼 있다(DB 접속 serverTimezone=Asia/Seoul) */
@@ -58,6 +62,9 @@ public record OpportunityDto(
                 opp.getTypeKo() != null && !opp.getTypeKo().isBlank() ? opp.getTypeKo() : opp.getType(),
                 opp.getUiLink(),
                 getStringList(raw, "resourceLinks"),
+                null,
+                null,
+                null,
                 null
         );
     }
@@ -91,8 +98,50 @@ public record OpportunityDto(
                 displayType,
                 opp.getUiLink(),
                 getStringList(raw, "resourceLinks"),
-                AnalysisResultDto.fromNotice(notice)
+                AnalysisResultDto.fromNotice(notice),
+                null,
+                null,
+                null
         );
+    }
+
+    /**
+     * CR-152: 공개 공고문이 없는 모은 공고의 상세. id=opportunityId, title=한글 제목(없으면 원문),
+     * description=모아 둔 원문 본문. rawJson 의 description 은 본문이 아니라 SAM 본문 조회 주소라 쓰지 않는다.
+     */
+    public static OpportunityDto fromOrigin(Opportunity opp, UUID publicNoticeId, String samUrl) {
+        Map<String, Object> raw = opp.getRawJson();
+        String displayTitle = opp.getTitleKo() != null && !opp.getTitleKo().isBlank()
+                ? opp.getTitleKo() : opp.getTitle();
+        String displayType = opp.getTypeKo() != null && !opp.getTypeKo().isBlank()
+                ? opp.getTypeKo() : opp.getType();
+        return new OpportunityDto(
+                opp.getId().toString(),
+                opp.getSolicitationNumber(),
+                displayTitle,
+                opp.getOrganizationName(),
+                getString(raw, "naicsCode"),
+                getString(raw, "setAside"),
+                formatDate(opp.getResponseDeadline()),
+                toKst(opp.getResponseDeadline()),
+                formatDate(opp.getPostedDate()),
+                getString(raw, "placeOfPerformance"),
+                opp.getDescriptionBody() != null && !opp.getDescriptionBody().isBlank() ? opp.getDescriptionBody() : null,
+                Boolean.TRUE.equals(opp.getActive()) ? "active" : "closed",
+                displayType,
+                opp.getUiLink(),
+                getStringList(raw, "resourceLinks"),
+                null,
+                opp.getTitle(),
+                publicNoticeId != null ? publicNoticeId.toString() : null,
+                samUrl
+        );
+    }
+
+    public OpportunityDto withSamUrl(String url) {
+        return new OpportunityDto(id, solicitationNumber, title, agencyName, naicsCode, setAside, responseDeadline,
+                responseDeadlineAt, postedDate, placeOfPerformance, description, status, type, uiLink, resourceLinks,
+                analysis, originalTitle, publicNoticeId, url);
     }
 
     private static OffsetDateTime toKst(LocalDateTime dt) {

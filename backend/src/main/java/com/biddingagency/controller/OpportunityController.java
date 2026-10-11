@@ -58,8 +58,18 @@ public class OpportunityController {
     @GetMapping("/{id}")
     @Operation(summary = "공고문 상세", description = "노출 공고문 상세 + 한글화 결과")
     public ResponseEntity<OpportunityDto> getOpportunity(@PathVariable UUID id) {
-        return noticeService.findVisibleById(id)
-                .map(OpportunityDto::fromNotice)
+        return noticeService.findVisibleDetail(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    /**
+     * 원본 공고 상세 (CR-152, id = opportunityId). 공개 공고문이 없는 모은 공고도 우리 상세로 연다
+     */
+    @GetMapping("/origin/{opportunityId}")
+    @Operation(summary = "원본 공고 상세", description = "모은 원본 공고 하나. 같은 공고의 공개 공고문이 있으면 publicNoticeId 를 싣는다")
+    public ResponseEntity<OpportunityDto> getOrigin(@PathVariable UUID opportunityId) {
+        return noticeService.findOriginDetail(opportunityId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }

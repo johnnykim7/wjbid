@@ -16,6 +16,11 @@ export interface Opportunity {
   uiLink?: string
   resourceLinks?: string[]
   analysis?: AnalysisResult
+  /** 원본 공고 상세만 (CR-152) */
+  originalTitle?: string
+  publicNoticeId?: string
+  /** SAM.gov 원문 공개 주소. uiLink 는 SAM 로그인이 필요한 작업공간 주소다 (CR-152) */
+  samUrl?: string
 }
 
 export interface AnalysisResult {

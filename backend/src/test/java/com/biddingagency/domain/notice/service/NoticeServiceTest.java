@@ -4,7 +4,10 @@ import com.biddingagency.domain.event.OpportunityAnalysisCompletedEvent;
 import com.biddingagency.domain.notice.entity.Notice;
 import com.biddingagency.domain.notice.entity.NoticeGenerationStatus;
 import com.biddingagency.domain.notice.repository.NoticeRepository;
+import com.biddingagency.domain.opportunity.dto.OpportunityDto;
 import com.biddingagency.domain.opportunity.entity.Opportunity;
+import com.biddingagency.domain.opportunity.entity.OpportunityVisibility;
+import com.biddingagency.domain.opportunity.repository.OpportunityRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -13,7 +16,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -34,6 +39,12 @@ class NoticeServiceTest {
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
+
+    @Mock
+    private OpportunityRepository opportunityRepository;
+
+    @Mock
+    private com.biddingagency.domain.opportunity.service.MarketRowAssembler marketRowAssembler;
 
     @Mock
     private com.biddingagency.integration.llmplatform.LLMPlatformClient llmPlatformClient;
@@ -227,5 +238,72 @@ class NoticeServiceTest {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("분석 중");
         then(noticeRepository).should(never()).delete(any());
+    }
+
+    // ===== CR-152: 원본 공고 상세 =====
+
+    private Opportunity originOpp(UUID id, String titleKo, String body) {
+        Opportunity opp = Opportunity.builder().noticeId("N-152").title("Laundry Service")
+                .titleKo(titleKo).descriptionBody(body).build();
+        ReflectionTestUtils.setField(opp, "id", id);
+        given(opportunityRepository.findById(id)).willReturn(Optional.of(opp));
+        return opp;
+    }
+
+    @Test
+    @DisplayName("TC-BROWSE-006: 공개공고문없음_원본상세조회_한글제목과원문본문")
+    void 공개공고문없음_원본상세조회_한글제목과원문본문() {
+        UUID id = UUID.randomUUID();
+        originOpp(id, "세탁 서비스", "Full description body");
+        given(noticeRepository.findFirstByOpportunityIdAndVisibilityOrderByAnalyzedAtDesc(id, OpportunityVisibility.VISIBLE))
+                .willReturn(Optional.empty());
+        given(marketRowAssembler.samUrl("N-152")).willReturn("https://sam.gov/opp/N-152/view");
+
+        OpportunityDto dto = noticeService.findOriginDetail(id).orElseThrow();
+
+        assertThat(dto).extracting(OpportunityDto::id, OpportunityDto::title, OpportunityDto::originalTitle,
+                        OpportunityDto::description, OpportunityDto::publicNoticeId, OpportunityDto::analysis, OpportunityDto::samUrl)
+                .containsExactly(id.toString(), "세탁 서비스", "Laundry Service", "Full description body", null, null,
+                        "https://sam.gov/opp/N-152/view");
+    }
+
+    @Test
+    @DisplayName("TC-BROWSE-007: 공개공고문있음_원본상세조회_공개공고문id")
+    void 공개공고문있음_원본상세조회_공개공고문id() {
+        UUID id = UUID.randomUUID();
+        Opportunity opp = originOpp(id, "세탁 서비스", null);
+        UUID noticeId = UUID.randomUUID();
+        Notice visible = Notice.builder().opportunity(opp).build();
+        ReflectionTestUtils.setField(visible, "id", noticeId);
+        given(noticeRepository.findFirstByOpportunityIdAndVisibilityOrderByAnalyzedAtDesc(id, OpportunityVisibility.VISIBLE))
+                .willReturn(Optional.of(visible));
+
+        assertThat(noticeService.findOriginDetail(id).orElseThrow().publicNoticeId()).isEqualTo(noticeId.toString());
+    }
+
+    @Test
+    @DisplayName("TC-BROWSE-008: 한글제목없음_원본상세조회_원문제목")
+    void 한글제목없음_원본상세조회_원문제목() {
+        UUID id = UUID.randomUUID();
+        originOpp(id, " ", null);
+        given(noticeRepository.findFirstByOpportunityIdAndVisibilityOrderByAnalyzedAtDesc(id, OpportunityVisibility.VISIBLE))
+                .willReturn(Optional.empty());
+
+        OpportunityDto dto = noticeService.findOriginDetail(id).orElseThrow();
+
+        assertThat(List.of(dto.title(), dto.originalTitle())).containsOnly("Laundry Service");
+    }
+
+    @Test
+    @DisplayName("TC-BROWSE-009: 지운공고_원본상세조회_없음")
+    void 지운공고_원본상세조회_없음() {
+        UUID deletedId = UUID.randomUUID();
+        Opportunity deleted = originOpp(deletedId, "세탁 서비스", null);
+        ReflectionTestUtils.setField(deleted, "deletedAt", LocalDateTime.of(2026, 10, 1, 0, 0));
+        UUID missingId = UUID.randomUUID();
+        given(opportunityRepository.findById(missingId)).willReturn(Optional.empty());
+
+        assertThat(List.of(noticeService.findOriginDetail(deletedId), noticeService.findOriginDetail(missingId)))
+                .allMatch(Optional::isEmpty);
     }
 }

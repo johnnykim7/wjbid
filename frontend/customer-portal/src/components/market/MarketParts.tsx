@@ -76,16 +76,13 @@ export function DeadlineCell({ deadline }: { deadline: string | null }) {
 export function GoLink({ target, children, className }: { target: GoTarget | null; children: ReactNode; className?: string }) {
   if (!target) return null
   const stop = (e: React.MouseEvent) => e.stopPropagation()
-  if (target.kind === 'notice') {
-    return <Link className={className} to={target.to} onClick={stop} aria-label={MARKET_COMMON.goNotice}>{children}</Link>
-  }
-  return <a className={className} href={target.href} target="_blank" rel="noopener noreferrer" onClick={stop} aria-label={MARKET_COMMON.goSam}>{children}</a>
+  return <Link className={className} to={target} onClick={stop} aria-label={MARKET_COMMON.goNotice}>{children}</Link>
 }
 
 export function GoCell({ target }: { target: GoTarget | null }) {
   return (
-    <td className="go" title={target?.kind === 'notice' ? MARKET_COMMON.goNotice : MARKET_COMMON.goSam}>
-      <GoLink target={target}><Icon name={target?.kind === 'notice' ? 'cr' : 'ext'} /></GoLink>
+    <td className="go" title={MARKET_COMMON.goNotice}>
+      <GoLink target={target}><Icon name="cr" /></GoLink>
     </td>
   )
 }
@@ -93,8 +90,7 @@ export function GoCell({ target }: { target: GoTarget | null }) {
 export function GoLegend() {
   return (
     <p className="golg">
-      <span><Icon name="cr" />{MARKET_COMMON.legend.notice}</span>
-      <span><Icon name="ext" />{MARKET_COMMON.legend.sam}</span>
+      <span><Icon name="cr" />{MARKET_COMMON.legend}</span>
     </p>
   )
 }

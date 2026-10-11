@@ -147,7 +147,7 @@ function GroupRows({ group: g, open, onToggle }: { group: AmendmentGroup; open: 
                       <td>{changed ? <><b>{deadline}</b><span className="chg">{t.changed}</span></> : deadline}</td>
                       <td className="vgo">
                         <GoLink target={target}>
-                          {target?.kind === 'notice' ? t.goNotice : t.goSam}<Icon name={target?.kind === 'notice' ? 'cr' : 'ext'} />
+                          {t.goNotice}<Icon name="cr" />
                         </GoLink>
                       </td>
                     </tr>

@@ -10,6 +10,7 @@ import com.biddingagency.domain.notice.repository.NoticeRepository;
 import com.biddingagency.domain.opportunity.entity.AttachmentDownloadStatus;
 import com.biddingagency.domain.opportunity.entity.Opportunity;
 import com.biddingagency.domain.opportunity.entity.OpportunityAttachment;
+import com.biddingagency.domain.opportunity.dto.OpportunityDto;
 import com.biddingagency.domain.opportunity.entity.OpportunityVisibility;
 import com.biddingagency.domain.opportunity.repository.OpportunityAttachmentRepository;
 import com.biddingagency.domain.opportunity.repository.OpportunityRepository;
@@ -55,6 +56,7 @@ public class NoticeService {
     private final com.biddingagency.domain.proposal.service.VerificationLogService verificationLogService;
     private final com.biddingagency.domain.opportunity.service.OpportunityTranslationService opportunityTranslationService;
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+    private final com.biddingagency.domain.opportunity.service.MarketRowAssembler marketRowAssembler;
     // CR-141: 분석 저장 때 요구 항목을 맞춘다(BIZ-045)
     private final com.biddingagency.domain.compliance.service.RequirementSyncService requirementSyncService;
     private final com.biddingagency.security.McpAccessGuard mcpAccessGuard;
@@ -145,6 +147,21 @@ public class NoticeService {
     public Optional<Notice> findLatestVisibleByOpportunityId(UUID opportunityId) {
         return noticeRepository.findFirstByOpportunityIdAndVisibilityOrderByAnalyzedAtDesc(
                 opportunityId, OpportunityVisibility.VISIBLE);
+    }
+
+    /** CR-152: 원본 공고 상세. 지운 공고는 없는 것으로 본다. 공개 공고문이 있으면 화면이 그쪽으로 넘기도록 id 를 싣는다 */
+    public Optional<OpportunityDto> findOriginDetail(UUID opportunityId) {
+        return opportunityRepository.findById(opportunityId)
+                .filter(opp -> opp.getDeletedAt() == null)
+                .map(opp -> OpportunityDto.fromOrigin(opp,
+                        findLatestVisibleByOpportunityId(opportunityId).map(Notice::getId).orElse(null),
+                        marketRowAssembler.samUrl(opp.getNoticeId())));
+    }
+
+    /** 공고문 상세. 머리의 SAM.gov 원문 단추가 쓸 공개 주소를 싣는다 (CR-152) */
+    public Optional<OpportunityDto> findVisibleDetail(UUID noticeId) {
+        return findVisibleById(noticeId)
+                .map(n -> OpportunityDto.fromNotice(n).withSamUrl(marketRowAssembler.samUrl(n.getOpportunity().getNoticeId())));
     }
 
     /** 고객 검색 (노출 공고문, 한글/원문 제목). CR-009: includeExpired=false(기본)면 마감 지난 공고 제외 */
