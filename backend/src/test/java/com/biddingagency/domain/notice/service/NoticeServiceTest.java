@@ -41,6 +41,9 @@ class NoticeServiceTest {
     @Mock
     private com.biddingagency.domain.proposal.service.VerificationLogService verificationLogService;
 
+    @Mock
+    private com.biddingagency.domain.compliance.service.RequirementSyncService requirementSyncService;
+
     @InjectMocks
     private NoticeService noticeService;
 

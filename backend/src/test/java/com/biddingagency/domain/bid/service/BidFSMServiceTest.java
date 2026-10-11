@@ -200,6 +200,29 @@ class BidFSMServiceTest {
     }
 
     @Test
+    @DisplayName("TC-PRE-026 필수빠짐_서류접수전이_차단_빠진항목이름")
+    void 필수빠짐_서류접수전이_차단() {
+        UUID bidRequestId = UUID.randomUUID();
+        BidRequest bidRequest = BidRequest.builder()
+                .state(BidRequestState.DOCS_PENDING)
+                .stateHistory(new ArrayList<>())
+                .build();
+        OpportunityRequirementItem missing = OpportunityRequirementItem.builder()
+                .title("Corporate Registration Certificate").isBlocker(true).build();
+        ReflectionTestUtils.setField(missing, "id", UUID.randomUUID());
+        given(bidRequestRepository.findByIdWithDetails(bidRequestId)).willReturn(Optional.of(bidRequest));
+        given(complianceService.getUnfulfilledBlockerSlots(bidRequestId)).willReturn(List.of(missing));
+
+        assertThatThrownBy(() -> fsmService.transition(
+                bidRequestId, BidRequestState.DOCS_RECEIVED, UUID.randomUUID(), "customer", ""))
+                .isInstanceOf(RequirementSlotsNotFulfilledException.class)
+                .extracting("unfulfilledSlots")
+                .asList()
+                .extracting("title")
+                .containsExactly("Corporate Registration Certificate");
+    }
+
+    @Test
     @DisplayName("DOCS_PENDING에서DOCS_RECEIVED_BLOCKER슬롯전부충족_전이성공_CR010")
     void DOCS_PENDING_DOCS_RECEIVED_슬롯충족_성공() {
         // given
