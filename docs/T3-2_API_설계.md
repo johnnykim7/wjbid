@@ -1,6 +1,6 @@
 # SAM.gov Bidding Agency Platform API 설계
 
-> 설계 버전: 1.10 | 최종 수정: 2026-10-11 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-144, CR-146
+> 설계 버전: 1.11 | 최종 수정: 2026-10-11 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-144, CR-146, CR-147
 
 > 단계: 3. Detail Design | 실행스펙 섹션 3에 포함
 >
@@ -239,10 +239,12 @@
 
 메뉴 속 화면 4묶음(다음 달 공고, 재발주 달력, 낙찰가 범위)이 쓴다. federal_contracts 만 읽고 우리 공고와 섞지 않는다. 로그인 회원만 연다. 달과 오늘은 Asia/Seoul 날짜다.
 
+- **변경 (CR-147)**: 재발주 예측을 지워 `GET /federal-contracts/recompete`, `GET /federal-contracts/recompete/calendar` 를 폐기한다(배포 뒤 404). 남는 것은 낙찰가 범위(award-range)와 업종 고르기(naics)이고, 업종 고르기의 기능 ID 는 BID-MKT-034 만 남는다. 자료 기준(`source`)은 남은 두 응답에 그대로 싣는다. 계약 줄에서 category, basisDateKind, basisDate, oneTimeConstruction 을 지운다. month 검증(이번 달부터 POL-033 달 수)은 recompete 와 함께 없어진다. 근거: 원문 "재발주 예측 삭제", 사용자 10/11 20:01 /전승(정할 것 1)
+
 | 메서드 | 경로 | 설명 | 인증 | 기능 ID |
 |--------|------|------|------|---------|
-| GET | /federal-contracts/recompete | 고른 달 계약. `month`(YYYY-MM, 기본 다음 달), `category`(RecompeteCategory, 없으면 전부), `naics`(6자리), `sort`(END 그 달 날짜순 기본, AMOUNT 금액 큰 순), `page`, `size`(기본 20, 최대 100) | 🔒 | BID-MKT-028, 029 |
-| GET | /federal-contracts/recompete/calendar | 이번 달부터 POL-033 달 수만큼 달마다 구분별 수. `naics` | 🔒 | BID-MKT-030 |
+| ~~GET~~ | ~~/federal-contracts/recompete~~ | ~~고른 달 계약. `month`(YYYY-MM, 기본 다음 달), `category`(RecompeteCategory, 없으면 전부), `naics`(6자리), `sort`(END 그 달 날짜순 기본, AMOUNT 금액 큰 순), `page`, `size`(기본 20, 최대 100)~~ | 🔒 | ~~BID-MKT-028, 029~~ **폐기 (CR-147)** |
+| ~~GET~~ | ~~/federal-contracts/recompete/calendar~~ | ~~이번 달부터 POL-033 달 수만큼 달마다 구분별 수. `naics`~~ | 🔒 | ~~BID-MKT-030~~ **폐기 (CR-147)** |
 | GET | /federal-contracts/award-range | 낙찰가 범위. `noticeNumber`(우리 공고번호) 또는 `naics` 하나는 필수, `q`(작업 설명 낱말) | 🔒 | BID-MKT-034 |
 | GET | /federal-contracts/naics | 업종 고르기 목록. `q`(코드나 이름 일부). 업종마다 code, name, count(계약 수), 계약 수 많은 순 50건 | 🔒 | BID-MKT-029, 034 |
 
@@ -266,9 +268,9 @@
 | startDate, endDate, potentialEndDate | potentialEndDate 는 아직 받지 않았거나 USAspending 에 없으면 null |
 | solicitationNumber | 원래 공고번호, 없으면 null |
 | publicNoticeId | 원래 공고번호로 낸 공개 한글 공고문이 있으면 그 공고문 id(화면은 공고 상세로 보낸다), 없으면 null |
-| category | RecompeteCategory(BIZ-050) |
-| basisDateKind, basisDate | 그 달에 걸린 날짜와 종류(ContractDateKind). 화면은 이 둘과 awardType, parentPiid 로 근거 한 줄을 만든다 |
-| oneTimeConstruction | 한 번짜리 공사 꼬리표(BIZ-051) |
+| ~~category~~ | ~~RecompeteCategory(BIZ-050)~~ **폐기 (CR-147)** |
+| ~~basisDateKind, basisDate~~ | ~~그 달에 걸린 날짜와 종류(ContractDateKind). 화면은 이 둘과 awardType, parentPiid 로 근거 한 줄을 만든다~~ **폐기 (CR-147)** |
+| ~~oneTimeConstruction~~ | ~~한 번짜리 공사 꼬리표(BIZ-051)~~ **폐기 (CR-147)** |
 | usaspendingUrl | USAspending 계약 쪽 주소. 앞부분은 설정 `app.federal-contract.award-page-url` |
 
 **응답**
@@ -280,17 +282,19 @@
 
 ---
 
-## C-5. 회원 계약과 옵션 연장 알림 (CR-142)
+## ~~C-5. 회원 계약과 옵션 연장 알림 (CR-142)~~ (CR-147 폐기)
+
+- **폐기 (2026-10-11, CR-147)**: 옵션 연장 알림 화면과 회원 계약 표(member_contracts, V51 DROP)를 지우면서 아래 다섯 API(GET /member-contracts, GET /member-contracts/lookup, POST /member-contracts, PATCH /member-contracts/{id}, DELETE /member-contracts/{id})를 모두 폐기한다. 근거: 원문 "재발주 예측 삭제", 사용자 10/11 20:01 /전승(정할 것 1)
 
 옵션 연장 알림 화면이 쓴다. 로그인 회원 본인 계약만. 남의 계약 id 는 404.
 
 | 메서드 | 경로 | 설명 | 인증 | 기능 ID |
 |--------|------|------|------|---------|
-| GET | /member-contracts | 내 계약 목록과 알림 설정 | 🔒 | BID-MKT-032 |
-| GET | /member-contracts/lookup | 계약번호로 찾기. `piid`. 표에 없으면 받는 범위 안에서 USAspending 검색 1회, 옵션 끝날짜를 아직 받지 않았으면 상세 1회 | 🔒 | BID-MKT-031 |
-| POST | /member-contracts | 등록. 본문 `piid`, `endDate?`, `potentialEndDate?`, `description?`. 계약을 찾으면 PUBLIC 으로 등록하고 본문 날짜는 쓰지 않는다. 못 찾으면 MANUAL 이고 endDate 필수 | 🔒 | BID-MKT-031 |
-| PATCH | /member-contracts/{id} | MANUAL 계약의 `endDate`, `potentialEndDate`, `description` 고치기 | 🔒 | BID-MKT-032 |
-| DELETE | /member-contracts/{id} | 지우기 | 🔒 | BID-MKT-032 |
+| ~~GET~~ | ~~/member-contracts~~ | ~~내 계약 목록과 알림 설정~~ | 🔒 | ~~BID-MKT-032~~ **폐기 (CR-147)** |
+| ~~GET~~ | ~~/member-contracts/lookup~~ | ~~계약번호로 찾기. `piid`. 표에 없으면 받는 범위 안에서 USAspending 검색 1회, 옵션 끝날짜를 아직 받지 않았으면 상세 1회~~ | 🔒 | ~~BID-MKT-031~~ **폐기 (CR-147)** |
+| ~~POST~~ | ~~/member-contracts~~ | ~~등록. 본문 `piid`, `endDate?`, `potentialEndDate?`, `description?`. 계약을 찾으면 PUBLIC 으로 등록하고 본문 날짜는 쓰지 않는다. 못 찾으면 MANUAL 이고 endDate 필수~~ | 🔒 | ~~BID-MKT-031~~ **폐기 (CR-147)** |
+| ~~PATCH~~ | ~~/member-contracts/{id}~~ | ~~MANUAL 계약의 `endDate`, `potentialEndDate`, `description` 고치기~~ | 🔒 | ~~BID-MKT-032~~ **폐기 (CR-147)** |
+| ~~DELETE~~ | ~~/member-contracts/{id}~~ | ~~지우기~~ | 🔒 | ~~BID-MKT-032~~ **폐기 (CR-147)** |
 
 **목록 응답**: `alertDays[]`(POL-035, 꺼져 있으면 빈 배열), `today`, `contracts[]`(id, piid, description, source, endDate, potentialEndDate, endDaysLeft, potentialDaysLeft, nextAlertOn, nextAlertKind, datesChangedOn, lastAlertedAt, federalContract 찾은 계약 줄 또는 null), `source`(C-4 와 같은 자료 기준, 찾은 계약 칸의 기준일과 늦음 안내에 쓴다). 지금 끝날짜가 가까운 순.
 
@@ -768,8 +772,8 @@ app.aimbase:
 | C. 공고 열람 | 8 | 3 |
 | C-2. 모은 공고 목록과 집계 | 6 | CR-135 |
 | C-3. 낙찰 업체와 기지별 집계 | 3 | CR-136 |
-| C-4. 미 연방 계약 자료 | 4 | CR-142 |
-| C-5. 회원 계약과 옵션 연장 알림 | 5 | CR-142 |
+| C-4. 미 연방 계약 자료 | 2 | CR-142, CR-147(recompete 둘 폐기) |
+| ~~C-5. 회원 계약과 옵션 연장 알림~~ | ~~5~~ 0 | CR-142, CR-147 폐기 |
 | B-5. 미 연방 계약 받기 (Admin) | 2 | CR-142 |
 | B-4. 기지 관리와 지난 낙찰 다시 받기 (Admin) | 6 | CR-136 |
 | N. 회사 공통 서류함 | 7 | CR-125, CR-136 |
@@ -789,9 +793,11 @@ app.aimbase:
 | MCP Tools | 12 | 5, CR-003, CR-013, CR-141 |
 | MCP SSE 엔드포인트 | 2 | CR-002 |
 | Aimbase 워크플로우 호출 | 2 | CR-002 |
-| **합계** | **REST 124 + MCP 12 + SSE 2 + Aimbase 2** | |
+| **합계** | **REST 117 + MCP 12 + SSE 2 + Aimbase 2** | |
 
 > CR-141: G 는 문서 3, 슬롯 3(올리기, 서류함에서 고르기, 빼기. 목록 조회는 걷어냄), 제출 전 검사 2 다. 그전에는 슬롯을 세지 않았다.
+
+> CR-147: REST 124 에서 재발주 조회 둘(C-4)과 회원 계약 다섯(C-5)을 빼 117 이다.
 
 ---
 
@@ -813,3 +819,4 @@ app.aimbase:
 - 소유 검증: 타 member 문서 접근 시 403/404. auto-fill은 미충족(PENDING/MISSING) 슬롯만 대상, 이미 충족 슬롯 미덮어씀.
 - CR-136: POST·PUT 에 `expiresOn?`(YYYY-MM-DD) 를 더하고 MemberDocumentDto 에 `expiresOn` 을 싣는다. 날짜 형식이 틀리면 400.
 - CR-136 만료 상태(ExpiryStatus): `EXPIRED`(만료일이 오늘보다 앞), `SOON`(남은 날 0 이상 soonDays 이하), `OK`(그보다 많이 남음, 알림이 꺼져 있으면 0 이상 전부), `NONE`(만료일 없음). daysLeft = 만료일 - 오늘(Asia/Seoul). lastAlertedAt 은 이 서류의 알림 이력(DOCUMENT_EXPIRY) 중 보내기에 성공한 마지막 시각.
+- **변경 (CR-147)**: 고정 칸은 6슬롯에서 다섯 칸(BUSINESS_REGISTRATION, BUSINESS_REGISTRATION_CERTIFICATE, COMPANY_PROFILE, FINANCIAL_STATEMENT, LICENSE, 이 순서)이 된다. POST `/member-documents` 에 `language`(KO, EN)를 받는다. 국문·영문 칸(BUSINESS_REGISTRATION_CERTIFICATE, COMPANY_PROFILE)에 language 가 없으면 400(언어를 고르라는 안내), 다른 칸에 오면 무시하고 비워 둔다. 같은 칸·같은 언어로 다시 올리면 그 언어 서류만 바뀐다(BIZ-065). PUT `/member-documents/{id}` 는 그 서류의 분류와 언어를 그대로 둔다. GET `/member-documents` 응답의 `fixedSlots[]` 는 칸마다 `files[]` 를 낸다. `files[]` 한 줄은 `{ language(KO, EN 또는 null), document(서류 또는 null) }` 이고, 국문·영문 칸은 KO, EN 두 줄, 다른 칸은 language null 한 줄이다. MemberDocumentDto 에 `language` 를 더한다. auto-fill 처럼 분류로 서류 하나를 고를 때 국문·영문 칸은 EN 을 먼저, 없으면 KO 를 고른다(BIZ-065). 근거: 원문 "서류함 필요리스트", 사용자 10/11 20:01 /전승(정할 것 3)
