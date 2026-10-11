@@ -1,6 +1,6 @@
 # SAM.gov Bidding Agency Platform API 설계
 
-> 설계 버전: 1.8 | 최종 수정: 2026-10-11 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135
+> 설계 버전: 1.8 | 최종 수정: 2026-10-11 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136
 
 > 단계: 3. Detail Design | 실행스펙 섹션 3에 포함
 >
@@ -103,6 +103,22 @@
 
 ---
 
+## B-4. 기지 관리와 지난 낙찰 다시 받기 (Admin, CR-136)
+
+| 메서드 | 경로 | 설명 | 인증 | 기능 ID |
+|--------|------|------|------|---------|
+| GET | /admin/bases | 기지 목록과 기지마다 지금 걸리는 공고번호 수(matchedCount) | 🔒 ADMIN | BID-MKT-010 |
+| POST | /admin/bases | 기지 추가. `nameKo`, `nameEn`, `matchTerms[]`(하나 이상), `region?`, `latitude?`, `longitude?`, `sortOrder?` | 🔒 ADMIN | BID-MKT-010 |
+| PUT | /admin/bases/{id} | 기지 고치기(같은 본문) | 🔒 ADMIN | BID-MKT-010 |
+| DELETE | /admin/bases/{id} | 기지 지우기 | 🔒 ADMIN | BID-MKT-010 |
+| GET | /admin/bases/unmatched | 어느 기지에도 걸리지 않은 공고(낙찰 공지 제외) 목록 줄과 건수, 최근 게시순 | 🔒 ADMIN | BID-MKT-010 |
+| POST | /admin/opportunities/award-backfill | 지난 낙찰 공지 다시 받기. 본문 `postedFrom`, `postedTo`(YYYY-MM-DD, 한 해 안) | 🔒 ADMIN | BID-MKT-008 |
+
+- 검증: 이름 비면 400, 영문 이름 겹치면 409, 찾을 낱말 0개 400, 위도·경도 한쪽만 400, 위도 -90~90·경도 -180~180 밖 400.
+- 다시 받기 응답: `samCalls`(이번에 부른 SAM 검색 수), `fetched`(받은 낙찰 공지 수), `filled`(이미 있던 공지에 업체·금액을 채운 수), `created`(새로 넣은 수), `withoutAwardee`(업체 이름이 오지 않은 수). 기간이 한 해를 넘거나 시작이 끝보다 늦으면 400. SAM 이 한도 초과나 인증 실패를 주면 502 와 그 사유. 검색 조건은 발주처(POL-002)와 낙찰 공지 유형.
+
+---
+
 ## C. 공고 열람 (Opportunity Browse) — Sprint 3
 
 | 메서드 | 경로 | 설명 | 인증 | 기능 ID |
@@ -155,6 +171,43 @@
 **금액**: 낙찰 금액은 공지에 적힌 문자열(예 `$60,700.00`)을 숫자로 읽어 합계·최대·금액순에 쓴다. 읽을 수 없거나 비면 금액 없음으로 센다. CR-136 이 금액 숫자 칸을 더하면 그 칸으로 바꾼다.
 
 **업종 대분류**: 원본 공고의 업종 코드 앞 두 자리. 31~33, 44~45, 48~49 는 한 대분류. 코드가 없으면 `NONE`. 한글 이름은 NAICS 공식 대분류 20개 전부를 둔다.
+
+---
+
+## C-3. 낙찰 업체와 기지별 집계 (CR-136)
+
+메뉴 속 화면 3묶음(낙찰 업체, 기지별 지도)이 쓴다. C-2 와 같이 모은 원본 공고 전부(지운 것 제외)를 읽고, 로그인 없이 연다. 목록 줄은 C-2 「목록 줄」 과 같다. 숫자는 저장된 자료로만 센다(BIZ-028).
+
+| 메서드 | 경로 | 설명 | 인증 | 기능 ID |
+|--------|------|------|------|---------|
+| GET | /opportunities/awardees | 낙찰 업체 목록. `q`(업체 이름 일부, 대소문자 무시), `sort`(COUNT 건수순 기본, AMOUNT 금액순). 업체마다 낙찰 공지 목록을 함께 준다 | | BID-MKT-009 |
+| GET | /opportunities/stats/bases | 기지별 공고 수·낙찰 수·마감 전 공고 수, 기지를 알 수 없는 공고 수, 자료 기간 | | BID-MKT-011 |
+| GET | /opportunities/stats/bases/{baseId}/opportunities | 그 기지 공고 최근 게시순 `size`건(기본 10, 최대 50). 낙찰 공지 제외 | | BID-MKT-011 |
+
+**낙찰 업체 응답**
+
+| 필드 | 설명 |
+|------|------|
+| dataFrom, dataTo | 낙찰 공지의 첫·마지막 게시일 |
+| totalAwards | 낙찰 공지 수 |
+| awardsWithAwardee | 그중 업체 이름이 있는 수. 0 이면 화면은 빈 상태 |
+| awardees[].key | 묶음 키. UEI 가 있으면 `UEI:<값>`, 없으면 `NAME:<정규화한 이름>` (BIZ-029) |
+| awardees[].name, uei | 표시 이름(가장 최근 공지의 이름), UEI(없으면 null) |
+| awardees[].awardCount | 낙찰 공지 수 |
+| awardees[].amountSum, amountCount | 금액 합계(달러, 금액이 있는 공지만 더함), 더한 공지 수 |
+| awardees[].lastPostedDate | 가장 최근 공지일 |
+| awardees[].awards[] | 목록 줄 + `awardAmountUsd`(숫자, 없으면 null). 최근 공지순 |
+
+**기지별 집계 응답**
+
+| 필드 | 설명 |
+|------|------|
+| dataFrom, dataTo | 대상 공고의 첫·마지막 게시일 |
+| totalNumbers | 낙찰 공지를 뺀 공고의 공고번호 수(공고번호가 없으면 SAM 공고 ID 로 센다) |
+| unmatchedNumbers | 그중 어느 기지에도 걸리지 않은 공고번호 수 |
+| bases[] | id, nameKo, nameEn, region, latitude, longitude(없으면 null), opportunityCount(공고번호 수), awardCount(낙찰 공지 수), openCount(마감 전 공고번호 수, 마감 전 판정은 C 의 마감 전 공고와 같다). 기지 목록 순서대로. 기지가 없으면 빈 배열 |
+
+기지 찾기는 BIZ-031. 한 공고가 여러 기지에 걸리면 각 기지에 세므로 기지별 합은 totalNumbers 보다 클 수 있다. 없는 baseId 는 404.
 
 ---
 
@@ -522,6 +575,9 @@ app.aimbase:
 | B. 공고 수집 (Admin) | 3 | 2 |
 | C. 공고 열람 | 8 | 3 |
 | C-2. 모은 공고 목록과 집계 | 6 | CR-135 |
+| C-3. 낙찰 업체와 기지별 집계 | 3 | CR-136 |
+| B-4. 기지 관리와 지난 낙찰 다시 받기 (Admin) | 6 | CR-136 |
+| N. 회사 공통 서류함 | 7 | CR-125, CR-136 |
 | D. 즐겨찾기 | 4 | 3 |
 | E. 자격 진단 | 1 | 3 |
 | F. 입찰 접수 | 7 | 4 |
@@ -538,7 +594,7 @@ app.aimbase:
 | MCP Tools | 13 | 5, CR-003, CR-013 |
 | MCP SSE 엔드포인트 | 2 | CR-002 |
 | Aimbase 워크플로우 호출 | 2 | CR-002 |
-| **합계** | **REST 89 + MCP 13 + SSE 2 + Aimbase 2** | |
+| **합계** | **REST 105 + MCP 13 + SSE 2 + Aimbase 2** | |
 
 ---
 
@@ -553,6 +609,10 @@ app.aimbase:
 | PUT | `/member-documents/{id}` (multipart) | 교체(파일 재업로드, displayName/description 갱신) |
 | DELETE | `/member-documents/{id}` | 삭제(StorageService 파일도 삭제) |
 | POST | `/bid-requests/{bidRequestId}/required-document-slots/auto-fill` | 서류함에서 같은 카테고리 서류를 미충족 슬롯에 일괄 자동매칭(CR-125 2단계) |
+| GET | `/member-documents/expiry` | 서류별 만료 상태(CR-136). 응답: `alertDays[]`(POL-016, 꺼져 있으면 빈 배열), `soonDays`(가장 큰 알림 날, 꺼져 있으면 null), `today`(Asia/Seoul 날짜), `summary`(expired, soon, noDate, total), `documents[]`(id, category, displayName, fileName, expiresOn, daysLeft, status, lastAlertedAt) |
+| PATCH | `/member-documents/{id}/expiry` | 만료일만 넣기·고치기·지우기(CR-136). 본문 `{"expiresOn": "YYYY-MM-DD" 또는 null}`. 응답 MemberDocumentDto |
 
 - 응답 DTO: `MemberDocumentDto`(LAZY 폭발 방지) / `MemberDocumentVaultResponse`(fixedSlots[] + others[]).
 - 소유 검증: 타 member 문서 접근 시 403/404. auto-fill은 미충족(PENDING/MISSING) 슬롯만 대상, 이미 충족 슬롯 미덮어씀.
+- CR-136: POST·PUT 에 `expiresOn?`(YYYY-MM-DD) 를 더하고 MemberDocumentDto 에 `expiresOn` 을 싣는다. 날짜 형식이 틀리면 400.
+- CR-136 만료 상태(ExpiryStatus): `EXPIRED`(만료일이 오늘보다 앞), `SOON`(남은 날 0 이상 soonDays 이하), `OK`(그보다 많이 남음, 알림이 꺼져 있으면 0 이상 전부), `NONE`(만료일 없음). daysLeft = 만료일 - 오늘(Asia/Seoul). lastAlertedAt 은 이 서류의 알림 이력(DOCUMENT_EXPIRY) 중 보내기에 성공한 마지막 시각.
