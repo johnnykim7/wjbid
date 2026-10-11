@@ -56,6 +56,53 @@ export const register = (data: {
   agreeTerms: boolean; agreePrivacy: boolean; agreeMarketing: boolean
 }) => api.post('/auth/register', data)
 
+/** 인증번호와 SNS 가입에서 서버가 주는 오류 코드 (CR-146) */
+export const AUTH_ERROR = {
+  EMAIL_CODE_TOO_SOON: 'EMAIL_CODE_TOO_SOON',
+  EMAIL_CODE_DAILY_LIMIT: 'EMAIL_CODE_DAILY_LIMIT',
+  EMAIL_SEND_FAILED: 'EMAIL_SEND_FAILED',
+  EMAIL_CODE_MISMATCH: 'EMAIL_CODE_MISMATCH',
+  EMAIL_CODE_EXPIRED: 'EMAIL_CODE_EXPIRED',
+  EMAIL_CODE_LOCKED: 'EMAIL_CODE_LOCKED',
+  EMAIL_NOT_VERIFIED: 'EMAIL_NOT_VERIFIED',
+  SNS_TICKET_EXPIRED: 'SNS_TICKET_EXPIRED',
+  SNS_ACCOUNT_IN_USE: 'SNS_ACCOUNT_IN_USE',
+} as const
+
+export type AuthErrorBody = { error?: string; retryAfterSeconds?: number; remainingAttempts?: number }
+
+/** 실패한 요청에서 상태 번호와 오류 코드만 꺼낸다. 서버 문장은 화면에 쓰지 않는다 */
+export const authErrorOf = (err: unknown) => {
+  const res = (err as { response?: { status?: number; data?: AuthErrorBody } }).response
+  return { status: res?.status, body: res?.data ?? {} }
+}
+
+export const sendEmailCode = (email: string) =>
+  api.post<{ expiresInSeconds: number; resendAfterSeconds: number }>('/auth/email-codes', { email })
+
+export const verifyEmailCode = (email: string, code: string) =>
+  api.post<{ verified: boolean }>('/auth/email-codes/verify', { email, code })
+
+export type SnsProviderItem = { provider: string; startPath: string }
+
+/** 키가 설정된 SNS 만 온다. 비어 있으면 SNS 단추를 숨긴다 (CR-146) */
+export const getSnsProviders = () => api.get<{ providers: SnsProviderItem[] }>('/auth/sns/providers')
+
+/** SNS 로그인은 화면 안 요청이 아니라 브라우저가 서버 주소로 옮겨 가서 시작한다 */
+export const snsStartUrl = (startPath: string) => `${BASE_URL}${startPath}`
+
+export const snsLogin = (ticket: string) => api.post('/auth/sns/login', { ticket })
+
+export const getSnsSignup = (ticket: string) =>
+  api.get<{ provider: string; email: string | null; emailVerifiedByProvider: boolean }>(
+    `/auth/sns/signup/${encodeURIComponent(ticket)}`)
+
+export const snsRegister = (data: {
+  ticket: string; email: string; companyName: string
+  businessRegistrationNumber: string; contactPerson: string; phone: string
+  agreeTerms: boolean; agreePrivacy: boolean; agreeMarketing: boolean
+}) => api.post('/auth/sns/register', data)
+
 // Opportunities
 export const getOpportunities = (page = 0, size = 20) =>
   api.get('/opportunities', { params: { page, size } })

@@ -5,11 +5,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
  * CR-131: 이미 가입된 이메일을 409 로 매핑.
- * 이 예외만 처리한다. 다른 예외의 기존 동작은 건드리지 않는다.
+ * CR-146: 인증번호와 SNS 가입 오류를 코드별 상태로 매핑.
+ * 이 예외들만 처리한다. 다른 예외의 기존 동작은 건드리지 않는다.
  */
 @RestControllerAdvice
 public class MemberExceptionHandler {
@@ -19,5 +21,14 @@ public class MemberExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
                 "error", "EMAIL_ALREADY_EXISTS",
                 "message", ex.getMessage()));
+    }
+
+    @ExceptionHandler(AuthFlowException.class)
+    public ResponseEntity<Map<String, Object>> handle(AuthFlowException ex) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("error", ex.getError().name());
+        body.put("message", ex.getMessage());
+        body.putAll(ex.getDetails());
+        return ResponseEntity.status(ex.getError().status()).body(body);
     }
 }

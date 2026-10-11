@@ -24,6 +24,21 @@ public final class SettingKey {
     /** 미 연방 계약 자료가 늦게 올라오는 날 수. 화면 안내에만 쓴다 (POL-036, CR-142) */
     public static final String FEDERAL_DATA_LAG_DAYS = "FEDERAL_DATA_LAG_DAYS";
 
+    /** 이메일 인증번호 유효 시간(분). 비었거나 1 보다 작으면 10 (POL-037, CR-146) */
+    public static final String EMAIL_CODE_TTL_MINUTES = "EMAIL_CODE_TTL_MINUTES";
+    /** 인증번호 다시 받기 간격(초). 비었거나 0 보다 작으면 60 (POL-037, CR-146) */
+    public static final String EMAIL_CODE_RESEND_SECONDS = "EMAIL_CODE_RESEND_SECONDS";
+    /** 인증번호를 틀릴 수 있는 횟수. 비었거나 1 보다 작으면 5 (POL-037, CR-146) */
+    public static final String EMAIL_CODE_MAX_ATTEMPTS = "EMAIL_CODE_MAX_ATTEMPTS";
+    /** 이메일 하나에 하루(서울 날짜) 보낼 수 있는 인증번호 수. 비었거나 1 보다 작으면 10 (POL-037, CR-146) */
+    public static final String EMAIL_CODE_DAILY_LIMIT = "EMAIL_CODE_DAILY_LIMIT";
+    /** 인증번호 확인 뒤 가입을 마쳐야 하는 시간(분). 비었거나 1 보다 작으면 30 (POL-037, CR-146) */
+    public static final String EMAIL_CODE_VERIFIED_MINUTES = "EMAIL_CODE_VERIFIED_MINUTES";
+    /** SNS 에서 돌아와 가입 화면을 쓸 수 있는 시간(분). 비었거나 1 보다 작으면 30 (POL-038, CR-146) */
+    public static final String SNS_SIGNUP_TICKET_MINUTES = "SNS_SIGNUP_TICKET_MINUTES";
+    /** SNS 에서 돌아와 로그인을 마칠 시간(초). 비었거나 1 보다 작으면 60 (POL-038, CR-146) */
+    public static final String SNS_LOGIN_TICKET_SECONDS = "SNS_LOGIN_TICKET_SECONDS";
+
     private SettingKey() {
     }
 }

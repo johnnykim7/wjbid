@@ -1,6 +1,10 @@
 package com.biddingagency.config;
 
 import com.biddingagency.security.JwtAuthenticationFilter;
+import com.biddingagency.security.sns.CookieAuthorizationRequestRepository;
+import com.biddingagency.security.sns.NoStoreAuthorizedClientRepository;
+import com.biddingagency.security.sns.SnsAuthorizationRequestResolver;
+import com.biddingagency.security.sns.SnsLoginHandlers;
 import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -49,7 +53,11 @@ public class SecurityConfig {
     private String extraCorsOrigins;
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    // SNS 처리기는 회원 서비스를 거쳐 이 설정의 PasswordEncoder 를 쓰므로 필드가 아니라 여기서 받아 순환을 피한다
+    public SecurityFilterChain filterChain(HttpSecurity http,
+                                           CookieAuthorizationRequestRepository snsAuthorizationRequestRepository,
+                                           SnsAuthorizationRequestResolver snsAuthorizationRequestResolver,
+                                           SnsLoginHandlers snsLoginHandlers) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -62,6 +70,8 @@ public class SecurityConfig {
 
                         // Public endpoints
                         .requestMatchers("/auth/**").permitAll()
+                        // CR-146: SNS 로그인 시작과 SNS 가 돌려보내는 주소
+                        .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
 
@@ -102,6 +112,15 @@ public class SecurityConfig {
                 // 권한 부족(인증은 됐으나 ROLE 불일치)은 기본 403 유지 → 둘을 구분.
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
+                )
+                // CR-146: 네이버, 카카오 로그인. 세션 없이 로그인 요청은 서명한 쿠키에, SNS 토큰은 남기지 않는다
+                .oauth2Login(oauth -> oauth
+                        .authorizationEndpoint(a -> a
+                                .authorizationRequestRepository(snsAuthorizationRequestRepository)
+                                .authorizationRequestResolver(snsAuthorizationRequestResolver))
+                        .authorizedClientRepository(new NoStoreAuthorizedClientRepository())
+                        .successHandler(snsLoginHandlers)
+                        .failureHandler(snsLoginHandlers)
                 )
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

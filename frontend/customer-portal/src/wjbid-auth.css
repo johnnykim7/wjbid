@@ -71,3 +71,37 @@
 .wj .au .ck { width: 24px; height: 24px; border-radius: 6px; border: 1.8px solid color-mix(in srgb, var(--color-ink-faint) 90%, var(--color-ink-mute)); background: white; display: grid; place-items: center; flex: 0 0 auto; }
 .wj .au .ck[data-state="checked"] { background: var(--color-brand); border-color: var(--color-brand); }
 .wj .au .ck svg { width: 16px; height: 16px; color: white; stroke-width: 3; }
+
+/* SNS 가입과 이메일 인증번호 (CR-146). SNS 단추 색은 네이버, 카카오 로그인 단추 안내서의 색이다 */
+.wj .au { --sns-naver: #03c75a; --sns-kakao: #fee500; --sns-kakao-ink: rgba(0, 0, 0, 0.85); }
+.wj .au .msg.info { background: var(--color-surface); color: var(--color-ink); border: 1px solid var(--color-line); }
+.wj .au .or { display: flex; align-items: center; gap: 14px; margin-top: 26px; font-size: 15px; color: var(--color-ink-mute); }
+.wj .au .or::before, .wj .au .or::after { content: ""; flex: 1 1 0%; height: 1px; background: var(--color-line-soft); }
+.wj .au .snsq { margin-top: 28px; }
+.wj .au .snsq .snst { margin: 0px 0px 12px; font-size: 16.5px; font-weight: 700; color: var(--color-ink); }
+.wj .au .sns { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+.wj .au .snsq .sns { margin-top: 0px; }
+.wj .au .snsb { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; height: 56px; border-radius: 8px; font-size: 17px; font-weight: 700; text-decoration: none; }
+.wj .au .snsb svg { width: 20px; height: 20px; }
+.wj .au .snsb.naver { background: var(--sns-naver); color: white; }
+.wj .au .snsb.kakao { background: var(--sns-kakao); color: var(--sns-kakao-ink); }
+.wj .au .snsb:hover { filter: brightness(0.96); }
+
+.wj .au .inrow { display: flex; gap: 10px; align-items: stretch; }
+.wj .au .inrow > .in, .wj .au .inrow > .tmw { flex: 1 1 0%; min-width: 0px; }
+.wj .au .in:disabled { background: var(--color-surface); color: var(--color-ink-sub); cursor: default; }
+.wj .au .subb { flex: 0 0 auto; height: 56px; padding: 0px 20px; border: 1.5px solid var(--color-brand); border-radius: 8px; background: white; color: var(--color-brand); font-size: 16.5px; font-weight: 700; white-space: nowrap; }
+.wj .au .subb:disabled { border-color: var(--color-line); color: var(--color-ink-mute); cursor: default; }
+.wj .au .tmw { position: relative; }
+.wj .au .tmw .in { padding-right: 70px; }
+.wj .au .tmw .tm { position: absolute; right: 18px; top: 50%; transform: translateY(-50%); font-size: 16px; font-weight: 700; color: var(--color-danger); font-variant-numeric: tabular-nums; }
+.wj .au .hint.good { color: var(--color-success); font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.wj .au .hint.good svg { width: 16px; height: 16px; stroke-width: 2.4; }
+.wj .au .tlnk { height: auto; padding: 0px; margin: 0px 0px 0px 10px; background: none; color: var(--color-brand); font-size: 14.5px; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+.wj .au .tlnk:disabled { color: var(--color-ink-mute); text-decoration: none; cursor: default; }
+.wj .au .fixed { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; padding: 15px 18px; border: 1.5px solid var(--color-line); border-radius: 8px; background: var(--color-surface); }
+.wj .au .fixed .v { font-size: 17.5px; color: var(--color-ink-sub); }
+.wj .au .fixed .by { display: inline-flex; align-items: center; gap: 5px; font-size: 14.5px; font-weight: 600; color: var(--color-success); }
+.wj .au .fixed .by svg { width: 16px; height: 16px; stroke-width: 2.4; }
+.wj .au .fixed .tlnk { margin-left: auto; }
+.wj.au-pg .sns-wait { margin: 80px 0px; text-align: center; font-size: 18px; font-weight: 700; color: var(--color-ink-sub); }

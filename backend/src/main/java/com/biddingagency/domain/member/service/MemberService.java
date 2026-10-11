@@ -37,6 +37,26 @@ public class MemberService {
     public Member register(String email, String password, String companyName, String contactPerson,
                            String phone, String businessRegistrationNumber,
                            boolean agreeTerms, boolean agreePrivacy, boolean agreeMarketing) {
+        return createCustomer(email, passwordEncoder.encode(password), null, companyName, contactPerson, phone,
+                businessRegistrationNumber, agreeTerms, agreePrivacy, agreeMarketing);
+    }
+
+    /**
+     * SNS 가입 (CR-146). 비밀번호 없이 만들고, 확인을 마친 이메일이므로 확인 시각을 채운다.
+     * 이메일 확인과 SNS 연결은 부르는 쪽(SnsAuthService)이 같은 트랜잭션에서 한다.
+     */
+    @Transactional
+    public Member registerSnsMember(String email, LocalDateTime emailVerifiedAt, String companyName,
+                                    String contactPerson, String phone, String businessRegistrationNumber,
+                                    boolean agreeTerms, boolean agreePrivacy, boolean agreeMarketing) {
+        return createCustomer(email, null, emailVerifiedAt, companyName, contactPerson, phone,
+                businessRegistrationNumber, agreeTerms, agreePrivacy, agreeMarketing);
+    }
+
+    private Member createCustomer(String email, String passwordHash, LocalDateTime emailVerifiedAt,
+                                  String companyName, String contactPerson, String phone,
+                                  String businessRegistrationNumber,
+                                  boolean agreeTerms, boolean agreePrivacy, boolean agreeMarketing) {
         if (memberRepository.existsByEmail(email)) {
             throw new EmailAlreadyExistsException();
         }
@@ -46,7 +66,8 @@ public class MemberService {
 
         Member member = Member.builder()
                 .email(email)
-                .passwordHash(passwordEncoder.encode(password))
+                .emailVerifiedAt(emailVerifiedAt)
+                .passwordHash(passwordHash)
                 .companyName(companyName)
                 .businessRegistrationNumber(businessRegistrationNumber)
                 .contactPerson(contactPerson)

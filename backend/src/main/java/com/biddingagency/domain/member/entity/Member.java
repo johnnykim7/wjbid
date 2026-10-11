@@ -21,7 +21,12 @@ public class Member extends BaseEntity {
     @Column(name = "email", nullable = false, unique = true)
     private String email;
 
-    @Column(name = "password_hash", nullable = false)
+    /** 인증번호나 SNS 가 이메일을 확인한 시각. CR-146 전에 가입한 회원은 비어 있다 (BIZ-062) */
+    @Column(name = "email_verified_at")
+    private LocalDateTime emailVerifiedAt;
+
+    /** SNS 로만 가입한 회원은 비어 있어 비밀번호로 로그인되지 않는다 (CR-146, BIZ-064) */
+    @Column(name = "password_hash")
     private String passwordHash;
 
     @Column(name = "company_name", nullable = false)

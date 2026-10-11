@@ -1,6 +1,6 @@
 # SAM.gov Bidding Agency Platform API 설계
 
-> 설계 버전: 1.11 | 최종 수정: 2026-10-11 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-144, CR-146, CR-147
+> 설계 버전: 1.12 | 최종 수정: 2026-10-12 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-144, CR-146, CR-147
 
 > 단계: 3. Detail Design | 실행스펙 섹션 3에 포함
 >
@@ -49,7 +49,7 @@
 | GET | /login/oauth2/code/{provider} | SNS 가 돌려보내는 주소(SNS 앱에 등록). 이어진 회원이면 LOGIN 표를 만들어 화면 `/auth/sns/done?ticket=`, 처음이면 SIGNUP 표로 `/register/sns?ticket=`, SNS 이메일로 가입된 회원이 있으면 `/login?sns=EMAIL_IN_USE`, 취소 `/login?sns=CANCELLED`, 실패 `/login?sns=FAILED` 로 보낸다 (CR-146, BIZ-063) | | BID-AUTH-006, BID-AUTH-007 |
 | POST | /auth/sns/login | LOGIN 표 `{ticket}` 를 Access, Refresh 토큰으로 바꾼다. 한 번만. 쓴 표, 시간 지난 표 410 `SNS_TICKET_EXPIRED` (CR-146, POL-038) | | BID-AUTH-007 |
 | GET | /auth/sns/signup/{ticket} | SNS 가입 화면 채울 값 `{provider, email, emailVerifiedByProvider}`. 쓴 표, 시간 지난 표 410 `SNS_TICKET_EXPIRED` (CR-146) | | BID-AUTH-006 |
-| POST | /auth/sns/register | SNS 가입 `{ticket, email, companyName, businessRegistrationNumber, contactPerson, phone, agreeTerms, agreePrivacy, agreeMarketing}`. 이메일이 SNS 확인 메일과 다르거나 SNS 확인이 없으면 확인을 마친 인증번호가 있어야 한다(없으면 400 `EMAIL_NOT_VERIFIED`). 이미 가입된 메일 409 `EMAIL_ALREADY_EXISTS`, 표 410 `SNS_TICKET_EXPIRED`. 성공하면 회원, SNS 연결, 동의 이력을 남기고 토큰을 준다 (CR-146, BIZ-062, BIZ-063) | | BID-AUTH-006 |
+| POST | /auth/sns/register | SNS 가입 `{ticket, email, companyName, businessRegistrationNumber, contactPerson, phone, agreeTerms, agreePrivacy, agreeMarketing}`. 이메일이 SNS 확인 메일과 다르거나 SNS 확인이 없으면 확인을 마친 인증번호가 있어야 한다(없으면 400 `EMAIL_NOT_VERIFIED`). 이미 가입된 메일 409 `EMAIL_ALREADY_EXISTS`, 같은 SNS 계정이 먼저 가입을 마쳤으면 409 `SNS_ACCOUNT_IN_USE`, 표 410 `SNS_TICKET_EXPIRED`. 성공하면 회원, SNS 연결, 동의 이력을 남기고 토큰을 준다 (CR-146, BIZ-062, BIZ-063) | | BID-AUTH-006 |
 | GET | /members/me | 내 정보 조회 | 🔒 | BID-AUTH-004 |
 | PATCH | /members/me | 내 정보 수정 | 🔒 | BID-AUTH-004 |
 
