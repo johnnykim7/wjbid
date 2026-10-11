@@ -237,7 +237,7 @@ CR-137 전에 있던 `POST /opportunities/{id}/qualification-check`(AI 자격 �
 | 필드 | 설명 |
 |------|------|
 | noticeId, solicitationNumber, koreanTitle | 공고문 id, 공고번호, 한글 제목 |
-| responseDeadline | 마감 일시(Asia/Seoul) |
+| responseDeadline | 마감 일시(저장된 값 그대로. 수집 때 시간대가 확인되지 않아 화면은 날짜만 보인다) |
 | open | 마감 전이면 true |
 | itemCount | 참가 자격 수 |
 | answeredCount | 지금 자격 이름과 맞는 내 답 수(BIZ-033) |
@@ -247,11 +247,11 @@ CR-137 전에 있던 `POST /opportunities/{id}/qualification-check`(AI 자격 �
 | 필드 | 설명 |
 |------|------|
 | notice | noticeId, solicitationNumber, koreanTitle, organizationName, responseDeadline, open |
-| items[] | itemNo, title, description, mandatory, gate(통과 조건), sourceRef(원문 위치), evidenceBy(증빙 서류 글), answer(HAVE, LACK, UNSURE, 답 안 함은 null), stale(옛 이름의 답이 있어 다시 답해야 하면 true), vaultCategory(증빙 서류 글과 맞은 서류함 분류 코드, 없으면 null), vaultDocuments[](그 분류에 올린 내 서류의 id, 이름, 올린 날) |
+| items[] | itemNo, title, description, mandatory, gate(통과 조건), sourceRef(원문 위치), evidenceBy(증빙 서류 글), answer(HAVE, LACK, UNSURE, 답 안 함은 null), stale(옛 이름의 답이 있어 다시 답해야 하면 true), answeredAt(지금 답을 저장한 시각, 답이 없거나 stale 이면 null), vaultCategory(증빙 서류 글과 맞은 서류함 분류 코드, 없으면 null), vaultCategoryName(그 분류 이름), vaultDocuments[](그 분류에 올린 내 서류의 id, 이름, 올린 날) |
 | summary | gateCount(통과 조건 자격 수), have, lack, unsure, unanswered(통과 조건 자격 기준). allCount(전체 자격 수) |
 
-- 404: 공고문이 없거나 숨김이거나 분석이 끝나지 않았을 때. 비로그인 401.
-- PUT 400: answer 가 셋 중 하나가 아니거나 itemNo 가 자격 목록 범위 밖일 때. 저장 응답은 그 자격 한 줄(items[] 와 같은 모양)과 summary.
+- 404 `ELIGIBILITY_NOTICE_NOT_FOUND`: 공고문이 없거나 숨김이거나 분석이 끝나지 않았거나 참가 자격이 0개일 때. 공고문 id 가 UUID 모양이 아니면 400. 비로그인 401.
+- PUT 400 `ELIGIBILITY_ANSWER_INVALID`: answer 가 셋 중 하나가 아닐 때. 400 `ELIGIBILITY_ITEM_INVALID`: itemNo 가 자격 목록 범위 밖일 때. 오류 본문은 `{ error, message }`. 저장 응답은 그 자격 한 줄(items[] 와 같은 모양)과 summary.
 
 ---
 
