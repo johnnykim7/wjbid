@@ -5,8 +5,12 @@ import { Button as DsButton } from '@therecommerce-develop/ds-ui'
 import { Badge } from '../components/ui/badge'
 import { LoadingSpinner } from '../components/ui/loading-spinner'
 import { AiProposalModal } from '../components/modals/AiProposalModal'
-import { getOpportunity, checkBookmark, addBookmark, removeBookmark } from '../api/client'
-import type { Opportunity } from '../types'
+import { isAxiosError } from 'axios'
+import { getOpportunity, checkBookmark, addBookmark, removeBookmark, getEligibilityDetail } from '../api/client'
+import type { EligibilityDetail, Opportunity } from '../types'
+import { Icon } from '../components/layout/Icon'
+import { VerdictBox } from '../components/verdict/VerdictBox'
+import { VERDICT_BOX_TEXT } from '../data/verdictContent'
 import NoticeDocumentView from '../components/NoticeDocumentView'
 import { ELIGIBILITY_TEXT, eligibilityHref } from '../data/eligibilityContent'
 
@@ -18,6 +22,17 @@ export default function BidDetailPage() {
   const [isBookmarked, setIsBookmarked] = useState(false)
   const [bookmarkLoading, setBookmarkLoading] = useState(false)
   const [aiModalOpen, setAiModalOpen] = useState(false)
+  // 우리 회사 판정 상자(CR-140). 판정할 수 없는 공고(404)는 상자를 두지 않는다
+  const [verdict, setVerdict] = useState<{ status: 'ok'; detail: EligibilityDetail } | { status: 'error' } | null>(null)
+  const hasEligibility = (bid?.analysis?.requiredDocuments?.eligibility?.length ?? 0) > 0
+
+  useEffect(() => {
+    setVerdict(null)
+    if (!id || !hasEligibility) return
+    getEligibilityDetail(id)
+      .then((res) => setVerdict({ status: 'ok', detail: res.data }))
+      .catch((e) => setVerdict(isAxiosError(e) && e.response?.status === 404 ? null : { status: 'error' }))
+  }, [id, hasEligibility])
 
   useEffect(() => {
     const load = async () => {
@@ -174,6 +189,15 @@ export default function BidDetailPage() {
                 {/* CR-021: 공고문 본문 (PDF 양식 풍부도) — contentJson 있을 때만 */}
                 {bid.analysis.contentJson && (
                   <NoticeDocumentView contentJson={bid.analysis.contentJson} />
+                )}
+
+                {verdict?.status === 'ok' && <VerdictBox detail={verdict.detail} />}
+                {verdict?.status === 'error' && (
+                  <div className="wj vd-host">
+                    <section className="cbx vd-box">
+                      <div className="vd-berr"><Icon name="alert" />{VERDICT_BOX_TEXT.loadError}</div>
+                    </section>
+                  </div>
                 )}
 
                 {/* 공고 요약 */}

@@ -75,7 +75,7 @@ export const MENU: MenuGroup[] = [
     items: [
       { key: 'profile', label: '회사 정보', to: '/profile' },
       { key: 'eligibility', label: '적격성 진단', to: '/fit/eligibility' },
-      { key: 'opportunity-fit', label: '공고별 판정' },
+      { key: 'opportunity-fit', label: '공고별 판정', to: '/fit/verdicts' },
     ],
   },
   {

@@ -2,16 +2,21 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, Navigate, useLocation, useParams } from 'react-router-dom'
 import { isAxiosError } from 'axios'
 import { Button, ToggleGroup, ToggleGroupItem } from '@therecommerce-develop/ds-ui'
-import { getEligibilityDetail, saveEligibilityAnswer } from '../api/client'
+import { attachEligibilityDocument, getEligibilityDetail, saveEligibilityAnswer } from '../api/client'
 import { Icon } from '../components/layout/Icon'
 import { findMenuItem } from '../components/layout/menu'
 import { SubPageFrame } from '../components/subpage/SubPageFrame'
+import { DocumentPicker } from '../components/verdict/DocumentPicker'
+import { EvidenceRow } from '../components/verdict/EvidenceRow'
+import { VerdictTag, VerdictWhy } from '../components/verdict/VerdictTag'
 import { LoadingSpinner } from '../components/ui/loading-spinner'
 import { useAuth } from '../context/AuthContext'
 import { ANSWER_OPTIONS, ELIGIBILITY_DETAIL_TEXT, ELIGIBILITY_PATH, ELIGIBILITY_TEXT, expertHref } from '../data/eligibilityContent'
-import type { EligibilityAnswerValue, EligibilityDetail, EligibilityItem } from '../types'
+import { EVIDENCE_TEXT } from '../data/verdictContent'
+import type { EligibilityAnswerValue, EligibilityDetail, EligibilityItem, EligibilitySaved } from '../types'
 import { dotDate, monthDayTime, officeName } from '../utils/eligibilityFormat'
 import '../wjbid-eligibility.css'
+import '../wjbid-verdict.css'
 
 const PLACE = findMenuItem('fit', 'eligibility')
 const T = ELIGIBILITY_DETAIL_TEXT
@@ -21,7 +26,8 @@ type Load = { status: 'loading' } | { status: 'notFound' } | { status: 'error' }
 /**
  * 공고별 진단 (CR-137, T3-3 「공고별 진단」, 화면 정본 detail, states).
  * 자격마다 회원이 있음, 없음, 확인 필요 중 하나를 고르면 바로 저장하고, 통과 조건 자격의 답 개수만 센다.
- * 서류함 서류는 증빙 서류 글과 서류 종류 이름이 맞을 때만 붙인다(BIZ-032).
+ * 서류함 서류는 증빙 서류 글이나 자격 이름이 서류 종류 이름과 맞을 때만 제안한다(BIZ-032).
+ * CR-140: 숫자 옆에 판정을, 있음 답 아래에 증빙 서류 줄을 둔다. 판정은 저장 응답의 값으로만 바꾼다(화면 정본 detail, detail2, picker).
  */
 export default function EligibilityDetailPage() {
   const { noticeId } = useParams()
@@ -30,6 +36,8 @@ export default function EligibilityDetailPage() {
   const [load, setLoad] = useState<Load>({ status: 'loading' })
   const [saving, setSaving] = useState<Record<number, boolean>>({})
   const [failed, setFailed] = useState<Record<number, boolean>>({})
+  const [attachFailed, setAttachFailed] = useState<Record<number, boolean>>({})
+  const [picking, setPicking] = useState<EligibilityItem | null>(null)
 
   const fetchDetail = useCallback(() => {
     if (!noticeId) return
@@ -54,13 +62,13 @@ export default function EligibilityDetailPage() {
   if (!PLACE) return <Navigate to="/" replace />
   const { group, item } = PLACE
 
-  const putItem = (next: EligibilityItem, summary?: EligibilityDetail['summary']) =>
+  const putItem = (next: EligibilityItem, saved?: EligibilitySaved) =>
     setLoad((prev) => prev.status !== 'ok' ? prev : {
       status: 'ok',
       detail: {
         ...prev.detail,
         items: prev.detail.items.map((i) => (i.itemNo === next.itemNo ? next : i)),
-        summary: summary ?? prev.detail.summary,
+        ...(saved && { summary: saved.summary, verdict: saved.verdict, blockers: saved.blockers }),
       },
     })
 
@@ -69,15 +77,33 @@ export default function EligibilityDetailPage() {
     if (!raw || !noticeId || saving[target.itemNo] || raw === target.answer) return
     const value = raw as EligibilityAnswerValue
     const no = target.itemNo
-    putItem({ ...target, answer: value, stale: false })
+    // 있음이 아닌 답이나 옛 답에 다시 답하면 서버가 붙인 서류를 푼다(BIZ-043)
+    const keep = value === 'HAVE' && !target.stale
+    putItem({ ...target, answer: value, stale: false, attachedDocument: keep ? target.attachedDocument : null })
     setSaving((s) => ({ ...s, [no]: true }))
     setFailed((f) => ({ ...f, [no]: false }))
+    setAttachFailed((f) => ({ ...f, [no]: false }))
     try {
       const { data } = await saveEligibilityAnswer(noticeId, no, value)
-      putItem(data.item, data.summary)
+      putItem(data.item, data)
     } catch {
       putItem(target)
       setFailed((f) => ({ ...f, [no]: true }))
+    } finally {
+      setSaving((s) => ({ ...s, [no]: false }))
+    }
+  }
+
+  const attach = async (target: EligibilityItem, documentId: string | null) => {
+    const no = target.itemNo
+    if (!noticeId || saving[no]) return
+    setSaving((s) => ({ ...s, [no]: true }))
+    setAttachFailed((f) => ({ ...f, [no]: false }))
+    try {
+      const { data } = await attachEligibilityDocument(noticeId, no, documentId)
+      putItem(data.item, data)
+    } catch {
+      setAttachFailed((f) => ({ ...f, [no]: true }))
     } finally {
       setSaving((s) => ({ ...s, [no]: false }))
     }
@@ -105,19 +131,31 @@ export default function EligibilityDetailPage() {
           </div>
         </section>
       ) : (
-        <Diagnosis detail={load.detail} saving={saving} failed={failed} onAnswer={answer} />
+        <Diagnosis
+          detail={load.detail}
+          saving={saving}
+          failed={failed}
+          attachFailed={attachFailed}
+          onAnswer={answer}
+          onAttach={attach}
+          onPick={setPicking}
+        />
       )}
+      <DocumentPicker item={picking} onClose={() => setPicking(null)} onAttach={attach} />
     </SubPageFrame>
   )
 }
 
-function Diagnosis({ detail, saving, failed, onAnswer }: {
+function Diagnosis({ detail, saving, failed, attachFailed, onAnswer, onAttach, onPick }: {
   detail: EligibilityDetail
   saving: Record<number, boolean>
   failed: Record<number, boolean>
+  attachFailed: Record<number, boolean>
   onAnswer: (item: EligibilityItem, raw: string) => void
+  onAttach: (item: EligibilityItem, documentId: string | null) => void
+  onPick: (item: EligibilityItem) => void
 }) {
-  const { notice, items, summary } = detail
+  const { notice, items, summary, verdict, blockers } = detail
   const office = officeName(notice.organizationName)
   const need = items.filter((i) => i.answer === 'LACK' || i.answer === 'UNSURE')
   const lack = need.filter((i) => i.answer === 'LACK')
@@ -153,7 +191,12 @@ function Diagnosis({ detail, saving, failed, onAnswer }: {
             <span><b>{T.sumTitle(summary.gateCount)}</b>{T.sumSuffix}</span>
             <span>{T.sumNote}</span>
           </div>
-          <div className="eq-nums">
+          <div className="eq-nums vd-n5">
+            <div className="vd-vc">
+              <span>{EVIDENCE_TEXT.verdictLabel}</span>
+              <VerdictTag verdict={verdict} />
+              <p><VerdictWhy verdict={verdict} blockers={blockers} gateCount={summary.gateCount} /></p>
+            </div>
             <div className="eq-k1"><span><i />{T.nums.have}</span><b>{summary.have}<small>{T.unit}</small></b></div>
             <div className="eq-k2"><span><i />{T.nums.lack}</span><b>{summary.lack}<small>{T.unit}</small></b></div>
             <div className="eq-k3"><span><i />{T.nums.unsure}</span><b>{summary.unsure}<small>{T.unit}</small></b></div>
@@ -162,7 +205,7 @@ function Diagnosis({ detail, saving, failed, onAnswer }: {
         </>
       ) : (
         <div className="eq-nogate" style={notice.open ? { marginTop: 24 } : undefined}>
-          <div className="eq-sumcap" style={{ margin: 0 }}><span><b>{T.sumTitle(0)}</b></span></div>
+          <div className="eq-sumcap" style={{ margin: 0 }}><span><b>{T.sumTitle(0)}</b><VerdictTag verdict={verdict} /></span></div>
           <p style={{ margin: '10px 0 0' }}>{T.noGate}</p>
         </div>
       )}
@@ -187,7 +230,17 @@ function Diagnosis({ detail, saving, failed, onAnswer }: {
                     {i.evidenceBy && <><dt>{T.evidenceBy}</dt><dd>{i.evidenceBy}</dd></>}
                   </dl>
                 )}
-                {i.vaultCategory && <VaultRow item={i} />}
+                {i.answer === 'HAVE' ? (
+                  <EvidenceRow
+                    item={i}
+                    busy={!!saving[i.itemNo]}
+                    failed={!!attachFailed[i.itemNo]}
+                    onAttach={(id) => onAttach(i, id)}
+                    onPick={() => onPick(i)}
+                  />
+                ) : (
+                  i.vaultCategory && <VaultRow item={i} />
+                )}
               </div>
               <div className="eq-answ">
                 <ToggleGroup

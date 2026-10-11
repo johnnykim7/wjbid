@@ -2,6 +2,7 @@ package com.biddingagency.controller;
 
 import com.biddingagency.domain.eligibility.service.EligibilityService;
 import com.biddingagency.dto.EligibilityAnswerRequest;
+import com.biddingagency.dto.EligibilityDocumentRequest;
 import com.biddingagency.dto.EligibilityResponses;
 import com.biddingagency.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
@@ -51,5 +52,16 @@ public class EligibilityController {
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         return ResponseEntity.ok(eligibilityService.answer(
                 userDetails.getMember().getId(), noticeId, itemNo, request.answer()));
+    }
+
+    @PutMapping("/{noticeId}/answers/{itemNo}/document")
+    @Operation(summary = "Attach or detach the evidence document of one HAVE answer (CR-140)")
+    public ResponseEntity<EligibilityResponses.Saved> attach(
+            @PathVariable UUID noticeId,
+            @PathVariable int itemNo,
+            @RequestBody EligibilityDocumentRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        return ResponseEntity.ok(eligibilityService.attach(
+                userDetails.getMember().getId(), noticeId, itemNo, request.documentId()));
     }
 }

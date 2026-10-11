@@ -159,8 +159,31 @@ export const STATE_BADGE: Record<string, 'draft' | 'review' | 'active' | 'final'
   CLOSED: 'closing',
 }
 
-/** 적격성 진단 (CR-137, T3-2 「적격성 진단」). 답은 회원이 고른 것이고 서버는 참여 가능 판정을 하지 않는다(BIZ-032) */
+/** 적격성 진단 (CR-137, T3-2 「적격성 진단」). 답은 회원이 고른 것이고, 판정(CR-140)은 서버가 답과 붙인 서류로만 낸다(BIZ-040) */
 export type EligibilityAnswerValue = 'HAVE' | 'LACK' | 'UNSURE'
+
+/** 공고별 판정 (CR-140, BIZ-040). 참여 가능, 서류 부족, 어려움, 판정 전 */
+export type EligibilityVerdict = 'ELIGIBLE' | 'DOCS_MISSING' | 'DIFFICULT' | 'UNDECIDED'
+
+/** 판정을 정한 자격이 걸린 까닭 (BIZ-044) */
+export type EligibilityBlockerProblem = 'LACK' | 'UNSURE' | 'UNANSWERED' | 'STALE' | 'NO_DOCUMENT' | 'EXPIRED'
+
+/** documentName, expiresOn 은 EXPIRED 일 때만 온다 */
+export interface EligibilityBlocker {
+  itemNo: number
+  title: string
+  sourceRef: string | null
+  problem: EligibilityBlockerProblem
+  documentName: string | null
+  expiresOn: string | null
+}
+
+export interface EligibilityAttachedDocument {
+  id: string
+  name: string
+  expiresOn: string | null
+  expired: boolean
+}
 
 export interface EligibilityNoticeRow {
   noticeId: string
@@ -170,6 +193,9 @@ export interface EligibilityNoticeRow {
   open: boolean
   itemCount: number
   answeredCount: number
+  gateCount: number
+  verdict: EligibilityVerdict
+  blockers: EligibilityBlocker[]
 }
 
 export interface EligibilityNoticeHead {
@@ -185,6 +211,8 @@ export interface EligibilityVaultDocument {
   id: string
   name: string
   uploadedAt: string
+  expiresOn: string | null
+  expired: boolean
 }
 
 export interface EligibilityItem {
@@ -202,6 +230,8 @@ export interface EligibilityItem {
   vaultCategory: string | null
   vaultCategoryName: string | null
   vaultDocuments: EligibilityVaultDocument[]
+  /** 지금 답이 있음이고 붙인 서류가 서류함에 있을 때만 온다 (CR-140) */
+  attachedDocument: EligibilityAttachedDocument | null
 }
 
 /** 개수는 통과 조건 자격만 센다. allCount 는 전체 자격 수 */
@@ -218,9 +248,29 @@ export interface EligibilityDetail {
   notice: EligibilityNoticeHead
   items: EligibilityItem[]
   summary: EligibilitySummary
+  verdict: EligibilityVerdict
+  blockers: EligibilityBlocker[]
 }
 
 export interface EligibilitySaved {
   item: EligibilityItem
   summary: EligibilitySummary
+  verdict: EligibilityVerdict
+  blockers: EligibilityBlocker[]
+}
+
+/** 서류 고르기 창이 쓰는 서류함 서류 (GET /member-documents 의 한 줄) */
+export interface VaultDocumentRow {
+  id: string
+  category: string
+  categoryLabel: string
+  fileName: string
+  displayName?: string | null
+  expiresOn?: string | null
+  createdAt: string
+}
+
+export interface VaultListResponse {
+  fixedSlots: { category: string; categoryLabel: string; document: VaultDocumentRow | null }[]
+  others: VaultDocumentRow[]
 }

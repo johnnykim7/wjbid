@@ -1,6 +1,6 @@
 /**
  * 적격성 진단 화면 문구 (CR-137, T3-3 「적격성 진단」, 「공고별 진단」).
- * 화면은 회원이 남긴 답을 셀 뿐 참여할 수 있는지 판정하지 않으므로 "참여 가능" 같은 판정 말은 두지 않는다(BIZ-032).
+ * 진단 화면은 회원이 남긴 답을 센다. 판정 말(참여 가능 등)은 공고별 판정(CR-140, verdictContent.ts)에 둔다.
  */
 import type { EligibilityAnswerValue } from '../types'
 import { INQUIRY_TYPE, inquiryHref } from './subpageContent'
@@ -77,7 +77,7 @@ export const ELIGIBILITY_DETAIL_TEXT = {
   saved: (at: string) => `${at} 저장`,
   saving: '저장 중',
   saveError: '저장하지 못했습니다. 다시 눌러 주세요',
-  notJudged: '이 화면은 회원님이 남긴 답을 세어 보여 줄 뿐, 입찰에 참여할 수 있는지 판정하지 않습니다. 서류함 서류는 증빙 서류 글과 서류 종류 이름이 맞아 붙인 것이니 내용은 직접 확인하세요.',
+  notJudged: '판정은 회원님이 남긴 답과 붙인 서류로만 냅니다. 서류 내용이 공고 조건에 맞는지는 보지 않습니다. 서류함 서류는 증빙 서류 글이나 자격 이름이 서류 종류 이름과 맞아 제안한 것이니 내용은 직접 확인하세요.',
   expertTitle: (lack: number, unsure: number) =>
     [lack > 0 && `없음 ${lack}개`, unsure > 0 && `확인 필요 ${unsure}개`].filter(Boolean).join(', ') + '가 남았습니다',
   expertDesc: '전문가가 이 공고의 자격을 함께 봐 드립니다',

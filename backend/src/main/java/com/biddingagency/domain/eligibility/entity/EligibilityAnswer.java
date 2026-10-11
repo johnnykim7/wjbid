@@ -49,9 +49,21 @@ public class EligibilityAnswer extends BaseEntity {
     @Column(name = "answer", nullable = false, length = 20)
     private EligibilityAnswerValue answer;
 
+    /** 있음으로 답한 자격에 붙인 증빙 서류 (CR-140, BIZ-043) */
+    @Column(name = "document_id", columnDefinition = "BINARY(16)")
+    private UUID documentId;
+
     public void change(String itemTitle, EligibilityAnswerValue answer) {
+        // 붙인 서류는 그 자격의 "있음" 답에만 묶인다. 옛 답에 다시 답한 것도 다른 자격일 수 있어 푼다
+        if (answer != EligibilityAnswerValue.HAVE || !matches(itemTitle)) {
+            this.documentId = null;
+        }
         this.itemTitle = itemTitle;
         this.answer = answer;
+    }
+
+    public void attach(UUID documentId) {
+        this.documentId = documentId;
     }
 
     public boolean matches(String currentTitle) {

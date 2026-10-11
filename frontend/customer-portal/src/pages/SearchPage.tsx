@@ -21,9 +21,18 @@ import {
   removeBookmark,
   getMyBookmarks,
   getMyBidRequests,
+  getEligibilityNotices,
 } from '../api/client'
-import type { Opportunity } from '../types'
+import type { EligibilityVerdict, Opportunity } from '../types'
+import { VerdictTag } from '../components/verdict/VerdictTag'
+import { VERDICT_NONE, VERDICT_TEXT } from '../data/verdictContent'
+import '../wjbid-verdict.css'
 import { DdayBadge } from '../utils/dday'
+
+/** 판정할 수 없는 공고(분석 전, 참가 자격 0개)는 - 로 둔다 */
+function VerdictCell({ verdict }: { verdict?: EligibilityVerdict }) {
+  return verdict ? <VerdictTag verdict={verdict} /> : <span className="vd-dash">{VERDICT_NONE}</span>
+}
 
 const AGENCIES = [
   '모든 발주처 (Agency)',
@@ -49,6 +58,14 @@ export default function SearchPage() {
   const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set())
   const [stats, setStats] = useState({ total: 0, bookmarks: 0, proposals: 0 })
   const [loadError, setLoadError] = useState<string | null>(null)
+  // 공고문별 우리 회사 판정(CR-140). 못 불러오면 null 로 두어 칸만 비운다
+  const [verdicts, setVerdicts] = useState<Map<string, EligibilityVerdict> | null>(null)
+
+  useEffect(() => {
+    getEligibilityNotices()
+      .then((res) => setVerdicts(new Map(res.data.map((r) => [r.noticeId, r.verdict]))))
+      .catch(() => setVerdicts(null))
+  }, [])
 
   // 초기 북마크 & 통계 로드
   useEffect(() => {
@@ -237,6 +254,7 @@ export default function SearchPage() {
                     <TableHead className="w-28">공고유형</TableHead>
                     <TableHead className="w-28">공고일</TableHead>
                     <TableHead className="w-36">마감일</TableHead>
+                    <TableHead className="w-32 text-center">{VERDICT_TEXT.cols.verdict}</TableHead>
                     <TableHead className="w-24 text-center">관심</TableHead>
                   </tr>
                 </TableHeader>
@@ -273,6 +291,9 @@ export default function SearchPage() {
                           <span className="text-sm text-ink-sub">{bid.responseDeadline}</span>
                           <DdayBadge deadline={bid.responseDeadline} />
                         </div>
+                      </TableCell>
+                      <TableCell className="text-center align-middle">
+                        {verdicts && <VerdictCell verdict={verdicts.get(bid.id)} />}
                       </TableCell>
                       <TableCell className="text-center align-middle">
                         <Button

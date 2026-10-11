@@ -403,11 +403,6 @@ export const PENDING: PendingInfo[] = [
     alts: [ALT.open, ALT.bookmarks, ALT.materials],
   },
   {
-    key: 'opportunity-fit', tier: 'm', photo: PHOTO.desk,
-    desc: ['공고마다 우리 회사가 참여할 수 있는지, 서류가 모자란지, 어려운지', '판정해 보여 드립니다.'],
-    alts: [ALT.profile, ALT.open, ALT.vault],
-  },
-  {
     key: 'expiry-alert', tier: 'm', photo: PHOTO.piee,
     desc: ['올린 서류마다 만료일을 보여 주고, 만료 전에 알려 드립니다.'],
     alts: [ALT.vault, ALT.proposals, ALT.renewal],

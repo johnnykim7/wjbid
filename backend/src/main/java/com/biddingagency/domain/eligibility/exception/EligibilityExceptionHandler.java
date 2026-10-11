@@ -28,6 +28,16 @@ public class EligibilityExceptionHandler {
         return body(HttpStatus.BAD_REQUEST, "ELIGIBILITY_ANSWER_INVALID", ex);
     }
 
+    @ExceptionHandler(EligibilityDocumentNotAllowedException.class)
+    public ResponseEntity<Map<String, Object>> handle(EligibilityDocumentNotAllowedException ex) {
+        return body(HttpStatus.BAD_REQUEST, "ELIGIBILITY_DOCUMENT_NOT_ALLOWED", ex);
+    }
+
+    @ExceptionHandler(EligibilityDocumentNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handle(EligibilityDocumentNotFoundException ex) {
+        return body(HttpStatus.NOT_FOUND, "ELIGIBILITY_DOCUMENT_NOT_FOUND", ex);
+    }
+
     private ResponseEntity<Map<String, Object>> body(HttpStatus status, String error, RuntimeException ex) {
         return ResponseEntity.status(status).body(Map.of("error", error, "message", ex.getMessage()));
     }
