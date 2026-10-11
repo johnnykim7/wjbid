@@ -11,6 +11,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -26,19 +27,27 @@ public class MemberService {
     private final MemberRepository memberRepository;
     private final MemberConsentRepository memberConsentRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EmailCodeService emailCodeService;
+    private final Clock clock;
 
     /** 현재 약관 버전 (CR-124) — 약관 개정 시 갱신, 동의이력에 기록 */
     private static final String CURRENT_TERMS_VERSION = "2026-06";
 
     /**
-     * Register new member (CUSTOMER role) — CR-124: 법인 필드(사업자번호) + 가입 동의이력 저장
+     * Register new member (CUSTOMER role) — CR-124: 법인 필드(사업자번호) + 가입 동의이력 저장.
+     * CR-146: 인증번호 확인을 마친 메일만 받고, 그 번호는 이 가입에 쓰고 끝낸다(BIZ-062).
      */
     @Transactional
     public Member register(String email, String password, String companyName, String contactPerson,
                            String phone, String businessRegistrationNumber,
                            boolean agreeTerms, boolean agreePrivacy, boolean agreeMarketing) {
-        return createCustomer(email, passwordEncoder.encode(password), null, companyName, contactPerson, phone,
-                businessRegistrationNumber, agreeTerms, agreePrivacy, agreeMarketing);
+        // 이미 가입된 메일이면 인증 안내보다 로그인 안내가 먼저다
+        if (memberRepository.existsByEmail(email)) {
+            throw new EmailAlreadyExistsException();
+        }
+        emailCodeService.consumeVerified(email);
+        return createCustomer(email, passwordEncoder.encode(password), LocalDateTime.now(clock), companyName,
+                contactPerson, phone, businessRegistrationNumber, agreeTerms, agreePrivacy, agreeMarketing);
     }
 
     /**
