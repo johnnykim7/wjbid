@@ -2,10 +2,10 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@therecommerce-develop/ds-ui'
 import { useAuth } from '../../context/AuthContext'
-import { Icon, LogoMark } from './Icon'
+import { CiLogo, Icon } from './Icon'
 import { MENU, menuHref } from './menu'
 import {
-  LOGO_SUB,
+  LOGO_LABEL,
   RECOMMENDED_KEYWORDS,
   SEARCH_FIELDS,
   SEARCH_PLACEHOLDER,
@@ -75,12 +75,8 @@ export function AppHeader({ member }: { member: MemberSummary }) {
       </div>
       <header className="hd">
         <div className="wrap">
-          <Link className="logo" to="/">
-            <small>{LOGO_SUB}</small>
-            <span className="mk">
-              <span className="sq"><LogoMark /></span>
-              <b>WJ<em>bid</em></b>
-            </span>
+          <Link className="logo" to="/" aria-label={LOGO_LABEL}>
+            <CiLogo className="ci" />
           </Link>
           <div className="sch">
             <form className="box" onSubmit={onSearch} role="search">

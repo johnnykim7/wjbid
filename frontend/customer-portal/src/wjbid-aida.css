@@ -21,12 +21,8 @@
 .wj .util nav { display: flex; gap: 18px; color: var(--color-ink-sub); }
 .wj .util nav a.b { color: var(--color-brand); font-weight: 600; }
 .wj .hd > .wrap { height: 92px; display: flex; align-items: center; gap: 40px; }
-.wj .logo { display: flex; flex-direction: column; gap: 3px; flex: 0 0 auto; }
-.wj .logo small { font-size: 12px; color: var(--color-ink-mute); letter-spacing: 0px; }
-.wj .logo .mk { display: flex; align-items: center; gap: 8px; }
-.wj .logo .sq { width: 32px; height: 32px; border-radius: 8px; background: var(--color-brand-deep); display: grid; place-items: center; }
-.wj .logo b { font-size: 27px; font-weight: 800; letter-spacing: -0.03em; color: var(--color-brand-deep); line-height: 1; }
-.wj .logo b em { font-style: normal; color: var(--color-brand); }
+.wj .logo { display: flex; align-items: center; flex: 0 0 auto; }
+.wj .logo .ci { width: auto; height: 48px; flex: none; color: var(--color-ink); }
 .wj .sch { flex: 1 1 0%; max-width: 560px; }
 .wj .sch .box { height: 48px; border: 2px solid var(--color-brand); border-radius: 999px; display: flex; align-items: center; padding: 0px 6px 0px 18px; }
 .wj .sch .sel { display: flex; align-items: center; gap: 4px; font-size: 14.5px; font-weight: 600; padding-right: 14px; margin-right: 14px; border-right: 1px solid var(--color-line); }
@@ -105,7 +101,9 @@
 footer.wj { margin-top: 48px; background: var(--color-dark); color: var(--color-dark-text); padding: 28px 0px 40px; font-size: 13.5px; }
 footer.wj .lk { display: flex; gap: 22px; color: white; font-weight: 600; padding-bottom: 16px; border-bottom: 1px solid var(--color-dark-line); }
 footer.wj .lk a:nth-child(2) { color: var(--color-brand-on-dark); }
-footer.wj .info { margin-top: 16px; line-height: 1.85; }
+footer.wj .body { display: flex; align-items: center; gap: 32px; margin-top: 20px; }
+footer.wj .ci { flex: none; width: auto; height: 52px; color: white; }
+footer.wj .info { line-height: 1.85; }
 footer.wj .info span + span::before { content: ""; display: inline-block; width: 1px; height: 11px; background: color-mix(in srgb, var(--color-dark-text) 35%, var(--color-dark)); margin: 0px 12px; vertical-align: -1px; }
 .wj .bids .loc b { display: flex; align-items: center; gap: 3px; font-size: 13.5px; font-weight: 700; color: var(--color-ink); }
 .wj .bids .loc b svg { width: 13px; height: 13px; color: var(--color-ink-mute); }
@@ -386,7 +384,6 @@ footer.wj { font-size: 14px; }
 
 /* 정본에서 인라인 스타일이던 것과, 정본에 없는 상태(마감 여유, 빈 목록, 판정 준비 중) */
 .wj.top { position: relative; z-index: 10; }
-.wj .logo .sq { color: white; }
 .wj .pv .cmp ul { list-style: disc; }
 .wj .pv .cmp .sub { margin-top: 4px; color: var(--color-ink-mute); }
 .wj .band.last { padding-bottom: 20px; }

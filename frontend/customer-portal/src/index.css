@@ -33,6 +33,10 @@
   --color-warning-soft: #fff4e5;
   --color-new:          #e8890c;
 
+  /* 회사 CI 색. 로고에만 쓰고 강조색을 바꿔도 그대로 둔다 */
+  --color-ci-red:       #a32d35;
+  --color-ci-gold:      #dea23e;
+
   --font-sans: "Pretendard Variable", Pretendard, system-ui, -apple-system, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
 }

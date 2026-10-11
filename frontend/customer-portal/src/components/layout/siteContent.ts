@@ -1,7 +1,7 @@
 /** 공통 틀(유틸 띠, 머리말, 꼬리말) 문구 (CR-127). 문구를 바꿀 때는 이 파일만 고친다. */
 
 export const SERVICE_LINE = '미군·연방 조달 입찰 정보 서비스'
-export const LOGO_SUB = '미군·연방 조달 입찰 대행'
+export const LOGO_LABEL = 'WOOJIN 홈'
 
 export const searchHref = (keyword?: string) =>
   keyword ? `/search?keyword=${encodeURIComponent(keyword)}` : '/search'
@@ -22,11 +22,13 @@ export const FOOTER_LINKS = [
 
 /** 사업자 정보. "(대표자명)" 처럼 괄호로 둘러싼 값은 아직 정해지지 않은 것이라 꼬리말에 내지 않는다 */
 export const COMPANY = {
-  name: '우진USbid',
+  name: '(주)우진이엔씨',
   ceo: '(대표자명)',
   businessNumber: '(사업자등록번호)',
-  address: '(주소)',
-  email: 'support@wjbid.com',
+  address: '경기도 평택시 팽성읍 안정 순환로 153-16',
+  tel: '031-651-0433',
+  mobile: '010-7156-7707',
+  email: 'woojinenc25@gmail.com',
 }
 
-export const COPYRIGHT = '© 2026 WJbid · 우진USbid · 미군·연방 조달 입찰 대행 서비스'
+export const COPYRIGHT = '© 2026 (주)우진이엔씨 · WJbid 미군·연방 조달 입찰 대행 서비스'
