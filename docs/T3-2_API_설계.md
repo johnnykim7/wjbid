@@ -1,6 +1,6 @@
 # SAM.gov Bidding Agency Platform API 설계
 
-> 설계 버전: 1.7 | 최종 수정: 2026-10-11 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132
+> 설계 버전: 1.8 | 최종 수정: 2026-10-11 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135
 
 > 단계: 3. Detail Design | 실행스펙 섹션 3에 포함
 >
@@ -115,6 +115,46 @@
 | GET | /opportunities/search/organization | 기관명 검색 | | BID-BROWSE-001 |
 | GET | /opportunities/near-deadline | 마감 임박 공고 | | BID-BROWSE-001 |
 | GET | /opportunities/recent | 최근 등록 공고 | | BID-BROWSE-001 |
+
+---
+
+## C-2. 모은 공고 목록과 집계 (CR-135)
+
+메뉴 속 화면 2묶음(사전 공고, 변경 공고, 공고문 예시, 최근 낙찰, 월별 동향, 업종별 발주)이 쓴다. C 의 공개 공고문 조회와 달리 **모은 원본 공고 전부**(지운 것 제외)를 읽는다. 모두 로그인 없이 부른다(GET /opportunities/** 공개). 읽기만 한다.
+
+| 메서드 | 경로 | 설명 | 인증 | 기능 ID |
+|--------|------|------|------|---------|
+| GET | /opportunities/collected | 모은 공고 목록, 게시일 최신순, 쪽. 거르기: `group`(PRE 사전, BID 입찰, AWARD 낙찰, OTHER 그 밖), `type`(SAM 공고 유형), `month`(게시 달 YYYY-MM), `sector`(업종 대분류, 예 23, 31-33, NONE), `openOnly`(답변 기한 남은 것만). 같은 거르기에서 유형별 건수를 함께 준다 | | BID-MKT-001, 005, 006 |
+| GET | /opportunities/amendments | 같은 공고번호로 두 번 이상 올라온 공고 묶음(낙찰 공지 제외), 마지막 게시일 최신순, 쪽. `openOnly`(마지막 판 마감 전만). 묶음마다 판 목록 | | BID-MKT-002 |
+| GET | /opportunities/sample | 설정 `NOTICE_SAMPLE_ID` 의 공개 공고문(공고 상세와 같은 응답). 없으면 204 | | BID-MKT-003 |
+| GET | /opportunities/awards | 낙찰 공지 목록, 쪽. `month`(공지 달), `sort`(LATEST 최신순, AMOUNT 금액순). 요약(건수, 금액 공개 건수, 합계, 최대)을 함께 준다 | | BID-MKT-004 |
+| GET | /opportunities/stats/monthly | 첫 게시 달부터 이번 달까지 달마다 묶음 유형별 건수(빈 달 0 포함), 자료 기간 | | BID-MKT-005 |
+| GET | /opportunities/stats/naics | 업종 대분류별 건수와 세부 코드별 건수, 업종 코드 없는 건수, 자료 기간 | | BID-MKT-006 |
+
+**목록 줄 (collected, amendments 의 판, awards 공통)**
+
+| 필드 | 설명 |
+|------|------|
+| id | 공고 id |
+| noticeId | SAM 공고 ID |
+| solicitationNumber | 공고번호 |
+| title, titleKo | 원문 제목, 한글 제목(없으면 null) |
+| type, typeKo, group | SAM 공고 유형, 한글 유형 이름, 묶음 유형 |
+| postedDate, responseDeadline | 게시일, 답변 기한(없으면 null) |
+| awardAmount | 낙찰 금액 표시 문자열(낙찰 공지만, 없으면 null) |
+| awardeeName | 낙찰 업체 이름(낙찰 공지만). 업체 이름 칸이 생기기 전(CR-136 전)에는 늘 null |
+| publicNoticeId | 같은 공고의 공개 한글 공고문 id(없으면 null). 있으면 화면이 공고 상세로 보낸다 |
+| samUrl | SAM.gov 원문 공개 주소. 주소 형식은 설정 `sam-gov.public-opportunity-url` |
+| hasMainNotice | (사전 공고만) 같은 공고번호로 입찰 공고가 올라왔는지 |
+| originalId | (낙찰 공지만) 같은 공고번호의 원래 공고 중 마지막 판 id(없으면 null) |
+
+**자료 기간**: 응답마다 `dataFrom`, `dataTo`(대상 공고의 첫·마지막 게시일)와 `total` 을 준다.
+
+**낙찰 요약**: `total`, `amountKnownCount`, `amountSum`, `amountMax`, `awardeeKnownCount`(업체 이름 있는 공지 수, CR-136 전에는 0). 화면은 `awardeeKnownCount` 가 0 이면 업체 이름을 모으지 않는다고 밝히고, 1 이상이면 업체 칸을 보인다(CR-136 과 계약, 10/11).
+
+**금액**: 낙찰 금액은 공지에 적힌 문자열(예 `$60,700.00`)을 숫자로 읽어 합계·최대·금액순에 쓴다. 읽을 수 없거나 비면 금액 없음으로 센다. CR-136 이 금액 숫자 칸을 더하면 그 칸으로 바꾼다.
+
+**업종 대분류**: 원본 공고의 업종 코드 앞 두 자리. 31~33, 44~45, 48~49 는 한 대분류. 코드가 없으면 `NONE`. 한글 이름은 NAICS 공식 대분류 20개 전부를 둔다.
 
 ---
 
@@ -481,6 +521,7 @@ app.aimbase:
 | A. 인증 | 5 | 1 |
 | B. 공고 수집 (Admin) | 3 | 2 |
 | C. 공고 열람 | 8 | 3 |
+| C-2. 모은 공고 목록과 집계 | 6 | CR-135 |
 | D. 즐겨찾기 | 4 | 3 |
 | E. 자격 진단 | 1 | 3 |
 | F. 입찰 접수 | 7 | 4 |
@@ -497,7 +538,7 @@ app.aimbase:
 | MCP Tools | 13 | 5, CR-003, CR-013 |
 | MCP SSE 엔드포인트 | 2 | CR-002 |
 | Aimbase 워크플로우 호출 | 2 | CR-002 |
-| **합계** | **REST 83 + MCP 13 + SSE 2 + Aimbase 2** | |
+| **합계** | **REST 89 + MCP 13 + SSE 2 + Aimbase 2** | |
 
 ---
 
