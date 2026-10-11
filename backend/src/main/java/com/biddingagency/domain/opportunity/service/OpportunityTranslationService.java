@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.Map;
 import java.util.UUID;
@@ -34,11 +35,15 @@ public class OpportunityTranslationService {
     private final OpportunityRepository opportunityRepository;
     private final LLMPlatformClient llmPlatformClient;
     private final SAMGovApiClient samGovApiClient;
+    private final TransactionTemplate transactionTemplate;
 
     /**
      * 비동기 자동 번역 — 수집 NEW 행에 대해 호출. 별도 스레드라 수집 흐름을 막지 않음.
      * CR-035: 제목(+type 라벨)만 번역한다. 본문(noticedesc) fetch는 SAM 쿼터를 추가로 소진하므로
      * 수집 시점에 일괄 호출하지 않고, 관리자가 상세에서 "한글 번역하기" 누를 때 그 1건만 fetch한다.
+     * CR-139: 번역은 저장 단위 밖에서 받고, 받은 뒤 공고를 다시 읽어 짧게 저장한다.
+     * 번역 동안 DB 연결을 잡지 않고, 엔티티는 모든 칸을 다시 쓰므로 처음 읽은 공고를 저장하면
+     * 그 사이 수집이 넣은 낙찰 정보(CR-136)를 옛 값으로 덮는다.
      */
     @Async("llmTaskExecutor")
     public void translateAsync(UUID opportunityId) {
@@ -47,11 +52,19 @@ public class OpportunityTranslationService {
             log.warn("[CR-022] 자동번역: 공고 없음 id={}", opportunityId);
             return;
         }
-        // type 한글 라벨은 코드 매핑(LLM 불필요) — 비어있으면 채움
-        if (opp.getTypeKo() == null || opp.getTypeKo().isBlank()) {
-            opp.applyTypeKo(NoticeTypeTranslator.toKorean(opp.getType()));
-        }
-        translateTitleOf(opp);
+        String titleKo = hasText(opp.getTitleKo()) ? null : requestTitleTranslation(opp);
+        transactionTemplate.executeWithoutResult(status ->
+                opportunityRepository.findById(opportunityId).ifPresent(fresh -> {
+                    // type 한글 라벨은 코드 매핑(LLM 불필요) — 비어있으면 채움
+                    if (!hasText(fresh.getTypeKo())) {
+                        fresh.applyTypeKo(NoticeTypeTranslator.toKorean(fresh.getType()));
+                    }
+                    // 번역 동안 관리자가 먼저 채운 한글 제목은 덮지 않는다
+                    if (titleKo != null && !hasText(fresh.getTitleKo())) {
+                        fresh.applyTitleTranslation(titleKo);
+                        log.info("[CR-022] 제목 번역 완료 noticeId={}, titleKo={}", fresh.getNoticeId(), titleKo);
+                    }
+                }));
     }
 
     /**
@@ -129,20 +142,30 @@ public class OpportunityTranslationService {
 
     /** 제목 번역 — 1회 시도. 실패해도 예외 안 던짐. 이미 한글이면 skip. */
     private boolean translateTitleOf(Opportunity opp) {
-        if (opp.getTitleKo() != null && !opp.getTitleKo().isBlank()) {
+        if (hasText(opp.getTitleKo())) {
             log.info("[CR-022] 제목 이미 번역됨 — skip noticeId={}", opp.getNoticeId());
             return false;
         }
+        String titleKo = requestTitleTranslation(opp);
+        if (titleKo == null) return false;
+        opp.applyTitleTranslation(titleKo);
+        log.info("[CR-022] 제목 번역 완료 noticeId={}, titleKo={}", opp.getNoticeId(), titleKo);
+        return true;
+    }
+
+    /** 제목 번역 요청만 한다(저장하지 않음). 실패하거나 빈 결과면 null. */
+    private String requestTitleTranslation(Opportunity opp) {
         try {
             String titleKo = llmPlatformClient.translateOpportunityTitle(opp.getTitle(), opp.getOrganizationName());
-            if (titleKo == null || titleKo.isBlank()) return false;
-            opp.applyTitleTranslation(titleKo);
-            log.info("[CR-022] 제목 번역 완료 noticeId={}, titleKo={}", opp.getNoticeId(), titleKo);
-            return true;
+            return hasText(titleKo) ? titleKo : null;
         } catch (RuntimeException e) {
             log.warn("[CR-022] 제목 번역 실패 noticeId={}: {}", opp.getNoticeId(), e.getMessage());
-            return false;
+            return null;
         }
+    }
+
+    private static boolean hasText(String s) {
+        return s != null && !s.isBlank();
     }
 
     /** 본문 번역 — noticedesc fetch + 원문 본문 저장 + LLM 번역. 빈 본문이면 skip. */
