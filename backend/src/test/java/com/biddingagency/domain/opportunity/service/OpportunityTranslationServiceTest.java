@@ -28,7 +28,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 
 /**
- * CR-139: 수집 때 제목 번역 결과가 저장되는지. 수집의 비동기 스레드처럼 바깥 저장 단위 없이 부른다.
+ * TC-OPP-006 ~ TC-OPP-011 (CR-139): 수집 때 제목 번역 결과가 저장되는지. 수집의 비동기 스레드처럼 바깥 저장 단위 없이 부른다.
  * LLM 은 Mock 이다.
  */
 @DataJpaTest
@@ -78,6 +78,7 @@ class OpportunityTranslationServiceTest {
         return opportunityRepository.findById(id).orElseThrow();
     }
 
+    // TC-OPP-006
     @Test
     @DisplayName("수집번역_번역받음_한글제목저장됨")
     void 수집번역_번역받음_한글제목저장됨() {
@@ -88,6 +89,7 @@ class OpportunityTranslationServiceTest {
         assertThat(reload().getTitleKo()).isEqualTo(TITLE_KO);
     }
 
+    // TC-OPP-007
     @Test
     @DisplayName("수집번역_번역받음_번역시각저장됨")
     void 수집번역_번역받음_번역시각저장됨() {
@@ -98,6 +100,7 @@ class OpportunityTranslationServiceTest {
         assertThat(reload().getTranslatedAt()).isNotNull();
     }
 
+    // TC-OPP-008
     @Test
     @DisplayName("수집번역_번역받음_유형한글저장됨")
     void 수집번역_번역받음_유형한글저장됨() {
@@ -108,6 +111,7 @@ class OpportunityTranslationServiceTest {
         assertThat(reload().getTypeKo()).isNotBlank();
     }
 
+    // TC-OPP-009
     @Test
     @DisplayName("수집번역_번역중낙찰정보저장_낙찰정보남음")
     void 수집번역_번역중낙찰정보저장_낙찰정보남음() {
@@ -122,6 +126,7 @@ class OpportunityTranslationServiceTest {
         assertThat(reload().getAwardeeName()).isEqualTo("ACME KOREA");
     }
 
+    // TC-OPP-010
     @Test
     @DisplayName("수집번역_번역중관리자가먼저채움_덮지않음")
     void 수집번역_번역중관리자가먼저채움_덮지않음() {
@@ -136,6 +141,7 @@ class OpportunityTranslationServiceTest {
         assertThat(reload().getTitleKo()).isEqualTo("관리자가 고친 제목");
     }
 
+    // TC-OPP-011
     @Test
     @DisplayName("수집번역_번역실패_한글제목비어있음")
     void 수집번역_번역실패_한글제목비어있음() {
