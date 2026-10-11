@@ -6,6 +6,8 @@ export interface Opportunity {
   naicsCode?: string
   setAside?: string
   responseDeadline: string
+  /** 마감 시각(서울 시각 표시 포함, 예 2026-11-03T13:00:00+09:00) */
+  responseDeadlineAt?: string
   postedDate?: string
   placeOfPerformance?: string
   description?: string

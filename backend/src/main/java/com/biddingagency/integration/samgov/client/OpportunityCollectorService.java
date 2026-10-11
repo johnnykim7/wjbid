@@ -14,6 +14,7 @@ import org.springframework.util.DigestUtils;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.HashMap;
@@ -30,6 +31,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class OpportunityCollectorService {
 
+    private static final ZoneId SERVICE_ZONE = ZoneId.of("Asia/Seoul");
     private static final DateTimeFormatter DATE_ONLY_FORMATTER =
             DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final DateTimeFormatter DATETIME_FORMATTER =
@@ -214,6 +216,8 @@ public class OpportunityCollectorService {
         rawJson.put("description", extractDescription(data.getDescription()));
         rawJson.put("placeOfPerformance", extractPlaceOfPerformance(data.getOfficeAddress()));
         rawJson.put("resourceLinks", data.getResourceLinks());
+        rawJson.put("postedDate", data.getPostedDate());
+        rawJson.put("responseDeadLine", data.getResponseDeadLine());
         if (data.getAward() != null) {
             rawJson.put("award", data.getAward()); // CR-136: 낙찰 정보도 원본에 남긴다(BIZ-004)
         }
@@ -261,7 +265,7 @@ public class OpportunityCollectorService {
      * - "yyyy-MM-ddTHH:mm:ss±HH:mm" (responseDeadLine, ISO-8601 with timezone)
      * - "yyyy-MM-dd HH:mm:ss" (legacy fallback)
      */
-    private LocalDateTime parseDate(String dateStr) {
+    static LocalDateTime parseDate(String dateStr) {
         if (dateStr == null || dateStr.isEmpty()) {
             return null;
         }
@@ -269,9 +273,10 @@ public class OpportunityCollectorService {
         try {
             return LocalDate.parse(dateStr, DATE_ONLY_FORMATTER).atStartOfDay();
         } catch (DateTimeParseException ignored) {}
-        // ISO-8601 with timezone offset (e.g. 2026-03-05T16:30:00-04:00)
+        // ISO-8601 with timezone offset (e.g. 2026-03-05T16:30:00-04:00).
+        // 시각 칸은 서울 벽시계로 저장하므로 시간대 표시를 떼지 않고 서울 시각으로 옮긴다.
         try {
-            return OffsetDateTime.parse(dateStr).toLocalDateTime();
+            return OffsetDateTime.parse(dateStr).atZoneSameInstant(SERVICE_ZONE).toLocalDateTime();
         } catch (DateTimeParseException ignored) {}
         // yyyy-MM-dd HH:mm:ss
         try {

@@ -65,17 +65,19 @@ export default function BidDetailPage() {
     </div>
   )
 
+  // 마감은 시각이 붙은 값으로 센다. 날짜만 있는 responseDeadline 은 브라우저가 UTC 자정으로 읽어 늘 오전 9시가 된다.
+  const deadlineAt = bid.responseDeadlineAt ?? bid.responseDeadline
   const daysLeft = Math.ceil(
-    (new Date(bid.responseDeadline).getTime() - Date.now()) / 86400000
+    (new Date(deadlineAt).getTime() - Date.now()) / 86400000
   )
 
-  // 마감일 한글 표기 (2026년 6월 17일 오전 11:00). 파싱 실패 시 원본 그대로.
+  // 마감일 한글 표기 (2026년 6월 17일 오전 11:00, 서울 시각). 파싱 실패 시 원본 그대로.
   const deadlineKo = (() => {
-    if (!bid.responseDeadline) return ''
-    const d = new Date(bid.responseDeadline)
+    if (!deadlineAt) return ''
+    const d = new Date(deadlineAt)
     return isNaN(d.getTime())
-      ? bid.responseDeadline
-      : d.toLocaleString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+      ? deadlineAt
+      : d.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
   })()
 
   return (

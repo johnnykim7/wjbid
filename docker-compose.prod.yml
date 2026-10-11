@@ -15,7 +15,10 @@ services:
     environment:
       LANG: C.UTF-8
       LC_ALL: C.UTF-8
-      JAVA_TOOL_OPTIONS: "-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8"
+      # 앱 시각은 서울 벽시계로 저장하고 읽는다(DB 접속 serverTimezone=Asia/Seoul). JVM 이 UTC 면 화면 시각이 9시간 이르고
+      # 수집이 만든 게시일, 마감은 9시간 늦게 저장된다.
+      TZ: Asia/Seoul
+      JAVA_TOOL_OPTIONS: "-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8 -Duser.timezone=Asia/Seoul"
       SERVER_PORT: 8080
       DB_URL: "jdbc:mysql://host.docker.internal:3306/bidding_agency?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useUnicode=true&useSSL=false&allowPublicKeyRetrieval=true"
       DB_USERNAME: voomerang

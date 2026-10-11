@@ -9,7 +9,6 @@ import org.springframework.stereotype.Component;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -72,7 +71,8 @@ public class SamQuotaLogger {
                     success ? 0L : 1L,
                     status, rateLimit, rateRemaining, rateHeadersJson,
                     truncatedBody,
-                    LocalDateTime.now(ZoneOffset.UTC));
+                    // 호출 일자만 SAM 쿼터 기준인 UTC 날짜다. 호출 시각은 다른 시각 칸처럼 앱 시간대로 쓴다.
+                    LocalDateTime.now());
         } catch (Exception e) {
             // 계측 실패가 본 흐름을 막지 않도록
             log.warn("[SAM-QUOTA] 계측 적재 실패 endpoint={}: {}", endpoint, e.getMessage());
