@@ -1,6 +1,6 @@
 # SAM.gov Bidding Agency Platform API 설계
 
-> 설계 버전: 1.13 | 최종 수정: 2026-10-12 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-144, CR-146, CR-147
+> 설계 버전: 1.14 | 최종 수정: 2026-10-12 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-144, CR-146, CR-147, CR-152
 
 > 단계: 3. Detail Design | 실행스펙 섹션 3에 포함
 >
@@ -145,6 +145,7 @@
 |--------|------|------|------|---------|
 | GET | /opportunities | 공고 목록 조회 (필터/검색/페이징). **사용자: visibility=VISIBLE만** (CR-003) | | BID-BROWSE-001 |
 | GET | /opportunities/{id} | 공고 상세 조회 (사전 분석 결과 포함 — CR-003). 응답 `responseDeadline` 은 날짜만, `responseDeadlineAt` 은 서울 시각 표시가 붙은 마감 시각(CR-138) | | BID-BROWSE-002 |
+| GET | /opportunities/origin/{opportunityId} | 원본 공고 상세 (CR-152). 모은 원본 공고 하나(지운 것 제외)를 공고 상세와 같은 꼴로 준다. `id` 는 원본 공고 id, `title` 은 한글 제목(없으면 원문 제목), `description` 은 모아 둔 원문 본문(없으면 null), `analysis` 는 없다. 더하는 값: `originalTitle`(원문 제목), `publicNoticeId`(같은 공고의 공개 한글 공고문 id, 없으면 null. 있으면 화면이 공고문 상세로 넘긴다). 없는 id 는 404 | | BID-BROWSE-002 |
 | GET | /opportunities/{id}/requirements | 공고 요구사항 목록 (카테고리별) | | BID-BROWSE-003 |
 | GET | /opportunities/{id}/attachments | 공고 첨부문서 목록 | | BID-OPP-003 |
 | GET | /opportunities/search | 키워드 검색 | | BID-BROWSE-001 |
@@ -179,7 +180,7 @@
 | postedDate, responseDeadline | 게시일, 답변 기한(없으면 null) |
 | awardAmount | 낙찰 금액 표시 문자열(낙찰 공지만, 없으면 null) |
 | awardeeName | 낙찰 업체 이름(낙찰 공지만). 업체 이름 칸이 생기기 전(CR-136 전)에는 늘 null |
-| publicNoticeId | 같은 공고의 공개 한글 공고문 id(없으면 null). 있으면 화면이 공고 상세로 보낸다 |
+| publicNoticeId | 같은 공고의 공개 한글 공고문 id(없으면 null). 있으면 화면이 공고문 상세(`/search/{id}`)로, 없으면 원본 공고 상세(`/search/origin/{opportunityId}`)로 보낸다(CR-152) |
 | samUrl | SAM.gov 원문 공개 주소. 주소 형식은 설정 `sam-gov.public-opportunity-url` |
 | hasMainNotice | (사전 공고만) 같은 공고번호로 입찰 공고가 올라왔는지 |
 | originalId | (낙찰 공지만) 같은 공고번호의 원래 공고 중 마지막 판 id(없으면 null) |
