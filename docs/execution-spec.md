@@ -1,6 +1,6 @@
 # 실행 지시서: SAM.gov Bidding Agency Platform
 
-> 설계 버전: 1.4 | 최종 수정: 2026-10-11 | 관련 CR: CR-003, CR-132, CR-133, CR-135, CR-136
+> 설계 버전: 1.4 | 최종 수정: 2026-10-11 | 관련 CR: CR-003, CR-132, CR-133, CR-135, CR-136, CR-137
 
 > **프로젝트:** bidding-agency-platform (미군 조달 입찰 AI 대행 서비스)
 > **프로젝트 유형:** 풀스택 (BE: Java 17 + Spring Boot 3.2 / FE: React 19 × 2)
@@ -119,7 +119,7 @@ SAM.gov에 올라오는 미군(USFK) 조달 입찰 공고를 자동 수집하고
 
 > 상세: `docs/T3-1_데이터_모델.md`
 
-- **엔티티 16개**: Member, Opportunity, OpportunityAttachment, **OpportunityAnalysis** (CR-003), OpportunityRequirementItem, BidRequest, ClientDocument, BidDocument, BidDocumentVersion, DocumentTemplate, RequirementFulfillmentMap, Bookmark, NotificationLog, CollectorRun, KeywordGroup, EventLog / CR-132: Inquiry, InquiryType 추가(T3-1) / CR-136: MilitaryBase 추가, Opportunity 낙찰 칸 3개, MemberDocument 만료일(T3-1)
+- **엔티티 16개**: Member, Opportunity, OpportunityAttachment, **OpportunityAnalysis** (CR-003), OpportunityRequirementItem, BidRequest, ClientDocument, BidDocument, BidDocumentVersion, DocumentTemplate, RequirementFulfillmentMap, Bookmark, NotificationLog, CollectorRun, KeywordGroup, EventLog / CR-132: Inquiry, InquiryType 추가(T3-1) / CR-136: MilitaryBase 추가, Opportunity 낙찰 칸 3개, MemberDocument 만료일(T3-1) / CR-137: EligibilityAnswer 추가(T3-1)
 - **FSM 관리 엔티티**: BidRequest (9상태), BidDocument (3상태), **Opportunity (2상태: HIDDEN/VISIBLE)**, **OpportunityAnalysis (4상태)** (CR-003), **Inquiry (2상태: RECEIVED/ANSWERED)** (CR-132)
 - **핵심 원칙**: UUID PK, JSON 컬럼(stateHistory, rawJson, contentJson), 문서 버전 불변성, 콘텐츠 해시 중복 검출
 
@@ -210,7 +210,7 @@ SAM.gov에 올라오는 미군(USFK) 조달 입찰 공고를 자동 수집하고
 | 2 | `docs/T3-1_데이터_모델.md` | Opportunity, OpportunityRequirementItem, Bookmark |
 | 3 | `docs/T1-1_기능요구사항_명세서.md` | BID-BROWSE, BID-QUAL |
 | 4 | `docs/T3-2_API_설계.md` | C. 공고 열람, D. 즐겨찾기, E. 자격 진단 |
-| 5 | `docs/T3-5_단위테스트_명세.md` | TC-BROWSE, TC-BM |
+| 5 | `docs/T3-5_단위테스트_명세.md` | TC-BROWSE, TC-BM, TC-QUAL(CR-137) |
 
 #### FE 참조
 
@@ -525,6 +525,7 @@ sequenceDiagram
 | 유효기간 알림 (CR-136) | `GET /member-documents/expiry`, `PATCH /member-documents/{id}/expiry` | 로그인. 메일은 매일 09:00 Asia/Seoul 스케줄러 |
 | Admin 기지 관리, 지난 낙찰 공지 다시 받기 (CR-136) | `GET/POST/PUT/DELETE /admin/bases`, `GET /admin/bases/unmatched`, `POST /admin/opportunities/award-backfill` | 다시 받기는 SAM 검색 1회 |
 | 요금 안내 | `GET /pricing` | CR-129. CR-133 에서 속페이지 틀 안 |
+| 적격성 진단, 공고별 진단 (CR-137) | `GET /eligibility/notices`, `GET /eligibility/notices/{noticeId}`, `PUT /eligibility/notices/{noticeId}/answers/{itemNo}` | 로그인. 자격은 공고문 분석 결과를 읽고, 답만 저장(BIZ-032, BIZ-033) |
 
 ### 8-4. 리뷰 체크리스트
 

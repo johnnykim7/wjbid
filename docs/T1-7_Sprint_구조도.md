@@ -1,6 +1,6 @@
 # SAM.gov Bidding Agency Platform Sprint 구조도
 
-> 설계 버전: 1.0 | 최종 수정: 2026-03-19 | 관련 CR: -
+> 설계 버전: 1.1 | 최종 수정: 2026-10-11 | 관련 CR: CR-137
 
 > 단계: 1. Requirements | 설계
 
@@ -52,7 +52,7 @@ flowchart LR
 | BID-BROWSE-001 | 공고 목록 조회 (BE API + FE 페이지) | Sprint 2 | 페이징/검색/필터 동작, 결과 화면 표시 | BE+FE | |
 | BID-BROWSE-002 | 공고 상세 조회 | BID-BROWSE-001 | 상세 정보 + 첨부파일 목록 표시 | BE+FE | |
 | BID-BROWSE-003 | 필요 문서 목록 표시 | BID-BROWSE-002 | 카테고리별 분류, BLOCKER 표시, 체크리스트 형태 | FE | |
-| BID-QUAL-001 | 입찰 자격 사전 진단 | BID-BROWSE-002 | 회사 프로필 기반 자격 진단 결과 표시 | BE+FE | |
+| BID-QUAL-001 | 적격성 진단 (CR-137) | BID-BROWSE-002, BID-OPP-006 | 공고 참가 자격마다 회원 답 저장, 답별 개수 요약 표시 | BE+FE | |
 | BID-QUAL-002 | 필수 인증/서류 가이드 | Sprint 1 | 가이드 페이지 정적 콘텐츠 표시 | FE | |
 
 ### Sprint 4: 입찰 접수 + FSM

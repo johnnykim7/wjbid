@@ -1,6 +1,6 @@
 # SAM.gov Bidding Agency Platform API 설계
 
-> 설계 버전: 1.8 | 최종 수정: 2026-10-11 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136
+> 설계 버전: 1.8 | 최종 수정: 2026-10-11 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137
 
 > 단계: 3. Detail Design | 실행스펙 섹션 3에 포함
 >
@@ -222,13 +222,36 @@
 
 ---
 
-## E. 자격 진단 (Qualification) — Sprint 3
+## E. 자격 진단 (적격성 진단), Sprint 3, CR-137 에서 고침
 
 | 메서드 | 경로 | 설명 | 인증 | 기능 ID |
 |--------|------|------|------|---------|
-| POST | /opportunities/{id}/qualification-check | AI 자격 사전 진단 요청 | 🔒 | BID-QUAL-001 |
+| GET | /eligibility/notices | 진단할 공고 목록. 공개이고 분석이 끝난 공고문 중 참가 자격이 1개 이상인 것. 마감 전(마감일 가까운 순) 다음 마감 지남(마감일 최근 순) | 🔒 | BID-QUAL-001 |
+| GET | /eligibility/notices/{noticeId} | 공고별 진단. 공고 머리, 자격 목록과 내 답, 개수 요약, 맞을 수 있는 서류함 서류 | 🔒 | BID-QUAL-001 |
+| PUT | /eligibility/notices/{noticeId}/answers/{itemNo} | 자격 하나의 답 저장(있으면 바꿈). 본문 `{ "answer": "HAVE" \| "LACK" \| "UNSURE" }` | 🔒 | BID-QUAL-001 |
 
-> Aimbase Workflow 비동기 호출. 결과는 폴링 또는 콜백으로 수신.
+CR-137 전에 있던 `POST /opportunities/{id}/qualification-check`(AI 자격 사전 진단 요청)는 실제 진단 없이 접수됐다는 응답만 주던 것이라 지운다(BIZ-032).
+
+**GET /eligibility/notices 응답 줄**:
+
+| 필드 | 설명 |
+|------|------|
+| noticeId, solicitationNumber, koreanTitle | 공고문 id, 공고번호, 한글 제목 |
+| responseDeadline | 마감 일시(Asia/Seoul) |
+| open | 마감 전이면 true |
+| itemCount | 참가 자격 수 |
+| answeredCount | 지금 자격 이름과 맞는 내 답 수(BIZ-033) |
+
+**GET /eligibility/notices/{noticeId} 응답**:
+
+| 필드 | 설명 |
+|------|------|
+| notice | noticeId, solicitationNumber, koreanTitle, organizationName, responseDeadline, open |
+| items[] | itemNo, title, description, mandatory, gate(통과 조건), sourceRef(원문 위치), evidenceBy(증빙 서류 글), answer(HAVE, LACK, UNSURE, 답 안 함은 null), stale(옛 이름의 답이 있어 다시 답해야 하면 true), vaultCategory(증빙 서류 글과 맞은 서류함 분류 코드, 없으면 null), vaultDocuments[](그 분류에 올린 내 서류의 id, 이름, 올린 날) |
+| summary | gateCount(통과 조건 자격 수), have, lack, unsure, unanswered(통과 조건 자격 기준). allCount(전체 자격 수) |
+
+- 404: 공고문이 없거나 숨김이거나 분석이 끝나지 않았을 때. 비로그인 401.
+- PUT 400: answer 가 셋 중 하나가 아니거나 itemNo 가 자격 목록 범위 밖일 때. 저장 응답은 그 자격 한 줄(items[] 와 같은 모양)과 summary.
 
 ---
 
@@ -579,7 +602,7 @@ app.aimbase:
 | B-4. 기지 관리와 지난 낙찰 다시 받기 (Admin) | 6 | CR-136 |
 | N. 회사 공통 서류함 | 7 | CR-125, CR-136 |
 | D. 즐겨찾기 | 4 | 3 |
-| E. 자격 진단 | 1 | 3 |
+| E. 자격 진단 | 3 | 3, CR-137 |
 | F. 입찰 접수 | 7 | 4 |
 | G. 고객 문서 제출 | 3 | 4 |
 | H. 입찰 관리 (Admin) | 6 | 4 |
@@ -594,7 +617,7 @@ app.aimbase:
 | MCP Tools | 13 | 5, CR-003, CR-013 |
 | MCP SSE 엔드포인트 | 2 | CR-002 |
 | Aimbase 워크플로우 호출 | 2 | CR-002 |
-| **합계** | **REST 105 + MCP 13 + SSE 2 + Aimbase 2** | |
+| **합계** | **REST 107 + MCP 13 + SSE 2 + Aimbase 2** | |
 
 ---
 
