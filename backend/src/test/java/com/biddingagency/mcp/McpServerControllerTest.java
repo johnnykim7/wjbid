@@ -6,7 +6,6 @@ import com.biddingagency.mcp.tool.OpportunityAnalysisMcpTool;
 import com.biddingagency.mcp.tool.OpportunityMcpTool;
 import com.biddingagency.mcp.tool.PatternGuideMcpTool;
 import com.biddingagency.mcp.tool.ProposalMcpTool;
-import com.biddingagency.mcp.tool.RequirementMcpTool;
 import com.biddingagency.mcp.tool.StateMcpTool;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -30,8 +29,6 @@ class McpServerControllerTest {
     @Mock
     private OpportunityMcpTool opportunityMcpTool;
     @Mock
-    private RequirementMcpTool requirementMcpTool;
-    @Mock
     private DocumentMcpTool documentMcpTool;
     @Mock
     private DocumentTemplateMcpTool documentTemplateMcpTool;
@@ -49,7 +46,7 @@ class McpServerControllerTest {
     @BeforeEach
     void setUp() {
         McpDispatcher dispatcher = new McpDispatcher(
-            opportunityMcpTool, requirementMcpTool, documentMcpTool,
+            opportunityMcpTool, documentMcpTool,
             documentTemplateMcpTool, stateMcpTool, opportunityAnalysisMcpTool,
             patternGuideMcpTool, proposalMcpTool);
         mcpServerController = new McpServerController(dispatcher);
@@ -106,12 +103,14 @@ class McpServerControllerTest {
                 .map(t -> (String) ((Map<String, Object>) t).get("name"))
                 .toList();
         assertThat(toolNames).contains(
-                "get_opportunity", "save_requirements", "save_document_version",
+                "get_opportunity", "save_document_version",
                 // CR-028 제안서 파이프라인
                 "get_proposal_design_input", "save_proposal_structure",
                 "get_section_context", "save_section_blocks",
                 // CR-031 충실성 검증
                 "get_section_verify_input", "get_notice_verify_input", "save_verification_result");
+        // CR-141: 요구 항목은 공고 분석에서 채우므로 저장 도구를 걷어냈다
+        assertThat(toolNames).doesNotContain("save_requirements");
     }
 
     // TC-MCP-003: tools/call 유효 도구 (get_opportunity)
