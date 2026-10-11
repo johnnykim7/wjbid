@@ -1,5 +1,5 @@
 #!/bin/bash
-# deploy.sh - bidding-agency 운영 배포 스크립트 (CI/CD 도입 전 임시)
+# deploy.sh - bidding-agency 테스트 서버(59.8.160.12) 배포 스크립트. 상용(AWS)은 deploy_aws.sh 로 올린다
 # 배포 디렉토리: /home/therecommerce/bidding-agency/
 #   ├── bidding-agency.jar       (BE fat jar — compose가 볼륨 마운트)
 #   ├── docker-compose.yml       (prod compose — 환경변수 인라인)
@@ -62,4 +62,4 @@ case "$TARGET" in
 esac
 
 echo ""
-echo "✅ 배포 완료 → https://woojinusbid.com (BE: http://59.8.160.12:8183/api)"
+echo "테스트 서버 배포 완료 (BE: http://59.8.160.12:8183/api)"
