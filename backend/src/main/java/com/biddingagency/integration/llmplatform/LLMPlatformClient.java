@@ -41,9 +41,6 @@ public class LLMPlatformClient {
     @Value("${app.aimbase.base-url}")
     private String baseUrl;
 
-    @Value("${app.aimbase.workflows.requirement-extraction:requirement-extraction}")
-    private String requirementExtractionWorkflowId;
-
     @Value("${app.aimbase.workflows.document-generation:bid-document-generation}")
     private String documentGenerationWorkflowId;
 
@@ -87,28 +84,6 @@ public class LLMPlatformClient {
     // ─────────────────────────────────────────────────────────────────────────
     // Public API
     // ─────────────────────────────────────────────────────────────────────────
-
-    /**
-     * 요구사항 추출 — requirement-extraction 워크플로우 실행.
-     * Aimbase가 MCP save_requirements 도구를 콜백하여 결과를 직접 저장.
-     */
-    public RequirementExtractionResponse extractRequirements(RequirementExtractionRequest request) {
-        log.info("Aimbase: 요구사항 추출 시작 opportunityId={}", request.getOpportunityId());
-
-        Map<String, Object> input = new HashMap<>();
-        input.put("opportunityId", request.getOpportunityId() != null ? request.getOpportunityId().toString() : null);
-        input.put("opportunityText", request.getOpportunityText());
-        input.put("metadata", request.getMetadata());
-
-        runWorkflowAndWait(requirementExtractionWorkflowId, input);
-
-        // Aimbase 워크플로우가 MCP save_requirements를 직접 호출하므로
-        // 여기서는 성공 상태만 반환 (데이터는 이미 DB에 저장됨)
-        return RequirementExtractionResponse.builder()
-            .status("success")
-            .requirements(List.of())
-            .build();
-    }
 
     /**
      * 문서 생성 — bid-document-generation 워크플로우 실행.

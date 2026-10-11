@@ -63,6 +63,11 @@ public class OpportunityRequirementItem extends BaseEntity {
     @Builder.Default
     private Boolean isVerified = false;
 
+    /** 공고 분석의 제출 서류 순서 (CR-141) */
+    @Column(name = "sort_order", nullable = false)
+    @Builder.Default
+    private Integer sortOrder = 0;
+
     // Business methods
 
     /**
@@ -77,6 +82,18 @@ public class OpportunityRequirementItem extends BaseEntity {
      */
     public void markAsBlocker() {
         this.isBlocker = true;
+    }
+
+    /**
+     * 공고 분석으로 다시 맞출 때 같은 열쇠 항목을 고쳐 쓴다 (CR-141, BIZ-045)
+     */
+    public void syncFromAnalysis(String title, String description, Boolean isBlocker,
+                                 Map<String, Object> requirementJson, int sortOrder) {
+        this.title = title;
+        this.description = description;
+        this.isBlocker = isBlocker;
+        this.requirementJson = requirementJson;
+        this.sortOrder = sortOrder;
     }
 
     /**

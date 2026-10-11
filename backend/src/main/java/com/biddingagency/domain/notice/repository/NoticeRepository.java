@@ -25,7 +25,20 @@ public interface NoticeRepository extends JpaRepository<Notice, UUID> {
 
     boolean existsByOpportunityId(UUID opportunityId);
 
+    /** CR-141 제출 전 검사 목록: 여러 원본의 공고문을 한 번에 */
+    List<Notice> findByOpportunityIdIn(java.util.Collection<UUID> opportunityIds);
+
     long countByGenerationStatus(NoticeGenerationStatus status);
+
+    /**
+     * CR-141: 분석은 끝났는데 요구 항목이 0행인 공고의 공고문. 서버가 뜰 때 요구 항목을 한 번 채운다(BIZ-045).
+     * 한 공고에 공고문이 여럿이면 최근 분석이 앞에 온다.
+     */
+    @Query("SELECT n FROM Notice n JOIN FETCH n.opportunity o "
+            + "WHERE n.generationStatus = com.biddingagency.domain.notice.entity.NoticeGenerationStatus.COMPLETED "
+            + "AND NOT EXISTS (SELECT 1 FROM OpportunityRequirementItem ri WHERE ri.opportunity = o) "
+            + "ORDER BY n.analyzedAt DESC")
+    List<Notice> findCompletedWithoutRequirementItems();
 
     /**
      * CR-039: stuck 자동 정리 대상 — ANALYZING 상태로 임계 시각 이전에 시작돼 멈춘 공고문.

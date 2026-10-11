@@ -56,6 +56,8 @@ public class NoticeService {
     private final com.biddingagency.domain.proposal.service.VerificationLogService verificationLogService;
     private final com.biddingagency.domain.opportunity.service.OpportunityTranslationService opportunityTranslationService;
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+    // CR-141: 분석 저장 때 요구 항목을 맞춘다(BIZ-045)
+    private final com.biddingagency.domain.compliance.service.RequirementSyncService requirementSyncService;
 
     /**
      * self-injection — @Async self-call이 AOP 프록시를 통과 못 해 동기 호출되는 함정 회피.
@@ -382,6 +384,7 @@ public class NoticeService {
 
         notice.markCompleted(koreanTitle, summaryJson, documentFormatsJson, requiredDocumentsJson, llmPromptPresetJson, contentJson, extractedFactsJson);
         Notice saved = noticeRepository.save(notice);
+        requirementSyncService.syncFromNotice(saved);
 
         // CR-031 BE 정형 룰 (LLM 0콜): 분량·첨부 0건 평가 → verification_log(RULE) 적재.
         // FAILED 로 막지 않고 PARTIAL 신호로 남긴다 — 관리자 콘솔이 배지로 노출, 재검증/재생성은 사람 판단.
@@ -475,7 +478,11 @@ public class NoticeService {
                                Map<String, Object> contentJson) {
         Notice notice = findById(noticeId);
         notice.updateResult(koreanTitle, summaryJson, documentFormatsJson, requiredDocumentsJson, llmPromptPresetJson, contentJson);
-        return noticeRepository.save(notice);
+        Notice saved = noticeRepository.save(notice);
+        if (saved.isGenerationCompleted()) {
+            requirementSyncService.syncFromNotice(saved);
+        }
+        return saved;
     }
 
     // ── 게이트② 검수 → 노출/비노출 ────────────────────────

@@ -234,13 +234,11 @@ public class BidFSMService {
 
     /**
      * 상태 전환 후 LLM 워크플로우 비동기 실행
-     * - REQUIREMENT_ANALYSIS 진입 → 요구사항 자동 추출
      * - DOCUMENT_DRAFTING 진입    → 문서 자동 생성
+     * 요구 항목은 공고 분석 저장 때 채우므로 분석 단계 진입에는 AI 작업이 없다 (CR-141, BIZ-045)
      */
     private void triggerAIWorkflow(BidRequest bidRequest, BidRequestState toState) {
         switch (toState) {
-            case ANALYZING ->
-                aiWorkflowService.extractRequirementsAsync(bidRequest);
             case GENERATING ->
                 aiWorkflowService.generateDocumentsAsync(bidRequest);
             default -> { /* 다른 상태는 AI 작업 없음 */ }

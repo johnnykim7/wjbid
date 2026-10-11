@@ -191,7 +191,6 @@ app:
       # 첨부 다건(14건) 공고는 build_workspace(parse_document 직렬)만으로 더 길어짐. 구 200*3초=10분은 빈번히 초과(ANALYZING 박힘).
       # 30분이면 최악(첨부 다건+에스컬레이션)도 완주 가능. Aimbase Phase1 시작값 수정으로 빨라지면 환경변수로 하향.
     workflows:
-      requirement-extraction: ${AIMBASE_WF_REQ_EXTRACTION:e96e63d1-7bf3-493c-9473-1bd87723073c}
       document-generation: ${AIMBASE_WF_DOC_GENERATION:014e7de2-251e-432d-95dd-16bddb28f18e}
       opportunity-analysis: ${AIMBASE_WF_OPP_ANALYSIS:placeholder-opp-analysis-workflow-id}
       type-pattern-extraction: ${AIMBASE_WF_TYPE_PATTERN:type-pattern-extraction}  # CR-013 재설계 (공고유형 단위)

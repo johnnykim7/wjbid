@@ -3,10 +3,12 @@ package com.biddingagency.domain.compliance.repository;
 import com.biddingagency.domain.compliance.entity.FulfillmentStatus;
 import com.biddingagency.domain.compliance.entity.RequirementFulfillmentMap;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -52,6 +54,21 @@ public interface RequirementFulfillmentMapRepository extends JpaRepository<Requi
             "AND ri.isBlocker = true " +
             "AND m.status = 'MISSING'")
     List<RequirementFulfillmentMap> findUnfulfilledBlockers(@Param("bidRequestId") UUID bidRequestId);
+
+    /**
+     * 공고 분석에서 사라진 요구 항목의 연결을 지운다 (CR-141, BIZ-045)
+     */
+    @Modifying
+    @Query("DELETE FROM RequirementFulfillmentMap m WHERE m.requirementItem.id IN :requirementItemIds")
+    int deleteByRequirementItemIds(@Param("requirementItemIds") Collection<UUID> requirementItemIds);
+
+    /**
+     * 여러 입찰 건의 연결과 이어진 서류를 한 번에 (CR-141 제출 전 검사 목록)
+     */
+    @Query("SELECT m FROM RequirementFulfillmentMap m LEFT JOIN FETCH m.clientDocument "
+            + "WHERE m.bidRequest.id IN :bidRequestIds")
+    List<RequirementFulfillmentMap> findWithClientDocumentByBidRequestIds(
+            @Param("bidRequestIds") Collection<UUID> bidRequestIds);
 
     /**
      * Delete all mappings for bid request

@@ -1,14 +1,13 @@
 package com.biddingagency.controller;
 
 import com.biddingagency.domain.compliance.dto.AutoFillResult;
-import com.biddingagency.domain.compliance.dto.RequiredDocumentSlot;
-import com.biddingagency.domain.compliance.dto.RequiredDocumentSlotsResponse;
-import com.biddingagency.domain.compliance.service.ComplianceService;
+import com.biddingagency.domain.compliance.service.PreCheckService;
+import com.biddingagency.dto.PreCheckFromVaultRequest;
+import com.biddingagency.dto.PreCheckResponses;
 import com.biddingagency.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -20,42 +19,46 @@ import java.util.UUID;
 /**
  * 요구사항 슬롯 (CR-010)
  *
- * 공고 BLOCKER 요구사항을 슬롯으로 펼쳐 고객 서류와 1:1 매핑.
- * DOCS_PENDING → DOCS_RECEIVED 전이의 사전 조건(BIZ-015).
+ * 슬롯은 공고 분석의 제출 서류에서 채운 요구 항목이다(CR-141, BIZ-045).
+ * 모든 동작은 그 입찰 건을 낸 회원만 한다(BIZ-049). 슬롯 목록은 GET /bid-requests/{id}/pre-check 가 대신한다.
  */
-@Slf4j
 @RestController
 @RequestMapping("/bid-requests/{bidRequestId}/required-document-slots")
 @RequiredArgsConstructor
-@Tag(name = "Required Document Slots", description = "공고 요구서류 슬롯 매칭 (CR-010)")
+@Tag(name = "Required Document Slots", description = "공고 요구서류 슬롯 매칭 (CR-010, CR-141)")
 public class RequiredDocumentSlotController {
 
-    private final ComplianceService complianceService;
-
-    @GetMapping
-    @Operation(summary = "요구사항 슬롯 목록")
-    public ResponseEntity<RequiredDocumentSlotsResponse> getSlots(@PathVariable UUID bidRequestId) {
-        return ResponseEntity.ok(complianceService.getRequiredDocumentSlots(bidRequestId));
-    }
+    private final PreCheckService preCheckService;
 
     @PostMapping(path = "/{requirementItemId}/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "슬롯에 직접 업로드")
-    public ResponseEntity<RequiredDocumentSlot> uploadToSlot(
+    public ResponseEntity<PreCheckResponses.ClientItem> uploadToSlot(
             @PathVariable UUID bidRequestId,
             @PathVariable UUID requirementItemId,
             @RequestParam("file") MultipartFile file,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
-        RequiredDocumentSlot slot = complianceService.uploadToSlot(
-                bidRequestId, requirementItemId, file, userDetails.getMember());
-        return ResponseEntity.ok(slot);
+        return ResponseEntity.ok(preCheckService.upload(
+                userDetails.getMember(), bidRequestId, requirementItemId, file));
+    }
+
+    @PostMapping("/{requirementItemId}/from-vault")
+    @Operation(summary = "공통 서류함 서류를 복사해 슬롯에 잇기 (CR-141)")
+    public ResponseEntity<PreCheckResponses.ClientItem> fromVault(
+            @PathVariable UUID bidRequestId,
+            @PathVariable UUID requirementItemId,
+            @RequestBody PreCheckFromVaultRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        return ResponseEntity.ok(preCheckService.fromVault(
+                userDetails.getMember(), bidRequestId, requirementItemId, request.memberDocumentId()));
     }
 
     @DeleteMapping("/{requirementItemId}")
     @Operation(summary = "슬롯 매핑 해제")
     public ResponseEntity<Void> unmapSlot(
             @PathVariable UUID bidRequestId,
-            @PathVariable UUID requirementItemId) {
-        complianceService.unmapSlot(bidRequestId, requirementItemId);
+            @PathVariable UUID requirementItemId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        preCheckService.unlink(userDetails.getMember().getId(), bidRequestId, requirementItemId);
         return ResponseEntity.noContent().build();
     }
 
@@ -64,7 +67,6 @@ public class RequiredDocumentSlotController {
     public ResponseEntity<AutoFillResult> autoFill(
             @PathVariable UUID bidRequestId,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
-        return ResponseEntity.ok(
-                complianceService.autoFillFromVault(bidRequestId, userDetails.getMember()));
+        return ResponseEntity.ok(preCheckService.autoFill(userDetails.getMember(), bidRequestId));
     }
 }

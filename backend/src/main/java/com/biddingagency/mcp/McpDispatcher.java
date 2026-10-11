@@ -18,7 +18,6 @@ import java.util.stream.Stream;
 public class McpDispatcher {
 
     private final OpportunityMcpTool opportunityMcpTool;
-    private final RequirementMcpTool requirementMcpTool;
     private final DocumentMcpTool documentMcpTool;
     private final DocumentTemplateMcpTool documentTemplateMcpTool;
     private final StateMcpTool stateMcpTool;
@@ -29,7 +28,6 @@ public class McpDispatcher {
     /** 전체 도구 정의 목록 */
     private static final List<Map<String, Object>> ALL_TOOLS = Stream.of(
         OpportunityMcpTool.TOOL_DEFINITIONS,
-        RequirementMcpTool.TOOL_DEFINITIONS,
         DocumentMcpTool.TOOL_DEFINITIONS,
         DocumentTemplateMcpTool.TOOL_DEFINITIONS,
         StateMcpTool.TOOL_DEFINITIONS,
@@ -110,7 +108,6 @@ public class McpDispatcher {
             case "get_opportunity"              -> opportunityMcpTool.getOpportunity(args);
             case "search_opportunities"         -> opportunityMcpTool.searchOpportunities(args);
             case "get_opportunity_requirements" -> opportunityMcpTool.getOpportunityRequirements(args);
-            case "save_requirements"            -> requirementMcpTool.saveRequirements(args);
             case "get_bid_request"              -> documentMcpTool.getBidRequest(args);
             case "save_document_version"        -> documentMcpTool.saveDocumentVersion(args);
             case "get_document_template"        -> documentTemplateMcpTool.getDocumentTemplate(args);

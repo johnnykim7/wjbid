@@ -86,7 +86,7 @@ export const MENU: MenuGroup[] = [
       { key: 'vault', label: '공통 서류함', to: '/documents' },
       { key: 'proposals', label: '공고별 서류', to: '/proposals' },
       { key: 'expiry-alert', label: '유효기간 알림', to: '/documents/expiry' },
-      { key: 'pre-check', label: '제출 전 검사' },
+      { key: 'pre-check', label: '제출 전 검사', to: '/documents/pre-check' },
     ],
   },
   {

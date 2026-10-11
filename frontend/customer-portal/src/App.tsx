@@ -29,6 +29,8 @@ import BillingPage from './pages/BillingPage'
 import DocumentsPage from './pages/DocumentsPage'
 import ComingSoonPage from './pages/ComingSoonPage'
 import DocumentExpiryPage from './pages/DocumentExpiryPage'
+import PreCheckPage from './pages/PreCheckPage'
+import PreCheckDetailPage from './pages/PreCheckDetailPage'
 import AwardeesPage from './pages/AwardeesPage'
 import BaseMapPage from './pages/BaseMapPage'
 import ServicePage from './pages/ServicePage'
@@ -109,6 +111,8 @@ function AppRoutes() {
         <Route path="/saved-searches" element={<SavedSearchesPage />} />
         <Route path="/documents" element={<DocumentsPage />} />
         <Route path="/documents/expiry" element={<DocumentExpiryPage />} />
+        <Route path="/documents/pre-check" element={<PreCheckPage />} />
+        <Route path="/documents/pre-check/:bidRequestId" element={<PreCheckDetailPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/billing" element={<BillingPage />} />
         <Route path="/profile" element={<ProfilePage />} />

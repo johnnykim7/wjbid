@@ -39,4 +39,8 @@ public class ClientDocument extends BaseEntity {
 
     @Column(name = "document_category", length = 100)
     private String documentCategory;
+
+    /** PDF 쪽수. 올릴 때 센다. PDF 가 아니거나 세지 못하면 비움 (CR-141, BIZ-048) */
+    @Column(name = "page_count")
+    private Integer pageCount;
 }

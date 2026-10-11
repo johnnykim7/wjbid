@@ -30,7 +30,6 @@ app:
   llm-platform:
     base-url: http://localhost:9999
     workflows:
-      requirement-extraction: test-extraction
       document-generation: test-generation
   ai:
     default-provider: openai

@@ -1,5 +1,6 @@
 import axios from 'axios'
 import type { EligibilityAnswerValue, EligibilityDetail, EligibilityNoticeRow, EligibilitySaved, VaultListResponse } from '../types'
+import type { PreCheckClientItem, PreCheckDetail, PreCheckRow } from '../types/preCheck'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
@@ -149,19 +150,27 @@ export const uploadClientDocument = (bidRequestId: string, file: File, category?
 export const deleteClientDocument = (bidRequestId: string, docId: string) =>
   api.delete(`/bid-requests/${bidRequestId}/client-documents/${docId}`)
 
-// Required Document Slots (CR-010: 공고 요구서류 슬롯 매칭)
-export const getRequiredDocumentSlots = (bidRequestId: string) =>
-  api.get(`/bid-requests/${bidRequestId}/required-document-slots`)
+// 제출 전 검사 (CR-141). 요구 서류 칸은 공고 분석의 제출 서류에서 채운 요구 항목이다
+export const getMyPreCheck = () => api.get<PreCheckRow[]>('/bid-requests/my/pre-check')
+
+export const getPreCheck = (bidRequestId: string) => api.get<PreCheckDetail>(`/bid-requests/${bidRequestId}/pre-check`)
 
 export const uploadToSlot = (bidRequestId: string, requirementItemId: string, file: File) => {
   const formData = new FormData()
   formData.append('file', file)
-  return api.post(
+  return api.post<PreCheckClientItem>(
     `/bid-requests/${bidRequestId}/required-document-slots/${requirementItemId}/upload`,
     formData,
     { headers: { 'Content-Type': 'multipart/form-data' } },
   )
 }
+
+// 공통 서류함 서류를 입찰 건 서류로 복사해 잇는다 (CR-141)
+export const slotFromVault = (bidRequestId: string, requirementItemId: string, memberDocumentId: string) =>
+  api.post<PreCheckClientItem>(
+    `/bid-requests/${bidRequestId}/required-document-slots/${requirementItemId}/from-vault`,
+    { memberDocumentId },
+  )
 
 export const unmapSlot = (bidRequestId: string, requirementItemId: string) =>
   api.delete(`/bid-requests/${bidRequestId}/required-document-slots/${requirementItemId}`)

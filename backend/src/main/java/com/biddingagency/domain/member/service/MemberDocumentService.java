@@ -136,6 +136,12 @@ public class MemberDocumentService {
         return repository.findFirstByMemberIdAndCategory(memberId, category).orElse(null);
     }
 
+    /** CR-141 제출 전 검사의 서류함에서 고르기. 자기 서류만, 아니면 404 (BIZ-049) */
+    @Transactional(readOnly = true)
+    public MemberDocument getOwned(UUID memberId, UUID docId) {
+        return findOwned(memberId, docId);
+    }
+
     // ── helpers ──────────────────────────────────────────────
 
     private MemberDocument findOwned(UUID memberId, UUID docId) {

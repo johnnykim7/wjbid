@@ -29,6 +29,12 @@ public interface BidRequestRepository extends JpaRepository<BidRequest, UUID> {
     Page<BidRequest> findByMemberId(@Param("memberId") UUID memberId, Pageable pageable);
 
     /**
+     * 회원의 입찰 건 전부, 공고와 함께 (CR-141 제출 전 검사 목록)
+     */
+    @Query("SELECT br FROM BidRequest br JOIN FETCH br.opportunity WHERE br.member.id = :memberId")
+    List<BidRequest> findAllByMemberIdWithOpportunity(@Param("memberId") UUID memberId);
+
+    /**
      * Find by member ID and state
      */
     Page<BidRequest> findByMemberIdAndState(UUID memberId, BidRequestState state, Pageable pageable);
