@@ -140,9 +140,9 @@
 
 | 메서드 | 경로 | 설명 | 인증 | 기능 ID |
 |--------|------|------|------|---------|
-| GET | /opportunities/collected | 모은 공고 목록, 게시일 최신순, 쪽. 거르기: `group`(PRE 사전, BID 입찰, AWARD 낙찰, OTHER 그 밖), `type`(SAM 공고 유형), `month`(게시 달 YYYY-MM), `sector`(업종 대분류, 예 23, 31-33, NONE), `openOnly`(답변 기한 남은 것만). 같은 거르기에서 유형별 건수를 함께 준다 | | BID-MKT-001, 005, 006 |
-| GET | /opportunities/amendments | 같은 공고번호로 두 번 이상 올라온 공고 묶음(낙찰 공지 제외), 마지막 게시일 최신순, 쪽. `openOnly`(마지막 판 마감 전만). 묶음마다 판 목록 | | BID-MKT-002 |
-| GET | /opportunities/sample | 설정 `NOTICE_SAMPLE_ID` 의 공개 공고문(공고 상세와 같은 응답). 없으면 204 | | BID-MKT-003 |
+| GET | /opportunities/collected | 모은 공고 목록, 게시일 최신순, 쪽. 거르기: `group`(PRE 사전, BID 입찰, AWARD 낙찰, OTHER 그 밖), `type`(SAM 공고 유형), `month`(게시 달 YYYY-MM), `sector`(업종 대분류, 예 23, 31-33, NONE), `openOnly`(답변 기한 남은 것만), `latestOnly`(같은 공고번호는 마지막 판 하나만, 업종별 최근 공고에 씀). 같은 거르기에서 유형별 건수를 함께 준다 | | BID-MKT-001, 005, 006 |
+| GET | /opportunities/amendments | 같은 공고번호로 두 번 이상 올라온 공고 묶음(낙찰 공지 제외), 마지막 게시일 최신순, 쪽. `openOnly`(마지막 판 마감 전만), `solicitationNumber`(그 공고번호 묶음만, 사전 공고의 "본 공고 나옴" 에서 씀). 묶음마다 판 목록. `openCount`(진행 중 묶음 수), `versionCount`(묶음에 든 판 수)를 함께 준다 | | BID-MKT-002 |
+| GET | /opportunities/sample | 설정 `NOTICE_SAMPLE_ID` 의 공개 공고문. 응답 `notice`(공고 상세와 같은 공고문), `originalTitle`(원문 제목), `samUrl`(SAM.gov 공개 주소), `firstPostedDate`(같은 공고번호의 첫 게시일, 낙찰 공지 제외). 없으면 204 | | BID-MKT-003 |
 | GET | /opportunities/awards | 낙찰 공지 목록, 쪽. `month`(공지 달), `sort`(LATEST 최신순, AMOUNT 금액순). 요약(건수, 금액 공개 건수, 합계, 최대)을 함께 준다 | | BID-MKT-004 |
 | GET | /opportunities/stats/monthly | 첫 게시 달부터 이번 달까지 달마다 묶음 유형별 건수(빈 달 0 포함), 자료 기간 | | BID-MKT-005 |
 | GET | /opportunities/stats/naics | 업종 대분류별 건수와 세부 코드별 건수, 업종 코드 없는 건수, 자료 기간 | | BID-MKT-006 |
@@ -163,8 +163,11 @@
 | samUrl | SAM.gov 원문 공개 주소. 주소 형식은 설정 `sam-gov.public-opportunity-url` |
 | hasMainNotice | (사전 공고만) 같은 공고번호로 입찰 공고가 올라왔는지 |
 | originalId | (낙찰 공지만) 같은 공고번호의 원래 공고 중 마지막 판 id(없으면 null) |
+| originalPublicNoticeId, originalSamUrl | (낙찰 공지만) 원래 공고의 공개 한글 공고문 id(없으면 null)와 SAM.gov 원문 공개 주소. 화면의 "원래 공고" 가 쓴다 |
 
 **자료 기간**: 응답마다 `dataFrom`, `dataTo`(대상 공고의 첫·마지막 게시일)와 `total` 을 준다.
+
+**순서**: 목록은 게시 시각 최신순이고, 같은 시각이면 DB 의 id 순(바이트 순)이다.
 
 **낙찰 요약**: `total`, `amountKnownCount`, `amountSum`, `amountMax`, `awardeeKnownCount`(업체 이름 있는 공지 수, CR-136 전에는 0). 화면은 `awardeeKnownCount` 가 0 이면 업체 이름을 모으지 않는다고 밝히고, 1 이상이면 업체 칸을 보인다(CR-136 과 계약, 10/11).
 

@@ -83,4 +83,11 @@ public interface NoticeRepository extends JpaRepository<Notice, UUID> {
             + "AND o.postedDate >= :since ORDER BY o.postedDate DESC")
     List<Notice> findVisibleRecentlyPosted(@Param("since") java.time.LocalDateTime since,
                                            @Param("visibility") OpportunityVisibility visibility);
+
+    /**
+     * CR-135: 노출 공고문의 (원본 id, 공고문 id). 한 원본에 노출 공고문이 여럿이면 뒤에 오는 것이 최근 분석본이다.
+     */
+    @Query("SELECT n.opportunity.id, n.id FROM Notice n WHERE n.visibility = :visibility "
+            + "ORDER BY n.analyzedAt ASC NULLS FIRST")
+    List<Object[]> findOpportunityAndNoticeIds(@Param("visibility") OpportunityVisibility visibility);
 }

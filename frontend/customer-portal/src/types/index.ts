@@ -31,9 +31,10 @@ export interface AnalysisSummary {
   scope?: string
   eligibility?: string
   evaluationCriteria?: string
-  keyDates?: { label: string; date: string; note?: string }[]
+  keyDates?: { label: string; date: string | null; note?: string | null }[]
   budgetInfo?: string
   specialNotes?: string[]
+  contractPeriod?: string
 }
 
 export interface AnalysisRequiredDocuments {

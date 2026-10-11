@@ -32,6 +32,12 @@ import AcademyClassPage from './pages/AcademyClassPage'
 import AcademyMaterialsPage from './pages/AcademyMaterialsPage'
 import AcademyGlossaryPage from './pages/AcademyGlossaryPage'
 import AcademyFormsPage from './pages/AcademyFormsPage'
+import PreSolicitationPage from './pages/PreSolicitationPage'
+import AmendmentsPage from './pages/AmendmentsPage'
+import NoticeSamplePage from './pages/NoticeSamplePage'
+import RecentAwardsPage from './pages/RecentAwardsPage'
+import MonthlyTrendPage from './pages/MonthlyTrendPage'
+import NaicsTrendPage from './pages/NaicsTrendPage'
 
 function ProtectedRoute() {
   const { isAuthenticated } = useAuth()
@@ -57,6 +63,13 @@ function AppRoutes() {
         <Route path="/academy/materials" element={<AcademyMaterialsPage />} />
         <Route path="/academy/glossary" element={<AcademyGlossaryPage />} />
         <Route path="/academy/forms" element={<AcademyFormsPage />} />
+        {/* 있는 데이터로 여는 메뉴 속 화면은 비로그인에게도 보인다(CR-135) */}
+        <Route path="/bids/pre-solicitation" element={<PreSolicitationPage />} />
+        <Route path="/bids/amendments" element={<AmendmentsPage />} />
+        <Route path="/bids/sample" element={<NoticeSamplePage />} />
+        <Route path="/awards/recent" element={<RecentAwardsPage />} />
+        <Route path="/analysis/monthly" element={<MonthlyTrendPage />} />
+        <Route path="/analysis/naics" element={<NaicsTrendPage />} />
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/guide" element={<GuidePage />} />
         <Route path="/notices" element={<NoticesPage />} />

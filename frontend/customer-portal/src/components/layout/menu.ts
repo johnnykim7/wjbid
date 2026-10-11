@@ -36,10 +36,10 @@ export const MENU: MenuGroup[] = [
     to: '/search',
     items: [
       { key: 'open', label: '마감 전 공고', to: '/search' },
-      { key: 'pre-solicitation', label: '사전 공고' },
-      { key: 'amendment', label: '변경 공고' },
+      { key: 'pre-solicitation', label: '사전 공고', to: '/bids/pre-solicitation' },
+      { key: 'amendment', label: '변경 공고', to: '/bids/amendments' },
       { key: 'bookmarks', label: '관심 공고', to: '/bookmarks' },
-      { key: 'notice-sample', label: '공고문 예시' },
+      { key: 'notice-sample', label: '공고문 예시', to: '/bids/sample' },
     ],
   },
   {
@@ -55,7 +55,7 @@ export const MENU: MenuGroup[] = [
     key: 'awards',
     label: '낙찰정보',
     items: [
-      { key: 'recent-awards', label: '최근 낙찰' },
+      { key: 'recent-awards', label: '최근 낙찰', to: '/awards/recent' },
       { key: 'awardees', label: '낙찰 업체' },
       { key: 'award-range', label: '낙찰가 범위' },
     ],
@@ -65,8 +65,8 @@ export const MENU: MenuGroup[] = [
     label: '발주분석',
     items: [
       { key: 'base-map', label: '기지별 지도' },
-      { key: 'monthly-trend', label: '월별 동향' },
-      { key: 'naics-trend', label: '업종별 발주' },
+      { key: 'monthly-trend', label: '월별 동향', to: '/analysis/monthly' },
+      { key: 'naics-trend', label: '업종별 발주', to: '/analysis/naics' },
     ],
   },
   {

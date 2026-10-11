@@ -63,9 +63,11 @@ public record AnalysisResultDto(
             List<KeyDateDto> dates = null;
             Object raw = map.get("keyDates");
             if (raw instanceof List<?> list) {
+                // 분석 결과의 일정은 {label,date,note} 객체로도, "질의 마감: 8월 10일" 같은 글줄로도 온다(CR-135)
                 dates = list.stream()
-                        .filter(e -> e instanceof Map)
-                        .map(e -> KeyDateDto.from((Map<String, Object>) e))
+                        .map(e -> e instanceof Map<?, ?> m ? KeyDateDto.from((Map<String, Object>) m)
+                                : e instanceof String line ? KeyDateDto.fromLine(line) : null)
+                        .filter(java.util.Objects::nonNull)
                         .toList();
             }
             List<String> notes = null;
@@ -100,6 +102,15 @@ public record AnalysisResultDto(
     public record KeyDateDto(String label, String date, String note) {
         public static KeyDateDto from(Map<String, Object> m) {
             return new KeyDateDto(str(m, "label"), str(m, "date"), str(m, "note"));
+        }
+
+        /** "항목: 일자" 글줄은 첫 ": " 에서 나눈다. 나눌 곳이 없으면 글줄 전체가 항목이다 */
+        public static KeyDateDto fromLine(String line) {
+            String text = line.trim();
+            if (text.isEmpty()) return null;
+            int at = text.indexOf(": ");
+            if (at <= 0) return new KeyDateDto(text, null, null);
+            return new KeyDateDto(text.substring(0, at).trim(), text.substring(at + 2).trim(), null);
         }
     }
 

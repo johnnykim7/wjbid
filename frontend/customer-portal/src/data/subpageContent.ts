@@ -373,21 +373,6 @@ export const COMING_SOON_GENERIC = {
 
 export const PENDING: PendingInfo[] = [
   {
-    key: 'pre-solicitation', tier: 'm', photo: PHOTO.meeting,
-    desc: ['본 공고보다 먼저 올라오는 사전 공고와 사전 수요 조사를 모아 한글로 보여 드립니다.', '본 공고가 나오기 전에 준비할 것을 미리 챙길 수 있습니다.'],
-    alts: [ALT.open, ALT.bookmarks, ALT.materials],
-  },
-  {
-    key: 'amendment', tier: 'm', photo: PHOTO.meeting,
-    desc: ['공고가 바뀌어 다시 올라오면 그 공고와 올라온 날짜들을 모아 보여 드립니다.', '마감일이나 제출 조건이 바뀐 것을 놓치지 않게 합니다.'],
-    alts: [ALT.bookmarks, ALT.open, ALT.forms],
-  },
-  {
-    key: 'notice-sample', tier: 'f', photo: PHOTO.meeting,
-    desc: ['마감된 미군 공고 한 건을 공고 상세와 같은 모양으로 처음부터 끝까지 한글로 보여 드립니다.', '공고문에 무엇이 들어 있는지 미리 볼 수 있습니다.'],
-    alts: [ALT.open, ALT.materials, ALT.glossary],
-  },
-  {
     key: 'next-month', tier: 'm', photo: PHOTO.meeting,
     desc: ['지난 계약이 끝나는 때를 보고, 다음 달 다시 나올 것으로 보이는 계약을', '그 근거와 함께 보여 드립니다.'],
     alts: [ALT.open, ALT.bookmarks, ALT.materials],
@@ -403,11 +388,6 @@ export const PENDING: PendingInfo[] = [
     alts: [ALT.open, ALT.bookmarks, ALT.profile],
   },
   {
-    key: 'recent-awards', photo: PHOTO.meeting,
-    desc: ['최근 낙찰 공지를 공고명, 공고번호, 금액, 공지일과 함께 모아 보여 드립니다.'],
-    alts: [ALT.open, ALT.materials, ALT.glossary],
-  },
-  {
     key: 'awardees', photo: PHOTO.meeting,
     desc: ['업체마다 미군 계약을 몇 건, 얼마에 따냈는지 모아 보여 드립니다.'],
     alts: [ALT.open, ALT.bookmarks, ALT.materials],
@@ -421,16 +401,6 @@ export const PENDING: PendingInfo[] = [
     key: 'base-map', tier: 'f', photo: PHOTO.hall,
     desc: ['기지마다 공고와 낙찰이 얼마나 나왔는지 지도에 보여 드립니다.'],
     alts: [ALT.open, ALT.bookmarks, ALT.materials],
-  },
-  {
-    key: 'monthly-trend', photo: PHOTO.hall,
-    desc: ['달마다 공고가 몇 건 나왔는지 공고 유형별로 나눠 보여 드립니다.'],
-    alts: [ALT.open, ALT.materials, ALT.glossary],
-  },
-  {
-    key: 'naics-trend', photo: PHOTO.hall,
-    desc: ['업종별로 공고가 얼마나 나왔는지와 최근 공고를 보여 드립니다.'],
-    alts: [ALT.open, ALT.profile, ALT.glossary],
   },
   {
     key: 'opportunity-fit', tier: 'm', photo: PHOTO.desk,

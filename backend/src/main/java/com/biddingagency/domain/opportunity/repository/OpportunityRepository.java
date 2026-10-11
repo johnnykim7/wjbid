@@ -1,5 +1,6 @@
 package com.biddingagency.domain.opportunity.repository;
 
+import com.biddingagency.domain.opportunity.dto.MarketSource;
 import com.biddingagency.domain.opportunity.entity.Opportunity;
 import com.biddingagency.domain.opportunity.entity.OpportunityVisibility;
 import org.springframework.data.domain.Page;
@@ -10,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -133,4 +135,17 @@ public interface OpportunityRepository extends JpaRepository<Opportunity, UUID> 
      */
     @Query("SELECT MAX(o.postedDate) FROM Opportunity o")
     Optional<LocalDateTime> findLatestPostedDate();
+
+    String MARKET_SOURCE_SELECT = "SELECT new com.biddingagency.domain.opportunity.dto.MarketSource("
+            + "o.id, o.noticeId, o.solicitationNumber, o.title, o.titleKo, o.type, o.typeKo, "
+            + "o.postedDate, o.responseDeadline, o.awardAmount, o.rawJson) "
+            + "FROM Opportunity o WHERE o.deletedAt IS NULL";
+
+    /** CR-135: 메뉴 속 화면이 읽는 모은 공고 전부(지운 것 제외), 목록과 집계에 쓰는 칸만 */
+    @Query(MARKET_SOURCE_SELECT)
+    List<MarketSource> findMarketSources();
+
+    /** CR-135: 공고번호들의 모은 공고(지운 것 제외). 목록 줄의 본 공고 나옴, 원래 공고를 채울 때 쓴다 */
+    @Query(MARKET_SOURCE_SELECT + " AND TRIM(o.solicitationNumber) IN :sols")
+    List<MarketSource> findMarketSourcesBySolicitationNumbers(@Param("sols") Collection<String> sols);
 }

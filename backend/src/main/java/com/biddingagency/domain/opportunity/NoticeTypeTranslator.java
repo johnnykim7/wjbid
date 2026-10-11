@@ -21,7 +21,9 @@ public final class NoticeTypeTranslator {
             "Combined Synopsis/Solicitation", "공고+입찰요청 통합",
             "Award Notice", "낙찰공지",
             "Sources Sought", "사전수요조사",
-            "Presolicitation", "사전공고"
+            "Presolicitation", "사전공고",
+            "Special Notice", "특별공고",
+            "Justification", "수의계약사유"
     );
 
     /**

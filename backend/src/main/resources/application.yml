@@ -142,6 +142,8 @@ app:
   sam-gov:
     api-url: https://api.sam.gov/opportunities/v2/search
     api-key: ${SAM_GOV_API_KEY:your-api-key-here}
+    # CR-135: 로그인 없이 열리는 SAM.gov 공고 원문 주소. {noticeId} 자리에 SAM 공고 ID 가 들어간다
+    public-opportunity-url: https://sam.gov/opp/{noticeId}/view
     # Collection Schedule: 4 times daily (06:00, 12:00, 18:00, 23:00 KST)
     collection-cron: "0 0 6,12,18,23 * * *"  # Spring @Scheduled cron expression
     # 스케줄 수집 on/off (SAM 일일 쿼터 보호). 환경변수 SAM_SCHEDULER_ENABLED로 제어. 수동 트리거는 영향 없음.
