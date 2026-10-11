@@ -1075,5 +1075,6 @@
 - **영향 모듈**: 배포
 - **영향 설계서**: 없음(앱 소스, API, 화면, 표 변경 없음)
 - **다른 곳**: 실행 설정(환경변수)을 더하는 CR(예: CR-144 의 MCP_API_KEY)은 이제 docker-compose.aws.yml 에도 넣어야 상용에 반영된다. 서버 compose 를 직접 고치면 다음 배포에 덮인다
+- **추가(사용자 10/12 00:25)**: 상용 앱에 CUSTOMER_PORTAL_URL 이 빠져 고객 메일 링크가 localhost 로 나갔다. 사용자가 서버 .env 에 https://woojinusbid.com 을 넣었고, 비밀값이 아니라 docker-compose.aws.yml 에도 넣는다
 - **규모**: 소(배포 스크립트와 설정 사본)
 - **상태**: 스크립트 커밋(5c6d5f4). 빌드 단계와 서버 compose 대조까지 확인, 실제 반영은 첫 배포 때 확인

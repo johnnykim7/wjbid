@@ -29,6 +29,8 @@ services:
       AIMBASE_URL: http://host.docker.internal:8280
       SELF_BASE_URL: http://host.docker.internal:8183/api
       APP_CORS_ALLOWED_ORIGINS: https://woojinusbid.com,http://woojinusbid.com
+      # 고객 메일 속 링크의 주소. 빠지면 기본값 localhost 로 나간다
+      CUSTOMER_PORTAL_URL: https://woojinusbid.com
       # CR-148: 위젯 토큰의 origin. 화면이 https 라 Aimbase widget.allowed-origins 와 함께 https 로 맞춘다.
       WIDGET_ALLOWED_ORIGIN: https://woojinusbid.com
       MANAGEMENT_HEALTH_MAIL_ENABLED: "false"
