@@ -1,6 +1,6 @@
 # SAM.gov Bidding Agency Platform API 설계
 
-> 설계 버전: 1.8 | 최종 수정: 2026-10-11 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137
+> 설계 버전: 1.9 | 최종 수정: 2026-10-11 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140
 
 > 단계: 3. Detail Design | 실행스펙 섹션 3에 포함
 >
@@ -226,13 +226,14 @@
 
 ---
 
-## E. 자격 진단 (적격성 진단), Sprint 3, CR-137 에서 고침
+## E. 자격 진단 (적격성 진단, 공고별 판정), Sprint 3, CR-137 에서 고침, CR-140 판정
 
 | 메서드 | 경로 | 설명 | 인증 | 기능 ID |
 |--------|------|------|------|---------|
-| GET | /eligibility/notices | 진단할 공고 목록. 공개이고 분석이 끝난 공고문 중 참가 자격이 1개 이상인 것. 마감 전(마감일 가까운 순) 다음 마감 지남(마감일 최근 순) | 🔒 | BID-QUAL-001 |
-| GET | /eligibility/notices/{noticeId} | 공고별 진단. 공고 머리, 자격 목록과 내 답, 개수 요약, 맞을 수 있는 서류함 서류 | 🔒 | BID-QUAL-001 |
-| PUT | /eligibility/notices/{noticeId}/answers/{itemNo} | 자격 하나의 답 저장(있으면 바꿈). 본문 `{ "answer": "HAVE" \| "LACK" \| "UNSURE" }` | 🔒 | BID-QUAL-001 |
+| GET | /eligibility/notices | 진단할 공고 목록. 공개이고 분석이 끝난 공고문 중 참가 자격이 1개 이상인 것. 마감 전(마감일 가까운 순) 다음 마감 지남(마감일 최근 순). CR-140: 줄마다 판정과 걸린 자격 | 🔒 | BID-QUAL-001, BID-MKT-015, BID-MKT-016, BID-MKT-019 |
+| GET | /eligibility/notices/{noticeId} | 공고별 진단. 공고 머리, 자격 목록과 내 답, 개수 요약, 맞을 수 있는 서류함 서류. CR-140: 판정과 걸린 자격, 자격마다 붙인 서류 | 🔒 | BID-QUAL-001, BID-MKT-017, BID-MKT-019 |
+| PUT | /eligibility/notices/{noticeId}/answers/{itemNo} | 자격 하나의 답 저장(있으면 바꿈). 본문 `{ "answer": "HAVE" \| "LACK" \| "UNSURE" }`. CR-140: 없음, 확인 필요로 바꾸거나 옛 답에 다시 답하면 붙인 서류를 푼다(BIZ-043) | 🔒 | BID-QUAL-001 |
+| PUT | /eligibility/notices/{noticeId}/answers/{itemNo}/document | 있음으로 답한 자격에 증빙 서류 붙이기와 떼기(CR-140). 본문 `{ "documentId": "<내 서류 id>" \| null }` | 🔒 | BID-MKT-018 |
 
 CR-137 전에 있던 `POST /opportunities/{id}/qualification-check`(AI 자격 사전 진단 요청)는 실제 진단 없이 접수됐다는 응답만 주던 것이라 지운다(BIZ-032).
 
@@ -245,17 +246,22 @@ CR-137 전에 있던 `POST /opportunities/{id}/qualification-check`(AI 자격 �
 | open | 마감 전이면 true |
 | itemCount | 참가 자격 수 |
 | answeredCount | 지금 자격 이름과 맞는 내 답 수(BIZ-033) |
+| gateCount | 통과 조건 자격 수(CR-140) |
+| verdict | 판정(CR-140, BIZ-040). ELIGIBLE 참여 가능, DOCS_MISSING 서류 부족, DIFFICULT 어려움, UNDECIDED 판정 전 |
+| blockers[] | 판정을 정한 자격(CR-140, BIZ-044). itemNo, title, sourceRef, problem, documentName, expiresOn. problem 은 LACK 없음, UNSURE 확인 필요, UNANSWERED 답 안 함, STALE 다시 답해야 함, NO_DOCUMENT 서류 없음, EXPIRED 서류 만료. 어려움은 LACK 만, 판정 전은 UNSURE, UNANSWERED, STALE 만, 서류 부족은 NO_DOCUMENT, EXPIRED 만 담는다. 참여 가능과 통과 조건 0개는 빈 배열. documentName, expiresOn 은 EXPIRED 일 때만 |
 
 **GET /eligibility/notices/{noticeId} 응답**:
 
 | 필드 | 설명 |
 |------|------|
 | notice | noticeId, solicitationNumber, koreanTitle, organizationName, responseDeadline, open |
-| items[] | itemNo, title, description, mandatory, gate(통과 조건), sourceRef(원문 위치), evidenceBy(증빙 서류 글), answer(HAVE, LACK, UNSURE, 답 안 함은 null), stale(옛 이름의 답이 있어 다시 답해야 하면 true), answeredAt(지금 답을 저장한 시각, 답이 없거나 stale 이면 null), vaultCategory(증빙 서류 글과 맞은 서류함 분류 코드, 없으면 null), vaultCategoryName(그 분류 이름), vaultDocuments[](그 분류에 올린 내 서류의 id, 이름, 올린 날) |
+| items[] | itemNo, title, description, mandatory, gate(통과 조건), sourceRef(원문 위치), evidenceBy(증빙 서류 글), answer(HAVE, LACK, UNSURE, 답 안 함은 null), stale(옛 이름의 답이 있어 다시 답해야 하면 true), answeredAt(지금 답을 저장한 시각, 답이 없거나 stale 이면 null), vaultCategory(증빙 서류 글과 맞은 서류함 분류 코드. CR-140 부터 증빙 서류 글이 맞지 않으면 자격 이름으로 맞춤. 없으면 null), vaultCategoryName(그 분류 이름), vaultDocuments[](그 분류에 올린 내 서류의 id, 이름, 올린 날), attachedDocument(CR-140. 붙인 서류의 id, name, expiresOn, expired. 붙인 서류가 없거나, 서류함에 없거나, 지금 답이 있음이 아니면 null) |
+| verdict, blockers[] | 목록 줄과 같다(CR-140) |
 | summary | gateCount(통과 조건 자격 수), have, lack, unsure, unanswered(통과 조건 자격 기준). allCount(전체 자격 수) |
 
 - 404 `ELIGIBILITY_NOTICE_NOT_FOUND`: 공고문이 없거나 숨김이거나 분석이 끝나지 않았거나 참가 자격이 0개일 때. 공고문 id 가 UUID 모양이 아니면 400. 비로그인 401.
-- PUT 400 `ELIGIBILITY_ANSWER_INVALID`: answer 가 셋 중 하나가 아닐 때. 400 `ELIGIBILITY_ITEM_INVALID`: itemNo 가 자격 목록 범위 밖일 때. 오류 본문은 `{ error, message }`. 저장 응답은 그 자격 한 줄(items[] 와 같은 모양)과 summary.
+- PUT 400 `ELIGIBILITY_ANSWER_INVALID`: answer 가 셋 중 하나가 아닐 때. 400 `ELIGIBILITY_ITEM_INVALID`: itemNo 가 자격 목록 범위 밖일 때. 오류 본문은 `{ error, message }`. 저장 응답은 그 자격 한 줄(items[] 와 같은 모양)과 summary, CR-140 부터 verdict, blockers[].
+- 서류 붙이기 PUT(CR-140): 400 `ELIGIBILITY_DOCUMENT_NOT_ALLOWED` 그 자격의 지금 답이 "있음" 이 아닐 때(답 없음, 옛 답 포함). 404 `ELIGIBILITY_DOCUMENT_NOT_FOUND` 서류가 없거나 남의 서류일 때. 그 밖은 답 저장과 같다. 응답은 답 저장 응답과 같은 모양이다. 고를 서류 목록은 `GET /member-documents`(N절)를 쓴다.
 
 ---
 
@@ -606,7 +612,7 @@ app.aimbase:
 | B-4. 기지 관리와 지난 낙찰 다시 받기 (Admin) | 6 | CR-136 |
 | N. 회사 공통 서류함 | 7 | CR-125, CR-136 |
 | D. 즐겨찾기 | 4 | 3 |
-| E. 자격 진단 | 3 | 3, CR-137 |
+| E. 자격 진단 | 4 | 3, CR-137, CR-140 |
 | F. 입찰 접수 | 7 | 4 |
 | G. 고객 문서 제출 | 3 | 4 |
 | H. 입찰 관리 (Admin) | 6 | 4 |
@@ -621,7 +627,7 @@ app.aimbase:
 | MCP Tools | 13 | 5, CR-003, CR-013 |
 | MCP SSE 엔드포인트 | 2 | CR-002 |
 | Aimbase 워크플로우 호출 | 2 | CR-002 |
-| **합계** | **REST 107 + MCP 13 + SSE 2 + Aimbase 2** | |
+| **합계** | **REST 108 + MCP 13 + SSE 2 + Aimbase 2** | |
 
 ---
 

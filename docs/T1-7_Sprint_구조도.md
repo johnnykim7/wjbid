@@ -1,6 +1,6 @@
 # SAM.gov Bidding Agency Platform Sprint 구조도
 
-> 설계 버전: 1.1 | 최종 수정: 2026-10-11 | 관련 CR: CR-137
+> 설계 버전: 1.2 | 최종 수정: 2026-10-11 | 관련 CR: CR-137, CR-140
 
 > 단계: 1. Requirements | 설계
 
@@ -54,6 +54,11 @@ flowchart LR
 | BID-BROWSE-003 | 필요 문서 목록 표시 | BID-BROWSE-002 | 카테고리별 분류, BLOCKER 표시, 체크리스트 형태 | FE | |
 | BID-QUAL-001 | 적격성 진단 (CR-137) | BID-BROWSE-002, BID-OPP-006 | 공고 참가 자격마다 회원 답 저장, 답별 개수 요약 표시 | BE+FE | |
 | BID-QUAL-002 | 필수 인증/서류 가이드 | Sprint 1 | 가이드 페이지 정적 콘텐츠 표시 | FE | |
+| BID-MKT-019 | 판정 계산과 근거 (CR-140) | BID-QUAL-001 | 판정 네 가지와 걸린 자격을 BIZ-040 순서로 냄 | BE | |
+| BID-MKT-018 | 증빙 서류 붙이기 (CR-140) | BID-QUAL-001, 서류함(CR-125) | 있음 답에 내 서류 붙이고 떼기, 남의 서류 거부 | BE+FE | |
+| BID-MKT-015 | 공고별 판정 (CR-140) | BID-MKT-019 | 판정별 개수와 거르기, 줄에서 공고별 진단으로 | FE | |
+| BID-MKT-016 | 공고 검색 판정 칸 (CR-140) | BID-MKT-019 | 공고 줄마다 판정 꼬리표, 판정할 수 없으면 "-" | FE | |
+| BID-MKT-017 | 공고 상세 판정 상자 (CR-140) | BID-MKT-019 | 판정과 걸린 자격 근거, 공고별 진단으로 | FE | |
 
 ### Sprint 4: 입찰 접수 + FSM
 

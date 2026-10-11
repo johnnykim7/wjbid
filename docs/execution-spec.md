@@ -1,6 +1,6 @@
 # 실행 지시서: SAM.gov Bidding Agency Platform
 
-> 설계 버전: 1.4 | 최종 수정: 2026-10-11 | 관련 CR: CR-003, CR-132, CR-133, CR-135, CR-136, CR-137
+> 설계 버전: 1.5 | 최종 수정: 2026-10-11 | 관련 CR: CR-003, CR-132, CR-133, CR-135, CR-136, CR-137, CR-140
 
 > **프로젝트:** bidding-agency-platform (미군 조달 입찰 AI 대행 서비스)
 > **프로젝트 유형:** 풀스택 (BE: Java 17 + Spring Boot 3.2 / FE: React 19 × 2)
@@ -210,7 +210,7 @@ SAM.gov에 올라오는 미군(USFK) 조달 입찰 공고를 자동 수집하고
 | 2 | `docs/T3-1_데이터_모델.md` | Opportunity, OpportunityRequirementItem, Bookmark |
 | 3 | `docs/T1-1_기능요구사항_명세서.md` | BID-BROWSE, BID-QUAL |
 | 4 | `docs/T3-2_API_설계.md` | C. 공고 열람, D. 즐겨찾기, E. 자격 진단 |
-| 5 | `docs/T3-5_단위테스트_명세.md` | TC-BROWSE, TC-BM, TC-QUAL(CR-137) |
+| 5 | `docs/T3-5_단위테스트_명세.md` | TC-BROWSE, TC-BM, TC-QUAL(CR-137, CR-140) |
 
 #### FE 참조
 
@@ -526,6 +526,7 @@ sequenceDiagram
 | Admin 기지 관리, 지난 낙찰 공지 다시 받기 (CR-136) | `GET/POST/PUT/DELETE /admin/bases`, `GET /admin/bases/unmatched`, `POST /admin/opportunities/award-backfill` | 다시 받기는 SAM 검색 1회 |
 | 요금 안내 | `GET /pricing` | CR-129. CR-133 에서 속페이지 틀 안 |
 | 적격성 진단, 공고별 진단 (CR-137) | `GET /eligibility/notices`, `GET /eligibility/notices/{noticeId}`, `PUT /eligibility/notices/{noticeId}/answers/{itemNo}` | 로그인. 자격은 공고문 분석 결과를 읽고, 답만 저장(BIZ-032, BIZ-033) |
+| 공고별 판정, 공고 검색 판정 칸, 공고 상세 판정 상자, 증빙 서류 붙이기 (CR-140) | `GET /eligibility/notices`, `GET /eligibility/notices/{noticeId}`, `PUT /eligibility/notices/{noticeId}/answers/{itemNo}/document`, `GET /member-documents` | 로그인. 판정은 답과 붙인 서류로만 조회 때 낸다(BIZ-040~044). 저장하지 않는다 |
 
 ### 8-4. 리뷰 체크리스트
 
