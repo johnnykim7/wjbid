@@ -1,6 +1,6 @@
 # SAM.gov Bidding Agency Platform API 설계
 
-> 설계 버전: 1.9 | 최종 수정: 2026-10-11 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143
+> 설계 버전: 1.9 | 최종 수정: 2026-10-11 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-144
 
 > 단계: 3. Detail Design | 실행스펙 섹션 3에 포함
 >
@@ -659,8 +659,24 @@ CR-137 전에 있던 `POST /opportunities/{id}/qualification-check`(AI 자격 �
 | POST | /mcp | JSON-RPC 2.0 (HTTP 전송) | 기존. 직접 호출용 |
 | GET | /mcp/sse | SSE 스트림 연결 | **CR-002 신규**. Aimbase 연결용 |
 | POST | /mcp/message?sessionId={id} | SSE 세션 메시지 수신 | **CR-002 신규**. SSE 응답 반환 |
+| GET | /mcp/opportunity-attachments/{id}/download | 공고 첨부 원본 내려받기 | CR-019. Aimbase download_file 용 |
+| GET | /mcp/rfp-files/{id}/download | 성공 제안서 원본 내려받기 | CR-013. Aimbase parse_document 용 |
 
 > SSE 전송: Aimbase가 `GET /mcp/sse`로 연결 → `endpoint` 이벤트로 메시지 URL 수신 → `POST /mcp/message`로 JSON-RPC 메시지 전송 → SSE `message` 이벤트로 응답 수신
+
+### 열쇠 확인 (CR-144, BIZ-061)
+
+| 경로 | 받는 조건 | 막을 때 |
+|------|----------|--------|
+| POST /mcp, GET /mcp/sse, POST /mcp/message | `X-API-Key` 머리글이 서버 열쇠와 같다 | 401, 본문 없음. 도구를 부르지 않는다 |
+| GET /mcp/opportunity-attachments/{id}/download, GET /mcp/rfp-files/{id}/download | 위 머리글, 또는 주소의 `exp`, `sig` 가 그 경로의 서명과 맞고 기한 안이다 | 401, 본문 없음 |
+
+- 서버 열쇠는 환경변수 `MCP_API_KEY`(설정 `app.mcp.api-key`)다. 비어 있으면 /mcp 요청을 모두 401 로 막고(열어 두지 않는다) 기동할 때 경고를 남긴다.
+- 서명 주소는 이 플랫폼이 만든다. `{SELF_BASE_URL}/mcp/opportunity-attachments/{id}/download?exp={만료 시각, 초}&sig={서명}` 꼴이다. 서명은 서버 열쇠로 만든 HMAC-SHA256(경로와 만료 시각)을 base64url 로 적은 것이다.
+- 기한은 설정 `app.mcp.download-url-ttl`(환경변수 `MCP_DOWNLOAD_URL_TTL`, 처음 값 1시간)이다. 이 플랫폼이 Aimbase 실행을 기다리는 한도(30분)보다 길게 둔다.
+- 서명 주소를 주는 곳은 공고 분석 워크플로우 입력의 `attachmentFiles[].downloadUrl` 과 `get_reference_samples` 의 `files[].downloadUrl` 이다.
+- Aimbase 등록 bidding-agency-mcp 의 config 에 `headers: {"X-API-Key": 열쇠}` 를 싣는다. Aimbase 가 등록 머리글을 SSE 연결, 메시지 보내기, Streamable 요청에 모두 싣는다(Aimbase 쪽 CR).
+- 401 은 보안 설정의 인증 실패처럼 상태만 준다. 막을 때 방법, 경로, 보낸 곳만 남기고 열쇠와 서명 값은 남기지 않는다.
 
 ### JSON-RPC 메서드
 
