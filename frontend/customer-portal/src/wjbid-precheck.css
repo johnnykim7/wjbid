@@ -2,6 +2,8 @@
    화면 정본(docs/기록/토론_WJbid홈페이지방향/자료/시안/AIDA_색상/속페이지_시안_4묶음_제출전검사.html)의 pc- 규칙을 색만 이름표로 바꿔 옮겼다.
    정본에만 있는 중간 색은 CR-137 처럼 이름표 두 개를 섞어 낸다. 공고 머리와 단계 띠는 wjbid-eligibility.css 의 eq- 규칙을 함께 쓴다. */
 
+/* 숫자 칸 머리글이 한 줄로 고정되면 공고명 칸이 좁아져 제목이 낱말마다 줄을 바꾼다. 정본처럼 머리글은 두 줄을 허용한다 */
+.wj .pc-tbl th.eq-c { white-space:normal; }
 .wj .pc-tbl .pc-n { font-weight:800; font-size:17px; }
 .wj .pc-tbl .pc-n small { font-weight:600; font-size:14px; color:var(--color-ink-sub); margin-left:2px; }
 .wj .pc-tbl .pc-z { color:var(--color-ink-mute); font-weight:600; }
