@@ -1,0 +1,49 @@
+/* 유효기간 알림과 날짜 고르기 칸 (CR-136).
+   화면 정본(docs/기록/토론_WJbid홈페이지방향/자료/시안/AIDA_색상/속페이지_시안_3묶음.html 의 expiry)의 규칙을 색만 이름표로 바꿔 옮겼다.
+   다른 메뉴 속 화면과 이름이 겹치지 않게 화면 뿌리 .exp 아래에만 건다. */
+
+.wj .exp .ph2 .rcv { flex:none; text-align:right; font-size:15px; color:var(--color-ink-sub); }
+.wj .exp .ph2 .rcv b { display:flex; align-items:center; gap:6px; justify-content:flex-end; margin-top:2px; font-size:16.5px; color:var(--color-ink); }
+.wj .exp .ph2 .rcv b svg { width:18px; height:18px; color:var(--color-brand); }
+
+.wj .exp .xsum { display:grid; grid-template-columns:repeat(3,1fr); background:white; border:1px solid var(--color-line); border-radius:14px; margin-bottom:28px; }
+.wj .exp .xsum > .wj-reset { display:block; padding:22px 26px; border-radius:13px; text-align:left; }
+.wj .exp .xsum > .wj-reset + .wj-reset { border-left:1px solid var(--color-line-soft); border-top-left-radius:0; border-bottom-left-radius:0; }
+.wj .exp .xsum > .wj-reset.on { background:var(--color-brand-softer); box-shadow:inset 0 0 0 2px var(--color-brand); }
+.wj .exp .xsum span { display:block; font-size:15px; color:var(--color-ink-sub); font-weight:600; }
+.wj .exp .xsum b { display:block; margin-top:4px; font-size:32px; font-weight:800; letter-spacing:-.03em; color:var(--color-ink); }
+.wj .exp .xsum b small { font-size:16px; font-weight:700; margin-left:2px; }
+.wj .exp .xsum b.r { color:var(--color-danger); }
+.wj .exp .xsum em { display:block; font-style:normal; font-size:14px; color:var(--color-ink-sub); margin-top:2px; }
+
+.wj .exp .h2 .all { margin-left:auto; font-size:15px; font-weight:700; color:var(--color-brand); }
+.wj .exp .nodate { margin:12px 0 0; padding:12px 16px; border-radius:8px; background:var(--color-surface); font-size:16px; color:var(--color-ink-sub); }
+.wj .exp .tbl td { vertical-align:middle; }
+.wj .exp .tbl th.c, .wj .exp .tbl td.c { text-align:center; white-space:nowrap; }
+.wj .exp .tbl .w-kind { width:150px; }
+.wj .exp .tbl .w-date { width:270px; }
+.wj .exp .tbl .w-left { width:120px; }
+.wj .exp .tbl .w-alert { width:130px; }
+.wj .exp .mute { color:var(--color-ink-mute); }
+
+.wj .dbtn { display:inline-flex; align-items:center; gap:8px; height:42px; padding:0 14px; border:1.5px solid var(--color-line-strong); border-radius:8px; background:white; font-size:16px; font-weight:600; white-space:nowrap; color:var(--color-ink); }
+.wj .dbtn svg { width:18px; height:18px; color:var(--color-ink-mute); }
+.wj .dbtn.add { color:var(--color-brand); border-style:dashed; border-color:var(--color-brand-line); font-weight:700; }
+.wj .dbtn.add svg { color:var(--color-brand); }
+.wj .dbtn.act { border-color:var(--color-brand); box-shadow:0 0 0 3px var(--color-brand-soft); }
+.wj .dbtn:disabled { opacity:.6; cursor:default; }
+.wj .exp .rmv { font-size:14.5px; font-weight:700; color:var(--color-ink-mute); margin-left:10px; }
+.wj .exp .ferr { margin:6px 0 0; font-size:14.5px; font-weight:600; color:var(--color-danger); }
+
+.wj .exp .dleft { display:inline-flex; align-items:center; height:30px; padding:0 10px; border-radius:6px; font-size:15px; font-weight:800; white-space:nowrap; }
+.wj .exp .dleft.x { background:var(--color-danger-soft); color:var(--color-danger); }
+.wj .exp .dleft.s { background:var(--color-warning-soft); color:var(--color-warning); }
+.wj .exp .dleft.o { background:var(--color-surface); color:var(--color-ink-sub); }
+.wj .exp .dleft.n { color:var(--color-ink-mute); font-weight:600; padding:0; }
+
+.wj .exp .wait { display:grid; place-items:center; padding:60px 0; }
+.wj .exp .retry { margin-top:22px; }
+
+/* 날짜 고르기 창은 문서 끝에 그려져 .wj 밖이다 */
+.wj-dpop { width:auto; padding:12px 12px 10px; border-radius:12px; box-shadow:0 12px 32px color-mix(in srgb, var(--color-ink) 16%, transparent); }
+.wj-dpop .ft { display:flex; justify-content:flex-end; gap:8px; margin-top:8px; }

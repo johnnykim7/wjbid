@@ -27,6 +27,9 @@ import SavedSearchesPage from './pages/SavedSearchesPage'
 import BillingPage from './pages/BillingPage'
 import DocumentsPage from './pages/DocumentsPage'
 import ComingSoonPage from './pages/ComingSoonPage'
+import DocumentExpiryPage from './pages/DocumentExpiryPage'
+import AwardeesPage from './pages/AwardeesPage'
+import BaseMapPage from './pages/BaseMapPage'
 import ServicePage from './pages/ServicePage'
 import AcademyClassPage from './pages/AcademyClassPage'
 import AcademyMaterialsPage from './pages/AcademyMaterialsPage'
@@ -68,8 +71,10 @@ function AppRoutes() {
         <Route path="/bids/amendments" element={<AmendmentsPage />} />
         <Route path="/bids/sample" element={<NoticeSamplePage />} />
         <Route path="/awards/recent" element={<RecentAwardsPage />} />
+        <Route path="/awards/awardees" element={<AwardeesPage />} />
         <Route path="/analysis/monthly" element={<MonthlyTrendPage />} />
         <Route path="/analysis/naics" element={<NaicsTrendPage />} />
+        <Route path="/analysis/base-map" element={<BaseMapPage />} />
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/guide" element={<GuidePage />} />
         <Route path="/notices" element={<NoticesPage />} />
@@ -100,6 +105,7 @@ function AppRoutes() {
         <Route path="/calendar" element={<CalendarPage />} />
         <Route path="/saved-searches" element={<SavedSearchesPage />} />
         <Route path="/documents" element={<DocumentsPage />} />
+        <Route path="/documents/expiry" element={<DocumentExpiryPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/billing" element={<BillingPage />} />
         <Route path="/profile" element={<ProfilePage />} />

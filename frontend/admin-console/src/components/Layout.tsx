@@ -10,6 +10,7 @@ const NAV = [
   { to: '/opportunities', icon: 'fa-solid fa-inbox', label: '원본 공고' },
   { to: '/notices', icon: 'fa-solid fa-bullhorn', label: '공고문 관리' },
   { to: '/collection', icon: 'fa-solid fa-satellite-dish', label: 'SAM.gov 수집' },
+  { to: '/bases', icon: 'fa-solid fa-location-dot', label: '기지 관리' },
   { to: '/templates', icon: 'fa-solid fa-file-lines', label: '문서 템플릿' },
   { to: '/rfp-samples', icon: 'fa-solid fa-trophy', label: '성공 제안서 패턴' },
   { to: '/inquiries', icon: 'fa-solid fa-headset', label: '1:1 문의' },

@@ -369,3 +369,58 @@ export const getAdminInquiry = (id: string) =>
 
 export const answerAdminInquiry = (id: string, answer: string) =>
   api.post<InquiryDetail>(`/admin/inquiries/${id}/answer`, { answer })
+
+// ── CR-136: 기지 관리와 지난 낙찰 공지 다시 받기 ──
+
+export interface AdminBase {
+  id: string
+  nameKo: string
+  nameEn: string
+  matchTerms: string[]
+  region: string | null
+  latitude: number | null
+  longitude: number | null
+  sortOrder: number
+  matchedCount: number
+}
+
+export interface BaseInput {
+  nameKo: string
+  nameEn: string
+  matchTerms: string[]
+  region: string | null
+  latitude: number | null
+  longitude: number | null
+  sortOrder: number | null
+}
+
+export interface UnmatchedRow {
+  id: string
+  noticeId: string
+  solicitationNumber: string | null
+  title: string
+  titleKo: string | null
+  postedDate: string | null
+}
+
+export interface AwardBackfillResult {
+  samCalls: number
+  fetched: number
+  filled: number
+  created: number
+  withoutAwardee: number
+}
+
+export const getAdminBases = () => api.get<AdminBase[]>('/admin/bases')
+
+export const createAdminBase = (body: BaseInput) => api.post<string>('/admin/bases', body)
+
+export const updateAdminBase = (id: string, body: BaseInput) => api.put(`/admin/bases/${id}`, body)
+
+export const deleteAdminBase = (id: string) => api.delete(`/admin/bases/${id}`)
+
+export const getUnmatchedOpportunities = () =>
+  api.get<{ count: number; rows: UnmatchedRow[] }>('/admin/bases/unmatched')
+
+export const runAwardBackfill = (postedFrom: string, postedTo: string) =>
+  api.post<AwardBackfillResult>('/admin/opportunities/award-backfill', { postedFrom, postedTo })

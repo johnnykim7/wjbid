@@ -1,0 +1,46 @@
+/* 낙찰 업체 (CR-136). 화면 정본(속페이지_시안_3묶음.html 의 awardees)의 규칙을 색만 이름표로 바꿔 옮겼다.
+   표 뼈대와 기준 줄, 정렬 단추는 메뉴 속 화면 2묶음(wjbid-market.css)을 그대로 쓰고, 여기엔 이 화면에만 있는 것만 둔다. */
+
+.wj .awd .tbar { margin-bottom:4px; }
+.wj .awd .gsch { flex:1; max-width:620px; }
+.wj .awd .gsch .in, .wj .awd .gsch .bigb { height:52px; }
+
+.wj .awd .otbl .w-rank { width:64px; }
+.wj .awd .otbl .w-cnt { width:100px; }
+.wj .awd .otbl .w-sum { width:190px; }
+.wj .awd .otbl .w-last { width:130px; }
+.wj .awd .otbl .w-tog { width:52px; }
+.wj .awd .otbl th.c, .wj .awd .otbl td.c { text-align:center; }
+.wj .awd .otbl td { vertical-align:middle; }
+.wj .awd .otbl th.cnt, .wj .awd .otbl td.cnt { text-align:right; white-space:nowrap; }
+
+.wj .awd .rk { display:inline-grid; place-items:center; width:30px; height:30px; border-radius:6px; background:var(--color-surface); font-weight:800; font-size:15px; color:var(--color-ink-sub); }
+.wj .awd .rk.t { background:var(--color-brand); color:white; }
+.wj .awd .co b { display:block; font-size:17px; font-weight:800; letter-spacing:-.01em; color:var(--color-ink); }
+.wj .awd .co small { display:block; margin-top:2px; font-size:13.5px; color:var(--color-ink-mute); font-family:var(--font-mono); }
+.wj .awd .num { font-weight:800; font-size:17px; margin-right:1px; }
+.wj .awd .otbl td.am { font-family:var(--font-mono); font-weight:600; letter-spacing:-.02em; }
+.wj .awd .otbl td.am small { display:block; margin-top:2px; font-family:var(--font-sans); font-size:13.5px; font-weight:600; color:var(--color-ink-mute); letter-spacing:0; }
+.wj .awd .otbl td.am.na { font-family:var(--font-sans); }
+
+.wj .awd .tog { text-align:center; }
+.wj .awd .tog .wj-reset { display:inline-grid; place-items:center; width:34px; height:34px; border-radius:8px; color:var(--color-ink-mute); }
+.wj .awd .tog svg { width:20px; height:20px; }
+.wj .awd .otbl tr.opn > td { background:var(--color-brand-softer); border-bottom-color:var(--color-brand-line); }
+.wj .awd .otbl tr.opn .co b, .wj .awd .otbl tr.opn .tog .wj-reset { color:var(--color-brand); }
+
+.wj .awd .otbl tr.sub2 > td { padding:0 0 0 62px; background:color-mix(in srgb, var(--color-brand-softer) 40%, white); }
+.wj .awd .sub2 table { width:100%; border-collapse:collapse; font-size:15.5px; }
+.wj .awd .sub2 td { padding:12px 16px; border-top:1px solid var(--color-line-soft); border-bottom:0; vertical-align:middle; }
+.wj .awd .sub2 tr:first-child td { border-top:0; }
+.wj .awd .sub2 td.dt { width:120px; white-space:nowrap; color:var(--color-ink-sub); }
+.wj .awd .sub2 .ttl b { display:block; font-weight:700; color:var(--color-ink); }
+.wj .awd .sub2 .ttl span { display:block; margin-top:1px; font-size:13.5px; color:var(--color-ink-mute); font-family:var(--font-mono); }
+.wj .awd .sub2 td.am { width:160px; font-size:15.5px; }
+.wj .awd .sub2 td.go { width:120px; text-align:right; }
+.wj .awd .sub2 a.ext { display:inline-flex; align-items:center; gap:3px; font-size:14.5px; font-weight:700; color:var(--color-brand); white-space:nowrap; }
+.wj .awd .sub2 a.ext svg { width:14px; height:14px; stroke-width:2.4; }
+
+.wj .awd .fn { margin:14px 0 0; font-size:15px; color:var(--color-ink-mute); }
+.wj .awd .retry { margin-top:22px; }
+.wj .awd .empty2 { border-bottom:0; }

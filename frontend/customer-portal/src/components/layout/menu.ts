@@ -56,7 +56,7 @@ export const MENU: MenuGroup[] = [
     label: '낙찰정보',
     items: [
       { key: 'recent-awards', label: '최근 낙찰', to: '/awards/recent' },
-      { key: 'awardees', label: '낙찰 업체' },
+      { key: 'awardees', label: '낙찰 업체', to: '/awards/awardees' },
       { key: 'award-range', label: '낙찰가 범위' },
     ],
   },
@@ -64,7 +64,7 @@ export const MENU: MenuGroup[] = [
     key: 'analysis',
     label: '발주분석',
     items: [
-      { key: 'base-map', label: '기지별 지도' },
+      { key: 'base-map', label: '기지별 지도', to: '/analysis/base-map' },
       { key: 'monthly-trend', label: '월별 동향', to: '/analysis/monthly' },
       { key: 'naics-trend', label: '업종별 발주', to: '/analysis/naics' },
     ],
@@ -85,7 +85,7 @@ export const MENU: MenuGroup[] = [
     items: [
       { key: 'vault', label: '공통 서류함', to: '/documents' },
       { key: 'proposals', label: '공고별 서류', to: '/proposals' },
-      { key: 'expiry-alert', label: '유효기간 알림' },
+      { key: 'expiry-alert', label: '유효기간 알림', to: '/documents/expiry' },
       { key: 'pre-check', label: '제출 전 검사' },
     ],
   },

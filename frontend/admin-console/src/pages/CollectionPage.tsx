@@ -1,11 +1,54 @@
 import { useState } from 'react'
-import { triggerCollection } from '../api/client'
+import { Button } from '@therecommerce-develop/ds-ui'
+import { runAwardBackfill, triggerCollection, type AwardBackfillResult } from '../api/client'
+import DateField from '../components/DateField'
+
+const BACKFILL_TEXT = {
+  title: '지난 낙찰 공지 다시 받기',
+  desc: '기간 안 낙찰 공지를 SAM.gov 에서 다시 받아 업체 이름, UEI, 금액을 채웁니다. 없는 공지는 새로 넣습니다.',
+  from: '공지일 시작',
+  to: '공지일 끝',
+  pick: '날짜 고르기',
+  limit: '기간은 1년 안. 수집 키워드마다 SAM 검색 1회(1000건이 넘으면 더)를 씁니다.',
+  confirm: (from: string, to: string) => `${from} ~ ${to} 낙찰 공지를 다시 받습니다. SAM 검색 1회를 씁니다(1000건이 넘으면 더). 실행할까요?`,
+  run: '실행',
+  running: '받는 중',
+  needDates: '시작과 끝 날짜를 고르세요.',
+  fail: '다시 받지 못했습니다.',
+  result: ['SAM 호출', '받은 낙찰 공지', '업체 채운 행', '새로 넣은 행', '업체 이름 없는 행'],
+}
 
 export default function CollectionPage() {
   const [daysBack, setDaysBack] = useState(30)
   const [triggering, setTriggering] = useState(false)
   const [result, setResult] = useState<{ status: string; message: string; note?: string } | null>(null)
   const [error, setError] = useState('')
+
+  const [backfillFrom, setBackfillFrom] = useState<string | null>(null)
+  const [backfillTo, setBackfillTo] = useState<string | null>(null)
+  const [backfilling, setBackfilling] = useState(false)
+  const [backfillResult, setBackfillResult] = useState<AwardBackfillResult | null>(null)
+  const [backfillError, setBackfillError] = useState('')
+
+  const handleBackfill = async () => {
+    if (!backfillFrom || !backfillTo) {
+      setBackfillError(BACKFILL_TEXT.needDates)
+      return
+    }
+    if (!confirm(BACKFILL_TEXT.confirm(backfillFrom, backfillTo))) return
+    setBackfilling(true)
+    setBackfillResult(null)
+    setBackfillError('')
+    try {
+      const { data } = await runAwardBackfill(backfillFrom, backfillTo)
+      setBackfillResult(data)
+    } catch (e) {
+      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message
+      setBackfillError(msg ?? BACKFILL_TEXT.fail)
+    } finally {
+      setBackfilling(false)
+    }
+  }
 
   const handleTrigger = async () => {
     if (!confirm(`최근 ${daysBack}일치 SAM.gov 공고를 수집하시겠습니까?`)) return
@@ -94,6 +137,49 @@ export default function CollectionPage() {
           {error}
         </div>
       )}
+
+      {/* CR-136: 지난 낙찰 공지 다시 받기 */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6 max-w-lg space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
+            <i className="fa-solid fa-trophy text-blue-600" />
+          </div>
+          <div>
+            <h2 className="text-sm font-semibold text-gray-900">{BACKFILL_TEXT.title}</h2>
+            <p className="text-xs text-gray-500">{BACKFILL_TEXT.desc}</p>
+          </div>
+        </div>
+        <div className="flex items-end gap-3 flex-wrap">
+          <div className="space-y-1">
+            <div className="text-sm font-medium text-gray-700">{BACKFILL_TEXT.from}</div>
+            <DateField value={backfillFrom} onChange={setBackfillFrom} placeholder={BACKFILL_TEXT.pick} label={BACKFILL_TEXT.from} disabled={backfilling} />
+          </div>
+          <div className="space-y-1">
+            <div className="text-sm font-medium text-gray-700">{BACKFILL_TEXT.to}</div>
+            <DateField value={backfillTo} onChange={setBackfillTo} placeholder={BACKFILL_TEXT.pick} label={BACKFILL_TEXT.to} disabled={backfilling} />
+          </div>
+          <Button variant="primary" onClick={handleBackfill} disabled={backfilling}>
+            {backfilling
+              ? <><i className="fa-solid fa-circle-notch fa-spin" /> {BACKFILL_TEXT.running}</>
+              : <><i className="fa-solid fa-play" /> {BACKFILL_TEXT.run}</>}
+          </Button>
+        </div>
+        <p className="text-xs text-gray-400">{BACKFILL_TEXT.limit}</p>
+        {backfillResult && (
+          <dl className="grid grid-cols-5 gap-2 bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-center">
+            {[backfillResult.samCalls, backfillResult.fetched, backfillResult.filled, backfillResult.created, backfillResult.withoutAwardee]
+              .map((v, i) => (
+                <div key={BACKFILL_TEXT.result[i]}>
+                  <dt className="text-[11px] text-emerald-700">{BACKFILL_TEXT.result[i]}</dt>
+                  <dd className="text-lg font-bold text-emerald-800">{v}</dd>
+                </div>
+              ))}
+          </dl>
+        )}
+        {backfillError && (
+          <p className="text-sm text-red-600"><i className="fa-solid fa-triangle-exclamation mr-2" />{backfillError}</p>
+        )}
+      </div>
 
       {/* 안내 */}
       <div className="max-w-lg bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-1.5">

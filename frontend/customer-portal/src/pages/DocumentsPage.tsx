@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Button } from '@therecommerce-develop/ds-ui'
 import {
   Dialog,
@@ -16,6 +17,11 @@ import {
   uploadMemberDocument,
   deleteMemberDocument,
 } from '../api/client'
+import { DatePick } from '../components/expiry/DatePick'
+import { daysLeftKst } from '../utils/kstDate'
+import { EXPIRY_TEXT, VAULT_EXPIRY_TEXT as XT } from '../data/expiryContent'
+
+const EXPIRY_PATH = '/documents/expiry'
 
 // ── CR-125: 회사 공통 서류함 (member 종속, BE 실연동) ──────────────
 interface MemberDocumentDto {
@@ -29,6 +35,8 @@ interface MemberDocumentDto {
   storageUrl: string
   displayName?: string
   description?: string
+  /** CR-136: YYYY-MM-DD */
+  expiresOn?: string
   createdAt: string
 }
 
@@ -41,6 +49,25 @@ interface FixedSlot {
 interface VaultResponse {
   fixedSlots: FixedSlot[]
   others: MemberDocumentDto[]
+}
+
+/** 만료일 한 줄 (CR-136). 남은 날은 한국 날짜 기준 */
+function ExpiryLine({ doc, withLink }: { doc: MemberDocumentDto; withLink?: boolean }) {
+  if (!doc.expiresOn) {
+    return (
+      <p className="text-[11px] text-ink-mute">
+        {XT.none}
+        {withLink && <> · <Link to={EXPIRY_PATH} className="text-brand font-medium">{XT.setOnExpiryPage}</Link></>}
+      </p>
+    )
+  }
+  const left = daysLeftKst(doc.expiresOn)
+  const label = left < 0 ? EXPIRY_TEXT.expired : left === 0 ? EXPIRY_TEXT.today : EXPIRY_TEXT.dday(left)
+  return (
+    <p className="text-[11px] text-ink-mute">
+      {XT.label} {doc.expiresOn} · <span className={left < 0 ? 'text-danger font-bold' : 'font-medium text-ink-sub'}>{label}</span>
+    </p>
+  )
 }
 
 function formatSize(bytes: number): string {
@@ -64,6 +91,7 @@ export default function DocumentsPage() {
   const [otherTitle, setOtherTitle] = useState('')
   const [otherDesc, setOtherDesc] = useState('')
   const [otherFile, setOtherFile] = useState<File | null>(null)
+  const [otherExpiry, setOtherExpiry] = useState<string | null>(null)
   const [otherSubmitting, setOtherSubmitting] = useState(false)
 
   const load = async () => {
@@ -134,11 +162,13 @@ export default function DocumentsPage() {
     }
     setOtherSubmitting(true)
     try {
-      await uploadMemberDocument(otherFile, 'OTHER', otherTitle.trim(), otherDesc.trim() || undefined)
+      await uploadMemberDocument(otherFile, 'OTHER', otherTitle.trim(), otherDesc.trim() || undefined,
+        otherExpiry ?? undefined)
       setOtherOpen(false)
       setOtherTitle('')
       setOtherDesc('')
       setOtherFile(null)
+      setOtherExpiry(null)
       await load()
     } catch {
       setError('등록에 실패했습니다.')
@@ -149,11 +179,16 @@ export default function DocumentsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="mb-6">
-        <h2 className="text-xl font-bold text-ink">서류함</h2>
-        <p className="text-sm text-ink-mute mt-1">
-          사업자등록증·회사소개서 등 공통 서류를 한 번 등록해 두면 제안서 작성 시 자동으로 채워집니다.
-        </p>
+      <div className="mb-6 flex items-end justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold text-ink">서류함</h2>
+          <p className="text-sm text-ink-mute mt-1">
+            사업자등록증·회사소개서 등 공통 서류를 한 번 등록해 두면 제안서 작성 시 자동으로 채워집니다.
+          </p>
+        </div>
+        <Button variant="outline" size="sm" asChild>
+          <Link to={EXPIRY_PATH}><i className="fa-regular fa-calendar mr-1.5" />{XT.shortcut}</Link>
+        </Button>
       </div>
 
       {error && (
@@ -229,6 +264,7 @@ export default function DocumentsPage() {
                           <p className="text-[11px] text-ink-mute">
                             {formatSize(doc!.fileSize)} · {doc!.createdAt?.slice(0, 10)}
                           </p>
+                          <ExpiryLine doc={doc!} withLink />
                         </div>
                       </div>
                     ) : (
@@ -291,6 +327,7 @@ export default function DocumentsPage() {
                     {doc.fileName} · {formatSize(doc.fileSize)}
                     {doc.description ? ` · ${doc.description}` : ''}
                   </p>
+                  <ExpiryLine doc={doc} />
                 </div>
                 <Button
                   variant="ghost"
@@ -345,6 +382,16 @@ export default function DocumentsPage() {
                   {otherFile.name} · {formatSize(otherFile.size)}
                 </p>
               )}
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-ink-sub mb-1">{XT.field}</label>
+              <div className="flex items-center gap-2">
+                <DatePick plain value={otherExpiry} onSave={setOtherExpiry} label={XT.field} />
+                {otherExpiry && (
+                  <Button variant="ghost" size="sm" onClick={() => setOtherExpiry(null)}>{XT.clear}</Button>
+                )}
+              </div>
+              <p className="mt-1 text-[11px] text-ink-mute">{XT.fieldHint}</p>
             </div>
             <div>
               <label className="block text-xs font-medium text-ink-sub mb-1">설명</label>

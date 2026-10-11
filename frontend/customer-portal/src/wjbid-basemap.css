@@ -1,0 +1,51 @@
+/* 기지별 지도 (CR-136). 화면 정본(속페이지_시안_3묶음.html 의 basemap)의 규칙을 색만 이름표로 바꿔 옮겼다.
+   표 뼈대와 기준 줄은 메뉴 속 화면 2묶음(wjbid-market.css)을 그대로 쓰고, 여기엔 이 화면에만 있는 것만 둔다. */
+
+.wj .bmp-empty { border-bottom:0; }
+.wj .bmp-empty .bmp-go { margin-top:22px; }
+
+.wj .bmp .mapw { display:grid; grid-template-columns:400px minmax(0,1fr); gap:20px; align-items:start; }
+.wj .bmp .mapw .cbx + .cbx { margin-top:0; }
+.wj .bmp .bmap { padding:18px 10px 10px; }
+.wj .bmp .bmap h3, .wj .bmp .btbl h3 { margin:0 0 4px 12px; font-size:18px; font-weight:800; letter-spacing:-.03em; color:var(--color-ink); }
+.wj .bmp .bmap .lg { display:flex; flex-wrap:wrap; gap:14px; margin:0 0 0 12px; font-size:13.5px; color:var(--color-ink-sub); }
+.wj .bmp .bmap .lg i { display:inline-block; width:10px; height:10px; border-radius:50%; background:var(--color-brand); opacity:.75; margin-right:5px; vertical-align:-1px; }
+.wj .bmp .bmap .lg i.b { width:18px; height:18px; vertical-align:-4px; }
+
+.wj .bmp .kmap { display:block; width:100%; max-width:380px; height:auto; margin:6px auto 0; }
+.wj .bmp .kmap .sea { fill:var(--color-surface); }
+.wj .bmp .kmap .land { fill:color-mix(in srgb, var(--color-brand-soft) 55%, var(--color-line-soft)); stroke:var(--color-line-strong); stroke-width:1.2; stroke-linejoin:round; }
+.wj .bmp .kmap .dmz { fill:none; stroke:var(--color-ink-mute); stroke-width:1.4; stroke-dasharray:4 4; }
+.wj .bmp .kmap .dot { fill:var(--color-brand); fill-opacity:.55; stroke:white; stroke-width:1.5; cursor:pointer; }
+.wj .bmp .kmap .dot:hover, .wj .bmp .kmap .dot:focus-visible { fill-opacity:.8; outline:none; }
+.wj .bmp .kmap .dot.on { fill-opacity:.9; stroke:var(--color-brand-deep); stroke-width:2.5; }
+.wj .bmp .kmap .lbl { font-size:12.5px; font-weight:700; fill:var(--color-ink-sub); paint-order:stroke; stroke:var(--color-surface); stroke-width:4px; pointer-events:none; }
+.wj .bmp .kmap .lbl.on { font-size:14px; font-weight:800; fill:var(--color-brand-deep); }
+
+.wj .bmp .btbl { padding:22px 20px 14px; }
+.wj .bmp .btbl h3 { margin-left:0; }
+.wj .bmp .btbl .otbl { margin-top:10px; }
+.wj .bmp .btbl .otbl th { padding:10px; font-size:14.5px; }
+.wj .bmp .btbl .otbl td { padding:11px 10px; vertical-align:middle; }
+.wj .bmp .btbl .w-reg { width:72px; }
+.wj .bmp .btbl .w-n { width:56px; }
+.wj .bmp .btbl .w-open { width:72px; }
+.wj .bmp .otbl th.r, .wj .bmp .otbl td.r { text-align:right; white-space:nowrap; }
+.wj .bmp .btbl .pick { display:inline; padding:0; font-size:16.5px; font-weight:800; color:var(--color-ink); text-align:left; }
+.wj .bmp .btbl .eng { display:block; margin-top:1px; font-size:13.5px; color:var(--color-ink-mute); }
+.wj .bmp .btbl .nopos { margin-left:6px; padding:1px 5px; border:1px solid var(--color-line); border-radius:4px; font-size:12px; font-weight:700; color:var(--color-ink-mute); vertical-align:2px; white-space:nowrap; }
+.wj .bmp .btbl tr.on > td { background:var(--color-brand-soft); }
+.wj .bmp .btbl tr.on .pick { color:var(--color-brand); }
+.wj .bmp .num { font-weight:800; font-size:17px; }
+.wj .bmp .num.z { color:var(--color-ink-mute); font-weight:600; }
+
+.wj .bmp .sech { margin-top:20px; }
+.wj .bmp .sech .w-type { width:150px; }
+.wj .bmp .sech .w-posted { width:120px; }
+.wj .bmp .sech .w-dl { width:140px; }
+.wj .bmp .sech .w-go { width:44px; }
+.wj .bmp .sech .none { margin:16px 0 0; padding:28px 0; text-align:center; font-size:16.5px; color:var(--color-ink-sub); }
+
+@media (max-width: 960px) {
+  .wj .bmp .mapw { grid-template-columns:minmax(0,1fr); }
+}

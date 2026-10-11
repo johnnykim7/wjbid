@@ -178,12 +178,14 @@ export const uploadMemberDocument = (
   category: string,
   displayName?: string,
   description?: string,
+  expiresOn?: string,
 ) => {
   const formData = new FormData()
   formData.append('file', file)
   formData.append('category', category)
   if (displayName) formData.append('displayName', displayName)
   if (description) formData.append('description', description)
+  if (expiresOn) formData.append('expiresOn', expiresOn)
   return api.post('/member-documents', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   })
@@ -191,12 +193,14 @@ export const uploadMemberDocument = (
 
 export const replaceMemberDocument = (
   id: string,
-  opts: { file?: File; displayName?: string; description?: string },
+  opts: { file?: File; displayName?: string; description?: string; expiresOn?: string | null },
 ) => {
   const formData = new FormData()
   if (opts.file) formData.append('file', opts.file)
   if (opts.displayName) formData.append('displayName', opts.displayName)
   if (opts.description !== undefined) formData.append('description', opts.description)
+  // CR-136: 칸을 안 보내면 만료일 그대로, 빈 값이면 지움
+  if (opts.expiresOn !== undefined) formData.append('expiresOn', opts.expiresOn ?? '')
   return api.put(`/member-documents/${id}`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   })
@@ -204,6 +208,12 @@ export const replaceMemberDocument = (
 
 export const deleteMemberDocument = (id: string) =>
   api.delete(`/member-documents/${id}`)
+
+// CR-136: 서류 만료일과 유효기간 알림
+export const getDocumentExpiry = () => api.get('/member-documents/expiry')
+
+export const changeDocumentExpiry = (id: string, expiresOn: string | null) =>
+  api.patch(`/member-documents/${id}/expiry`, { expiresOn })
 
 // Notifications (CR-006: 고객 인앱 알림)
 export const getNotifications = (page = 0, size = 20) =>
