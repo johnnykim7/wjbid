@@ -29,10 +29,10 @@ export const inquiryHref = (type: InquiryType, title: string, content?: string) 
 export const consultTitle = (name: string) => `${name} 상담 신청`
 
 const PHOTO = {
-  desk: '/img/army_71dae7c5.jpg',
-  piee: '/img/army_17a23e72.jpg',
-  meeting: '/img/army_5decc7b0.jpg',
-  hall: '/img/army_d68e5213.jpg',
+  desk: '/img/biz-handshake.jpg',
+  piee: '/img/biz-laptop.jpg',
+  meeting: '/img/biz-meeting.jpg',
+  hall: '/img/biz-seminar.jpg',
 }
 export const ACADEMY_PHOTO = PHOTO.hall
 
