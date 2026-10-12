@@ -32,7 +32,7 @@
 - **응답 래퍼**: `ApiResponse<T>` — `{ success, data, message }`
 - **페이징**: `Page<T>` — `{ content[], totalElements, totalPages, number, size }`
 - **에러**: `{ success: false, message, errorCode }`
-- **회원 전용 (CR-157)**: 인증 칸 `🔒 회원` 은 회원(BIZ-072)과 관리자만 부른다. 회원이 아니면(로그인하지 않은 경우 포함) 403 `{ "error": "MEMBERSHIP_REQUIRED", "message": "회원 전용입니다" }` (BIZ-071)
+- **회원 전용 (CR-157)**: 인증 칸 `🔒 회원` 은 회원(BIZ-072)과 관리자만 부른다. 로그인한 무료회원은 403 `{ "error": "MEMBERSHIP_REQUIRED", "message": "회원 전용입니다" }`. 로그인하지 않았거나 토큰이 끝났으면 401 `{ "error": "LOGIN_REQUIRED", "message": "로그인이 필요합니다" }` 이고, 화면은 이것을 받고 토큰을 새로 받는다 (BIZ-071)
 
 ---
 
