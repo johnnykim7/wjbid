@@ -295,7 +295,8 @@ public class NotificationEventListener {
         String noticeId = opp.getNoticeId() != null ? opp.getNoticeId() : "-";
         String deadline = opp.getResponseDeadline() != null
                 ? opp.getResponseDeadline().format(DATE_FMT) : "미정";
-        String detailUrl = customerPortalUrl + "/search/" + opp.getId();
+        // CR-158: /search/{id} 는 공고문 번호를 받는다. 모은 공고 번호로는 원본 공고 상세를 연다(회원은 거기서 공고문으로 간다)
+        String detailUrl = customerPortalUrl + "/search/origin/" + opp.getId();
 
         List<Member> customers = memberRepository.findByRole(Member.Role.CUSTOMER);
         for (Member customer : customers) {
