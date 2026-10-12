@@ -1,6 +1,6 @@
 # SAM.gov Bidding Agency Platform API 설계
 
-> 설계 버전: 1.15 | 최종 수정: 2026-10-12 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-144, CR-146, CR-147, CR-152, CR-153
+> 설계 버전: 1.16 | 최종 수정: 2026-10-12 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-144, CR-146, CR-147, CR-152, CR-153, CR-155
 
 > 단계: 3. Detail Design | 실행스펙 섹션 3에 포함
 >
@@ -162,25 +162,25 @@
 
 | 메서드 | 경로 | 설명 | 인증 | 기능 ID |
 |--------|------|------|------|---------|
-| GET | /opportunities | 공고 목록 조회 (필터/검색/페이징). **사용자: visibility=VISIBLE만** (CR-003) | | BID-BROWSE-001 |
-| GET | /opportunities/{id} | 공고 상세 조회 (사전 분석 결과 포함 — CR-003). 응답 `responseDeadline` 은 날짜만, `responseDeadlineAt` 은 서울 시각 표시가 붙은 마감 시각(CR-138). `samUrl` 은 SAM.gov 원문 공개 주소(`uiLink` 는 SAM 로그인이 필요한 작업공간 주소라 화면 단추는 `samUrl` 을 쓴다, CR-152) | | BID-BROWSE-002 |
-| GET | /opportunities/origin/{opportunityId} | 원본 공고 상세 (CR-152). 모은 원본 공고 하나(지운 것 제외)를 공고 상세와 같은 꼴로 준다. `id` 는 원본 공고 id, `title` 은 한글 제목(없으면 원문 제목), `description` 은 모아 둔 원문 본문(없으면 null), `analysis` 는 없다. 더하는 값: `originalTitle`(원문 제목), `publicNoticeId`(같은 공고의 공개 한글 공고문 id, 없으면 null. 있으면 화면이 공고문 상세로 넘긴다), `samUrl`(SAM.gov 원문 공개 주소). 없는 id 는 404 | | BID-BROWSE-002 |
+| GET | /opportunities | 공고 목록 조회 (필터/검색/페이징). **사용자: visibility=VISIBLE만** (CR-003). 고객 화면은 더 쓰지 않고(CR-155, 마감 전 공고는 C-2 의 collected), 관리자 콘솔이 공개 공고문 수를 셀 때 쓴다 | | BID-BROWSE-001 |
+| GET | /opportunities/{id} | 공고 상세 조회 (사전 분석 결과 포함 — CR-003). 응답 `responseDeadline` 은 날짜만, `responseDeadlineAt` 은 서울 시각 표시가 붙은 마감 시각(CR-138). `samUrl` 은 SAM.gov 원문 공개 주소(`uiLink` 는 SAM 로그인이 필요한 작업공간 주소라 화면 단추는 `samUrl` 을 쓴다, CR-152). `opportunityId` 는 이 공고문이 만들어진 모은 공고 id 이고 관심 공고 저장에 쓴다(CR-155) | | BID-BROWSE-002, 004 |
+| GET | /opportunities/origin/{opportunityId} | 원본 공고 상세 (CR-152). 모은 원본 공고 하나(지운 것 제외)를 공고 상세와 같은 꼴로 준다. `id` 는 원본 공고 id, `title` 은 한글 제목(없으면 원문 제목), `description` 은 모아 둔 원문 본문(없으면 null), `analysis` 는 없다. 더하는 값: `originalTitle`(원문 제목), `publicNoticeId`(같은 공고의 공개 한글 공고문 id, 없으면 null. 있으면 화면이 공고문 상세로 넘긴다), `samUrl`(SAM.gov 원문 공개 주소), `descriptionKo`(원문 본문을 한글로 옮긴 것, 없으면 null, CR-155). 없는 id 는 404 | | BID-BROWSE-002 |
 | GET | /opportunities/{id}/requirements | 공고 요구사항 목록 (카테고리별) | | BID-BROWSE-003 |
 | GET | /opportunities/{id}/attachments | 공고 첨부문서 목록 | | BID-OPP-003 |
-| GET | /opportunities/search | 키워드 검색 | | BID-BROWSE-001 |
+| ~~GET~~ | ~~/opportunities/search~~ | ~~키워드 검색~~ (CR-155 폐기. 마감 전 공고 검색은 C-2 의 collected `q`) | | BID-BROWSE-001 |
 | GET | /opportunities/search/organization | 기관명 검색 | | BID-BROWSE-001 |
-| GET | /opportunities/near-deadline | 마감 임박 공고 | | BID-BROWSE-001 |
+| ~~GET~~ | ~~/opportunities/near-deadline~~ | ~~마감 임박 공고~~ (CR-155 폐기. 첫 화면 마감 임박은 C-2 의 collected `sort=DEADLINE`, `dueWithinDays`) | | BID-BROWSE-001 |
 | GET | /opportunities/recent | 최근 등록 공고 | | BID-BROWSE-001 |
 
 ---
 
 ## C-2. 모은 공고 목록과 집계 (CR-135)
 
-메뉴 속 화면 2묶음(사전 공고, 변경 공고, 공고문 예시, 최근 낙찰, 월별 동향, 업종별 발주)이 쓴다. C 의 공개 공고문 조회와 달리 **모은 원본 공고 전부**(지운 것 제외)를 읽는다. 모두 로그인 없이 부른다(GET /opportunities/** 공개). 읽기만 한다.
+메뉴 속 화면 2묶음(사전 공고, 변경 공고, 공고문 예시, 최근 낙찰, 월별 동향, 업종별 발주)이 쓴다. CR-155 부터 고객 마감 전 공고 화면(`/search`)과 첫 화면 마감 전 공고 목록도 collected 를 쓴다. C 의 공개 공고문 조회와 달리 **모은 원본 공고 전부**(지운 것 제외)를 읽는다. 모두 로그인 없이 부른다(GET /opportunities/** 공개). 읽기만 한다.
 
 | 메서드 | 경로 | 설명 | 인증 | 기능 ID |
 |--------|------|------|------|---------|
-| GET | /opportunities/collected | 모은 공고 목록, 게시일 최신순, 쪽. 거르기: `group`(PRE 사전, BID 입찰, AWARD 낙찰, OTHER 그 밖), `type`(SAM 공고 유형), `month`(게시 달 YYYY-MM), `sector`(업종 대분류, 예 23, 31-33, NONE), `openOnly`(답변 기한 남은 것만), `latestOnly`(같은 공고번호는 마지막 판 하나만, 업종별 최근 공고에 씀). 같은 거르기에서 유형별 건수를 함께 준다 | | BID-MKT-001, 005, 006 |
+| GET | /opportunities/collected | 모은 공고 목록, 게시일 최신순, 쪽. 거르기: `group`(PRE 사전, BID 입찰, AWARD 낙찰, OTHER 그 밖), `type`(SAM 공고 유형), `month`(게시 달 YYYY-MM), `sector`(업종 대분류, 예 23, 31-33, NONE), `openOnly`(답변 기한 남은 것만), `latestOnly`(같은 공고번호는 마지막 판 하나만, 업종별 최근 공고에 씀). 같은 거르기에서 유형별 건수를 함께 준다. CR-155 에서 더한 것: `q`(검색어. 한글 제목, 원문 제목, 공고번호에 대소문자 없이 들어 있는 것), `sort`(LATEST 게시일 최신순이 기본, DEADLINE 마감이 가까운 순이고 마감이 같으면 게시일 최신순), `dueWithinDays`(마감이 지금부터 N일 안인 것만, 1 이상). `openOnly` 는 낙찰 공지를 늘 뺀다(BIZ-069). 마감 전 공고 화면과 첫 화면은 `openOnly=true&latestOnly=true` 로 부른다 | | BID-MKT-001, 005, 006, BID-BROWSE-001, 005 |
 | GET | /opportunities/amendments | 같은 공고번호로 두 번 이상 올라온 공고 묶음(낙찰 공지 제외), 마지막 게시일 최신순, 쪽. `openOnly`(마지막 판 마감 전만), `solicitationNumber`(그 공고번호 묶음만, 사전 공고의 "본 공고 나옴" 에서 씀). 묶음마다 판 목록. `openCount`(진행 중 묶음 수), `versionCount`(묶음에 든 판 수)를 함께 준다 | | BID-MKT-002 |
 | GET | /opportunities/sample | 설정 `NOTICE_SAMPLE_ID` 의 공개 공고문. 응답 `notice`(공고 상세와 같은 공고문), `originalTitle`(원문 제목), `samUrl`(SAM.gov 공개 주소), `firstPostedDate`(같은 공고번호의 첫 게시일, 낙찰 공지 제외). 없으면 204 | | BID-MKT-003 |
 | GET | /opportunities/awards | 낙찰 공지 목록, 쪽. `month`(공지 달), `sort`(LATEST 최신순, AMOUNT 금액순). 요약(건수, 금액 공개 건수, 합계, 최대)을 함께 준다 | | BID-MKT-004 |
@@ -195,6 +195,9 @@
 | noticeId | SAM 공고 ID |
 | solicitationNumber | 공고번호 |
 | title, titleKo | 원문 제목, 한글 제목(없으면 null) |
+| agencyName | 발주처(모은 공고의 기관 이름, 없으면 null) (CR-155) |
+| naicsCode | 업종 코드(원본 JSON 의 naicsCode, 없으면 null) (CR-155) |
+| placeOfPerformance | 이행 장소. 짧은 이름이 있으면 그것, 없으면 원본 JSON 의 이행 장소, 둘 다 없으면 null (CR-155) |
 | type, typeKo, group | SAM 공고 유형, 한글 유형 이름, 묶음 유형 |
 | postedDate, responseDeadline | 게시일, 답변 기한(없으면 null) |
 | awardAmount | 낙찰 금액 표시 문자열(낙찰 공지만, 없으면 null) |
@@ -207,7 +210,7 @@
 
 **자료 기간**: 응답마다 `dataFrom`, `dataTo`(대상 공고의 첫·마지막 게시일)와 `total` 을 준다.
 
-**순서**: 목록은 게시 시각 최신순이고, 같은 시각이면 DB 의 id 순(바이트 순)이다.
+**순서**: 목록은 게시 시각 최신순이고, 같은 시각이면 DB 의 id 순(바이트 순)이다. collected 의 `sort=DEADLINE` 은 마감 시각이 이른 순이고, 마감이 같으면 게시 시각 최신순, 그다음 id 순이다(CR-155).
 
 **낙찰 요약**: `total`, `amountKnownCount`, `amountSum`, `amountMax`, `awardeeKnownCount`(업체 이름 있는 공지 수, CR-136 전에는 0). 화면은 `awardeeKnownCount` 가 0 이면 업체 이름을 모으지 않는다고 밝히고, 1 이상이면 업체 칸을 보인다(CR-136 과 계약, 10/11).
 
@@ -801,7 +804,7 @@ app.aimbase:
 |------|-------------|--------|
 | A. 인증 | 5 | 1 |
 | B. 공고 수집 (Admin) | 3 | 2 |
-| C. 공고 열람 | 8 | 3 |
+| C. 공고 열람 | ~~8~~ 7 | 3, CR-152(origin 더함), CR-155(search, near-deadline 폐기) |
 | C-2. 모은 공고 목록과 집계 | 6 | CR-135 |
 | C-3. 낙찰 업체와 기지별 집계 | 3 | CR-136 |
 | C-4. 미 연방 계약 자료 | 2 | CR-142, CR-147(recompete 둘 폐기) |

@@ -1,6 +1,6 @@
 # 실행 지시서: SAM.gov Bidding Agency Platform
 
-> 설계 버전: 1.9 | 최종 수정: 2026-10-12 | 관련 CR: CR-003, CR-132, CR-133, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-146, CR-147, CR-153
+> 설계 버전: 1.10 | 최종 수정: 2026-10-12 | 관련 CR: CR-003, CR-132, CR-133, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-146, CR-147, CR-153, CR-155
 
 > **프로젝트:** bidding-agency-platform (미군 조달 입찰 AI 대행 서비스)
 > **프로젝트 유형:** 풀스택 (BE: Java 17 + Spring Boot 3.2 / FE: React 19 × 2)
@@ -512,15 +512,16 @@ sequenceDiagram
 
 | 화면 | 주요 API | 비고 |
 |------|---------|------|
-| 홈 | `GET /site-photos` | 문구는 정적 콘텐츠. 사진 자리 넷은 사진 목록에서 방문마다 한 장(CR-153) |
+| 홈 | `GET /site-photos`, `GET /opportunities/collected` | 문구는 정적 콘텐츠. 사진 자리 넷은 사진 목록에서 방문마다 한 장(CR-153). 마감 전 공고 목록과 건수는 모은 공고에서 `openOnly`, `latestOnly`, `sort`, `dueWithinDays` 로(CR-155) |
 | 회원가입 | `POST /auth/email-codes`, `/auth/email-codes/verify`, `/auth/register` | 이메일 인증번호 확인을 마친 주소만 가입 (BIZ-062, CR-146) |
 | SNS 가입·로그인 | `GET /auth/sns/providers`, `/oauth2/authorization/{provider}`, `/auth/sns/signup/{ticket}`, `POST /auth/sns/register`, `/auth/sns/login` | 네이버, 카카오(구글 보류). 키가 있는 곳만 (CR-146) |
-| 공고 검색 | `GET /opportunities`, `/search`, `/near-deadline` | 필터, 페이징. CR-147: 화면 이름 마감 전 공고, 속페이지 틀, 숫자 칸은 검색어와 상관없는 마감 전 공고 전체 건수, 빈 상태 두 가지 |
-| 공고 상세 | `GET /opportunities/{id}`, `/requirements`, `/attachments` | |
+| 공고 검색 | ~~`GET /opportunities`, `/search`, `/near-deadline`~~ `GET /opportunities/collected` (CR-155) | 필터, 페이징. CR-155: 모은 공고 중 마감 전인 것 전부(BIZ-069), 검색어 `q`, 줄을 누르면 공고문 상세 또는 원본 공고 상세. CR-147: 화면 이름 마감 전 공고, 속페이지 틀, 숫자 칸은 검색어와 상관없는 마감 전 공고 전체 건수, 빈 상태 두 가지 |
+| 공고 상세 | `GET /opportunities/{id}`, `/requirements`, `/attachments` | 관심 공고는 응답의 `opportunityId` 로(CR-155) |
+| 원본 공고 상세 | `GET /opportunities/origin/{opportunityId}` | 한글 본문(`descriptionKo`) 먼저, 원문 본문은 접어 둔다(CR-152, CR-155) |
 | 입찰 신청 | `POST /bid-requests` | 서비스 레벨 선택 |
 | 내 입찰 현황 | `GET /bid-requests/my`, `/{id}`, `/{id}/history` | 자기 입찰 건만, 남의 건 404 (BIZ-060) |
 | 문서 업로드 | `POST /bid-requests/{id}/client-documents` | multipart, 자기 입찰 건만 (BIZ-060) |
-| 즐겨찾기 | `GET/POST/DELETE /bookmarks/{id}` | |
+| 즐겨찾기 | `GET/POST/DELETE /bookmarks/{id}` | 번호는 모은 공고 번호. 줄을 누르면 원본 공고 상세 주소로(CR-155) |
 | Admin 대시보드 | `GET /admin/bid-requests/stats` | |
 | Admin 입찰 관리 | `GET/POST /admin/bid-requests/*` | FSM 전이 |
 | Admin 문서 편집 | `GET/POST /bid-documents/{id}/*` | TipTap + 잠금 |
