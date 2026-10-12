@@ -50,10 +50,11 @@ export function useNow() {
 /** 줄을 누르면 갈 화면 주소 */
 export type GoTarget = string
 
-/** 공개 공고문이 있으면 공고 상세, 없으면 원본 공고 상세 (CR-152). SAM.gov 원문은 상세 화면의 단추로 연다 */
+/** 모은 공고는 원본 공고 상세, 모은 공고 번호가 없으면 공고 상세 (CR-152, CR-157). SAM.gov 원문은 상세 화면의 단추로 연다 */
 export function targetOf(publicNoticeId: string | null, opportunityId: string | null): GoTarget | null {
-  if (publicNoticeId) return `/search/${publicNoticeId}`
+  // 원본 공고 상세부터 연다. 회원은 거기서 공고문 상세로 가고 무료회원은 원본에 머문다(CR-157)
   if (opportunityId) return `/search/origin/${opportunityId}`
+  if (publicNoticeId) return `/search/${publicNoticeId}`
   return null
 }
 

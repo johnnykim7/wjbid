@@ -47,6 +47,26 @@ export const getOpportunityCount = () =>
 export const getMembers = (page = 0) =>
   api.get('/admin/members', { params: { page, size: 20 } })
 
+/** 회원 기간 한 줄 (CR-157). current 는 오늘을 품은 기간 */
+export interface MembershipLine {
+  id: string
+  startsOn: string
+  endsOn: string
+  memo: string | null
+  createdByEmail: string | null
+  createdAt: string
+  current: boolean
+}
+
+export const getMemberships = (memberId: string) =>
+  api.get<MembershipLine[]>(`/admin/members/${memberId}/memberships`)
+
+export const grantMembership = (memberId: string, body: { startsOn: string; endsOn: string; memo: string }) =>
+  api.post<MembershipLine>(`/admin/members/${memberId}/memberships`, body)
+
+export const deleteMembership = (memberId: string, membershipId: string) =>
+  api.delete(`/admin/members/${memberId}/memberships/${membershipId}`)
+
 // Bid Requests (admin)
 export const getAdminBidRequests = (state?: string, page = 0) =>
   api.get('/admin/bid-requests', { params: { state, page, size: 20 } })
