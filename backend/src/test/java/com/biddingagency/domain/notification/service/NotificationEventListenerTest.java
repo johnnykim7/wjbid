@@ -355,8 +355,8 @@ class NotificationEventListenerTest {
     }
 
     @Test
-    @DisplayName("상태전이AWARDED_고객에게합격알림_CR018")
-    void onBidRequestStateChanged_AWARDED_합격알림() {
+    @DisplayName("상태전이AWARDED_고객에게낙찰알림_CR018")
+    void onBidRequestStateChanged_AWARDED_낙찰알림() {
         // given
         UUID bidRequestId = UUID.randomUUID();
         given(bidRequestRepository.findByIdWithDetails(bidRequestId))
@@ -371,7 +371,7 @@ class NotificationEventListenerTest {
         then(notificationService).should().sendNotification(
                 eq(NotificationType.BID_AWARDED_CUSTOMER),
                 eq("customer@test.com"), any(),
-                contains("합격"),
+                contains("낙찰"),
                 any(),
                 eq(bidRequestId), eq("BidRequest"),
                 eq("BR_STATE_" + bidRequestId + "_AWARDED")

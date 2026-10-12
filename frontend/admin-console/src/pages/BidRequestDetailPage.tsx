@@ -7,20 +7,7 @@ import {
   transitionBidRequest,
   regenerateBidDocument,
 } from '../api/client'
-
-const STATE_LABELS: Record<string, string> = {
-  CREATED: '신청 접수',
-  DOCS_PENDING: '문서 대기',
-  DOCS_RECEIVED: '문서 접수',
-  ANALYZING: '분석 중',
-  GENERATING: '문서 생성',
-  REVIEW: '관리자 검토',
-  CONFIRMED: '확정',
-  SUBMITTED: '제출 완료',
-  AWARDED: '합격',
-  NOT_AWARDED: '불합격',
-  CLOSED: '종료',
-}
+import { STATE_LABELS } from '../utils/bidState'
 
 const STATE_COLORS: Record<string, string> = {
   CREATED: 'bg-gray-100 text-gray-600',

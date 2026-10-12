@@ -98,7 +98,7 @@ public class BidFSMService {
                 BidRequestState.REVIEW  // 수정 필요
         ));
 
-        // CR-018: 제출 후 입찰 결과 — 관리자가 합격/불합격 수동 업데이트
+        // CR-018: 제출 후 입찰 결과 — 관리자가 낙찰/탈락 수동 업데이트
         VALID_TRANSITIONS.put(BidRequestState.SUBMITTED, List.of(
                 BidRequestState.AWARDED,
                 BidRequestState.NOT_AWARDED

@@ -285,7 +285,7 @@ class BidFSMServiceTest {
 
         // when
         BidRequest result = fsmService.transition(
-                bidRequestId, BidRequestState.AWARDED, UUID.randomUUID(), "admin", "합격");
+                bidRequestId, BidRequestState.AWARDED, UUID.randomUUID(), "admin", "낙찰");
 
         // then
         assertThat(result.getState()).isEqualTo(BidRequestState.AWARDED);
@@ -307,7 +307,7 @@ class BidFSMServiceTest {
 
         // when
         BidRequest result = fsmService.transition(
-                bidRequestId, BidRequestState.NOT_AWARDED, UUID.randomUUID(), "admin", "불합격");
+                bidRequestId, BidRequestState.NOT_AWARDED, UUID.randomUUID(), "admin", "탈락");
 
         // then
         assertThat(result.getState()).isEqualTo(BidRequestState.NOT_AWARDED);
