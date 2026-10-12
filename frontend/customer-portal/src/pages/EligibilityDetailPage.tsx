@@ -11,6 +11,8 @@ import { EvidenceRow } from '../components/verdict/EvidenceRow'
 import { VerdictTag, VerdictWhy } from '../components/verdict/VerdictTag'
 import { LoadingSpinner } from '../components/ui/loading-spinner'
 import { useAuth } from '../context/AuthContext'
+import { MemberOnlyBox } from '../components/membership/MemberOnlyBox'
+import { MEMBERSHIP_TEXT } from '../data/membershipContent'
 import { ANSWER_OPTIONS, ELIGIBILITY_DETAIL_TEXT, ELIGIBILITY_PATH, ELIGIBILITY_TEXT, expertHref } from '../data/eligibilityContent'
 import { EVIDENCE_TEXT } from '../data/verdictContent'
 import type { EligibilityAnswerValue, EligibilityDetail, EligibilityItem, EligibilitySaved } from '../types'
@@ -32,7 +34,7 @@ type Load = { status: 'loading' } | { status: 'notFound' } | { status: 'error' }
 export default function EligibilityDetailPage() {
   const { noticeId } = useParams()
   const { pathname } = useLocation()
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, membership } = useAuth()
   const [load, setLoad] = useState<Load>({ status: 'loading' })
   const [saving, setSaving] = useState<Record<number, boolean>>({})
   const [failed, setFailed] = useState<Record<number, boolean>>({})
@@ -51,8 +53,9 @@ export default function EligibilityDetailPage() {
   }, [noticeId])
 
   useEffect(() => {
-    if (isAuthenticated) fetchDetail()
-  }, [isAuthenticated, fetchDetail])
+    // 진단은 회원만 쓴다(CR-157)
+    if (isAuthenticated && membership === 'member') fetchDetail()
+  }, [isAuthenticated, membership, fetchDetail])
   const retry = () => {
     setLoad({ status: 'loading' })
     fetchDetail()
@@ -61,6 +64,11 @@ export default function EligibilityDetailPage() {
   if (!isAuthenticated) return <Navigate to="/login" replace state={{ from: pathname }} />
   if (!PLACE) return <Navigate to="/" replace />
   const { group, item } = PLACE
+  if (membership === 'free') return (
+    <SubPageFrame group={group} item={item}>
+      <MemberOnlyBox title={MEMBERSHIP_TEXT.eligibility.title} desc={MEMBERSHIP_TEXT.eligibility.desc} />
+    </SubPageFrame>
+  )
 
   const putItem = (next: EligibilityItem, saved?: EligibilitySaved) =>
     setLoad((prev) => prev.status !== 'ok' ? prev : {

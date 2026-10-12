@@ -1,6 +1,6 @@
 # SAM.gov Bidding Agency Platform API 설계
 
-> 설계 버전: 1.16 | 최종 수정: 2026-10-12 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-144, CR-146, CR-147, CR-152, CR-153, CR-155
+> 설계 버전: 1.17 | 최종 수정: 2026-10-12 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-144, CR-146, CR-147, CR-152, CR-153, CR-155, CR-157
 
 > 단계: 3. Detail Design | 실행스펙 섹션 3에 포함
 >
@@ -32,6 +32,7 @@
 - **응답 래퍼**: `ApiResponse<T>` — `{ success, data, message }`
 - **페이징**: `Page<T>` — `{ content[], totalElements, totalPages, number, size }`
 - **에러**: `{ success: false, message, errorCode }`
+- **회원 전용 (CR-157)**: 인증 칸 `🔒 회원` 은 회원(BIZ-072)과 관리자만 부른다. 로그인한 무료회원은 403 `{ "error": "MEMBERSHIP_REQUIRED", "message": "회원 전용입니다" }`. 로그인하지 않았거나 토큰이 끝났으면 401 `{ "error": "LOGIN_REQUIRED", "message": "로그인이 필요합니다" }` 이고, 화면은 이것을 받고 토큰을 새로 받는다 (BIZ-071)
 
 ---
 
@@ -50,7 +51,7 @@
 | POST | /auth/sns/login | LOGIN 표 `{ticket}` 를 Access, Refresh 토큰으로 바꾼다. 한 번만. 쓴 표, 시간 지난 표 410 `SNS_TICKET_EXPIRED` (CR-146, POL-038) | | BID-AUTH-007 |
 | GET | /auth/sns/signup/{ticket} | SNS 가입 화면 채울 값 `{provider, email, emailVerifiedByProvider}`. 쓴 표, 시간 지난 표 410 `SNS_TICKET_EXPIRED` (CR-146) | | BID-AUTH-006 |
 | POST | /auth/sns/register | SNS 가입 `{ticket, email, companyName, businessRegistrationNumber, contactPerson, phone, agreeTerms, agreePrivacy, agreeMarketing}`. 이메일이 SNS 확인 메일과 다르거나 SNS 확인이 없으면 확인을 마친 인증번호가 있어야 한다(없으면 400 `EMAIL_NOT_VERIFIED`). 이미 가입된 메일 409 `EMAIL_ALREADY_EXISTS`, 같은 SNS 계정이 먼저 가입을 마쳤으면 409 `SNS_ACCOUNT_IN_USE`, 표 410 `SNS_TICKET_EXPIRED`. 성공하면 회원, SNS 연결, 동의 이력을 남기고 토큰을 준다 (CR-146, BIZ-062, BIZ-063) | | BID-AUTH-006 |
-| GET | /members/me | 내 정보 조회 | 🔒 | BID-AUTH-004 |
+| GET | /members/me | 내 정보 조회. CR-157: `membership` `{ member, endsOn }` 를 싣는다. member 는 회원이면 true(관리자 포함), endsOn 은 오늘을 품은 기간 중 가장 늦은 끝일(YYYY-MM-DD, 관리자와 무료회원은 null) | 🔒 | BID-AUTH-004, BID-AUTH-008 |
 | PATCH | /members/me | 내 정보 수정 | 🔒 | BID-AUTH-004 |
 
 ---
@@ -162,15 +163,15 @@
 
 | 메서드 | 경로 | 설명 | 인증 | 기능 ID |
 |--------|------|------|------|---------|
-| GET | /opportunities | 공고 목록 조회 (필터/검색/페이징). **사용자: visibility=VISIBLE만** (CR-003). 고객 화면은 더 쓰지 않고(CR-155, 마감 전 공고는 C-2 의 collected), 관리자 콘솔이 공개 공고문 수를 셀 때 쓴다 | | BID-BROWSE-001 |
-| GET | /opportunities/{id} | 공고 상세 조회 (사전 분석 결과 포함 — CR-003). 응답 `responseDeadline` 은 날짜만, `responseDeadlineAt` 은 서울 시각 표시가 붙은 마감 시각(CR-138). `samUrl` 은 SAM.gov 원문 공개 주소(`uiLink` 는 SAM 로그인이 필요한 작업공간 주소라 화면 단추는 `samUrl` 을 쓴다, CR-152). `opportunityId` 는 이 공고문이 만들어진 모은 공고 id 이고 관심 공고 저장에 쓴다(CR-155) | | BID-BROWSE-002, 004 |
-| GET | /opportunities/origin/{opportunityId} | 원본 공고 상세 (CR-152). 모은 원본 공고 하나(지운 것 제외)를 공고 상세와 같은 꼴로 준다. `id` 는 원본 공고 id, `title` 은 한글 제목(없으면 원문 제목), `description` 은 모아 둔 원문 본문(없으면 null), `analysis` 는 없다. 더하는 값: `originalTitle`(원문 제목), `publicNoticeId`(같은 공고의 공개 한글 공고문 id, 없으면 null. 있으면 화면이 공고문 상세로 전환한다), `samUrl`(SAM.gov 원문 공개 주소), `descriptionKo`(원문 본문을 한글로 옮긴 것, 없으면 null, CR-155). 없는 id 는 404 | | BID-BROWSE-002 |
-| GET | /opportunities/{id}/requirements | 공고 요구사항 목록 (카테고리별) | | BID-BROWSE-003 |
+| GET | /opportunities | 공고 목록 조회 (필터/검색/페이징). **사용자: visibility=VISIBLE만** (CR-003). 고객 화면은 더 쓰지 않고(CR-155, 마감 전 공고는 C-2 의 collected), 관리자 콘솔이 공개 공고문 수를 셀 때 쓴다 CR-157: 회원만(BIZ-071). | 🔒 회원 | BID-BROWSE-001 |
+| GET | /opportunities/{id} | 공고 상세 조회 (사전 분석 결과 포함 — CR-003). 응답 `responseDeadline` 은 날짜만, `responseDeadlineAt` 은 서울 시각 표시가 붙은 마감 시각(CR-138). `samUrl` 은 SAM.gov 원문 공개 주소(`uiLink` 는 SAM 로그인이 필요한 작업공간 주소라 화면 단추는 `samUrl` 을 쓴다, CR-152). `opportunityId` 는 이 공고문이 만들어진 모은 공고 id 이고 관심 공고 저장에 쓴다(CR-155) CR-157: 회원만(BIZ-071). | 🔒 회원 | BID-BROWSE-002, 004 |
+| GET | /opportunities/origin/{opportunityId} | 원본 공고 상세 (CR-152). 모은 원본 공고 하나(지운 것 제외)를 공고 상세와 같은 꼴로 준다. `id` 는 원본 공고 id, `title` 은 한글 제목(없으면 원문 제목), `description` 은 모아 둔 원문 본문(없으면 null), `analysis` 는 없다. 더하는 값: `originalTitle`(원문 제목), `publicNoticeId`(같은 공고의 공개 한글 공고문 id, 없으면 null. 있으면 화면이 공고문 상세로 전환한다), `samUrl`(SAM.gov 원문 공개 주소), `descriptionKo`(원문 본문을 한글로 옮긴 것, 없으면 null, CR-155). 없는 id 는 404 CR-157: 무료회원에게도 연다. `publicNoticeId` 도 무료회원에게 준다(BIZ-071). |  | BID-BROWSE-002 |
+| GET | /opportunities/{id}/requirements | 공고 요구사항 목록 (카테고리별) CR-157: 회원만(BIZ-071). | 🔒 회원 | BID-BROWSE-003 |
 | GET | /opportunities/{id}/attachments | 공고 첨부문서 목록 | | BID-OPP-003 |
 | ~~GET~~ | ~~/opportunities/search~~ | ~~키워드 검색~~ (CR-155 폐기. 마감 전 공고 검색은 C-2 의 collected `q`) | | BID-BROWSE-001 |
 | GET | /opportunities/search/organization | 기관명 검색 | | BID-BROWSE-001 |
 | ~~GET~~ | ~~/opportunities/near-deadline~~ | ~~마감 임박 공고~~ (CR-155 폐기. 첫 화면 마감 임박은 C-2 의 collected `sort=DEADLINE`, `dueWithinDays`) | | BID-BROWSE-001 |
-| GET | /opportunities/recent | 최근 등록 공고 | | BID-BROWSE-001 |
+| GET | /opportunities/recent | 최근 등록 공고 CR-157: 회원만(BIZ-071). | 🔒 회원 | BID-BROWSE-001 |
 
 ---
 
@@ -354,10 +355,10 @@
 
 | 메서드 | 경로 | 설명 | 인증 | 기능 ID |
 |--------|------|------|------|---------|
-| GET | /eligibility/notices | 진단할 공고 목록. 공개이고 분석이 끝난 공고문 중 참가 자격이 1개 이상인 것. 마감 전(마감일 가까운 순) 다음 마감 지남(마감일 최근 순). CR-140: 줄마다 판정과 걸린 자격 | 🔒 | BID-QUAL-001, BID-MKT-015, BID-MKT-016, BID-MKT-019 |
-| GET | /eligibility/notices/{noticeId} | 공고별 진단. 공고 머리, 자격 목록과 내 답, 개수 요약, 맞을 수 있는 서류함 서류. CR-140: 판정과 걸린 자격, 자격마다 붙인 서류 | 🔒 | BID-QUAL-001, BID-MKT-017, BID-MKT-019 |
-| PUT | /eligibility/notices/{noticeId}/answers/{itemNo} | 자격 하나의 답 저장(있으면 바꿈). 본문 `{ "answer": "HAVE" \| "LACK" \| "UNSURE" }`. CR-140: 없음, 확인 필요로 바꾸거나 옛 답에 다시 답하면 붙인 서류를 푼다(BIZ-043) | 🔒 | BID-QUAL-001 |
-| PUT | /eligibility/notices/{noticeId}/answers/{itemNo}/document | 있음으로 답한 자격에 증빙 서류 붙이기와 떼기(CR-140). 본문 `{ "documentId": "<내 서류 id>" \| null }` | 🔒 | BID-MKT-018 |
+| GET | /eligibility/notices | 진단할 공고 목록. 공개이고 분석이 끝난 공고문 중 참가 자격이 1개 이상인 것. 마감 전(마감일 가까운 순) 다음 마감 지남(마감일 최근 순). CR-140: 줄마다 판정과 걸린 자격 CR-157: 회원만(BIZ-071). | 🔒 회원 | BID-QUAL-001, BID-MKT-015, BID-MKT-016, BID-MKT-019 |
+| GET | /eligibility/notices/{noticeId} | 공고별 진단. 공고 머리, 자격 목록과 내 답, 개수 요약, 맞을 수 있는 서류함 서류. CR-140: 판정과 걸린 자격, 자격마다 붙인 서류 CR-157: 회원만(BIZ-071). | 🔒 회원 | BID-QUAL-001, BID-MKT-017, BID-MKT-019 |
+| PUT | /eligibility/notices/{noticeId}/answers/{itemNo} | 자격 하나의 답 저장(있으면 바꿈). 본문 `{ "answer": "HAVE" \| "LACK" \| "UNSURE" }`. CR-140: 없음, 확인 필요로 바꾸거나 옛 답에 다시 답하면 붙인 서류를 푼다(BIZ-043) CR-157: 회원만(BIZ-071). | 🔒 회원 | BID-QUAL-001 |
+| PUT | /eligibility/notices/{noticeId}/answers/{itemNo}/document | 있음으로 답한 자격에 증빙 서류 붙이기와 떼기(CR-140). 본문 `{ "documentId": "<내 서류 id>" \| null }` CR-157: 회원만(BIZ-071). | 🔒 회원 | BID-MKT-018 |
 
 CR-137 전에 있던 `POST /opportunities/{id}/qualification-check`(AI 자격 사전 진단 요청)는 실제 진단 없이 접수됐다는 응답만 주던 것이라 지운다(BIZ-032).
 
@@ -393,7 +394,7 @@ CR-137 전에 있던 `POST /opportunities/{id}/qualification-check`(AI 자격 �
 
 | 메서드 | 경로 | 설명 | 인증 | 기능 ID |
 |--------|------|------|------|---------|
-| POST | /bid-requests | 입찰 참여 신청 (서비스 레벨 포함) | 🔒 | BID-REQ-001 |
+| POST | /bid-requests | 입찰 참여 신청 (서비스 레벨 포함) CR-157: 회원만(BIZ-071). | 🔒 회원 | BID-REQ-001 |
 | GET | /bid-requests/my | 내 입찰 목록 (페이징) | 🔒 | BID-REQ-003 |
 | GET | /bid-requests/{id} | 입찰 상세 조회 | 🔒 | BID-REQ-004 |
 | GET | /bid-requests/{id}/history | 상태 전이 이력 | 🔒 | BID-REQ-004 |
@@ -548,7 +549,10 @@ CR-137 전에 있던 `POST /opportunities/{id}/qualification-check`(AI 자격 �
 
 | 메서드 | 경로 | 설명 | 인증 | 기능 ID |
 |--------|------|------|------|---------|
-| GET | /admin/members | 회원 목록 (페이징) | 🔒 ADMIN | BID-ADMIN-001 |
+| GET | /admin/members | 회원 목록 (페이징). CR-157: 줄마다 `member`(회원 여부, 관리자 true), `membershipEndsOn`(지금 기간의 끝일, 없으면 null) | 🔒 ADMIN | BID-ADMIN-001, BID-ADMIN-002 |
+| GET | /admin/members/{memberId}/memberships | 그 고객의 회원 기간 이력, 시작일 늦은 순. 줄 `{ id, startsOn, endsOn, memo, createdByEmail, createdAt, current }`. current 는 오늘을 품은 기간이면 true (CR-157) | 🔒 ADMIN | BID-ADMIN-002 |
+| POST | /admin/members/{memberId}/memberships | 회원 기간 넣기 `{ startsOn, endsOn, memo }`. 201 과 넣은 줄. 끝일이 시작일보다 앞이면 400 `MEMBERSHIP_PERIOD_INVALID`, 없는 회원 404 `MEMBER_NOT_FOUND` (CR-157, BIZ-072) | 🔒 ADMIN | BID-ADMIN-002 |
+| DELETE | /admin/members/{memberId}/memberships/{membershipId} | 회원 기간 지우기. 204. 그 고객의 기간이 아니면 404 `MEMBERSHIP_NOT_FOUND` (CR-157) | 🔒 ADMIN | BID-ADMIN-002 |
 
 ---
 

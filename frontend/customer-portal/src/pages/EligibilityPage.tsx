@@ -8,6 +8,8 @@ import { SubIcon } from '../components/subpage/SubIcon'
 import { ApplyBand, PageHead, SubPageFrame } from '../components/subpage/SubPageFrame'
 import { LoadingSpinner } from '../components/ui/loading-spinner'
 import { useAuth } from '../context/AuthContext'
+import { MemberOnlyBox } from '../components/membership/MemberOnlyBox'
+import { MEMBERSHIP_TEXT } from '../data/membershipContent'
 import { ELIGIBILITY_PATH, ELIGIBILITY_TEXT, eligibilityHref, expertHref } from '../data/eligibilityContent'
 import type { EligibilityNoticeRow } from '../types'
 import { dotDate } from '../utils/eligibilityFormat'
@@ -25,7 +27,7 @@ type Load = { status: 'loading' } | { status: 'error' } | { status: 'ok'; rows: 
  * 비로그인은 안내와 로그인만 보이고, 로그인하면 분석이 끝난 공개 공고를 마감 전과 지난 공고로 나눠 보인다.
  */
 export default function EligibilityPage() {
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, membership } = useAuth()
   const navigate = useNavigate()
   const navigationType = useNavigationType()
   const [load, setLoad] = useState<Load>({ status: 'loading' })
@@ -41,8 +43,9 @@ export default function EligibilityPage() {
   }
 
   useEffect(() => {
-    if (isAuthenticated) fetchRows()
-  }, [isAuthenticated, fetchRows])
+    // 진단과 판정은 회원만 쓴다(CR-157)
+    if (isAuthenticated && membership === 'member') fetchRows()
+  }, [isAuthenticated, membership, fetchRows])
 
   useEffect(() => {
     if (load.status !== 'ok') return
@@ -92,6 +95,8 @@ export default function EligibilityPage() {
             </div>
           </div>
         </section>
+      ) : membership === 'free' ? (
+        <MemberOnlyBox title={MEMBERSHIP_TEXT.eligibility.title} desc={MEMBERSHIP_TEXT.eligibility.desc} />
       ) : load.status === 'loading' ? (
         <section className="cbx pad"><LoadingSpinner fullPage /></section>
       ) : load.status === 'error' ? (

@@ -14,13 +14,21 @@ import { VERDICT_BOX_TEXT } from '../data/verdictContent'
 import NoticeDocumentView from '../components/NoticeDocumentView'
 import { ELIGIBILITY_TEXT, eligibilityHref } from '../data/eligibilityContent'
 import { ORIGIN_TEXT } from '../data/originContent'
+import { CONSULT_PATH, MEMBERSHIP_TEXT, PRICING_PATH } from '../data/membershipContent'
+import { useAuth } from '../context/AuthContext'
 
-/** origin: 공개 공고문이 없는 모은 공고를 원문으로 보이는 원본 공고 상세 (CR-152) */
+/**
+ * origin: 공개 공고문이 없는 모은 공고를 원문으로 보이는 원본 공고 상세 (CR-152).
+ * 공고문 상세는 회원만 본다. 무료회원은 원본 공고 상세에 머물고, 공고문 주소를 직접 열면 회원 안내를 본다 (CR-157)
+ */
 export default function BidDetailPage({ origin = false }: { origin?: boolean }) {
   const { id, opportunityId } = useParams<{ id: string; opportunityId: string }>()
   const navigate = useNavigate()
+  const { membership } = useAuth()
   const [bid, setBid] = useState<Opportunity | null>(null)
   const [loading, setLoading] = useState(true)
+  // 서버가 회원 전용(403)으로 막은 공고문 상세
+  const [blocked, setBlocked] = useState(false)
   const [isBookmarked, setIsBookmarked] = useState(false)
   const [bookmarkLoading, setBookmarkLoading] = useState(false)
   const [showOriginal, setShowOriginal] = useState(false)
@@ -37,40 +45,49 @@ export default function BidDetailPage({ origin = false }: { origin?: boolean }) 
       .catch((e) => setVerdict(isAxiosError(e) && e.response?.status === 404 ? null : { status: 'error' }))
   }, [id, hasEligibility])
 
+  // 원본 공고 상세는 회원 구분을 알아야 공고문 상세로 갈지 정한다. 공고문 상세는 서버가 가른다
+  const originGate = origin ? membership : null
+
   useEffect(() => {
+    if (originGate === 'loading') return
+    // 관심 공고는 공고문 번호가 아니라 모은 공고 번호로 저장한다(CR-155)
+    const loadBookmark = async (opportunityKey: string) => {
+      try {
+        const bRes = await checkBookmark(opportunityKey)
+        setIsBookmarked(bRes.data?.bookmarked ?? false)
+      } catch { /* 북마크 확인 실패 시 무시 */ }
+    }
     const load = async () => {
       setLoading(true)
+      setBlocked(false)
       try {
         if (origin) {
           const res = await getOriginOpportunity(opportunityId!)
-          // 공고문이 공개되면 원본 주소로 들어와도 공고문 상세로 넘긴다
-          if (res.data.publicNoticeId) {
+          // 공고문이 공개된 공고는 회원이면 공고문 상세를 연다. 무료회원은 원본에 머문다(CR-157)
+          if (res.data.publicNoticeId && originGate === 'member') {
             navigate(`/search/${res.data.publicNoticeId}`, { replace: true })
             return
           }
           setBid(res.data)
+          await loadBookmark(res.data.id)
           return
         }
         const res = await getOpportunity(id!)
         setBid(res.data)
-        // 관심 공고는 공고문 번호가 아니라 모은 공고 번호로 저장한다(CR-155)
-        if (res.data.opportunityId) {
-          try {
-            const bRes = await checkBookmark(res.data.opportunityId)
-            setIsBookmarked(bRes.data?.bookmarked ?? false)
-          } catch { /* 북마크 확인 실패 시 무시 */ }
-        }
-      } catch {
+        if (res.data.opportunityId) await loadBookmark(res.data.opportunityId)
+      } catch (e) {
         setBid(null)
+        setBlocked(isAxiosError(e) && e.response?.status === 403)
       } finally {
         setLoading(false)
       }
     }
     load()
-  }, [id, opportunityId, origin, navigate])
+  }, [id, opportunityId, origin, originGate, navigate])
 
   const toggleBookmark = async () => {
-    const opportunityKey = bid?.opportunityId
+    // 원본 공고 상세의 id 가 모은 공고 번호다
+    const opportunityKey = origin ? bid?.id : bid?.opportunityId
     if (!opportunityKey || bookmarkLoading) return
     setBookmarkLoading(true)
     try {
@@ -87,6 +104,18 @@ export default function BidDetailPage({ origin = false }: { origin?: boolean }) 
   }
 
   if (loading) return <LoadingSpinner fullPage />
+  if (blocked) return (
+    <div className="flex flex-col items-center justify-center h-full gap-4 px-6 text-center">
+      <i className="fa-solid fa-lock text-4xl text-ink-faint" />
+      <p className="text-lg font-semibold text-ink">{MEMBERSHIP_TEXT.notice.title}</p>
+      <p className="text-sm text-ink-mute max-w-md">{MEMBERSHIP_TEXT.notice.desc}</p>
+      <div className="flex flex-wrap justify-center gap-2">
+        <DsButton variant="primary" onClick={() => navigate(PRICING_PATH)}>{MEMBERSHIP_TEXT.pricing}</DsButton>
+        <DsButton variant="outline" onClick={() => navigate(CONSULT_PATH)}>{MEMBERSHIP_TEXT.consult}</DsButton>
+        <DsButton variant="ghost" mode="link" onClick={() => navigate('/search')}>{MEMBERSHIP_TEXT.toSearch}</DsButton>
+      </div>
+    </div>
+  )
   if (!bid) return (
     <div className="flex flex-col items-center justify-center h-full text-ink-mute gap-4">
       <i className="fa-solid fa-circle-exclamation text-4xl text-ink-faint" />
@@ -131,25 +160,24 @@ export default function BidDetailPage({ origin = false }: { origin?: boolean }) 
               <i className="fa-solid fa-arrow-up-right-from-square mr-1" /> SAM.gov 원문 보기
             </Button>
           )}
-          {/* 관심 공고와 제안서는 공고문에 붙는다. 원본 공고 상세에는 두지 않는다 */}
+          {/* 관심 공고는 모은 공고 번호로 저장하므로 원본 공고 상세에도 둔다(CR-157) */}
+          <Button
+            variant="outline"
+            onClick={toggleBookmark}
+            disabled={bookmarkLoading}
+            className="hidden md:flex items-center gap-1"
+          >
+            {bookmarkLoading
+              ? <i className="fa-solid fa-spinner fa-spin" />
+              : <i className={isBookmarked ? 'fa-solid fa-bookmark text-brand' : 'fa-regular fa-bookmark'} />
+            }
+            {isBookmarked ? '저장됨' : '관심 공고 저장'}
+          </Button>
+          {/* 제안서는 공고문에 붙는다. 원본 공고 상세에는 두지 않는다 */}
           {!origin && (
-            <>
-              <Button
-                variant="outline"
-                onClick={toggleBookmark}
-                disabled={bookmarkLoading}
-                className="hidden md:flex items-center gap-1"
-              >
-                {bookmarkLoading
-                  ? <i className="fa-solid fa-spinner fa-spin" />
-                  : <i className={isBookmarked ? 'fa-solid fa-bookmark text-brand' : 'fa-regular fa-bookmark'} />
-                }
-                {isBookmarked ? '저장됨' : '관심 공고 저장'}
-              </Button>
-              <Button variant="accent" onClick={() => setAiModalOpen(true)}>
-                <i className="fa-solid fa-wand-magic-sparkles mr-1" /> 제안서 작성
-              </Button>
-            </>
+            <Button variant="accent" onClick={() => setAiModalOpen(true)}>
+              <i className="fa-solid fa-wand-magic-sparkles mr-1" /> 제안서 작성
+            </Button>
           )}
         </div>
       </div>
@@ -447,7 +475,14 @@ export default function BidDetailPage({ origin = false }: { origin?: boolean }) 
             ) : (
               /* ── 원본 표시 (분석 미완료 / fallback) ── */
               <div className="space-y-6">
-                {origin && (
+                {origin && bid.publicNoticeId && (
+                  <div className="flex flex-wrap items-center gap-2 px-4 py-3 bg-brand-soft border border-brand-line rounded-lg">
+                    <i className="fa-solid fa-lock text-brand" />
+                    <span className="flex-1 text-sm text-brand font-medium">{MEMBERSHIP_TEXT.originBanner}</span>
+                    <DsButton variant="primary" size="sm" onClick={() => navigate(PRICING_PATH)}>{MEMBERSHIP_TEXT.pricing}</DsButton>
+                  </div>
+                )}
+                {origin && !bid.publicNoticeId && (
                   <div className="flex items-center gap-2 px-4 py-3 bg-brand-soft border border-brand-line rounded-lg">
                     <i className="fa-solid fa-circle-info text-brand" />
                     <span className="text-sm text-brand font-medium">

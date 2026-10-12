@@ -1,6 +1,6 @@
 # 실행 지시서: SAM.gov Bidding Agency Platform
 
-> 설계 버전: 1.10 | 최종 수정: 2026-10-12 | 관련 CR: CR-003, CR-132, CR-133, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-146, CR-147, CR-153, CR-155
+> 설계 버전: 1.11 | 최종 수정: 2026-10-12 | 관련 CR: CR-003, CR-132, CR-133, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-146, CR-147, CR-153, CR-155, CR-157
 
 > **프로젝트:** bidding-agency-platform (미군 조달 입찰 AI 대행 서비스)
 > **프로젝트 유형:** 풀스택 (BE: Java 17 + Spring Boot 3.2 / FE: React 19 × 2)
@@ -518,6 +518,8 @@ sequenceDiagram
 | 공고 검색 | ~~`GET /opportunities`, `/search`, `/near-deadline`~~ `GET /opportunities/collected` (CR-155) | 필터, 페이징. CR-155: 모은 공고 중 마감 전인 것 전부(BIZ-069), 검색어 `q`, 줄을 누르면 공고문 상세 또는 원본 공고 상세. CR-147: 화면 이름 마감 전 공고, 속페이지 틀, 숫자 칸은 검색어와 상관없는 마감 전 공고 전체 건수, 빈 상태 두 가지 |
 | 공고 상세 | `GET /opportunities/{id}`, `/requirements`, `/attachments` | 관심 공고는 응답의 `opportunityId` 로(CR-155) |
 | 원본 공고 상세 | `GET /opportunities/origin/{opportunityId}` | 한글 본문(`descriptionKo`) 먼저, 원문 본문은 접어 둔다(CR-152, CR-155) |
+| 회원 구분 (CR-157) | `GET /members/me` 의 `membership` | 원본 공고 상세의 공고문 이동과 회원 전용 안내, 공고 상세 회원 안내, 판정 칸, 적격성 진단, 공고별 판정, 요금 안내 지금 단계, 내 프로필이 이 값으로 가른다. 서버는 공고문 조회, 적격성, 입찰 신청을 BIZ-071 로 다시 막는다 |
+| 관리자 회원 관리 (CR-157) | `GET /admin/members`, `GET /admin/members/{memberId}/memberships`, `POST /admin/members/{memberId}/memberships`, `DELETE /admin/members/{memberId}/memberships/{membershipId}` | 회원 여부와 끝일, 회원 기간 넣기, 지우기, 이력(BIZ-072) |
 | 입찰 신청 | `POST /bid-requests` | 서비스 레벨 선택 |
 | 내 입찰 현황 | `GET /bid-requests/my`, `/{id}`, `/{id}/history` | 자기 입찰 건만, 남의 건 404 (BIZ-060) |
 | 문서 업로드 | `POST /bid-requests/{id}/client-documents` | multipart, 자기 입찰 건만 (BIZ-060) |

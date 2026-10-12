@@ -32,6 +32,9 @@ import { DdayBadge } from '../utils/dday'
 import { findMenuItem } from '../components/layout/menu'
 import { PageHead, SubPageFrame } from '../components/subpage/SubPageFrame'
 import { SEARCH_TEXT as T } from '../data/searchContent'
+import { Badge } from '../components/ui/badge'
+import { useAuth } from '../context/AuthContext'
+import { MEMBERSHIP_TEXT } from '../data/membershipContent'
 
 const PLACE = findMenuItem('bids', 'open')
 
@@ -42,6 +45,13 @@ const PAGE_SIZE = 20
 /** 판정할 수 없는 공고(분석 전, 참가 자격 0개)는 - 로 둔다 */
 function VerdictCell({ verdict }: { verdict?: EligibilityVerdict }) {
   return verdict ? <VerdictTag verdict={verdict} /> : <span className="vd-dash">{VERDICT_NONE}</span>
+}
+
+/** 무료회원은 판정 대신 공고문이 있는 줄에 회원 꼬리표를 본다 (CR-157) */
+function MemberTagCell({ hasNotice }: { hasNotice: boolean }) {
+  return hasNotice
+    ? <Badge variant="info" size="sm" title={MEMBERSHIP_TEXT.rowTagTitle}>{MEMBERSHIP_TEXT.rowTag}</Badge>
+    : <span className="vd-dash">{VERDICT_NONE}</span>
 }
 
 const AGENCIES = [
@@ -75,11 +85,15 @@ export default function SearchPage() {
   // 공고문별 우리 회사 판정(CR-140). 못 불러오면 null 로 두어 칸만 비운다
   const [verdicts, setVerdicts] = useState<Map<string, EligibilityVerdict> | null>(null)
 
+  const { membership } = useAuth()
+
+  // 판정은 회원만 본다(CR-157)
   useEffect(() => {
+    if (membership !== 'member') return
     getEligibilityNotices()
       .then((res) => setVerdicts(new Map(res.data.map((r) => [r.noticeId, r.verdict]))))
       .catch(() => setVerdicts(null))
-  }, [])
+  }, [membership])
 
   // 초기 북마크 & 통계 로드
   useEffect(() => {
@@ -312,7 +326,9 @@ export default function SearchPage() {
                           </div>
                         </TableCell>
                         <TableCell className="text-center align-middle">
-                          {verdicts && (
+                          {membership === 'free' ? (
+                            <MemberTagCell hasNotice={!!bid.publicNoticeId} />
+                          ) : verdicts && (
                             <VerdictCell verdict={bid.publicNoticeId ? verdicts.get(bid.publicNoticeId) : undefined} />
                           )}
                         </TableCell>

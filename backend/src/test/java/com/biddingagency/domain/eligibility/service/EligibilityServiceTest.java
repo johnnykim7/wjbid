@@ -11,9 +11,12 @@ import com.biddingagency.domain.eligibility.exception.EligibilityDocumentNotFoun
 import com.biddingagency.domain.eligibility.exception.EligibilityItemInvalidException;
 import com.biddingagency.domain.eligibility.exception.EligibilityNoticeNotFoundException;
 import com.biddingagency.domain.eligibility.repository.EligibilityAnswerRepository;
+import com.biddingagency.domain.member.MembershipError;
+import com.biddingagency.domain.member.MembershipException;
 import com.biddingagency.domain.member.entity.DocumentCategory;
 import com.biddingagency.domain.member.entity.MemberDocument;
 import com.biddingagency.domain.member.repository.MemberDocumentRepository;
+import com.biddingagency.domain.member.service.MembershipService;
 import com.biddingagency.domain.notice.entity.Notice;
 import com.biddingagency.domain.notice.entity.NoticeGenerationStatus;
 import com.biddingagency.domain.notice.repository.NoticeRepository;
@@ -54,10 +57,14 @@ import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 /**
  * TC-QUAL-001 ~ TC-QUAL-014 (CR-137): 적격성 진단 목록, 상세, 답 저장(BID-QUAL-001).
+ * TC-MEM-013 (CR-157): 무료회원은 진단 목록을 받지 못한다(BIZ-071).
  * TC-QUAL-016 ~ TC-QUAL-034 (CR-140): 공고별 판정과 증빙 서류 붙이기(BID-MKT-015, BID-MKT-018, BID-MKT-019).
  *
  * TC-QUAL-015(공고문을 지우면 답도 지워짐)는 DB 외래 키(ON DELETE CASCADE)가 하는 일이라 여기서 보지 않는다.
@@ -74,6 +81,7 @@ class EligibilityServiceTest {
     @Mock private NoticeRepository noticeRepository;
     @Mock private EligibilityAnswerRepository answerRepository;
     @Mock private MemberDocumentRepository memberDocumentRepository;
+    @Mock private MembershipService membershipService;
 
     private EligibilityService service;
     private final UUID me = UUID.randomUUID();
@@ -84,7 +92,8 @@ class EligibilityServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new EligibilityService(noticeRepository, answerRepository, memberDocumentRepository, NOW);
+        service = new EligibilityService(noticeRepository, answerRepository, memberDocumentRepository, NOW,
+                membershipService);
         lenient().when(noticeRepository.findByIdAndVisibility(any(), any())).thenAnswer(inv -> notices.stream()
                 .filter(n -> n.getId().equals(inv.getArgument(0)) && n.getVisibility() == inv.getArgument(1))
                 .findFirst());
@@ -566,5 +575,15 @@ class EligibilityServiceTest {
 
         assertThat(i.vaultDocuments()).extracting(v -> tuple(v.expiresOn(), v.expired()))
                 .containsExactlyInAnyOrder(tuple(LocalDate.of(2026, 10, 10), true), tuple(LocalDate.of(2026, 10, 11), false));
+    }
+
+    @Test
+    @DisplayName("TC-MEM-013 무료회원_적격성목록_MEMBERSHIP_REQUIRED")
+    void 무료회원_적격성목록_MEMBERSHIP_REQUIRED() {
+        doThrow(new MembershipException(MembershipError.MEMBERSHIP_REQUIRED)).when(membershipService).requireMember(me);
+
+        catchThrowable(() -> service.listNotices(me));
+
+        verify(noticeRepository, never()).findVisible(any(), anyBoolean(), any(), any());
     }
 }

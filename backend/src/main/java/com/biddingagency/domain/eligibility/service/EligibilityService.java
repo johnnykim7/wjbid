@@ -13,6 +13,7 @@ import com.biddingagency.domain.member.entity.DocumentCategory;
 import com.biddingagency.domain.member.entity.MemberDocument;
 import com.biddingagency.domain.member.repository.MemberDocumentRepository;
 import com.biddingagency.domain.member.service.DocumentExpiryService;
+import com.biddingagency.domain.member.service.MembershipService;
 import com.biddingagency.domain.notice.entity.Notice;
 import com.biddingagency.domain.notice.repository.NoticeRepository;
 import com.biddingagency.domain.opportunity.dto.AnalysisResultDto.EligibilityDto;
@@ -49,6 +50,7 @@ import java.util.stream.IntStream;
  *
  * 자격 항목은 공고문 분석 결과(required_documents_json 의 eligibility)를 그때그때 읽는다.
  * 저장하는 것은 회원의 답과 붙인 서류뿐이다. 판정(CR-140)은 조회할 때 그 답과 서류로만 낸다(BIZ-040).
+ * 진단과 판정은 회원만 쓴다(CR-157, BIZ-071).
  */
 @Slf4j
 @Service
@@ -60,6 +62,7 @@ public class EligibilityService {
     private final EligibilityAnswerRepository answerRepository;
     private final MemberDocumentRepository memberDocumentRepository;
     private final Clock clock;
+    private final MembershipService membershipService;
 
     // 서류 만료는 서류함 만료 알림과 같은 날짜로 본다
     private static final ZoneId SERVICE_ZONE = ZoneId.of(DocumentExpiryService.SERVICE_ZONE);
@@ -71,6 +74,7 @@ public class EligibilityService {
     }
 
     public List<NoticeRow> listNotices(UUID memberId) {
+        membershipService.requireMember(memberId);
         LocalDateTime now = LocalDateTime.now(clock);
         List<Target> targets = noticeRepository
                 .findVisible(OpportunityVisibility.VISIBLE, true, now, Pageable.unpaged())
@@ -104,6 +108,7 @@ public class EligibilityService {
     }
 
     public Detail detail(UUID memberId, UUID noticeId) {
+        membershipService.requireMember(memberId);
         Target t = load(noticeId);
         List<Item> items = items(memberId, t);
         Judgment j = EligibilityVerdictJudge.judge(items);
@@ -112,6 +117,7 @@ public class EligibilityService {
 
     @Transactional
     public Saved answer(UUID memberId, UUID noticeId, int itemNo, String rawAnswer) {
+        membershipService.requireMember(memberId);
         EligibilityAnswerValue value = parse(rawAnswer);
         Target t = load(noticeId);
         if (itemNo < 0 || itemNo >= t.items().size()) {
@@ -134,6 +140,7 @@ public class EligibilityService {
     /** documentId 가 null 이면 뗀다 (CR-140, BIZ-042) */
     @Transactional
     public Saved attach(UUID memberId, UUID noticeId, int itemNo, UUID documentId) {
+        membershipService.requireMember(memberId);
         Target t = load(noticeId);
         if (itemNo < 0 || itemNo >= t.items().size()) {
             throw new EligibilityItemInvalidException();
