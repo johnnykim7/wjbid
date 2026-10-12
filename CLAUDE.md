@@ -141,7 +141,7 @@ frontend/{app}/src/
 ## 테스트 전략
 
 > 테스트 코드 작성 시 반드시 이 전략을 따른다.
-> 개별 테스트 케이스 목록은 docs/T3-5_단위테스트_명세.md 참조.
+> 개별 테스트 케이스 목록은 docs/AI-SDLC/T3-5_단위테스트_명세.md 참조.
 
 ### 테스트 범위
 
@@ -214,12 +214,12 @@ feat/SPR-01-auth → develop (PR) → main (릴리스 PR) + tag v1.0
 
 ## 참조 문서
 
-- 실행스펙: ./docs/execution-spec.md
-- 단위테스트 명세: ./docs/T3-5_단위테스트_명세.md
-- 기능요구사항: ./docs/T1-1_기능요구사항_명세서.md
-- FSM 상태: ./docs/T1-5_FSM_상태_정의.md
-- 이벤트 계약: ./docs/T1-6_이벤트_계약.md
-- 기술스택: ./docs/T2-1_기술스택_결정서.md
+- 실행스펙: ./docs/AI-SDLC/execution-spec.md
+- 단위테스트 명세: ./docs/AI-SDLC/T3-5_단위테스트_명세.md
+- 기능요구사항: ./docs/AI-SDLC/T1-1_기능요구사항_명세서.md
+- FSM 상태: ./docs/AI-SDLC/T1-5_FSM_상태_정의.md
+- 이벤트 계약: ./docs/AI-SDLC/T1-6_이벤트_계약.md
+- 기술스택: ./docs/AI-SDLC/T2-1_기술스택_결정서.md
 
 ## 변경 규모 판단 및 설계 우선 원칙
 

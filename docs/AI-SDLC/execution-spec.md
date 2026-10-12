@@ -120,7 +120,7 @@ SAM.gov에 올라오는 미군(USFK) 조달 입찰 공고를 자동 수집하고
 
 ## 4. 데이터 모델 요약
 
-> 상세: `docs/T3-1_데이터_모델.md`
+> 상세: `docs/AI-SDLC/T3-1_데이터_모델.md`
 
 - **엔티티 16개**: Member, Opportunity, OpportunityAttachment, **OpportunityAnalysis** (CR-003), OpportunityRequirementItem, BidRequest, ClientDocument, BidDocument, BidDocumentVersion, DocumentTemplate, RequirementFulfillmentMap, Bookmark, NotificationLog, CollectorRun, KeywordGroup, EventLog / CR-132: Inquiry, InquiryType 추가(T3-1) / CR-136: MilitaryBase 추가, Opportunity 낙찰 칸 3개, MemberDocument 만료일(T3-1) / CR-137: EligibilityAnswer 추가(T3-1) / CR-141: ClientDocument 쪽수 칸(T3-1) / CR-142: FederalContract, FederalContractSyncRun, MemberContract 추가(T3-1)
 - **FSM 관리 엔티티**: BidRequest (9상태), BidDocument (3상태), **Opportunity (2상태: HIDDEN/VISIBLE)**, **OpportunityAnalysis (4상태)** (CR-003), **Inquiry (2상태: RECEIVED/ANSWERED)** (CR-132)
@@ -140,21 +140,21 @@ SAM.gov에 올라오는 미군(USFK) 조달 입찰 공고를 자동 수집하고
 | 순서 | 읽을 파일 | 참조 범위 |
 |------|----------|----------|
 | 1 | `CLAUDE.md` | BE 아키텍처 규칙, 네이밍 |
-| 2 | `docs/T3-1_데이터_모델.md` | Member, Role Enum |
-| 3 | `docs/T1-1_기능요구사항_명세서.md` | BID-AUTH-001~003 |
-| 4 | `docs/T1-3_비즈니스_규칙.md` | BIZ-008 (이메일 유일성) |
-| 5 | `docs/T3-2_API_설계.md` | A. 인증 API |
-| 6 | `docs/T3-5_단위테스트_명세.md` | TC-AUTH-001~008 |
-| 7 | `docs/T1-7_Sprint_구조도.md` | Sprint 1 검증 기준 |
+| 2 | `docs/AI-SDLC/T3-1_데이터_모델.md` | Member, Role Enum |
+| 3 | `docs/AI-SDLC/T1-1_기능요구사항_명세서.md` | BID-AUTH-001~003 |
+| 4 | `docs/AI-SDLC/T1-3_비즈니스_규칙.md` | BIZ-008 (이메일 유일성) |
+| 5 | `docs/AI-SDLC/T3-2_API_설계.md` | A. 인증 API |
+| 6 | `docs/AI-SDLC/T3-5_단위테스트_명세.md` | TC-AUTH-001~008 |
+| 7 | `docs/AI-SDLC/T1-7_Sprint_구조도.md` | Sprint 1 검증 기준 |
 
 #### FE 참조
 
 | 순서 | 읽을 파일 | 참조 범위 |
 |------|----------|----------|
 | 1 | `CLAUDE.md` | FE 아키텍처 규칙 |
-| 2 | `docs/T3-3_화면_구조.md` | 홈, 로그인, 회원가입, 프로필 |
-| 3 | `docs/T3-2_API_설계.md` | A. 인증 API |
-| 4 | `docs/T1-7_Sprint_구조도.md` | Sprint 1 FE 검증 기준 |
+| 2 | `docs/AI-SDLC/T3-3_화면_구조.md` | 홈, 로그인, 회원가입, 프로필 |
+| 3 | `docs/AI-SDLC/T3-2_API_설계.md` | A. 인증 API |
+| 4 | `docs/AI-SDLC/T1-7_Sprint_구조도.md` | Sprint 1 FE 검증 기준 |
 
 **핵심 설계 결정:**
 - Role을 ADMIN + CUSTOMER 2개로 단순화. Flyway 마이그레이션으로 기존 역할 정리
@@ -175,14 +175,14 @@ SAM.gov에 올라오는 미군(USFK) 조달 입찰 공고를 자동 수집하고
 | 순서 | 읽을 파일 | 참조 범위 |
 |------|----------|----------|
 | 1 | `CLAUDE.md` | BE 규칙 |
-| 2 | `docs/T3-1_데이터_모델.md` | Opportunity, OpportunityAttachment, **OpportunityAnalysis (CR-003)**, CollectorRun, KeywordGroup, NotificationLog |
-| 3 | `docs/T1-1_기능요구사항_명세서.md` | BID-OPP-001~005, **BID-OPP-006~008 (CR-003)**, BID-NOTIFY-001 |
-| 4 | `docs/T1-3_비즈니스_규칙.md` | BIZ-004 (원본 보존), BIZ-005 (중복 검출), BIZ-012 (알림 멱등) |
-| 5 | `docs/T1-4_정책_정의.md` | POL-001 (수집 주기), POL-002 (알림 대상) |
-| 6 | `docs/T1-6_이벤트_계약.md` | OpportunitiesCollected, AttachmentDownloaded |
-| 7 | `docs/T3-2_API_설계.md` | B. 공고 수집 API |
-| 8 | `docs/T3-5_단위테스트_명세.md` | TC-OPP, TC-ATT, TC-NOTI |
-| 9 | `docs/T1-7_Sprint_구조도.md` | Sprint 2 검증 기준 |
+| 2 | `docs/AI-SDLC/T3-1_데이터_모델.md` | Opportunity, OpportunityAttachment, **OpportunityAnalysis (CR-003)**, CollectorRun, KeywordGroup, NotificationLog |
+| 3 | `docs/AI-SDLC/T1-1_기능요구사항_명세서.md` | BID-OPP-001~005, **BID-OPP-006~008 (CR-003)**, BID-NOTIFY-001 |
+| 4 | `docs/AI-SDLC/T1-3_비즈니스_규칙.md` | BIZ-004 (원본 보존), BIZ-005 (중복 검출), BIZ-012 (알림 멱등) |
+| 5 | `docs/AI-SDLC/T1-4_정책_정의.md` | POL-001 (수집 주기), POL-002 (알림 대상) |
+| 6 | `docs/AI-SDLC/T1-6_이벤트_계약.md` | OpportunitiesCollected, AttachmentDownloaded |
+| 7 | `docs/AI-SDLC/T3-2_API_설계.md` | B. 공고 수집 API |
+| 8 | `docs/AI-SDLC/T3-5_단위테스트_명세.md` | TC-OPP, TC-ATT, TC-NOTI |
+| 9 | `docs/AI-SDLC/T1-7_Sprint_구조도.md` | Sprint 2 검증 기준 |
 
 **핵심 설계 결정:**
 - SAM.gov API 호출은 cron 4회/일 + 수동 트리거
@@ -210,19 +210,19 @@ SAM.gov에 올라오는 미군(USFK) 조달 입찰 공고를 자동 수집하고
 | 순서 | 읽을 파일 | 참조 범위 |
 |------|----------|----------|
 | 1 | `CLAUDE.md` | BE 규칙 |
-| 2 | `docs/T3-1_데이터_모델.md` | Opportunity, OpportunityRequirementItem, Bookmark |
-| 3 | `docs/T1-1_기능요구사항_명세서.md` | BID-BROWSE, BID-QUAL |
-| 4 | `docs/T3-2_API_설계.md` | C. 공고 열람, D. 즐겨찾기, E. 자격 진단 |
-| 5 | `docs/T3-5_단위테스트_명세.md` | TC-BROWSE, TC-BM, TC-QUAL(CR-137, CR-140), TC-PRE(CR-141), TC-FED(CR-142) |
+| 2 | `docs/AI-SDLC/T3-1_데이터_모델.md` | Opportunity, OpportunityRequirementItem, Bookmark |
+| 3 | `docs/AI-SDLC/T1-1_기능요구사항_명세서.md` | BID-BROWSE, BID-QUAL |
+| 4 | `docs/AI-SDLC/T3-2_API_설계.md` | C. 공고 열람, D. 즐겨찾기, E. 자격 진단 |
+| 5 | `docs/AI-SDLC/T3-5_단위테스트_명세.md` | TC-BROWSE, TC-BM, TC-QUAL(CR-137, CR-140), TC-PRE(CR-141), TC-FED(CR-142) |
 
 #### FE 참조
 
 | 순서 | 읽을 파일 | 참조 범위 |
 |------|----------|----------|
 | 1 | `CLAUDE.md` | FE 규칙 |
-| 2 | `docs/T3-3_화면_구조.md` | 공고 검색, 공고 상세, 즐겨찾기, 가이드 |
-| 3 | `docs/T3-4_화면_상호작용.md` | 공고 상세 — 입찰 신청 (자격 진단 부분) |
-| 4 | `docs/T3-2_API_설계.md` | C, D, E API |
+| 2 | `docs/AI-SDLC/T3-3_화면_구조.md` | 공고 검색, 공고 상세, 즐겨찾기, 가이드 |
+| 3 | `docs/AI-SDLC/T3-4_화면_상호작용.md` | 공고 상세 — 입찰 신청 (자격 진단 부분) |
+| 4 | `docs/AI-SDLC/T3-2_API_설계.md` | C, D, E API |
 
 **핵심 검증:** 공고 목록 페이징/검색/필터 → 상세 + 요구사항 + 첨부 → 북마크 토글
 
@@ -238,21 +238,21 @@ SAM.gov에 올라오는 미군(USFK) 조달 입찰 공고를 자동 수집하고
 | 순서 | 읽을 파일 | 참조 범위 |
 |------|----------|----------|
 | 1 | `CLAUDE.md` | BE 규칙 |
-| 2 | `docs/T3-1_데이터_모델.md` | BidRequest, ClientDocument, ServiceLevel Enum, BidRequestState Enum |
-| 3 | `docs/T1-5_FSM_상태_정의.md` | BidRequest 전체 FSM |
-| 4 | `docs/T1-3_비즈니스_규칙.md` | BIZ-001 (FSM 화이트리스트), BIZ-006 (중복 신청), BIZ-011 (파일 크기) |
-| 5 | `docs/T1-6_이벤트_계약.md` | BidRequestCreated, BidRequestStateChanged, DocumentsReceived, DeadlineApproaching |
-| 6 | `docs/T3-2_API_설계.md` | F. 입찰 접수, G. 고객 문서 제출, H. 입찰 관리 |
-| 7 | `docs/T3-5_단위테스트_명세.md` | TC-BID, TC-FSM, TC-DOC-UPLOAD, TC-DEADLINE |
+| 2 | `docs/AI-SDLC/T3-1_데이터_모델.md` | BidRequest, ClientDocument, ServiceLevel Enum, BidRequestState Enum |
+| 3 | `docs/AI-SDLC/T1-5_FSM_상태_정의.md` | BidRequest 전체 FSM |
+| 4 | `docs/AI-SDLC/T1-3_비즈니스_규칙.md` | BIZ-001 (FSM 화이트리스트), BIZ-006 (중복 신청), BIZ-011 (파일 크기) |
+| 5 | `docs/AI-SDLC/T1-6_이벤트_계약.md` | BidRequestCreated, BidRequestStateChanged, DocumentsReceived, DeadlineApproaching |
+| 6 | `docs/AI-SDLC/T3-2_API_설계.md` | F. 입찰 접수, G. 고객 문서 제출, H. 입찰 관리 |
+| 7 | `docs/AI-SDLC/T3-5_단위테스트_명세.md` | TC-BID, TC-FSM, TC-DOC-UPLOAD, TC-DEADLINE |
 
 #### FE 참조
 
 | 순서 | 읽을 파일 | 참조 범위 |
 |------|----------|----------|
 | 1 | `CLAUDE.md` | FE 규칙 |
-| 2 | `docs/T3-3_화면_구조.md` | 내 입찰 현황, 입찰 상세, 대시보드, 입찰 관리 |
-| 3 | `docs/T3-4_화면_상호작용.md` | 공고 상세 입찰 신청, 입찰 상세 문서 업로드, 입찰 상세 관리 |
-| 4 | `docs/T3-2_API_설계.md` | F, G, H API |
+| 2 | `docs/AI-SDLC/T3-3_화면_구조.md` | 내 입찰 현황, 입찰 상세, 대시보드, 입찰 관리 |
+| 3 | `docs/AI-SDLC/T3-4_화면_상호작용.md` | 공고 상세 입찰 신청, 입찰 상세 문서 업로드, 입찰 상세 관리 |
+| 4 | `docs/AI-SDLC/T3-2_API_설계.md` | F, G, H API |
 
 **핵심 설계 결정:**
 - FSM 화이트리스트: 허용 전이만 실행, 나머지 전부 거부
@@ -273,10 +273,10 @@ SAM.gov에 올라오는 미군(USFK) 조달 입찰 공고를 자동 수집하고
 | 순서 | 읽을 파일 | 참조 범위 |
 |------|----------|----------|
 | 1 | `CLAUDE.md` | BE 규칙, AI 연동 섹션 |
-| 2 | `docs/T3-2_API_설계.md` | MCP 서버 전체 + Aimbase 워크플로우 호출 |
-| 3 | `docs/T1-1_기능요구사항_명세서.md` | BID-MCP-001~005 |
-| 4 | `docs/T1-3_비즈니스_규칙.md` | BIZ-013 (MCP 무상태) |
-| 5 | `docs/T3-5_단위테스트_명세.md` | TC-MCP 전체 |
+| 2 | `docs/AI-SDLC/T3-2_API_설계.md` | MCP 서버 전체 + Aimbase 워크플로우 호출 |
+| 3 | `docs/AI-SDLC/T1-1_기능요구사항_명세서.md` | BID-MCP-001~005 |
+| 4 | `docs/AI-SDLC/T1-3_비즈니스_규칙.md` | BIZ-013 (MCP 무상태) |
+| 5 | `docs/AI-SDLC/T3-5_단위테스트_명세.md` | TC-MCP 전체 |
 
 **핵심 설계 결정 (CR-002):**
 - MCP 전송: HTTP POST (`POST /mcp`) + **SSE** (`GET /mcp/sse` + `POST /mcp/message`) 이중 지원
@@ -304,18 +304,18 @@ SAM.gov에 올라오는 미군(USFK) 조달 입찰 공고를 자동 수집하고
 | 순서 | 읽을 파일 | 참조 범위 |
 |------|----------|----------|
 | 1 | `CLAUDE.md` | BE 규칙 |
-| 2 | `docs/T3-1_데이터_모델.md` | DocumentTemplate, BidDocument, BidDocumentVersion |
-| 3 | `docs/T1-3_비즈니스_규칙.md` | BIZ-002 (버전 불변), BIZ-010 (사용 중 템플릿 삭제 불가) |
-| 4 | `docs/T1-6_이벤트_계약.md` | DocumentGenerated, AimbaseWorkflowCompleted |
-| 5 | `docs/T3-2_API_설계.md` | I. 문서 템플릿 |
-| 6 | `docs/T3-5_단위테스트_명세.md` | TC-TPL, TC-DOCGEN |
+| 2 | `docs/AI-SDLC/T3-1_데이터_모델.md` | DocumentTemplate, BidDocument, BidDocumentVersion |
+| 3 | `docs/AI-SDLC/T1-3_비즈니스_규칙.md` | BIZ-002 (버전 불변), BIZ-010 (사용 중 템플릿 삭제 불가) |
+| 4 | `docs/AI-SDLC/T1-6_이벤트_계약.md` | DocumentGenerated, AimbaseWorkflowCompleted |
+| 5 | `docs/AI-SDLC/T3-2_API_설계.md` | I. 문서 템플릿 |
+| 6 | `docs/AI-SDLC/T3-5_단위테스트_명세.md` | TC-TPL, TC-DOCGEN |
 
 #### FE 참조
 
 | 순서 | 읽을 파일 | 참조 범위 |
 |------|----------|----------|
-| 1 | `docs/T3-3_화면_구조.md` | 문서 양식 관리 |
-| 2 | `docs/T3-2_API_설계.md` | I. 템플릿 API |
+| 1 | `docs/AI-SDLC/T3-3_화면_구조.md` | 문서 양식 관리 |
+| 2 | `docs/AI-SDLC/T3-2_API_설계.md` | I. 템플릿 API |
 
 **핵심 설계 결정 (CR-003 / CR-014):**
 - BID-DOC-001 LLM 입력 3파이프라인: ①OpportunityAnalysis(캐시) + ②ClientDocument[](사실 출처) + ③**성공 제안서 자산**(CR-014 개정 — 기존 "사용자 과거 BidDocument[]"에서 대체)
@@ -336,20 +336,20 @@ SAM.gov에 올라오는 미군(USFK) 조달 입찰 공고를 자동 수집하고
 
 | 순서 | 읽을 파일 | 참조 범위 |
 |------|----------|----------|
-| 1 | `docs/T3-1_데이터_모델.md` | BidDocument, BidDocumentVersion |
-| 2 | `docs/T1-5_FSM_상태_정의.md` | BidDocument FSM |
-| 3 | `docs/T1-3_비즈니스_규칙.md` | BIZ-002, BIZ-003, BIZ-009 |
-| 4 | `docs/T1-6_이벤트_계약.md` | DocumentConfirmed |
-| 5 | `docs/T3-2_API_설계.md` | J. 문서 편집, L. 요금 안내 |
-| 6 | `docs/T3-5_단위테스트_명세.md` | TC-EDIT |
+| 1 | `docs/AI-SDLC/T3-1_데이터_모델.md` | BidDocument, BidDocumentVersion |
+| 2 | `docs/AI-SDLC/T1-5_FSM_상태_정의.md` | BidDocument FSM |
+| 3 | `docs/AI-SDLC/T1-3_비즈니스_규칙.md` | BIZ-002, BIZ-003, BIZ-009 |
+| 4 | `docs/AI-SDLC/T1-6_이벤트_계약.md` | DocumentConfirmed |
+| 5 | `docs/AI-SDLC/T3-2_API_설계.md` | J. 문서 편집, L. 요금 안내 |
+| 6 | `docs/AI-SDLC/T3-5_단위테스트_명세.md` | TC-EDIT |
 
 #### FE 참조
 
 | 순서 | 읽을 파일 | 참조 범위 |
 |------|----------|----------|
-| 1 | `docs/T3-3_화면_구조.md` | 문서 편집, 요금 안내 |
-| 2 | `docs/T3-4_화면_상호작용.md` | 문서 편집 페이지 전체 |
-| 3 | `docs/T3-2_API_설계.md` | J, L API |
+| 1 | `docs/AI-SDLC/T3-3_화면_구조.md` | 문서 편집, 요금 안내 |
+| 2 | `docs/AI-SDLC/T3-4_화면_상호작용.md` | 문서 편집 페이지 전체 |
+| 3 | `docs/AI-SDLC/T3-2_API_설계.md` | J, L API |
 
 **핵심 검증:** TipTap 편집 → 새 버전 → 잠금 → 잠금 해제 → PDF 내보내기
 
@@ -363,8 +363,8 @@ SAM.gov에 올라오는 미군(USFK) 조달 입찰 공고를 자동 수집하고
 | 순서 | 읽을 파일 | 참조 범위 |
 |------|----------|----------|
 | 1 | 전체 설계 문서 | E2E 플로우 검증 |
-| 2 | `docs/T1-5_FSM_상태_정의.md` | 전체 FSM 전이 검증 |
-| 3 | `docs/T1-6_이벤트_계약.md` | 이벤트 흐름 검증 |
+| 2 | `docs/AI-SDLC/T1-5_FSM_상태_정의.md` | 전체 FSM 전이 검증 |
+| 3 | `docs/AI-SDLC/T1-6_이벤트_계약.md` | 이벤트 흐름 검증 |
 
 **핵심 검증:** 공고 수집 → 입찰 신청 → 문서 제출 → AI 생성 → 편집 → 확정 → 제출 전체 플로우
 
