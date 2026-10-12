@@ -60,7 +60,7 @@ Aimbase 안의 Claude CLI 는 Aimbase 자신의 MCP(aimbase-server)에만 붙고
 
 ### 3.5 바깥에서도 열려 있다
 
-- 운영 BE 8183 은 0.0.0.0 으로 열려 있고, 운영 nginx 도 /api/ 를 BE 로 넘긴다(CR-143 3.2).
+- 운영 BE 8183 은 0.0.0.0 으로 열려 있고, 운영 nginx 도 /api/ 를 BE 로 전달한다(CR-143 3.2).
 - 보안 설정은 /mcp/** 를 로그인 없이 연다(SecurityConfig.java:74~75). 열쇠 확인이 없다.
 - 내려받기 주소는 번호만 바꾸면 다른 파일이 열린다(OpportunityAttachmentDownloadController.java:37, RfpFileDownloadController.java:35). 샘플(rfp-files)은 과거 제안서다.
 
@@ -68,10 +68,10 @@ Aimbase 안의 Claude CLI 는 Aimbase 자신의 MCP(aimbase-server)에만 붙고
 
 운영이 AWS(54.116.150.247, 앱 /opt/wjbid/app)로 옮겨졌다(컨타 10/12 00:18).
 
-- BE 는 127.0.0.1, 172.17.0.1 의 8183 에만 열려 있다. 그러나 nginx 가 /api/ 와 /api/mcp/sse 를 BE 로 넘겨, https://woojinusbid.com/api/mcp 에 열쇠 없이 tools/list 를 보내면 200 과 도구 목록이 오고 /api/mcp/sse 는 세션을 내준다.
+- BE 는 127.0.0.1, 172.17.0.1 의 8183 에만 열려 있다. 그러나 nginx 가 /api/ 와 /api/mcp/sse 를 BE 로 전달해, https://woojinusbid.com/api/mcp 에 열쇠 없이 tools/list 를 보내면 200 과 도구 목록이 오고 /api/mcp/sse 는 세션을 내준다.
 - Aimbase 등록 bidding-agency-mcp 는 sse, http://host.docker.internal:8183/api/mcp, connected, 도구 19개, 머리글 없음(수정 10/11 14:47 UTC).
 - 서버 compose(/opt/wjbid/app/docker-compose.yml)는 .env 를 env_file 로 읽는다. MCP_API_KEY 는 .env 한 줄로 들어가고 compose 수정은 필요 없다. 지금 .env 에는 SAM_GOV_API_KEY, DB_PASSWORD, REDIS_PASSWORD 만 있다.
-- BE 는 이 폴더의 bidding-agency.jar 를 띄운다. 배포는 deploy_aws.sh 가 커밋 하나를 깨끗한 worktree 로 빌드해 jar 와 docker-compose.aws.yml 을 올린다(CR-149). 옛 서버의 docker-compose.prod.yml, deploy.sh 는 쓰지 않는다.
+- BE 는 이 폴더의 bidding-agency.jar 를 기동한다. 배포는 deploy_aws.sh 가 커밋 하나를 깨끗한 worktree 로 빌드해 jar 와 docker-compose.aws.yml 을 올린다(CR-149). 옛 서버의 docker-compose.prod.yml, deploy.sh 는 쓰지 않는다.
 
 ## 4. 정할 것
 

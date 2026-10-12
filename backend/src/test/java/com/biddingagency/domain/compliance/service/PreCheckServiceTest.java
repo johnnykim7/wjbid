@@ -153,8 +153,8 @@ class PreCheckServiceTest {
     }
 
     @Test
-    @DisplayName("TC-PRE-018 필수빠짐_검사_넘길수없음")
-    void 필수빠짐_검사_넘길수없음() {
+    @DisplayName("TC-PRE-018 필수빠짐_검사_전환불가")
+    void 필수빠짐_검사_전환불가() {
         OpportunityRequirementItem license = item("Business License", FulfillmentParty.CLIENT_UPLOAD, true, null);
         OpportunityRequirementItem insurance = item("Insurance Certificate", FulfillmentParty.CLIENT_UPLOAD, true, null);
         givenDetail(List.of(license, insurance), List.of(linked(license, "license.pdf")));
@@ -166,8 +166,8 @@ class PreCheckServiceTest {
     }
 
     @Test
-    @DisplayName("TC-PRE-019 필수다있고어긋남_검사_넘길수있음")
-    void 필수다있고어긋남_검사_넘길수있음() {
+    @DisplayName("TC-PRE-019 필수다있고어긋남_검사_전환가능")
+    void 필수다있고어긋남_검사_전환가능() {
         OpportunityRequirementItem license = item("Business License", FulfillmentParty.CLIENT_UPLOAD, true, "PDF");
         OpportunityRequirementItem insurance = item("Insurance Certificate", FulfillmentParty.CLIENT_UPLOAD, true, null);
         givenDetail(List.of(license, insurance),

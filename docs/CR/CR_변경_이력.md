@@ -26,7 +26,7 @@
 | CR-014 | 2026-05-29 | 성공 제안서 자산 작성 활용 (B작업) — 공고 IndustryType 자동분류 + 작성 P3를 성공 가이드+원본으로 대체 | BE (domain/opportunity IndustryClassifier 신설, Opportunity 엔티티, integration/samgov, domain/rfp ReferenceSampleService, domain/bid AIWorkflowService, mcp, 마이그레이션 V12) | 중규모 | 설계 먼저 + 코드 |
 | CR-019 | 2026-05-29 | 원본 공고 첨부 보강 — 수집 시 첨부 적재 + "가져와야 함" 표식 + 관리자 업로드 실제 저장 + 한글화 입력에 첨부 포함 | BE (integration/samgov, domain/opportunity OpportunityAttachment·status enum·repository, controller/admin, domain/notice, integration/llmplatform·mcp, 마이그레이션 V14) + FE (admin-console) | 중규모 | 설계 먼저 + 코드 |
 | CR-017 ① | 2026-05-29 | 제안서 생성 완료 알림 발행 연결 — MCP 문서저장 콜백에서 DocumentGeneratedEvent 발행(기존 배선만 있고 발행 0건이던 것) + 멱등키에 버전 포함 | BE (mcp/DocumentMcpTool, domain/event, domain/notification) | 소규모 | 완료 (코드+테스트, 실발송 E2E 미수행) |
-| CR-018 | 2026-05-29 | 고객 대상 진행 알림 3종(생성완료/접수/합격) + 입찰 결과 상태(AWARDED/NOT_AWARDED) 신설 | BE (domain/bid BidRequestState·BidFSMService·BidRequest, domain/notification NotificationType·NotificationEventListener, controller/admin, 마이그레이션 V16) + FE (admin-console, customer-portal) | 중규모 | 설계 먼저 + 코드 |
+| CR-018 | 2026-05-29 | 고객 대상 진행 알림 3종(생성완료/접수/낙찰) + 입찰 결과 상태(AWARDED/NOT_AWARDED) 신설 | BE (domain/bid BidRequestState·BidFSMService·BidRequest, domain/notification NotificationType·NotificationEventListener, controller/admin, 마이그레이션 V16) + FE (admin-console, customer-portal) | 중규모 | 설계 먼저 + 코드 |
 | CR-020 | 2026-05-30 | 대용량 제안서 섹션 루프 워크플로우 재설계 — 단일 LLM_CALL → plan_outline + FOREACH(섹션별 EVALUATOR_LOOP) + assemble. 50~백 페이지 안정 생성 + 품질 보강 | Aimbase 워크플로우 steps JSON 재작성 (엔진 무변경) + 소비앱 인터페이스 검토 (MCP/엔티티 무변경 전제) | 중규모 이상 | 설계 초안 (상세: CR-020_대용량_제안서_섹션루프_워크플로우_재설계.md) |
 | CR-021 | 2026-05-31 | 공고문 표시 풍부화 — TipTap JSON 본문(contentJson) 신설 + NOTICE_VIEW 양식 템플릿 + Aimbase 워크플로우에 양식 입력/contentJson 출력 추가. 첨부 PDF 수준 PDF 양식으로 admin/customer 양쪽 렌더 | BE (마이그레이션 V18/V19, domain/notice Notice·NoticeService·MCP·DTO, domain/document DocumentType·DocumentTemplate API 활성/수정/재활성, application.yml polling 200) + FE (admin-console NoticeDocumentView 신규·NoticeAdminDetailPage·DocumentTemplatePage, customer-portal NoticeDocumentView·BidDetailPage·types) + Aimbase 워크플로우 PUT(noticeViewTemplate 입력·contentJson 출력·timeout_ms 600000) + docs/templates/·docs/workflows/ 자산화 | 중규모 | 1차 완료 (실제 노티 한글화 → contentJson 7768자 생성 → admin 화면 렌더 검증, 2026-05-31). 설계 캐스케이드는 사용자 지시로 보류 (나중 일괄). |
 | CR-033 | 2026-06-02 | 공고 필수서류·자격요건 정밀추출 WF 분리 + Claude Code식 채팅 재생성 — ①요약 WF와 별도로 자격요건+필요서류를 묶은 정밀추출 WF 신설(Instructions to Offerors·PWS를 자율주행 파싱) ②슬롯 FACTOR>Subfactor 계층화 + 충족주체(AI생성/고객업로드/시스템양식) 분류, 고객 화면엔 고객업로드만 노출 ③관리자 검수=Aimbase Chat Widget 재사용, 현재 산출물+지시이력+첨부URL을 contextProvider로 주입해 자율주행이 부분 수정 | BE (domain/notice 추출/재생성 WF 분리·MCP 스키마, domain/compliance 슬롯 계층 모델, controller/admin 재생성 게이트, integration/llmplatform) + FE (admin-console 슬롯 검수 + aimbase-chat 위젯 + BFF 토큰 프록시, customer-portal 슬롯 고객업로드 필터) + Aimbase 워크플로우(정밀추출 신규) | 중규모 이상 | **1차 구현 완료 (2026-06-03)**: FACTOR>Subfactor+충족주체+자격요건 스키마(BE DTO·MCP), 고객/관리자 화면 렌더, opportunity-analysis WF에 추출 프롬프트+스키마 추가. 실측으로 설계 수정(아래 상세 §CR-033 참조) — 저장소=경로A(Notice.requiredDocumentsJson) 확장, 별도 WF 신설 대신 기존 한글화 WF에 추출 통합. **남음**: 실제 LLM 추출 정확도 E2E, 교정 채팅(BFF+위젯). 운영 배포 완료 |
@@ -106,11 +106,11 @@
   3. **관리자 첨부파일 수동 업로드** — SAM.gov에서 첨부파일이 없거나 다운로드 실패 시, 관리자가 직접 첨부파일을 업로드하고 분석 트리거
   4. **LLM 입력 3파이프라인 통합** — 문서 작성 시 입력 = ①공고 사전 분석 결과(캐시) + ②사용자 제출 서류 + ③과거 제출 이력. 3번 파이프라인은 빈 배열이어도 동일 구조로 전달 (조건 분기 없음)
   5. **OpportunityAnalysis 엔티티 신설** — 공고별 사전 분석 결과 저장 (요약, 필요서류, 양식, 프롬프트 프리셋)
-  6. **BID-DOC-001 개선** — AIWorkflowService가 3파이프라인 데이터를 조합하여 Aimbase에 전달. 과거 이력은 조회해서 넘기면 끝 (비어있으면 빈 배열)
+  6. **BID-DOC-001 개선** — AIWorkflowService가 3파이프라인 데이터를 조합하여 Aimbase에 전달. 과거 이력은 조회해서 전달하면 끝 (비어있으면 빈 배열)
   7. **MCP Tool 추가** — `get_opportunity_analysis` (사전 분석 결과 조회), `get_past_submissions` (과거 제출 이력 조회)
 - **설계 원칙**:
   - 공고 분석은 공고당 1회 — 여러 사용자가 신청해도 재분석 불필요
-  - 과거 이력 조회에 조건 분기 불필요 — 조회해서 넘기면 됨, 비어있으면 빈 배열
+  - 과거 이력 조회에 조건 분기 불필요 — 조회해서 전달하면 됨, 비어있으면 빈 배열
   - 관리자 승인 전까지 공고는 사용자에게 비노출
 - **영향 설계 문서**:
   - T1-1 기능요구사항 v1.2 — BID-OPP-006~008 신규, BID-DOC-001 개선, BID-MCP-002 확장, BID-ADMIN-004 신규
@@ -371,7 +371,7 @@
 - **CR-016 선반영 발견**: 메모리 진단 시점과 달리 CR-016(원본/공고문 분리, Notice 엔티티 신설, V13)이 이미 코드 반영됨. 한글화 입력 경로가 구 `OpportunityAnalysisService`가 아니라 `NoticeService.buildOpportunityText`로 이전됨 → CR-019 (c)·(d)는 NoticeService 기준으로 진행.
 - **사용자 확정 결정**:
   1. **범위** = 4종 전부 (수집 적재+표식 / 관리자 업로드 실제 저장 / 한글화 입력 포함 / 관리자 화면 표식 UI).
-  2. **파싱** = Aimbase `parse_document`. BE 사전 파싱 없이 첨부 다운로드 URL을 워크플로우 입력으로 넘겨 Aimbase가 발췌(RfpSample fileUrls와 동일 패턴).
+  2. **파싱** = Aimbase `parse_document`. BE 사전 파싱 없이 첨부 다운로드 URL을 워크플로우 입력으로 전달해 Aimbase가 발췌(RfpSample fileUrls와 동일 패턴).
   3. 진행 = 설계 캐스케이드 먼저 + 코드 (중규모).
 - **변경 사항**:
   1. **데이터 모델 (T3-1)**: 마이그레이션 V14. `AttachmentDownloadStatus`에 `MANUAL_FETCH_REQUIRED`(외부 수동수집 필요) 값 추가. OpportunityAttachment 적재/갱신 경로 정의.
@@ -440,11 +440,11 @@
 
 ### CR-018: 고객 대상 진행 알림 3종 + 입찰 결과 상태 신설 (2026-05-29)
 
-- **배경**: 점검8. 사용자 기대 = 제안서 생성 완료 시 고객에 "완료" 알림, 제출(접수) 시 "접수" 알림, 합격 시 "합격" 알림(자동 아니라 관리자 수동 업데이트 전제). 실측 결과 고객 대상 알림은 OPPORTUNITY_APPROVED(신규 공고) 1종뿐이고, ①생성완료 알림은 ADMIN 대상(DocumentGenerated), ②접수 알림은 타입/리스너 없음(BidRequestStateChanged 발행되나 알림 리스너 無), ③합격은 **FSM 상태 모델 자체에 없음**(SUBMITTED가 종착).
+- **배경**: 점검8. 사용자 기대 = 제안서 생성 완료 시 고객에 "완료" 알림, 제출(접수) 시 "접수" 알림, 낙찰 시 "합격" 알림(자동 아니라 관리자 수동 업데이트 전제). 실측 결과 고객 대상 알림은 OPPORTUNITY_APPROVED(신규 공고) 1종뿐이고, ①생성완료 알림은 ADMIN 대상(DocumentGenerated), ②접수 알림은 타입/리스너 없음(BidRequestStateChanged 발행되나 알림 리스너 無), ③낙찰은 **FSM 상태 모델 자체에 없음**(SUBMITTED가 종착).
 - **사용자 확정 결정**:
-  - 합격 상태모델 = **FSM에 AWARDED/NOT_AWARDED 추가**(별도 결과 필드 분리 안 함). 전이 = **SUBMITTED → AWARDED / NOT_AWARDED**(둘 다 종착, 재도전 전이 없음). 관리자만 전이 가능(기존 CR-017 ③ 화이트리스트로 고객 차단 유지).
-  - 알림 3종 발송 시점 = `BidRequestStateChangedEvent` 소비 — `toState=REVIEW`(생성완료), `SUBMITTED`(접수), `AWARDED`(합격). NOT_AWARDED는 MVP 무알림. (생성완료를 REVIEW 전이로 잡은 이유: GENERATING→REVIEW가 AI 문서 생성 완료를 의미하고 이미 StateChanged 이벤트로 발행됨 → DocumentGenerated의 DocumentType별 N건 발행을 고객에게 중복 전송하지 않음.)
-  - bp-notification 템플릿 = **기존 템플릿 재사용**(신규 등록 운영작업 없이 즉시 발송). 생성완료=BID_DOC_GENERATED, 접수=BID_REQUEST_ADMIN, 합격=BID_OPPORTUNITY_APPROVED 재사용(문구 부적절 가능성은 감수, 후속 전용 템플릿 등록 가능).
+  - 낙찰 상태모델 = **FSM에 AWARDED/NOT_AWARDED 추가**(별도 결과 필드 분리 안 함). 전이 = **SUBMITTED → AWARDED / NOT_AWARDED**(둘 다 종착, 재도전 전이 없음). 관리자만 전이 가능(기존 CR-017 ③ 화이트리스트로 고객 차단 유지).
+  - 알림 3종 발송 시점 = `BidRequestStateChangedEvent` 소비 — `toState=REVIEW`(생성완료), `SUBMITTED`(접수), `AWARDED`(낙찰). NOT_AWARDED는 MVP 무알림. (생성완료를 REVIEW 전이로 잡은 이유: GENERATING→REVIEW가 AI 문서 생성 완료를 의미하고 이미 StateChanged 이벤트로 발행됨 → DocumentGenerated의 DocumentType별 N건 발행을 고객에게 중복 전송하지 않음.)
+  - bp-notification 템플릿 = **기존 템플릿 재사용**(신규 등록 운영작업 없이 즉시 발송). 생성완료=BID_DOC_GENERATED, 접수=BID_REQUEST_ADMIN, 낙찰=BID_OPPORTUNITY_APPROVED 재사용(문구 부적절 가능성은 감수, 후속 전용 템플릿 등록 가능).
   - 구현 범위 = **BE + FE 전체**.
 - **변경 사항**:
   1. `domain/bid/entity/BidRequestState` — `AWARDED`, `NOT_AWARDED` 추가. `isTerminal()`에 둘 다 포함, `getStateDisplay()` 한글 라벨 추가.
@@ -454,7 +454,7 @@
   5. `domain/notification/entity/NotificationType` — 고객 대상 `PROPOSAL_READY_CUSTOMER`/`BID_SUBMITTED_CUSTOMER`/`BID_AWARDED_CUSTOMER` 3종(기존 templateCode 재사용).
   6. `domain/notification/service/NotificationEventListener.onBidRequestStateChanged` — toState 분기로 고객 알림 발송(member 1명). 멱등키 `BR_STATE_{id}_{toState}`.
   7. `controller/admin/BidRequestAdminController` — 기존 `POST /{id}/transition` 으로 AWARDED/NOT_AWARDED 전이 처리(전용 API 신설 안 함, FSM 화이트리스트 재사용).
-  8. FE admin `BidRequestDetailPage` — NEXT_STATES/STATE_LABELS/STATE_COLORS에 AWARDED/NOT_AWARDED 추가 → 기존 상태 전환 모달에서 합격/불합격 선택 가능.
+  8. FE admin `BidRequestDetailPage` — NEXT_STATES/STATE_LABELS/STATE_COLORS에 AWARDED/NOT_AWARDED 추가 → 기존 상태 전환 모달에서 낙찰/탈락 선택 가능.
   9. FE customer `types`(STATE_LABEL/STATE_BADGE) — AWARDED/NOT_AWARDED 라벨/배지 추가 → 제안서 상세·목록에 결과 표시.
 - **영향 범위**: BE (domain/bid, domain/notification, controller/admin, 마이그레이션 V16) + FE (admin-console, customer-portal) + 테스트(BidFSMServiceTest, NotificationEventListener 검증).
 - **규모**: 중규모(FSM 상태·데이터 모델·화면·알림 동시 변경 → 설계 캐스케이드 선행).
@@ -466,7 +466,7 @@
 
 ### CR-021: 공고문 표시 풍부화 — TipTap 본문 + NOTICE_VIEW 양식 (2026-05-31)
 
-- **배경**: 운영 화면에서 공고문 상세가 `JSON.stringify` 원시값으로 노출되어 사람이 읽기 불가. 사용자 합격선 = 첨부 PDF(W90VN926QA034) 수준의 풍부도(표·계층·강조박스·메타그리드). 정형 JSON(summary/requiredDocuments/documentFormats)은 액션용으로 유지하면서, 사람이 읽는 본문을 별도 슬롯으로 신설.
+- **배경**: 운영 화면에서 공고문 상세가 `JSON.stringify` 원시값으로 노출되어 사람이 읽기 불가. 사용자 통과 기준 = 첨부 PDF(W90VN926QA034) 수준의 풍부도(표·계층·강조박스·메타그리드). 정형 JSON(summary/requiredDocuments/documentFormats)은 액션용으로 유지하면서, 사람이 읽는 본문을 별도 슬롯으로 신설.
 - **사용자 확정 결정**:
   - 데이터 모델 = **`notices.content_json` 신설**(TipTap JSON 노드 트리). 액션용 정형 키는 그대로 유지.
   - 양식 = 기존 "문서 템플릿 관리" 메뉴에 **`NOTICE_VIEW` 타입 추가** — 별도 메뉴 분리 안 함.
@@ -587,7 +587,7 @@
   - **BidRequest(고객 신청)는 Opportunity를 참조**([BidRequest.java:43](../backend/src/main/java/com/biddingagency/domain/bid/entity/BidRequest.java#L43)), Notice 직접 참조 아님 → 공고문 삭제해도 고객 신청·제안서 문서 무영향.
   - **Notice → Opportunity 단방향**(역참조 FK 없음, V13 FK는 opportunity 삭제 시 notice cascade — 역방향 아님) → Notice 삭제 시 원본 Opportunity 보존(BIZ-004).
   - **VerificationLog**(targetType=NOTICE, targetId=noticeId)는 FK 아닌 느슨한 참조 → 함께 삭제(고아 방지).
-  - **NotificationLog 정리 불필요(실측 반박)**: referenceType은 CollectorRun/BidRequest/Opportunity 등 엔티티명, referenceId에 우리 Notice UUID를 박는 알림 없음. 알림 vars의 `noticeId`는 SAM 공고번호(string, `opp.getNoticeId()`)이지 Notice 엔티티 PK 아님. → 삭제 대상 아님.
+  - **NotificationLog 정리 불필요(실측 반박)**: referenceType은 CollectorRun/BidRequest/Opportunity 등 엔티티명, referenceId에 우리 Notice UUID를 기록하는 알림 없음. 알림 vars의 `noticeId`는 SAM 공고번호(string, `opp.getNoticeId()`)이지 Notice 엔티티 PK 아님. → 삭제 대상 아님.
 - **변경 사항**:
   1. `NoticeService.deleteNotice(noticeId)` — 가드 후 hard delete. 가드: `isVisible()`이면 409(노출 중 삭제 금지), `isAnalyzing()`이면 409(분석 중 삭제 금지). 통과 시 VerificationLog(NOTICE,noticeId) deleteAll → noticeRepository.delete.
   2. Controller `DELETE /admin/notices/{id}`.
@@ -762,7 +762,7 @@
 
 - **배경(사용자 지적)**: 고객이 보는 입찰 상세 화면에서 같은 서류 목록이 **두 번** 노출됨 — ① 공고문 본문(`NoticeDocumentView`) 안의 "11. 제출 서류" 표 + ② 하단 별도 "필요 서류 체크리스트". 고객 입장에서 중복·혼란. "고객은 자기가 제출해야 할 서류만 정확히 알면 된다."
 - **실측 진단(소스 직접 확인)**:
-  - 고객 [BidDetailPage.tsx:175](../frontend/customer-portal/src/pages/BidDetailPage.tsx#L175)가 `NoticeDocumentView`로 본문 contentJson 렌더 — 그 안에 `heading`("11. 제출 서류") + `dataTable` 노드가 박혀 표로 표시됨.
+  - 고객 [BidDetailPage.tsx:175](../frontend/customer-portal/src/pages/BidDetailPage.tsx#L175)가 `NoticeDocumentView`로 본문 contentJson 렌더 — 그 안에 `heading`("11. 제출 서류") + `dataTable` 노드가 들어 있어 표로 표시됨.
   - 같은 페이지 [BidDetailPage.tsx:261-289](../frontend/customer-portal/src/pages/BidDetailPage.tsx#L261-L289)가 `requiredDocuments.documents[]`를 "필요 서류 체크리스트"(체크박스/필수배지/페이지제한 포함)로 별도 렌더.
   - 두 곳이 같은 서류를 다른 데이터 소스로 보여주는 중복. 체크리스트가 정보가 더 풍부(고객이 "내가 올릴 것" 보기 좋음).
   - 고객/관리자 `NoticeDocumentView`는 **별도 파일**(공유 컴포넌트 아님) — 고객 파일만 고치면 관리자 무영향.
@@ -860,7 +860,7 @@
 
 ### CR-129: 회원 요금 월 5만원 반영 (2026-10-10)
 
-- **배경(사용자)**: 10/10 15:31 원문 "회원가입해서 5만원정도..월.. 공고문 적격성 서비스도 해주고, 공고문 상세번역도 해주고. 무료 가입자는 SAM번역수준만."(docs/origins/원본_사이트목적과서비스_20261010.md 4번). 17:13 "5만원은 그냥 제가 툭던진말이고". 17:40 월 구독은 무료·회원 두 단계, 등록 대행·제안서 자문은 건별 견적으로 따로, 회원 금액은 화면에 박지 않고 설정값으로 두고 발주사와 정한 뒤 넣는다. 18:50 결제 내역·약관·환불 문구도 이 CR 에서 고치고, 관리자 금액 입력 화면은 만들지 않는다.
+- **배경(사용자)**: 10/10 15:31 원문 "회원가입해서 5만원정도..월.. 공고문 적격성 서비스도 해주고, 공고문 상세번역도 해주고. 무료 가입자는 SAM번역수준만."(docs/origins/원본_사이트목적과서비스_20261010.md 4번). 17:13 "5만원은 그냥 제가 툭던진말이고". 17:40 월 구독은 무료·회원 두 단계, 등록 대행·제안서 자문은 건별 견적으로 따로, 회원 금액은 화면에 고정하지 않고 설정값으로 두고 발주사와 정한 뒤 넣는다. 18:50 결제 내역·약관·환불 문구도 이 CR 에서 고치고, 관리자 금액 입력 화면은 만들지 않는다.
 - **대상 기능 ID**: BID-PRICE-001
 - **변경 타입**: 변경
 - **영향 범위**: BID-PRICE-001, POL-010
@@ -959,7 +959,7 @@
 ### CR-138: 운영 시각 9시간 어긋남과 관리자 주소 바로 열기 (2026-10-11)
 
 - **배경(사용자)**: 10/11 09:26 /전승 "운영 서버 시간대가 없어 모든 화면·메일 시각이 9시간 이르게 보임 ①새 창에서 운영 서버 시간대를 서울로 맞춤, 정해진 시각에 도는 작업이 함께 옮겨지는지도 확인(권장)", "관리자 콘솔 아래 주소로 바로 들어가거나 새로고침하면 고객 사이트가 뜸 ①새 창에서 운영 웹서버 설정을 고침(권장)". 컨타 11:30 배정 공고 마감 9시간 늦게 저장(CR-137 창 10:16 발견)
-- **원인**: 운영 백엔드 컨테이너만 UTC(compose 에 TZ 없음). 지금 시각으로 쓴 칸은 바르게 저장되고 읽을 때 9시간 이르다. 수집이 만든 게시일과 마감은 9시간 늦게 저장돼 공고 목록에서는 맞물려 맞게 보인다. 공고 상세 응답은 마감을 날짜만 줘 화면이 늘 오전 09:00. 서버 nginx 의 관리자 경로가 없는 주소를 고객 포털 첫 파일로 넘긴다
+- **원인**: 운영 백엔드 컨테이너만 UTC(compose 에 TZ 없음). 지금 시각으로 쓴 칸은 바르게 저장되고 읽을 때 9시간 이르다. 수집이 만든 게시일과 마감은 9시간 늦게 저장돼 공고 목록에서는 맞물려 맞게 보인다. 공고 상세 응답은 마감을 날짜만 줘 화면이 늘 오전 09:00. 서버 nginx 의 관리자 경로가 없는 주소를 고객 포털 첫 파일로 전달한다
 - **대상**: docker-compose.prod.yml 시간대, 수집 날짜 읽기, SAM 호출 기록 시각, 운영 공고 게시일과 마감 보정(386건 예상), 공고 상세 응답 마감 시각 칸, 서버 nginx 한 줄
 - **변경 타입**: 결함 수정, 운영 데이터 보정, 서버 설정
 - **영향 설계서**: T3-2(공고문 상세 responseDeadlineAt), T1-3(BIZ-004 원본 보존 대상). 확인하고 영향 없음: T1-1, T1-4, T1-5, T1-6, T1-7, T2-1, T3-1, T3-3, T3-4, T3-5
@@ -1070,7 +1070,7 @@
 
 - **배경(사용자)**: 10/11 운영을 AWS(54.116.150.247)로 옮기고 https 를 붙인 뒤, 관리자 공고문 수정 채팅이 옛 서버 http 주소에서 위젯을 불러 https 화면에서 막히는 것을 확인. 10/12 00:01 "ㄱ1"(채팅을 https 주소로 열고 관리자 화면이 그 주소를 부르게 고침), 00:06 /전승
 - **대상**: 관리자 공고문 수정 채팅. 원인 셋. (1) 위젯을 옛 서버 http://59.8.160.12:8280 에서 불러 https 화면에서 막힘 (2) Aimbase widget.allowed-origins 와 앱의 위젯 토큰 origin 이 http://woojinusbid.com 뿐 (3) 화면이 위젯 전역의 createWidget 을 부르지만 UMD 로더는 init 만 내놓아 옮기기 전부터 열리지 않음
-- **변경**: 관리자 화면 NoticeCorrectionChat 은 위젯 주소 기본값을 같은 주소 /aimbase 로 바꾸고 createWidget 대신 init 을 부른다. AWS 웹 서버는 /aimbase/widget/ 과 채팅 경로(chat, workflows/runs/{id}/subscribe, knowledge-sources/{id}/chunks)만 Aimbase 로 넘기고 그 밖의 /aimbase 는 404. AWS Aimbase global_config widget.allowed-origins 에 https://woojinusbid.com 추가. AWS 앱 실행 설정 WIDGET_ALLOWED_ORIGIN=https://woojinusbid.com
+- **변경**: 관리자 화면 NoticeCorrectionChat 은 위젯 주소 기본값을 같은 주소 /aimbase 로 바꾸고 createWidget 대신 init 을 부른다. AWS 웹 서버는 /aimbase/widget/ 과 채팅 경로(chat, workflows/runs/{id}/subscribe, knowledge-sources/{id}/chunks)만 Aimbase 로 전달하고 그 밖의 /aimbase 는 404. AWS Aimbase global_config widget.allowed-origins 에 https://woojinusbid.com 추가. AWS 앱 실행 설정 WIDGET_ALLOWED_ORIGIN=https://woojinusbid.com
 - **변경 타입**: 변경(결함 수정과 운영 설정)
 - **영향 모듈**: 관리자 공고문 관리(교정 채팅), Aimbase 위젯 연동
 - **영향 설계서**: 없음(새 API, 화면, 표 없음). 설계서의 59.8.160.12 서버 주소 표기는 AWS 이전 기록에서 함께 정리한다
@@ -1122,7 +1122,7 @@
 - **현황(상용 실측 10/12 07:50)**: 모은 공고 398건 중 공개 한글 공고문이 있는 것 21건. 나머지 377건은 줄을 누르면 SAM.gov 원문이 새 창으로 열렸다(CR-135 규칙). 한글 제목 395건, 모아 둔 원문 본문 51건
 - **대상 기능 ID**: BID-BROWSE-002, BID-MKT-001~006 과 기지 지도(줄 누름 규칙)
 - **변경 타입**: 변경
-- **대상**: 모은 공고 화면 7곳(사전 공고, 변경 공고, 최근 낙찰, 낙찰 업체, 월별 동향, 업종별 발주, 기지 지도)의 줄 누름을 우리 공고 상세로 바꾼다. 공고문이 없는 공고는 새 원본 공고 상세(`/search/origin/{opportunityId}`, `GET /opportunities/origin/{opportunityId}`)로 열고, 공고문이 공개되면 공고문 상세로 넘긴다. 공고 상세 머리에 SAM.gov 원문 보기 단추. 공고 상세는 지금처럼 로그인해야 연다
+- **대상**: 모은 공고 화면 7곳(사전 공고, 변경 공고, 최근 낙찰, 낙찰 업체, 월별 동향, 업종별 발주, 기지 지도)의 줄 누름을 우리 공고 상세로 바꾼다. 공고문이 없는 공고는 새 원본 공고 상세(`/search/origin/{opportunityId}`, `GET /opportunities/origin/{opportunityId}`)로 열고, 공고문이 공개되면 공고문 상세로 전환한다. 공고 상세 머리에 SAM.gov 원문 보기 단추. 공고 상세는 지금처럼 로그인해야 연다
 - **영향 모듈**: 고객 포털 모은 공고 화면, 공고 상세 / BE 공고 조회
 - **영향 설계서**: T1-1 1.15, T3-2 1.14, T3-3 1.12, T3-4 1.9, T3-5 1.9(TC-BROWSE-006~009). T1-3, T1-5, T1-6, T2, T3-1 은 영향 없음(새 규칙, 상태, 이벤트, 표 없음)
 - **규모**: 중(새 화면 1, 새 조회 API 1, 화면 7곳 줄 누름). 문서 [CR-152_모은_공고를_누르면_우리_공고_상세로.md](CR-152_모은_공고를_누르면_우리_공고_상세로.md)
@@ -1133,12 +1133,12 @@
 - **배경(사용자)**: 10/12 07:58 "메인사진하고, 간간히 들어가는 사진들은 주기적으로 자동으로 변경하게 할수 없나요?", 08:00 "1"(관리자 화면에서 자리별 사진 묶음을 올리고 고객 화면은 방문마다 돌려 보이기) [origins/원본_사진자동교체_20261012.md](../origins/원본_사진자동교체_20261012.md)
 - **대상 기능 ID**: BID-SITE-001(관리자 사진 묶음 관리), BID-SITE-002(고객 화면 사진 고르기)
 - **변경 타입**: 신규
-- **대상**: 고객 화면 사진 자리 10곳(홈 4, 로그인, 회원가입, 서비스 안내 4묶음)이 코드에 박힌 경로 대신 DB 의 사진 묶음을 읽고 방문마다 한 장을 고른다. 관리자 콘솔에 「고객 화면 사진」 화면을 더해 자리별로 올리고 숨기고 지운다. 올린 사진은 가로 1600, 400KB 안팎 JPEG 로 줄여 저장한다. 처음 배포 때 지금 사진 8장이 자리마다 들어 있어 화면은 그대로다
+- **대상**: 고객 화면 사진 자리 10곳(홈 4, 로그인, 회원가입, 서비스 안내 4묶음)이 코드에 고정된 경로 대신 DB 의 사진 묶음을 읽고 방문마다 한 장을 고른다. 관리자 콘솔에 「고객 화면 사진」 화면을 더해 자리별로 올리고 숨기고 지운다. 올린 사진은 가로 1600, 400KB 안팎 JPEG 로 줄여 저장한다. 처음 배포 때 지금 사진 8장이 자리마다 들어 있어 화면은 그대로다
 - **영향 모듈**: 고객 포털 홈, 로그인, 회원가입, SNS 가입, 서비스 안내, 항목별 준비 안내 / 관리자 콘솔 / BE 사진 묶음, 파일 저장, 운영 설정
 - **영향 설계서**: T1-1 1.16, T1-2 1.7, T1-3 1.6(BIZ-067~068), T1-4 1.6(POL-039), T2-1 1.7, T3-1 1.10, T3-2 1.15, T3-3 1.13, T3-4 1.10, T3-5 1.10(TC-SITE-001~012), execution-spec 1.9. T1-5, T1-6 은 영향 없음(상태, 이벤트 없음)
 - **규모**: 중(새 표 2, 새 API 6, 관리자 새 화면 1). 문서 [CR-153_고객_화면_사진_자동_교체_관리자_사진_묶음.md](CR-153_고객_화면_사진_자동_교체_관리자_사진_묶음.md)
 - **다른 CR 과 이어짐**: 운영에 V53 을 V52(CR-146)보다 먼저 올리려 spring.flyway.out-of-order 를 켠다. CR-146 을 운영에 올릴 때 이 설정이 있어야 V52 가 들어간다
-- **상태**: 상용 배포 완료(10/12 08:43 `./deploy_aws.sh all ed3840b`, 갈래 deploy/cr153 은 운영 6ec8dd7 에 이 CR 만 얹음, V53 적용, 운영 화면과 공고 분석 1건 확인 09:05). 바뀌는 방식 선택 칸과 순서 화살표는 사용자 답이 오기 전까지 뺌
+- **상태**: 상용 배포 완료(10/12 08:43 `./deploy_aws.sh all ed3840b`, 브랜치 deploy/cr153 은 운영 6ec8dd7 에 이 CR 만 얹음, V53 적용, 운영 화면과 공고 분석 1건 확인 09:05). 바뀌는 방식 선택 칸과 순서 화살표는 사용자 답이 오기 전까지 뺌
 
 ### CR-154: 용어표 도입과 입찰 결과 이름 낙찰, 탈락 (2026-10-12)
 
@@ -1149,7 +1149,7 @@
 - **영향 모듈**: 고객 포털 입찰 상태 / 관리자 콘솔 입찰 관리, 대시보드, 입찰 상세 / BE 입찰 상태 이름, 낙찰 알림 메일 제목
 - **영향 설계서**: T1-10 1.0(신설), T1-5 1.4, T1-6 1.6. T3 는 영향 없음(입찰 결과 이름 없음)
 - **규모**: 소(이름 변경과 문서 자리 이동). 문서 [CR-154_용어표_도입과_입찰_결과_이름_낙찰_탈락.md](CR-154_용어표_도입과_입찰_결과_이름_낙찰_탈락.md)
-- **상태**: 구현 완료, 로컬 확인 전
+- **상태**: 완료. 10/12 14:12 "1=2, 2=1" 로 로컬 화면 확인은 하지 않고, 설계서와 CR 문서 31개의 대화체 낱말 131곳을 고침. 운영 미배포
 
 ### CR-155: 모은 공고 전체 공개와 본문 한글화 (2026-10-12)
 
@@ -1162,4 +1162,4 @@
 - **영향 설계서**: T1-1 1.17, T1-3 1.7(BIZ-069~070), T3-1 1.11(있던 칸 보정), T3-2 1.16, T3-3 1.14, T3-4 1.11, T3-5 1.11(TC-BROWSE-010~017, TC-OPP-015~019), execution-spec 1.10. T1-4, T1-5, T1-6, T1-7, T1-10, T2 는 영향 없음(새 정책 값, 상태, 이벤트, 이름, 라이브러리 없음)
 - **규모**: 대(고객 목록 세 곳의 자료 기준 변경, 수집 흐름에 본문 조회와 번역). 문서 [CR-155_모은_공고_전체_공개와_본문_한글화.md](CR-155_모은_공고_전체_공개와_본문_한글화.md)
 - **다른 CR 과 이어짐**: 공고문 열람을 회원으로 묶는 것과 숨겨 둔 공고문 2건 공개는 CR-156
-- **상태**: 완료. 상용 배포 10/12 13:00(`./deploy_aws.sh all d065ebd`, 갈래 deploy/cr155-prod 는 운영 ed3840b 에 이 CR 만 얹음, CR-146 제외), 마감 전 13건 한글 본문 채움, 운영 화면 확인 13:06
+- **상태**: 완료. 상용 배포 10/12 13:00(`./deploy_aws.sh all d065ebd`, 브랜치 deploy/cr155-prod 는 운영 ed3840b 에 이 CR 만 얹음, CR-146 제외), 마감 전 13건 한글 본문 채움, 운영 화면 확인 13:06

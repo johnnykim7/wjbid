@@ -320,7 +320,7 @@ SAM.gov에 올라오는 미군(USFK) 조달 입찰 공고를 자동 수집하고
 **핵심 설계 결정 (CR-003 / CR-014):**
 - BID-DOC-001 LLM 입력 3파이프라인: ①OpportunityAnalysis(캐시) + ②ClientDocument[](사실 출처) + ③**성공 제안서 자산**(CR-014 개정 — 기존 "사용자 과거 BidDocument[]"에서 대체)
 - ③ = 신규 공고 industry_type(BIZ-018) 매칭 → successGuide(PatternGuide.guideJson) + referenceSamples[](성공 제안서 원본 메타+다운로드 URL, Aimbase가 parse_document로 발췌) + referenceUsagePolicy(사실 복붙 금지, BIZ-019)
-- 조회해서 넘기면 끝. industry_type=NULL(미분류)이면 빈 처리. 조건 분기 없음
+- 조회해서 전달하면 끝. industry_type=NULL(미분류)이면 빈 처리. 조건 분기 없음
 - 사전 분석이 COMPLETED 상태여야 문서 생성 가능
 
 **핵심 검증:** 템플릿 등록 → **사전 분석 캐시 확인** → Aimbase Workflow 실행 (3파이프라인 입력) → 문서 생성 → DB 저장 → 관리자 이메일
@@ -540,7 +540,7 @@ sequenceDiagram
 | ~~옵션 연장 알림 (CR-142)~~ | ~~`GET /member-contracts`, `GET /member-contracts/lookup`, `POST /member-contracts`, `PATCH/DELETE /member-contracts/{id}`~~ | ~~로그인, 본인 계약만. 찾기는 표에 없을 때만 USAspending 1회. 메일은 매일 09:00 Asia/Seoul 스케줄러~~ **폐기 (CR-147)** |
 | 낙찰가 범위 (CR-142) | `GET /federal-contracts/award-range`, `/naics` | 로그인. 금액 0 이하 제외, 건수가 설정값 미만이면 범위를 내지 않음(BIZ-054) |
 | 관리자 미 연방 계약 받기 (CR-142) | `POST /admin/federal-contracts/sync`, `GET /admin/federal-contracts/sync-runs` | 화면 없음. 매일 05:00 Asia/Seoul 스케줄러와 같은 처리 |
-| 제출 전 검사, 입찰 건별 제출 전 검사, 입찰 상세 제출 서류 (CR-141) | `GET /bid-requests/my/pre-check`, `GET /bid-requests/{id}/pre-check`, `POST/DELETE /bid-requests/{id}/required-document-slots/{itemId}[/upload, /from-vault]`, `GET /member-documents`, `PATCH /bid-requests/{id}/state` | 로그인, 자기 입찰 건만(BIZ-049). 필수 서류 빠지면 서류 접수 넘기기 막고 형식·쪽수는 경고만(BIZ-046~048) |
+| 제출 전 검사, 입찰 건별 제출 전 검사, 입찰 상세 제출 서류 (CR-141) | `GET /bid-requests/my/pre-check`, `GET /bid-requests/{id}/pre-check`, `POST/DELETE /bid-requests/{id}/required-document-slots/{itemId}[/upload, /from-vault]`, `GET /member-documents`, `PATCH /bid-requests/{id}/state` | 로그인, 자기 입찰 건만(BIZ-049). 필수 서류 빠지면 서류 접수 전환을 막고 형식·쪽수는 경고만(BIZ-046~048) |
 | 고객 화면 사진 자리(홈, 로그인, 회원가입, SNS 가입, 서비스 안내, 준비 안내) (CR-153) | `GET /site-photos`, `GET /site-photos/{id}/image` | 로그인 없이. 앱 시작 때 한 번 받고 브라우저에 남겨 둔다. 사진이 없거나 못 받으면 사진 없이(BIZ-067) |
 | 관리자 고객 화면 사진 (CR-153) | `GET/POST /admin/site-photos`, `PATCH/DELETE /admin/site-photos/{id}` | 올린 사진은 가로 1600, 400KB 안팎 JPEG 로 다시 저장(BIZ-068, POL-039) |
 

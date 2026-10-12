@@ -164,7 +164,7 @@
 |--------|------|------|------|---------|
 | GET | /opportunities | 공고 목록 조회 (필터/검색/페이징). **사용자: visibility=VISIBLE만** (CR-003). 고객 화면은 더 쓰지 않고(CR-155, 마감 전 공고는 C-2 의 collected), 관리자 콘솔이 공개 공고문 수를 셀 때 쓴다 | | BID-BROWSE-001 |
 | GET | /opportunities/{id} | 공고 상세 조회 (사전 분석 결과 포함 — CR-003). 응답 `responseDeadline` 은 날짜만, `responseDeadlineAt` 은 서울 시각 표시가 붙은 마감 시각(CR-138). `samUrl` 은 SAM.gov 원문 공개 주소(`uiLink` 는 SAM 로그인이 필요한 작업공간 주소라 화면 단추는 `samUrl` 을 쓴다, CR-152). `opportunityId` 는 이 공고문이 만들어진 모은 공고 id 이고 관심 공고 저장에 쓴다(CR-155) | | BID-BROWSE-002, 004 |
-| GET | /opportunities/origin/{opportunityId} | 원본 공고 상세 (CR-152). 모은 원본 공고 하나(지운 것 제외)를 공고 상세와 같은 꼴로 준다. `id` 는 원본 공고 id, `title` 은 한글 제목(없으면 원문 제목), `description` 은 모아 둔 원문 본문(없으면 null), `analysis` 는 없다. 더하는 값: `originalTitle`(원문 제목), `publicNoticeId`(같은 공고의 공개 한글 공고문 id, 없으면 null. 있으면 화면이 공고문 상세로 넘긴다), `samUrl`(SAM.gov 원문 공개 주소), `descriptionKo`(원문 본문을 한글로 옮긴 것, 없으면 null, CR-155). 없는 id 는 404 | | BID-BROWSE-002 |
+| GET | /opportunities/origin/{opportunityId} | 원본 공고 상세 (CR-152). 모은 원본 공고 하나(지운 것 제외)를 공고 상세와 같은 꼴로 준다. `id` 는 원본 공고 id, `title` 은 한글 제목(없으면 원문 제목), `description` 은 모아 둔 원문 본문(없으면 null), `analysis` 는 없다. 더하는 값: `originalTitle`(원문 제목), `publicNoticeId`(같은 공고의 공개 한글 공고문 id, 없으면 null. 있으면 화면이 공고문 상세로 전환한다), `samUrl`(SAM.gov 원문 공개 주소), `descriptionKo`(원문 본문을 한글로 옮긴 것, 없으면 null, CR-155). 없는 id 는 404 | | BID-BROWSE-002 |
 | GET | /opportunities/{id}/requirements | 공고 요구사항 목록 (카테고리별) | | BID-BROWSE-003 |
 | GET | /opportunities/{id}/attachments | 공고 첨부문서 목록 | | BID-OPP-003 |
 | ~~GET~~ | ~~/opportunities/search~~ | ~~키워드 검색~~ (CR-155 폐기. 마감 전 공고 검색은 C-2 의 collected `q`) | | BID-BROWSE-001 |
