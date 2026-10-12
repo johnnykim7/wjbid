@@ -9,9 +9,12 @@ public enum NotificationType {
     // CR-126: 수집 실패(특히 API 키 만료) 관리자 통보. 전용 템플릿은 후속 운영작업 — 수집 템플릿 재사용.
     COLLECTION_FAILED("BID_COLLECTION_DONE"),
     DOCUMENT_GENERATED("BID_DOC_GENERATED"),
+    // CR-156 전 알림 이력의 유형. 지금은 남은 날과 상관없이 DEADLINE_ALERT 로 보낸다
     DEADLINE_D7("BID_DEADLINE_ALERT"),
     DEADLINE_D3("BID_DEADLINE_ALERT"),
     DEADLINE_D1("BID_DEADLINE_ALERT"),
+    // CR-156: 입찰 요청 마감 알림(관리자와 그 요청을 낸 고객). 며칠 전인지는 설정 DEADLINE_ALERT_DAYS
+    DEADLINE_ALERT("BID_DEADLINE_ALERT"),
     BID_REQUEST_CREATED("BID_REQUEST_ADMIN"),
     AI_WORKFLOW_FAILED("BID_ANALYSIS_DONE"),
     OPPORTUNITY_ANALYSIS_COMPLETED("BID_ANALYSIS_DONE"),

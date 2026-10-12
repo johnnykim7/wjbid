@@ -26,8 +26,10 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * 도메인 이벤트 → bp-notification 알림 발송 (CR-005/006).
@@ -256,27 +258,38 @@ public class NotificationEventListener {
         }
     }
 
+    /**
+     * 마감 알림을 관리자 전원과 그 요청을 낸 고객에게 보낸다(BID-NOTIFY-002, CR-156).
+     * 멱등 키에 마감일과 받는 사람을 넣어, 받는 사람마다 한 번 보내고 마감이 바뀌면 새 일정으로 다시 보낸다(BIZ-012).
+     */
     @Async
     @EventListener
     public void onDeadlineApproaching(DeadlineApproachingEvent event) {
-        NotificationType type = switch (event.getDaysRemaining()) {
-            case 7 -> NotificationType.DEADLINE_D7;
-            case 3 -> NotificationType.DEADLINE_D3;
-            case 1 -> NotificationType.DEADLINE_D1;
-            default -> NotificationType.DEADLINE_D7;
-        };
         BidRequest br = bidRequestRepository.findByIdWithDetails(event.getEntityId()).orElse(null);
-        String oppTitle = br != null ? br.getOpportunity().getTitle() : "(공고)";
-
+        if (br == null) {
+            log.warn("마감 알림 받을 입찰 요청이 없습니다: bidRequest={}", event.getEntityId());
+            return;
+        }
         Map<String, Object> vars = Map.of(
                 "daysLeft", String.valueOf(event.getDaysRemaining()),
-                "opportunityTitle", oppTitle);
-        for (Member admin : memberRepository.findByRole(Member.Role.ADMIN)) {
-            notificationService.sendNotification(
-                    type, admin.getEmail(), admin.getId(),
-                    String.format("[Bidding Agency] 마감 D-%d 알림", event.getDaysRemaining()), vars,
-                    event.getEntityId(), "BidRequest",
-                    "DEADLINE_D" + event.getDaysRemaining() + "_" + event.getEntityId());
+                "opportunityTitle", br.getOpportunity().getTitle());
+        String subject = String.format("[Bidding Agency] 마감 D-%d 알림", event.getDaysRemaining());
+        String keyPrefix = "DEADLINE_" + event.getEntityId() + "_" + event.getDeadline().toLocalDate()
+                + "_" + event.getDaysRemaining() + "_";
+
+        Map<UUID, Member> recipients = new LinkedHashMap<>();
+        for (Member admin : memberRepository.findByRole(Member.Role.ADMIN)) recipients.putIfAbsent(admin.getId(), admin);
+        recipients.putIfAbsent(br.getMember().getId(), br.getMember());
+
+        for (Member m : recipients.values()) {
+            if (m.getEmail() == null || m.getEmail().isBlank()) continue;
+            try {
+                notificationService.sendNotification(
+                        NotificationType.DEADLINE_ALERT, m.getEmail(), m.getId(), subject, vars,
+                        event.getEntityId(), "BidRequest", keyPrefix + m.getId());
+            } catch (Exception e) {
+                log.error("마감 알림 실패: bidRequest={}, member={}", event.getEntityId(), m.getId(), e);
+            }
         }
     }
 

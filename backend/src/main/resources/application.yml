@@ -273,6 +273,10 @@ app:
   doc-expiry:
     cron: ${DOC_EXPIRY_CRON:0 0 9 * * *}
 
+  # CR-156: 입찰 요청 마감 알림 확인 시각(Asia/Seoul). 며칠 전에 보낼지는 DB 설정 DEADLINE_ALERT_DAYS (POL-009)
+  deadline-alert:
+    cron: ${DEADLINE_ALERT_CRON:0 0 9 * * *}
+
   # CR-142: 미 연방 계약 공개 자료(USAspending.gov, 키 없음). 받는 범위 POL-031, 받는 시각과 호출 간격 POL-032, 예측 기간 POL-033.
   # 호출 한도가 공식 숫자로 밝혀져 있지 않아 간격을 줄이지 않는다.
   federal-contract:

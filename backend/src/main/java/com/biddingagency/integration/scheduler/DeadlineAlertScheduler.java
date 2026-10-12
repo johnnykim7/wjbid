@@ -1,57 +1,28 @@
 package com.biddingagency.integration.scheduler;
 
-import com.biddingagency.domain.bid.entity.BidRequest;
-import com.biddingagency.domain.bid.entity.BidRequestState;
-import com.biddingagency.domain.bid.repository.BidRequestRepository;
-import com.biddingagency.domain.event.DeadlineApproachingEvent;
+import com.biddingagency.domain.bid.service.DeadlineAlertService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
-import java.util.List;
-
 /**
- * 마감일 임박 알림 스케줄러
- * 매일 09:00 KST에 D-7, D-3, D-1 알림 발행
+ * 입찰 요청 마감 알림 확인 (BID-NOTIFY-002, CR-156). 확인 시각은 설정 app.deadline-alert.cron(한국 시각),
+ * 며칠 전에 보낼지는 DB 설정 DEADLINE_ALERT_DAYS (POL-009).
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class DeadlineAlertScheduler {
 
-    private final BidRequestRepository bidRequestRepository;
-    private final ApplicationEventPublisher eventPublisher;
+    private final DeadlineAlertService deadlineAlertService;
 
-    @Scheduled(cron = "0 0 9 * * *", zone = "Asia/Seoul")
+    @Scheduled(cron = "${app.deadline-alert.cron:0 0 9 * * *}", zone = DeadlineAlertService.SERVICE_ZONE)
     public void checkDeadlines() {
-        log.info("Checking approaching deadlines...");
-
-        // 활성 상태 (SUBMITTED, CLOSED 아닌) 입찰만 조회
-        List<BidRequestState> activeStates = List.of(
-                BidRequestState.CREATED, BidRequestState.DOCS_PENDING,
-                BidRequestState.DOCS_RECEIVED, BidRequestState.ANALYZING,
-                BidRequestState.GENERATING, BidRequestState.REVIEW,
-                BidRequestState.CONFIRMED
-        );
-
-        List<BidRequest> requests = bidRequestRepository.findByStateIn(activeStates);
-        for (BidRequest br : requests) {
-            if (br.getOpportunity() == null || br.getOpportunity().getResponseDeadline() == null) continue;
-
-            LocalDateTime deadline = br.getOpportunity().getResponseDeadline();
-            long daysUntil = ChronoUnit.DAYS.between(LocalDateTime.now(), deadline);
-
-            if (daysUntil == 7 || daysUntil == 3 || daysUntil == 1) {
-                log.info("Deadline approaching: bidRequest={}, days={}", br.getId(), daysUntil);
-                eventPublisher.publishEvent(
-                        new DeadlineApproachingEvent(br.getId(), (int) daysUntil, deadline));
-            }
+        try {
+            deadlineAlertService.publishDueAlerts();
+        } catch (Exception e) {
+            log.error("마감 알림 확인 실패", e);
         }
-
-        log.info("Deadline check completed");
     }
 }

@@ -7,6 +7,7 @@ import com.biddingagency.domain.notification.entity.NotificationLog;
 import com.biddingagency.domain.notification.entity.NotificationType;
 import com.biddingagency.domain.notification.repository.NotificationLogRepository;
 import com.biddingagency.domain.setting.entity.SettingKey;
+import com.biddingagency.domain.setting.service.AlertDaysSetting;
 import com.biddingagency.domain.setting.service.SystemSettingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -69,30 +70,11 @@ public class DocumentExpiryService {
         return LocalDate.now(clock.withZone(ZONE));
     }
 
-    /**
-     * 알림 시점. 값이 비었거나 하나라도 읽을 수 없으면 꺼짐(빈 목록)으로 본다.
-     * 잘못 넣은 값으로 엉뚱한 날에 메일이 나가는 것보다 보내지 않는 편이 낫다.
-     */
+    /** 알림 시점. 값이 비었거나 하나라도 읽을 수 없으면 꺼짐(빈 목록)으로 본다 */
     public List<Integer> alertDays() {
-        return systemSettingService.findValue(SettingKey.DOC_EXPIRY_ALERT_DAYS).map(value -> {
-            try {
-                List<Integer> days = java.util.Arrays.stream(value.split(","))
-                        .map(String::trim)
-                        .filter(s -> !s.isEmpty())
-                        .map(Integer::parseInt)
-                        .distinct()
-                        .sorted(Comparator.reverseOrder())
-                        .toList();
-                if (days.isEmpty() || days.stream().anyMatch(d -> d < 0 || d > MAX_ALERT_DAYS)) {
-                    log.warn("서류 만료 알림 시점이 범위를 벗어나 알림을 끕니다: {}", value);
-                    return List.<Integer>of();
-                }
-                return days;
-            } catch (NumberFormatException e) {
-                log.warn("서류 만료 알림 시점을 읽지 못해 알림을 끕니다: {}", value);
-                return List.<Integer>of();
-            }
-        }).orElse(List.of());
+        return systemSettingService.findValue(SettingKey.DOC_EXPIRY_ALERT_DAYS)
+                .map(value -> AlertDaysSetting.parse(SettingKey.DOC_EXPIRY_ALERT_DAYS, value, MAX_ALERT_DAYS))
+                .orElse(List.of());
     }
 
     @Transactional(readOnly = true)
