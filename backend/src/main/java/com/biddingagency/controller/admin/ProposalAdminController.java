@@ -1,6 +1,8 @@
 package com.biddingagency.controller.admin;
 
 import com.biddingagency.domain.bid.service.AIWorkflowService;
+import com.biddingagency.domain.compliance.dto.CoverageResult;
+import com.biddingagency.domain.compliance.service.ComplianceService;
 import com.biddingagency.domain.proposal.dto.ProposalTreeDto;
 import com.biddingagency.domain.proposal.entity.ProposalSection;
 import com.biddingagency.domain.proposal.entity.VerificationLog;
@@ -41,6 +43,7 @@ public class ProposalAdminController {
     private final ProposalService proposalService;
     private final AIWorkflowService aiWorkflowService;
     private final VerificationLogService verificationLogService;
+    private final ComplianceService complianceService;
 
     /** 좌측 트리 — chapter → section. */
     @GetMapping("/chapters")
@@ -145,6 +148,13 @@ public class ProposalAdminController {
                 "sectionId", sectionId.toString(),
                 "message", "재검증을 시작했습니다. 완료 시 결과가 갱신됩니다."
         ));
+    }
+
+    /** 커버리지 검증 (CR-159, BIZ-078). 볼 때마다 계산한다 */
+    @GetMapping("/coverage")
+    @Operation(summary = "커버리지 검증", description = "대상 REQ ID 가운데 이 문서의 절로 충족된 수와 누락 REQ, 매트릭스에 없는 ID")
+    public ResponseEntity<CoverageResult> coverage(@PathVariable UUID documentId) {
+        return ResponseEntity.ok(complianceService.coverage(documentId));
     }
 
     private Map<String, Object> toVerificationView(VerificationLog v) {

@@ -93,7 +93,7 @@ public class OpportunityController {
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         membershipService.requireMember(memberIdOf(userDetails));
         opportunityService.findById(id); // existence check
-        return ResponseEntity.ok(requirementItemRepository.findByOpportunityId(id));
+        return ResponseEntity.ok(requirementItemRepository.findByOpportunityIdAndReqIdIsNullOrderBySortOrderAsc(id)); // CR-159 BIZ-075 제출 서류 줄만
     }
 
     /**

@@ -147,6 +147,11 @@ public class Opportunity extends BaseEntity {
     @Builder.Default
     private Boolean pieeLinkBroken = false;
 
+    /** CR-159: 이 공고에서 마지막으로 준 REQ ID 의 숫자. 지운 번호를 다시 쓰지 않으려고 둔다(BIZ-074) */
+    @Column(name = "last_req_no", nullable = false)
+    @Builder.Default
+    private Integer lastReqNo = 0;
+
     /** CR-160: PIEE 입찰서류 받기 결과. null 이면 받지 않는 공고(BIZ-079) */
     @Enumerated(EnumType.STRING)
     @Column(name = "piee_fetch_status", length = 20)
@@ -165,6 +170,12 @@ public class Opportunity extends BaseEntity {
     private String pieeFetchMessage;
 
     // Business methods
+
+    /** CR-159: 다음 REQ 번호를 준다(BIZ-074) */
+    public int nextReqNo() {
+        this.lastReqNo = (this.lastReqNo == null ? 0 : this.lastReqNo) + 1;
+        return this.lastReqNo;
+    }
 
     public void updateContent(String title, String type, String organizationName,
                               LocalDateTime postedDate, LocalDateTime responseDeadline,

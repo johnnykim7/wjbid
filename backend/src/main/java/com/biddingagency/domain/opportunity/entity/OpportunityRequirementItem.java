@@ -15,6 +15,7 @@ import java.util.Map;
  */
 @Entity
 @Table(name = "opportunity_requirement_items",
+        uniqueConstraints = @UniqueConstraint(name = "uq_requirement_items_req_id", columnNames = {"opportunity_id", "req_id"}),
         indexes = {
                 @Index(name = "idx_requirement_items_opportunity", columnList = "opportunity_id"),
                 @Index(name = "idx_requirement_items_category", columnList = "category"),
@@ -63,10 +64,19 @@ public class OpportunityRequirementItem extends BaseEntity {
     @Builder.Default
     private Boolean isVerified = false;
 
-    /** 공고 분석의 제출 서류 순서 (CR-141) */
+    /** 공고 분석의 제출 서류 순서 (CR-141). 매트릭스 줄은 REQ ID 의 숫자 (CR-159) */
     @Column(name = "sort_order", nullable = false)
     @Builder.Default
     private Integer sortOrder = 0;
+
+    /** CR-159: REQ ID. 매트릭스 줄만 채운다. 비어 있으면 제출 서류 줄(BIZ-075) */
+    @Column(name = "req_id", length = 20)
+    private String reqId;
+
+    /** CR-159: 매트릭스 줄의 구분 */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "req_level", length = 10)
+    private RequirementLevel reqLevel;
 
     // Business methods
 
@@ -94,6 +104,23 @@ public class OpportunityRequirementItem extends BaseEntity {
         this.isBlocker = isBlocker;
         this.requirementJson = requirementJson;
         this.sortOrder = sortOrder;
+    }
+
+    /**
+     * 매트릭스를 다시 맞출 때 같은 열쇠 줄을 고쳐 쓴다. REQ ID 와 순서는 바꾸지 않는다 (CR-159, BIZ-074)
+     */
+    public void syncFromMatrix(String title, String description, RequirementCategory category,
+                               RequirementLevel reqLevel, Map<String, Object> requirementJson) {
+        this.title = title;
+        this.description = description;
+        this.category = category;
+        this.reqLevel = reqLevel;
+        this.requirementJson = requirementJson;
+    }
+
+    /** CR-159: 컴플라이언스 매트릭스 줄인가(BIZ-075) */
+    public boolean isMatrixLine() {
+        return reqId != null;
     }
 
     /**

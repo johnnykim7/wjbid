@@ -1,5 +1,6 @@
 package com.biddingagency.domain.proposal.service;
 
+import com.biddingagency.domain.compliance.repository.RequirementFulfillmentMapRepository;
 import com.biddingagency.domain.proposal.entity.*;
 import com.biddingagency.domain.proposal.repository.*;
 import org.junit.jupiter.api.DisplayName;
@@ -28,6 +29,7 @@ class ProposalServiceTest {
     @Mock private ProposalSectionRepository sectionRepository;
     @Mock private ProposalBlockRepository blockRepository;
     @Mock private VerificationLogService verificationLogService;
+    @Mock private RequirementFulfillmentMapRepository fulfillmentMapRepository;
 
     @InjectMocks private ProposalService proposalService;
 
@@ -147,5 +149,16 @@ class ProposalServiceTest {
 
         assertThat(created.getStatus()).isEqualTo(SectionStatus.PENDING);
         assertThat(created.getChapterId()).isEqualTo(chapterId);
+    }
+
+    @Test
+    @DisplayName("TC-COMP-026 설계다시저장_이문서절충족매핑_지움")
+    void 설계다시저장_이문서절충족매핑_지움() {
+        UUID documentId = UUID.randomUUID();
+        given(sectionRepository.findAllByDocumentId(documentId)).willReturn(List.of());
+
+        proposalService.saveStructure(documentId, List.of());
+
+        then(fulfillmentMapRepository).should().deleteSectionMapsByDocumentId(documentId);
     }
 }

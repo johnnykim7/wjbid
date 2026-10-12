@@ -114,6 +114,34 @@ public class RequirementFulfillmentMap extends BaseEntity {
     }
 
     /**
+     * 제안서 절 검증이 이 요구를 답했는지 남긴다 (CR-159, BIZ-077)
+     */
+    public void recordSectionAnswer(BidDocument document, String sectionId, boolean answered,
+                                    String notes, LocalDateTime recordedAt) {
+        this.fulfillmentType = FulfillmentType.DOCUMENT_SECTION;
+        this.document = document;
+        this.clientDocument = null;
+        this.documentSectionPath = sectionId;
+        this.status = answered ? FulfillmentStatus.FULFILLED : FulfillmentStatus.MISSING;
+        this.notes = notes;
+        this.mappedBy = null;
+        this.mappedAt = recordedAt;
+    }
+
+    /** CR-159: 이 제안서 문서의 절로 충족되었나 */
+    public boolean isFulfilledByDocument(UUID documentId) {
+        return status == FulfillmentStatus.FULFILLED
+                && fulfillmentType == FulfillmentType.DOCUMENT_SECTION
+                && document != null && documentId.equals(document.getId());
+    }
+
+    /** CR-159: 그 절이 아닌 곳(다른 절, 다른 문서, 고객 서류)으로 이미 충족되었나 */
+    public boolean isFulfilledElsewhere(UUID documentId, String sectionId) {
+        return status == FulfillmentStatus.FULFILLED
+                && !(isFulfilledByDocument(documentId) && sectionId.equals(documentSectionPath));
+    }
+
+    /**
      * Fulfill this slot with a client-uploaded document (CR-010)
      */
     public void fulfillWithClientDocument(ClientDocument clientDocument, UUID userId) {

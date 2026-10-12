@@ -12,6 +12,7 @@ import {
 import NoticeDocumentView from '../components/NoticeDocumentView'
 import type { EligibilityItem, NoticeSummary, RequiredDocumentItem } from '../components/NoticeDocumentView'
 import NoticeCorrectionChat from '../components/NoticeCorrectionChat'
+import ComplianceMatrixPanel from '../components/ComplianceMatrixPanel'
 
 interface AnalysisResult {
   analysisStatus?: string
@@ -402,6 +403,14 @@ export default function NoticeAdminDetailPage() {
           </div>
         )}
       </div>
+
+      {id && (
+        <ComplianceMatrixPanel
+          noticeId={id}
+          analyzing={notice.generationStatus === 'ANALYZING'}
+          reloadKey={notice.analyzedAt}
+        />
+      )}
 
       {/* CR-033: 공고문 완료 후 교정 채팅 — 분석 결과를 자연어로 부분 수정 */}
       {notice.generationStatus === 'COMPLETED' && id && (

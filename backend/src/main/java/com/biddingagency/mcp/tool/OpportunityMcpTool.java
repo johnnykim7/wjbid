@@ -115,7 +115,7 @@ public class OpportunityMcpTool {
 
     public String getOpportunityRequirements(Map<String, Object> args) {
         UUID opportunityId = UUID.fromString((String) args.get("opportunityId"));
-        List<OpportunityRequirementItem> items = requirementItemRepository.findByOpportunityId(opportunityId);
+        List<OpportunityRequirementItem> items = requirementItemRepository.findByOpportunityIdAndReqIdIsNullOrderBySortOrderAsc(opportunityId); // CR-159 BIZ-075
 
         List<Map<String, Object>> requirements = items.stream().map(item -> {
             Map<String, Object> req = new LinkedHashMap<>();

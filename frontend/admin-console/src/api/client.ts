@@ -157,6 +157,10 @@ export const getProposalSectionVerification = (documentId: string, sectionId: st
 export const reverifyProposalSection = (documentId: string, sectionId: string) =>
   api.post(`/admin/bid-documents/${documentId}/sections/${sectionId}/reverify`)
 
+// CR-159 커버리지 검증
+export const getProposalCoverage = (documentId: string) =>
+  api.get(`/admin/bid-documents/${documentId}/coverage`)
+
 // Bid Request Detail (admin)
 export const getAdminBidRequestDetail = (id: string) =>
   api.get(`/admin/bid-requests/${id}`)
@@ -258,6 +262,10 @@ export const getAdminNoticeDetail = (id: string) =>
 // 공고분석 진행 STEP 조회 — ANALYZING 동안 화면이 주기 폴링
 export const getNoticeAnalysisProgress = (id: string) =>
   api.get(`/admin/notices/${id}/progress`)
+
+// CR-159 컴플라이언스 매트릭스
+export const getNoticeComplianceMatrix = (id: string) =>
+  api.get(`/admin/notices/${id}/compliance-matrix`)
 
 // 게이트②: 검수 후 노출/비노출
 export const publishNotice = (id: string) =>

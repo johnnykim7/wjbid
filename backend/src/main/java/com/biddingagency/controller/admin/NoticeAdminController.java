@@ -1,5 +1,7 @@
 package com.biddingagency.controller.admin;
 
+import com.biddingagency.domain.compliance.dto.ComplianceMatrixView;
+import com.biddingagency.domain.compliance.service.ComplianceService;
 import com.biddingagency.domain.notice.dto.NoticeAdminDto;
 import com.biddingagency.domain.notice.entity.Notice;
 import com.biddingagency.domain.notice.service.NoticeService;
@@ -32,6 +34,7 @@ import java.util.UUID;
 public class NoticeAdminController {
 
     private final NoticeService noticeService;
+    private final ComplianceService complianceService;
 
     @GetMapping
     @Operation(summary = "공고문 목록 (관리자)", description = "한글화 상태, 노출 상태 포함")
@@ -45,6 +48,12 @@ public class NoticeAdminController {
     @Operation(summary = "공고문 상세 (관리자)", description = "한글화 결과 포함")
     public ResponseEntity<NoticeAdminDto> getNotice(@PathVariable UUID id) {
         return ResponseEntity.ok(noticeService.findByIdAsDto(id));
+    }
+
+    @GetMapping("/{id}/compliance-matrix")
+    @Operation(summary = "컴플라이언스 매트릭스 (CR-159)", description = "공고의 매트릭스 줄과 질의 후보, 평가 항목 구조")
+    public ResponseEntity<ComplianceMatrixView> getComplianceMatrix(@PathVariable UUID id) {
+        return ResponseEntity.ok(complianceService.getComplianceMatrix(id));
     }
 
     @GetMapping("/{id}/progress")

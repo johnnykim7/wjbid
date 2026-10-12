@@ -113,7 +113,7 @@ public class PreCheckService {
             return List.of();
         }
         Set<UUID> opportunityIds = bidRequests.stream().map(br -> br.getOpportunity().getId()).collect(Collectors.toSet());
-        Map<UUID, List<OpportunityRequirementItem>> itemsByOpportunity = requirementRepository.findByOpportunityIds(opportunityIds)
+        Map<UUID, List<OpportunityRequirementItem>> itemsByOpportunity = requirementRepository.findSubmissionItemsByOpportunityIds(opportunityIds)
                 .stream().collect(Collectors.groupingBy(ri -> ri.getOpportunity().getId()));
         Map<UUID, Map<UUID, RequirementFulfillmentMap>> mapsByBid = fulfillmentMapRepository
                 .findWithClientDocumentByBidRequestIds(bidRequests.stream().map(BidRequest::getId).toList())
@@ -220,7 +220,7 @@ public class PreCheckService {
         Map<UUID, RequirementFulfillmentMap> maps = mapsOf(br.getId());
         List<String> filled = new ArrayList<>();
         List<String> unmatched = new ArrayList<>();
-        for (OpportunityRequirementItem item : requirementRepository.findByOpportunityIdOrderBySortOrderAsc(br.getOpportunity().getId())) {
+        for (OpportunityRequirementItem item : requirementRepository.findByOpportunityIdAndReqIdIsNullOrderBySortOrderAsc(br.getOpportunity().getId())) {
             if (party(item) != FulfillmentParty.CLIENT_UPLOAD || linkedDocument(maps.get(item.getId())) != null) {
                 continue;
             }
@@ -249,7 +249,7 @@ public class PreCheckService {
 
     private Detail buildDetail(BidRequest br) {
         Opportunity o = br.getOpportunity();
-        List<OpportunityRequirementItem> items = requirementRepository.findByOpportunityIdOrderBySortOrderAsc(o.getId());
+        List<OpportunityRequirementItem> items = requirementRepository.findByOpportunityIdAndReqIdIsNullOrderBySortOrderAsc(o.getId());
         List<ClientItem> clientItems = clientItems(items, mapsOf(br.getId()), judge.pageUnits());
         List<PlatformItem> platformItems = items.stream()
                 .filter(ri -> party(ri) != FulfillmentParty.CLIENT_UPLOAD)
@@ -335,6 +335,7 @@ public class PreCheckService {
     private OpportunityRequirementItem clientUploadItem(BidRequest br, UUID requirementItemId) {
         OpportunityRequirementItem item = requirementRepository.findById(requirementItemId)
                 .filter(ri -> ri.getOpportunity().getId().equals(br.getOpportunity().getId()))
+                .filter(ri -> !ri.isMatrixLine()) // CR-159 BIZ-075 매트릭스 줄은 고객 서류를 받지 않는다
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "요구 서류를 찾을 수 없습니다"));
         if (party(item) != FulfillmentParty.CLIENT_UPLOAD) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "고객이 올리는 서류가 아닙니다");

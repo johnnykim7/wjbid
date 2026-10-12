@@ -63,6 +63,14 @@ public interface RequirementFulfillmentMapRepository extends JpaRepository<Requi
     int deleteByRequirementItemIds(@Param("requirementItemIds") Collection<UUID> requirementItemIds);
 
     /**
+     * 한 제안서 문서의 절 충족 매핑을 지운다. 설계를 다시 저장하면 절 id 가 바뀌기 때문이다 (CR-159, BIZ-077)
+     */
+    @Modifying
+    @Query("DELETE FROM RequirementFulfillmentMap m WHERE m.document.id = :documentId "
+            + "AND m.fulfillmentType = com.biddingagency.domain.compliance.entity.FulfillmentType.DOCUMENT_SECTION")
+    int deleteSectionMapsByDocumentId(@Param("documentId") UUID documentId);
+
+    /**
      * 여러 입찰 건의 연결과 이어진 서류를 한 번에 (CR-141 제출 전 검사 목록)
      */
     @Query("SELECT m FROM RequirementFulfillmentMap m LEFT JOIN FETCH m.clientDocument "

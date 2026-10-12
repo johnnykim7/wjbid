@@ -2,6 +2,7 @@ package com.biddingagency.mcp.tool;
 
 import com.biddingagency.domain.bid.entity.BidRequest;
 import com.biddingagency.domain.bid.service.BidRequestService;
+import com.biddingagency.domain.compliance.service.ComplianceService;
 import com.biddingagency.domain.document.entity.BidDocument;
 import com.biddingagency.domain.document.service.BidDocumentService;
 import com.biddingagency.domain.notice.entity.Notice;
@@ -51,6 +52,7 @@ public class ProposalMcpTool {
     private final ProposalService proposalService;
     private final ReferenceSampleService referenceSampleService;
     private final VerificationLogService verificationLogService;
+    private final ComplianceService complianceService;
     private final ObjectMapper objectMapper;
 
     // ─── 도구 정의 ────────────────────────────────────────────────────────
@@ -60,7 +62,9 @@ public class ProposalMcpTool {
             "name", "get_proposal_design_input",
             "description", "제안서 구조 설계(design)에 필요한 입력을 조회합니다. " +
                     "documentId 로 연결된 공고의 한글화 요약·요구서류·공고 본문(content)과, 정제 시 도출된 FACTOR/Subfactor 트리(factorTree)를 반환합니다. " +
-                    "factorTree 가 있으면 그대로 chapter/section 으로 복사·검증하고, 없으면(null) 공고 본문(noticeContent/opportunityText)의 Section L/M 에서 FACTOR/Subfactor 를 직접 발췌하세요.",
+                    "factorTree 가 있으면 그대로 chapter/section 으로 복사·검증하고, 없으면(null) 공고 본문(noticeContent/opportunityText)의 Section L/M 에서 FACTOR/Subfactor 를 직접 발췌하세요. " +
+                    "CR-159: complianceMatrix(컴플라이언스 매트릭스 줄 [{reqId, level, text, verb, fulfillmentParty, factorId, factorTitle}])가 있으면 " +
+                    "section 마다 답할 reqId 를 requirementRefs 로 정하세요. level=SHALL 이면서 fulfillmentParty=PLATFORM_GENERATED 인 줄은 빠짐없이 어느 section 엔가 걸어야 합니다.",
             "inputSchema", Map.of(
                 "type", "object",
                 "properties", Map.of(
@@ -72,7 +76,9 @@ public class ProposalMcpTool {
         Map.of(
             "name", "save_proposal_structure",
             "description", "design 단계 결과인 chapter/section 트리를 저장합니다 (기존 트리를 비우고 통째 재생성). " +
-                    "공고가 박은 라벨·순서를 그대로 보존하세요(창작 금지). LOCKED section 이 하나라도 있으면 거부됩니다.",
+                    "공고가 박은 라벨·순서를 그대로 보존하세요(창작 금지). LOCKED section 이 하나라도 있으면 거부됩니다. " +
+                    "CR-159: 공고에 컴플라이언스 매트릭스가 있으면 requirementRefs 는 그 reqId 만 받고, 없는 ID 가 하나라도 있으면 전체를 거부하며 그 ID 를 알려 줍니다. " +
+                    "저장되면 unassignedReqIds(어느 section 에도 걸리지 않은 SHALL 이면서 PLATFORM_GENERATED 인 reqId)를 돌려줍니다.",
             "inputSchema", Map.of(
                 "type", "object",
                 "properties", Map.of(
@@ -88,7 +94,7 @@ public class ProposalMcpTool {
                                 "sourceSection", Map.of("type", "string", "description", "NOTICE_L | NOTICE_M | SECTION_K (기본 NOTICE_M)"),
                                 "sections", Map.of("type", "array", "description",
                                     "Subfactor 단위 section 배열. Subfactor 강제 안 한 FACTOR 는 section 1개(subfactorLabel=null)로 통합. " +
-                                    "각 항목: {subfactorLabel, title, scope(작성 지침), requirementRefs(Section L/M 발췌 ID 배열), minWords(최소 단어 수)}")
+                                    "각 항목: {subfactorLabel, title, scope(작성 지침), requirementRefs(대응 REQ ID 배열, complianceMatrix 의 reqId), minWords(최소 단어 수)}")
                             )
                         ))
                     )
@@ -100,6 +106,7 @@ public class ProposalMcpTool {
             "name", "get_section_context",
             "description", "한 section 의 본문 작성에 필요한 컨텍스트를 조회합니다. " +
                     "section 의 scope(작성 지침)·title·minWords·requirementRefs 와, 소속 공고유형(industryType)에 매칭되는 참조 샘플 파일 목록(referenceSamples)을 반환합니다. " +
+                    "CR-159: requirements 에 대응 REQ ID 마다 원문(text), 번역, 요구 동사(verb), 구분(level), 평가항목을 줍니다. 요구 동사가 정하는 형태로 답하세요. " +
                     "referenceSamples 의 downloadUrl 을 parse_document(url=...)로 읽어 few-shot 으로 참조하되, 사실(회사명·실적·수치)은 복붙하지 마세요.",
             "inputSchema", Map.of(
                 "type", "object",
@@ -139,7 +146,8 @@ public class ProposalMcpTool {
             "description", "한 section 의 충실성 검증에 필요한 입력을 조회합니다 (CR-031). " +
                     "section 의 scope·요구사항(requirementRefs)·현재 작성된 본문(blocks 의 text 평탄화)·" +
                     "공고 본문 텍스트(opportunityText)·참조 샘플 목록을 반환합니다. " +
-                    "생성된 본문의 각 문장이 공고 본문/첨부에 근거하는지 검증하세요 — 근거 없는 문장은 환각입니다.",
+                    "생성된 본문의 각 문장이 공고 본문/첨부에 근거하는지 검증하세요 — 근거 없는 문장은 환각입니다. " +
+                    "CR-159: requirements 의 reqId 마다 본문이 그 요구에 답했는지 보고 save_verification_result 의 requirementChecks 로 보내세요.",
             "inputSchema", Map.of(
                 "type", "object",
                 "properties", Map.of(
@@ -178,7 +186,9 @@ public class ProposalMcpTool {
                             "근거 없는 문장 배열. 각 항목 {sentence, reason}")),
                     Map.entry("missingFromSource", Map.of("type", "array", "description",
                             "원문에 있는데 결과물에 누락된 항목 배열. 각 항목 {source_quote, reason}")),
-                    Map.entry("wordCount", Map.of("type", "integer", "description", "결과물 단어 수 (optional)"))
+                    Map.entry("wordCount", Map.of("type", "integer", "description", "결과물 단어 수 (optional)")),
+                    Map.entry("requirementChecks", Map.of("type", "array", "description",
+                            "CR-159 PROPOSAL_SECTION 만. 대응 REQ ID 마다 본문이 답했는지. 각 항목 {reqId, answered(boolean), evidenceQuote(답한 본문 인용), reason(답하지 않았으면 사유)}"))
                 ),
                 "required", List.of("targetType", "targetId", "verdict")
             )
@@ -220,6 +230,7 @@ public class ProposalMcpTool {
             result.put("factorTree", null);
             result.put("priceItems", null);
         }
+        result.put("complianceMatrix", complianceService.designInputLines(opp.getId()));
         return toJson(result);
     }
 
@@ -251,6 +262,10 @@ public class ProposalMcpTool {
             ));
         }
 
+        complianceService.requireKnownReqIds(documentId, chapters.stream()
+                .flatMap(ch -> ch.sections().stream())
+                .flatMap(sec -> sec.requirementRefs().stream())
+                .toList());
         List<ProposalChapter> saved = proposalService.saveStructure(documentId, chapters);
         int sectionCount = saved.stream()
                 .mapToInt(ch -> proposalService.getSections(ch.getId()).size()).sum();
@@ -274,7 +289,8 @@ public class ProposalMcpTool {
                 "status", "SAVED",
                 "chapterCount", saved.size(),
                 "sectionCount", sectionCount,
-                "sections", sectionList
+                "sections", sectionList,
+                "unassignedReqIds", complianceService.unassignedReqIds(documentId)
         ));
     }
 
@@ -297,6 +313,7 @@ public class ProposalMcpTool {
         result.put("status", section.getStatus().name());
         result.put("factorLabel", chapter.getFactorLabel());
         result.put("factorTitle", chapter.getFactorTitle());
+        result.put("requirements", complianceService.sectionRequirements(chapter.getDocumentId(), section.getRequirementRefs()));
 
         // 참조 샘플 — section 이 속한 문서의 공고유형 매칭
         IndustryType industryType = industryTypeOf(chapter);
@@ -362,6 +379,7 @@ public class ProposalMcpTool {
         result.put("scope", section.getScope());
         result.put("minWords", section.getMinWords());
         result.put("requirementRefs", section.getRequirementRefs());
+        result.put("requirements", complianceService.sectionRequirements(chapter.getDocumentId(), section.getRequirementRefs()));
         result.put("generatedBody", body.toString().trim());
         result.put("blockCount", blocks.size());
         result.put("opportunityText", buildOpportunityText(opp));
@@ -404,6 +422,8 @@ public class ProposalMcpTool {
 
         verificationLogService.recordLlm(targetType, targetId, null, verdict,
                 hallucinations, missing, wordCount, attempt);
+        int requirementsRecorded = targetType == VerificationTargetType.PROPOSAL_SECTION
+                ? complianceService.recordSectionChecks(targetId, castList(args.get("requirementChecks"))) : 0;
 
         log.info("MCP save_verification_result: target={}/{}, verdict={}, 환각={}, attempt={}",
                 targetType, targetId, verdict, hallucinations.size(), attempt);
@@ -412,6 +432,7 @@ public class ProposalMcpTool {
                 "targetId", targetId.toString(),
                 "verdict", verdict.name(),
                 "hallucinationCount", hallucinations.size(),
+                "requirementsRecorded", requirementsRecorded,
                 "status", "SAVED"
         ));
     }

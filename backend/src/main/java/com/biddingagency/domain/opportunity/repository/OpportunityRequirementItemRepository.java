@@ -28,10 +28,21 @@ public interface OpportunityRequirementItemRepository extends JpaRepository<Oppo
     List<OpportunityRequirementItem> findByOpportunityIdOrderBySortOrderAsc(UUID opportunityId);
 
     /**
-     * 여러 공고의 요구 항목을 한 번에 (CR-141 제출 전 검사 목록)
+     * 여러 공고의 제출 서류 줄을 한 번에 (CR-141 제출 전 검사 목록). 매트릭스 줄은 뺀다 (CR-159, BIZ-075)
      */
-    @Query("SELECT ri FROM OpportunityRequirementItem ri WHERE ri.opportunity.id IN :opportunityIds ORDER BY ri.sortOrder")
-    List<OpportunityRequirementItem> findByOpportunityIds(@Param("opportunityIds") Collection<UUID> opportunityIds);
+    @Query("SELECT ri FROM OpportunityRequirementItem ri WHERE ri.opportunity.id IN :opportunityIds "
+            + "AND ri.reqId IS NULL ORDER BY ri.sortOrder")
+    List<OpportunityRequirementItem> findSubmissionItemsByOpportunityIds(@Param("opportunityIds") Collection<UUID> opportunityIds);
+
+    /**
+     * 제출 서류 줄만 (CR-159, BIZ-075). 고객 화면, 제출 전 검사, 지금 워크플로우 입력이 읽는다
+     */
+    List<OpportunityRequirementItem> findByOpportunityIdAndReqIdIsNullOrderBySortOrderAsc(UUID opportunityId);
+
+    /**
+     * 컴플라이언스 매트릭스 줄만, REQ ID 순 (CR-159)
+     */
+    List<OpportunityRequirementItem> findByOpportunityIdAndReqIdIsNotNullOrderBySortOrderAsc(UUID opportunityId);
 
     /**
      * Find by opportunity and category
