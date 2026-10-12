@@ -1187,4 +1187,4 @@
 - **영향 모듈**: BE 알림(NotificationEventListener)
 - **영향 설계서**: 없음(주소 값 하나, API 와 표 변경 없음). 시험은 NotificationEventListenerTest 에 하나 더함
 - **규모**: 소
-- **상태**: 구현 완료, 상용 배포 대기
+- **상태**: 완료(10/12 16:07 상용 BE 배포 44a2af9 = e193275 + 이 수정, 브랜치 deploy/cr158-prod). 서버 jar 에 새 주소가 든 것과 원본 공고 상세 주소가 열리는 것을 확인, Aimbase 도구 연결 다시 붙임(19개)
