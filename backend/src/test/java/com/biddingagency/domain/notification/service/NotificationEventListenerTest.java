@@ -8,6 +8,7 @@ import com.biddingagency.domain.event.BidRequestStateChangedEvent;
 import com.biddingagency.domain.event.CollectionFailedEvent;
 import com.biddingagency.domain.event.DeadlineApproachingEvent;
 import com.biddingagency.domain.event.OpportunitiesCollectedEvent;
+import com.biddingagency.domain.event.OpportunityApprovedEvent;
 import com.biddingagency.domain.member.entity.Member;
 import com.biddingagency.domain.member.repository.MemberRepository;
 import com.biddingagency.domain.notification.entity.NotificationType;
@@ -406,5 +407,30 @@ class NotificationEventListenerTest {
         // then
         then(bidRequestRepository).shouldHaveNoInteractions();
         then(notificationService).shouldHaveNoInteractions();
+    }
+
+    @Test
+    @DisplayName("공고노출승인_고객알림_상세주소는원본공고상세_CR158")
+    void onOpportunityApproved_상세주소_원본공고상세() {
+        // given
+        UUID opportunityId = UUID.randomUUID();
+        Opportunity opp = Opportunity.builder()
+                .title("USFK Facility Maintenance")
+                .noticeId("W912-26-R-0001")
+                .build();
+        org.springframework.test.util.ReflectionTestUtils.setField(opp, "id", opportunityId);
+        org.springframework.test.util.ReflectionTestUtils.setField(listener, "customerPortalUrl", "https://portal.test");
+        given(opportunityRepository.findById(opportunityId)).willReturn(Optional.of(opp));
+        given(memberRepository.findByRole(Member.Role.CUSTOMER)).willReturn(List.of(createCustomer()));
+        ArgumentCaptor<Map<String, Object>> vars = ArgumentCaptor.forClass(Map.class);
+
+        // when
+        listener.onOpportunityApproved(new OpportunityApprovedEvent(opportunityId, UUID.randomUUID()));
+
+        // then
+        then(notificationService).should().sendNotification(
+                eq(NotificationType.OPPORTUNITY_APPROVED), eq("customer@test.com"), any(),
+                any(), vars.capture(), eq(opportunityId), eq("Opportunity"), any());
+        assertThat(vars.getValue().get("detailUrl")).isEqualTo("https://portal.test/search/origin/" + opportunityId);
     }
 }
