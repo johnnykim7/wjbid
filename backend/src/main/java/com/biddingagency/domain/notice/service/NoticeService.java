@@ -164,18 +164,6 @@ public class NoticeService {
                 .map(n -> OpportunityDto.fromNotice(n).withSamUrl(marketRowAssembler.samUrl(n.getOpportunity().getNoticeId())));
     }
 
-    /** 고객 검색 (노출 공고문, 한글/원문 제목). CR-009: includeExpired=false(기본)면 마감 지난 공고 제외 */
-    public Page<Notice> searchVisible(String keyword, boolean includeExpired, Pageable pageable) {
-        return noticeRepository.searchVisibleByKeyword(
-                keyword, OpportunityVisibility.VISIBLE, includeExpired, java.time.LocalDateTime.now(), pageable);
-    }
-
-    /** 마감 임박 노출 공고문 */
-    public List<Notice> findVisibleNearDeadline(int days) {
-        java.time.LocalDateTime now = java.time.LocalDateTime.now();
-        return noticeRepository.findVisibleNearDeadline(now, now.plusDays(days), OpportunityVisibility.VISIBLE);
-    }
-
     /** 최근 게시 노출 공고문 */
     public List<Notice> findVisibleRecentlyPosted(int days) {
         return noticeRepository.findVisibleRecentlyPosted(

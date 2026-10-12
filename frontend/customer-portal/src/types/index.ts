@@ -21,6 +21,10 @@ export interface Opportunity {
   publicNoticeId?: string
   /** SAM.gov 원문 공개 주소. uiLink 는 SAM 로그인이 필요한 작업공간 주소다 (CR-152) */
   samUrl?: string
+  /** 원문 본문을 한글로 옮긴 것. 원본 공고 상세만 (CR-155) */
+  descriptionKo?: string
+  /** 공고문이 만들어진 모은 공고 id. 관심 공고는 이 번호로 저장한다. 공고문 상세만 (CR-155) */
+  opportunityId?: string
 }
 
 export interface AnalysisResult {

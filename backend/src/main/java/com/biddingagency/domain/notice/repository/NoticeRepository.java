@@ -69,28 +69,6 @@ public interface NoticeRepository extends JpaRepository<Notice, UUID> {
     Optional<Notice> findFirstByOpportunityIdAndVisibilityOrderByAnalyzedAtDesc(
             UUID opportunityId, OpportunityVisibility visibility);
 
-    /**
-     * 고객 검색 — 노출 공고문의 한글 제목 또는 원본 제목에 키워드 포함.
-     * CR-009: includeExpired=false면 마감 지난 공고 제외(마감일 NULL은 유지). 정렬은 Pageable.
-     */
-    @Query("SELECT n FROM Notice n JOIN FETCH n.opportunity o WHERE n.visibility = :visibility "
-            + "AND (:includeExpired = true OR o.responseDeadline IS NULL OR o.responseDeadline >= :now) "
-            + "AND (LOWER(n.koreanTitle) LIKE LOWER(CONCAT('%', :keyword, '%')) "
-            + "OR LOWER(o.title) LIKE LOWER(CONCAT('%', :keyword, '%'))) "
-            + "ORDER BY o.postedDate DESC, n.createdAt DESC")
-    Page<Notice> searchVisibleByKeyword(@Param("keyword") String keyword,
-                                        @Param("visibility") OpportunityVisibility visibility,
-                                        @Param("includeExpired") boolean includeExpired,
-                                        @Param("now") java.time.LocalDateTime now,
-                                        Pageable pageable);
-
-    /** 마감 임박 노출 공고문 (now < deadline < limit) */
-    @Query("SELECT n FROM Notice n JOIN FETCH n.opportunity o WHERE n.visibility = :visibility "
-            + "AND o.responseDeadline > :now AND o.responseDeadline < :limit ORDER BY o.responseDeadline ASC")
-    List<Notice> findVisibleNearDeadline(@Param("now") java.time.LocalDateTime now,
-                                         @Param("limit") java.time.LocalDateTime limit,
-                                         @Param("visibility") OpportunityVisibility visibility);
-
     /** 최근 게시 노출 공고문 (posted >= since) */
     @Query("SELECT n FROM Notice n JOIN FETCH n.opportunity o WHERE n.visibility = :visibility "
             + "AND o.postedDate >= :since ORDER BY o.postedDate DESC")

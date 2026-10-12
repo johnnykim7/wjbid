@@ -10,6 +10,10 @@ export interface MarketRow {
   solicitationNumber: string | null
   title: string | null
   titleKo: string | null
+  /** 발주처, 업종 코드, 이행 장소 (CR-155) */
+  agencyName: string | null
+  naicsCode: string | null
+  placeOfPerformance: string | null
   type: string | null
   typeKo: string | null
   group: MarketGroup
@@ -133,6 +137,12 @@ export interface CollectedQuery {
   sector?: string
   openOnly?: boolean
   latestOnly?: boolean
+  /** 한글 제목, 원문 제목, 공고번호에서 찾는다 (CR-155) */
+  q?: string
+  /** 기본 LATEST 게시일 최신순, DEADLINE 마감이 가까운 순 (CR-155) */
+  sort?: 'LATEST' | 'DEADLINE'
+  /** 마감이 지금부터 이 날 수 안인 것만 (CR-155) */
+  dueWithinDays?: number
   page?: number
   size?: number
 }

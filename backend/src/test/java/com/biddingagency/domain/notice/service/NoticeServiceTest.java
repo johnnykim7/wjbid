@@ -306,4 +306,38 @@ class NoticeServiceTest {
         assertThat(List.of(noticeService.findOriginDetail(deletedId), noticeService.findOriginDetail(missingId)))
                 .allMatch(Optional::isEmpty);
     }
+
+    // ===== CR-155: 한글 본문, 관심 공고 번호 =====
+
+    @Test
+    @DisplayName("TC-BROWSE-016: 한글본문있음_원본상세_descriptionKo")
+    void 한글본문있음_원본상세_descriptionKo() {
+        UUID id = UUID.randomUUID();
+        Opportunity opp = originOpp(id, "세탁 서비스", "Full description body");
+        opp.applyDescriptionTranslation("세탁 서비스 본문");
+        given(noticeRepository.findFirstByOpportunityIdAndVisibilityOrderByAnalyzedAtDesc(id, OpportunityVisibility.VISIBLE))
+                .willReturn(Optional.empty());
+
+        OpportunityDto dto = noticeService.findOriginDetail(id).orElseThrow();
+
+        assertThat(List.of(dto.description(), dto.descriptionKo()))
+                .containsExactly("Full description body", "세탁 서비스 본문");
+    }
+
+    @Test
+    @DisplayName("TC-BROWSE-017: 공고문상세_opportunityId_모은공고번호")
+    void 공고문상세_opportunityId_모은공고번호() {
+        UUID oppId = UUID.randomUUID();
+        Opportunity opp = Opportunity.builder().noticeId("N-155").title("Laundry Service").build();
+        ReflectionTestUtils.setField(opp, "id", oppId);
+        UUID noticeId = UUID.randomUUID();
+        Notice visible = Notice.builder().opportunity(opp).build();
+        ReflectionTestUtils.setField(visible, "id", noticeId);
+        given(noticeRepository.findByIdAndVisibility(noticeId, OpportunityVisibility.VISIBLE))
+                .willReturn(Optional.of(visible));
+
+        OpportunityDto dto = noticeService.findVisibleDetail(noticeId).orElseThrow();
+
+        assertThat(List.of(dto.id(), dto.opportunityId())).containsExactly(noticeId.toString(), oppId.toString());
+    }
 }

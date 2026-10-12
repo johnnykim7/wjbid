@@ -15,15 +15,16 @@ import {
   SelectItem,
 } from '@therecommerce-develop/ds-ui'
 import {
-  getOpportunities,
-  searchOpportunities,
   addBookmark,
   removeBookmark,
   getMyBookmarks,
   getMyBidRequests,
   getEligibilityNotices,
 } from '../api/client'
+import { marketApi } from '../api/market'
 import type { EligibilityVerdict, Opportunity } from '../types'
+import type { CollectedQuery, MarketRow } from '../types/market'
+import { rowTarget } from '../components/market/marketUtils'
 import { VerdictTag } from '../components/verdict/VerdictTag'
 import { VERDICT_NONE, VERDICT_TEXT } from '../data/verdictContent'
 import '../wjbid-verdict.css'
@@ -33,6 +34,10 @@ import { PageHead, SubPageFrame } from '../components/subpage/SubPageFrame'
 import { SEARCH_TEXT as T } from '../data/searchContent'
 
 const PLACE = findMenuItem('bids', 'open')
+
+/** 모은 공고 중 마감 전인 것, 같은 공고번호는 마지막 판 하나 (CR-155, BIZ-069) */
+const OPEN_QUERY: CollectedQuery = { openOnly: true, latestOnly: true }
+const PAGE_SIZE = 20
 
 /** 판정할 수 없는 공고(분석 전, 참가 자격 0개)는 - 로 둔다 */
 function VerdictCell({ verdict }: { verdict?: EligibilityVerdict }) {
@@ -54,7 +59,7 @@ export default function SearchPage() {
   // CR-127 — 홈 검색바가 /search?keyword=... 로 넘겨준 키워드를 초기값으로 사용
   const [searchParams] = useSearchParams()
   const initialKeyword = searchParams.get('keyword') ?? ''
-  const [items, setItems] = useState<Opportunity[]>([])
+  const [items, setItems] = useState<MarketRow[]>([])
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
@@ -101,24 +106,15 @@ export default function SearchPage() {
     setLoading(true)
     setLoadError(null)
     try {
-      let data
-      if (kw.trim()) {
-        const res = await searchOpportunities(kw, p)
-        data = res.data
-      } else {
-        const res = await getOpportunities(p)
-        data = res.data
-      }
+      const q = kw.trim()
+      const data = await marketApi.collected({ ...OPEN_QUERY, q: q || undefined, page: p, size: PAGE_SIZE })
       setItems(data.content ?? [])
       setTotalPages(data.totalPages ?? 1)
       setTotalElements(data.totalElements ?? 0)
-      setSearchedKeyword(kw.trim())
-      if (!kw.trim()) setOpenTotal(data.totalElements ?? 0)
-    } catch (err) {
-      const msg = (err as { response?: { status?: number } })?.response?.status === 401
-        ? '로그인이 필요합니다.'
-        : '공고문을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.'
-      setLoadError(msg)
+      setSearchedKeyword(q)
+      if (!q) setOpenTotal(data.totalElements ?? 0)
+    } catch {
+      setLoadError(T.loadError.desc)
       setItems([])
       setTotalPages(1)
       setTotalElements(0)
@@ -130,8 +126,8 @@ export default function SearchPage() {
   useEffect(() => {
     fetchData(0, initialKeyword)
     if (initialKeyword.trim()) {
-      getOpportunities(0, 1)
-        .then((res) => setOpenTotal(res.data.totalElements ?? 0))
+      marketApi.collected({ ...OPEN_QUERY, size: 1 })
+        .then((data) => setOpenTotal(data.totalElements ?? 0))
         .catch(() => setOpenTotal(null))
     }
   }, [])
@@ -147,7 +143,8 @@ export default function SearchPage() {
     fetchData(p)
   }
 
-  const toggleBookmark = async (bid: Opportunity, e: React.MouseEvent) => {
+  // 관심 공고는 모은 공고 번호로 저장한다(CR-155)
+  const toggleBookmark = async (bid: MarketRow, e: React.MouseEvent) => {
     e.stopPropagation()
     const isBookmarked = bookmarkedIds.has(bid.id)
     try {
@@ -253,7 +250,7 @@ export default function SearchPage() {
           ) : loadError ? (
             <EmptyState
               icon="fa-solid fa-triangle-exclamation"
-              title="공고문을 불러오지 못했습니다"
+              title={T.loadError.title}
               description={loadError}
             />
           ) : items.length === 0 ? (
@@ -282,7 +279,10 @@ export default function SearchPage() {
                       <TableRow
                         key={bid.id}
                         className="cursor-pointer"
-                        onClick={() => navigate(`/search/${bid.id}`)}
+                        onClick={() => {
+                          const to = rowTarget(bid)
+                          if (to) navigate(to)
+                        }}
                       >
                         <TableCell className="whitespace-nowrap align-top">
                           <div className="font-bold text-ink text-xs">{bid.solicitationNumber}</div>
@@ -292,7 +292,7 @@ export default function SearchPage() {
                         </TableCell>
                         <TableCell className="align-top">
                           <div className="font-semibold text-ink text-sm mb-1 line-clamp-2">
-                            {bid.title}
+                            {bid.titleKo || bid.title}
                           </div>
                           <div className="text-xs text-ink-mute flex items-center gap-1">
                             <i className="fa-solid fa-building-columns text-ink-mute" />
@@ -300,19 +300,21 @@ export default function SearchPage() {
                           </div>
                         </TableCell>
                         <TableCell className="align-top text-sm text-ink-sub">
-                          {bid.type || '-'}
+                          {bid.typeKo || bid.type || '-'}
                         </TableCell>
                         <TableCell className="whitespace-nowrap align-top text-sm text-ink-sub">
                           {bid.postedDate || '-'}
                         </TableCell>
                         <TableCell className="whitespace-nowrap align-top">
                           <div className="flex items-center gap-1.5">
-                            <span className="text-sm text-ink-sub">{bid.responseDeadline}</span>
-                            <DdayBadge deadline={bid.responseDeadline} />
+                            <span className="text-sm text-ink-sub">{bid.responseDeadline?.slice(0, 10)}</span>
+                            <DdayBadge deadline={bid.responseDeadline?.slice(0, 10)} />
                           </div>
                         </TableCell>
                         <TableCell className="text-center align-middle">
-                          {verdicts && <VerdictCell verdict={verdicts.get(bid.id)} />}
+                          {verdicts && (
+                            <VerdictCell verdict={bid.publicNoticeId ? verdicts.get(bid.publicNoticeId) : undefined} />
+                          )}
                         </TableCell>
                         <TableCell className="text-center align-middle">
                           <Button

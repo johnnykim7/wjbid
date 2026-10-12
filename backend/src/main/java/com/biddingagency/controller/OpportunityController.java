@@ -75,34 +75,6 @@ public class OpportunityController {
     }
 
     /**
-     * 공고문 검색 (한글/원문 제목)
-     */
-    @GetMapping("/search")
-    @Operation(summary = "공고문 검색", description = "노출 공고문 제목 검색. CR-009: 최신순 + 마감 공고 기본 제외")
-    public ResponseEntity<Page<OpportunityDto>> searchOpportunities(
-            @RequestParam String keyword,
-            @RequestParam(defaultValue = "false") boolean includeExpired,
-            // 정렬은 쿼리에 고정(게시일 DESC, 2차 수집순 DESC) — Pageable sort 미지정
-            @PageableDefault(size = 20) Pageable pageable) {
-        Page<OpportunityDto> notices = noticeService.searchVisible(keyword, includeExpired, pageable)
-                .map(OpportunityDto::fromNotice);
-        return ResponseEntity.ok(notices);
-    }
-
-    /**
-     * Get opportunities near deadline
-     */
-    @GetMapping("/near-deadline")
-    @Operation(summary = "Near deadline", description = "Get opportunities approaching deadline")
-    public ResponseEntity<List<OpportunityDto>> nearDeadline(
-            @RequestParam(defaultValue = "7") int days) {
-        log.debug("Fetching opportunities near deadline (within {} days)", days);
-        List<OpportunityDto> opportunities = noticeService.findVisibleNearDeadline(days)
-                .stream().map(OpportunityDto::fromNotice).toList();
-        return ResponseEntity.ok(opportunities);
-    }
-
-    /**
      * Get opportunity requirements
      */
     @GetMapping("/{id}/requirements")

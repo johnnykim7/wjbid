@@ -92,6 +92,9 @@ public class MarketRowAssembler {
                 s.solicitationNumber(),
                 s.title(),
                 s.titleKo(),
+                s.organizationName(),
+                s.naicsCode(),
+                s.placeOfPerformance(),
                 s.type(),
                 s.typeKo() != null ? s.typeKo() : NoticeTypeTranslator.toKorean(s.type()),
                 group,
@@ -118,11 +121,13 @@ public class MarketRowAssembler {
         return new MarketSource(o.getId(), o.getNoticeId(), o.getSolicitationNumber(), o.getTitle(),
                 o.getTitleKo(), o.getType(), o.getTypeKo(), o.getPostedDate(), o.getResponseDeadline(),
                 o.getAwardAmount(), o.getAwardAmountUsd(), o.getAwardeeName(), o.getAwardeeUei(),
-                o.getRawJson());
+                o.getOrganizationName(), o.getPlaceOfPerformanceShort(), o.getRawJson());
     }
 
+    /** 답변 기한이 남은 공고. 낙찰 공지는 기한이 적혀 있어도 끝난 공고다(BIZ-069) */
     static boolean isOpen(MarketSource s, LocalDateTime nowKst) {
-        return s.responseDeadline() != null && s.responseDeadline().isAfter(nowKst);
+        return s.group() != MarketGroup.AWARD
+                && s.responseDeadline() != null && s.responseDeadline().isAfter(nowKst);
     }
 
     record Context(Map<String, List<MarketSource>> bySol, Map<UUID, UUID> publicNoticeByOpportunity) {

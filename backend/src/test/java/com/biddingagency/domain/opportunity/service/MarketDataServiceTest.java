@@ -5,6 +5,7 @@ import com.biddingagency.domain.notice.service.NoticeService;
 import com.biddingagency.domain.opportunity.MarketGroup;
 import com.biddingagency.domain.opportunity.dto.MarketResponses.AmendmentGroup;
 import com.biddingagency.domain.opportunity.dto.MarketResponses.AwardSummary;
+import com.biddingagency.domain.opportunity.dto.MarketResponses.CollectedResponse;
 import com.biddingagency.domain.opportunity.dto.MarketResponses.MonthStat;
 import com.biddingagency.domain.opportunity.dto.MarketResponses.MonthlyResponse;
 import com.biddingagency.domain.opportunity.dto.MarketResponses.NaicsResponse;
@@ -14,6 +15,8 @@ import com.biddingagency.domain.opportunity.dto.MarketRowDto;
 import com.biddingagency.domain.opportunity.dto.MarketSource;
 import com.biddingagency.domain.opportunity.repository.OpportunityRepository;
 import com.biddingagency.domain.opportunity.service.MarketDataService.AwardSort;
+import com.biddingagency.domain.opportunity.service.MarketDataService.CollectedFilter;
+import com.biddingagency.domain.opportunity.service.MarketDataService.CollectedSort;
 import com.biddingagency.domain.setting.entity.SettingKey;
 import com.biddingagency.domain.setting.service.SystemSettingService;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,8 +33,10 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
@@ -83,7 +88,22 @@ class MarketDataServiceTest {
                                        BigDecimal amountUsd, String naicsCode) {
         UUID id = UUID.randomUUID();
         return new MarketSource(id, id.toString().replace("-", ""), sol, "title " + id, null, type, null,
-                posted, deadline, null, amountUsd, null, null, naicsCode);
+                posted, deadline, null, amountUsd, null, null, naicsCode, null, (String) null);
+    }
+
+    private static MarketSource titled(String sol, String title, String titleKo, LocalDateTime deadline) {
+        UUID id = UUID.randomUUID();
+        return new MarketSource(id, id.toString().replace("-", ""), sol, title, titleKo, "Solicitation", null,
+                NOW_KST.minusDays(1), deadline, null, null, null, null, null, null, (String) null);
+    }
+
+    private static CollectedFilter filter(MarketGroup group, boolean openOnly, boolean latestOnly) {
+        return new CollectedFilter(group, null, null, null, openOnly, latestOnly, null, null, null);
+    }
+
+    /** 마감 전 공고 화면과 첫 화면이 부르는 꼴 (CR-155) */
+    private static CollectedFilter open(String q, CollectedSort sort, Integer dueWithinDays) {
+        return new CollectedFilter(null, null, null, null, true, true, q, sort, dueWithinDays);
     }
 
     private void given모은공고(MarketSource... sources) {
@@ -99,7 +119,7 @@ class MarketDataServiceTest {
                 source("S2", "Sources Sought", NOW_KST.minusDays(2), null),
                 source("S3", "Solicitation", NOW_KST.minusDays(1), null));
 
-        List<TypeCount> counts = service().collected(MarketGroup.PRE, null, null, null, false, false, 0, 20)
+        List<TypeCount> counts = service().collected(filter(MarketGroup.PRE, false, false), 0, 20)
                 .typeCounts();
 
         assertThat(counts).extracting(TypeCount::type, TypeCount::count)
@@ -116,7 +136,7 @@ class MarketDataServiceTest {
                 source("S2", "Presolicitation", NOW_KST.minusDays(2), NOW_KST.minusDays(1)),
                 source("S3", "Presolicitation", NOW_KST.minusDays(1), null));
 
-        List<MarketRowDto> rows = service().collected(null, null, null, null, true, false, 0, 20).content();
+        List<MarketRowDto> rows = service().collected(filter(null, true, false), 0, 20).content();
 
         assertThat(rows).extracting(MarketRowDto::id).containsExactly(tomorrow.id());
     }
@@ -129,7 +149,7 @@ class MarketDataServiceTest {
                 source("W1", "Sources Sought", NOW_KST.minusDays(10), null),
                 source("W1", "Solicitation", NOW_KST.minusDays(2), NOW_KST.plusDays(20)));
 
-        List<MarketRowDto> rows = service().collected(MarketGroup.PRE, null, null, null, false, false, 0, 20)
+        List<MarketRowDto> rows = service().collected(filter(MarketGroup.PRE, false, false), 0, 20)
                 .content();
 
         assertThat(rows).singleElement().extracting(MarketRowDto::hasMainNotice).isEqualTo(true);
@@ -317,5 +337,95 @@ class MarketDataServiceTest {
 
         assertThat(sectors).extracting(SectorStat::code, SectorStat::nameKo)
                 .containsExactly(tuple("92", "공공 행정"));
+    }
+
+    // ===== CR-155: 마감 전 공고 =====
+
+    // TC-BROWSE-010
+    @Test
+    @DisplayName("마감전만_openOnly_낙찰공지뺌")
+    void 마감전만_openOnly_낙찰공지뺌() {
+        MarketSource open = source("B1", "Solicitation", NOW_KST.minusDays(3), NOW_KST.plusDays(5));
+        given모은공고(
+                open,
+                source("B2", "Solicitation", NOW_KST.minusDays(9), NOW_KST.minusDays(1)),
+                source("B3", "Award Notice", NOW_KST.minusDays(1), NOW_KST.plusDays(5)));
+
+        List<MarketRowDto> rows = service().collected(open(null, null, null), 0, 20).content();
+
+        assertThat(rows).extracting(MarketRowDto::id).containsExactly(open.id());
+    }
+
+    // TC-BROWSE-011
+    @Test
+    @DisplayName("같은공고번호_openOnly와latestOnly_마지막판하나")
+    void 같은공고번호_openOnly와latestOnly_마지막판하나() {
+        MarketSource latest = source("W1", "Solicitation", NOW_KST.minusDays(1), NOW_KST.plusDays(10));
+        given모은공고(
+                source("W1", "Solicitation", NOW_KST.minusDays(5), NOW_KST.plusDays(7)),
+                latest);
+
+        List<MarketRowDto> rows = service().collected(open(null, null, null), 0, 20).content();
+
+        assertThat(rows).extracting(MarketRowDto::id).containsExactly(latest.id());
+    }
+
+    // TC-BROWSE-012
+    @Test
+    @DisplayName("검색어_q_한글제목원문제목공고번호")
+    void 검색어_q_한글제목원문제목공고번호() {
+        MarketSource ko = titled("S1", "Facility Repair", "시설 정비", NOW_KST.plusDays(5));
+        MarketSource en = titled("S2", "Grounds Maintenance", null, NOW_KST.plusDays(5));
+        MarketSource sol = titled("W91QVN26RAA86", "Laundry", null, NOW_KST.plusDays(5));
+        given모은공고(ko, en, sol);
+
+        List<UUID> found = Stream.of("정비", "MAINTENANCE", "w91qvn")
+                .map(q -> service().collected(open(q, null, null), 0, 20).content())
+                .map(rows -> rows.size() == 1 ? rows.get(0).id() : null)
+                .toList();
+
+        assertThat(found).containsExactly(ko.id(), en.id(), sol.id());
+    }
+
+    // TC-BROWSE-013
+    @Test
+    @DisplayName("마감순_sort_DEADLINE_마감이른순")
+    void 마감순_sort_DEADLINE_마감이른순() {
+        MarketSource d20 = source("D20", "Solicitation", NOW_KST.minusDays(3), NOW_KST.plusDays(9));
+        MarketSource d15 = source("D15", "Solicitation", NOW_KST.minusDays(1), NOW_KST.plusDays(4));
+        MarketSource d30 = source("D30", "Solicitation", NOW_KST.minusDays(2), NOW_KST.plusDays(19));
+        given모은공고(d20, d15, d30);
+
+        List<MarketRowDto> rows = service().collected(open(null, CollectedSort.DEADLINE, null), 0, 20).content();
+
+        assertThat(rows).extracting(MarketRowDto::id).containsExactly(d15.id(), d20.id(), d30.id());
+    }
+
+    // TC-BROWSE-014
+    @Test
+    @DisplayName("기한안_dueWithinDays_그안만")
+    void 기한안_dueWithinDays_그안만() {
+        MarketSource soon = source("N3", "Solicitation", NOW_KST.minusDays(1), NOW_KST.plusDays(3));
+        given모은공고(soon, source("N10", "Solicitation", NOW_KST.minusDays(1), NOW_KST.plusDays(10)));
+
+        CollectedResponse res = service().collected(open(null, null, 7), 0, 20);
+
+        assertThat(res.content()).extracting(MarketRowDto::id).containsExactly(soon.id());
+    }
+
+    // TC-BROWSE-015
+    @Test
+    @DisplayName("줄칸_발주처업종이행장소")
+    void 줄칸_발주처업종이행장소() {
+        UUID id = UUID.randomUUID();
+        MarketSource src = new MarketSource(id, "N1", "W1", "Laundry", null, "Solicitation", null,
+                NOW_KST.minusDays(1), NOW_KST.plusDays(5), null, null, null, null,
+                "DEPT OF THE ARMY", " ", Map.of("naicsCode", "236220", "placeOfPerformance", "APO, AP"));
+        given모은공고(src);
+
+        MarketRowDto row = service().collected(open(null, null, null), 0, 20).content().get(0);
+
+        assertThat(row).extracting(MarketRowDto::agencyName, MarketRowDto::naicsCode, MarketRowDto::placeOfPerformance)
+                .containsExactly("DEPT OF THE ARMY", "236220", "APO, AP");
     }
 }
