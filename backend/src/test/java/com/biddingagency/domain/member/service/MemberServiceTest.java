@@ -1,5 +1,7 @@
 package com.biddingagency.domain.member.service;
 
+import com.biddingagency.domain.member.AuthError;
+import com.biddingagency.domain.member.AuthFlowException;
 import com.biddingagency.domain.member.EmailAlreadyExistsException;
 import com.biddingagency.domain.member.entity.Member;
 import com.biddingagency.domain.member.entity.MemberConsent;
@@ -9,11 +11,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.time.Clock;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -22,7 +26,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.*;
 
 /**
- * TC-AUTH-001 ~ TC-AUTH-003: MemberService 단위 테스트
+ * TC-AUTH-001 ~ TC-AUTH-003, TC-AUTH-018 ~ TC-AUTH-019: MemberService 단위 테스트
  */
 @ExtendWith(MockitoExtension.class)
 class MemberServiceTest {
@@ -36,8 +40,13 @@ class MemberServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
-    @InjectMocks
+    @Mock
+    private EmailCodeService emailCodeService;
+
     private MemberService memberService;
+
+    private static final ZoneId ZONE = ZoneId.of("Asia/Seoul");
+    private static final LocalDateTime NOW = LocalDateTime.of(2026, 10, 12, 9, 0);
 
     private static final String TEST_EMAIL = "test@example.com";
     private static final String TEST_PASSWORD = "password123";
@@ -45,6 +54,13 @@ class MemberServiceTest {
     private static final String TEST_CONTACT = "John Doe";
     private static final String TEST_PHONE = "010-1234-5678";
     private static final String TEST_BRN = "123-45-67890";
+
+    @BeforeEach
+    void setUp() {
+        Clock clock = Clock.fixed(NOW.atZone(ZONE).toInstant(), ZONE);
+        memberService = new MemberService(memberRepository, memberConsentRepository, passwordEncoder,
+                emailCodeService, clock);
+    }
 
     // TC-AUTH-001: 정상 회원가입
     @Test
@@ -97,6 +113,36 @@ class MemberServiceTest {
                 .isInstanceOf(EmailAlreadyExistsException.class);
 
         then(memberRepository).should(never()).save(any());
+        then(emailCodeService).should(never()).consumeVerified(any());
+    }
+
+    // TC-AUTH-018: 인증번호 확인 없이 가입
+    @Test
+    @DisplayName("확인한번호없음_가입_EMAIL_NOT_VERIFIED_BIZ062")
+    void 확인없는이메일_회원가입_막힘() {
+        given(memberRepository.existsByEmail(TEST_EMAIL)).willReturn(false);
+        willThrow(new AuthFlowException(AuthError.EMAIL_NOT_VERIFIED)).given(emailCodeService).consumeVerified(TEST_EMAIL);
+
+        assertThatThrownBy(() -> memberService.register(TEST_EMAIL, TEST_PASSWORD, TEST_COMPANY, TEST_CONTACT, TEST_PHONE,
+                TEST_BRN, true, true, false))
+                .isInstanceOfSatisfying(AuthFlowException.class,
+                        e -> assertThat(e.getError()).isEqualTo(AuthError.EMAIL_NOT_VERIFIED));
+
+        then(memberRepository).should(never()).save(any());
+    }
+
+    // TC-AUTH-019: 확인 뒤 정상 가입
+    @Test
+    @DisplayName("확인한번호있음_가입_이메일확인시각채움")
+    void 확인한이메일_회원가입_확인시각채움() {
+        given(memberRepository.existsByEmail(TEST_EMAIL)).willReturn(false);
+        given(memberRepository.save(any(Member.class))).willAnswer(inv -> inv.getArgument(0));
+
+        Member result = memberService.register(TEST_EMAIL, TEST_PASSWORD, TEST_COMPANY, TEST_CONTACT, TEST_PHONE,
+                TEST_BRN, true, true, false);
+
+        assertThat(result.getEmailVerifiedAt()).isEqualTo(NOW);
+        then(emailCodeService).should().consumeVerified(TEST_EMAIL);
     }
 
     // TC-AUTH-006: 존재하지 않는 이메일로 조회
