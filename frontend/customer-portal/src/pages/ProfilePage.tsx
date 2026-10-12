@@ -2,7 +2,17 @@ import { useState, useEffect } from 'react'
 import { Button, Input, Label } from '@therecommerce-develop/ds-ui'
 import { LoadingSpinner } from '../components/ui/loading-spinner'
 import { getMyProfile, updateMyProfile } from '../api/client'
+import { Link } from 'react-router-dom'
 import type { MemberProfile } from '../types'
+import { MEMBERSHIP_TEXT, PRICING_PATH } from '../data/membershipContent'
+
+/** 회원 구분 (CR-157). 관리자는 기간 없이 회원과 같다 */
+function membershipLabel(profile: MemberProfile | null) {
+  if (!profile) return ''
+  if (profile.role === 'ADMIN') return MEMBERSHIP_TEXT.profile.admin
+  const endsOn = profile.membership?.endsOn
+  return profile.membership?.member && endsOn ? MEMBERSHIP_TEXT.profile.member(endsOn) : MEMBERSHIP_TEXT.profile.free
+}
 
 type FormState = {
   companyName: string
@@ -121,6 +131,15 @@ export default function ProfilePage() {
                   value={profile?.role ?? ''}
                   disabled
                 />
+              </div>
+              <div>
+                <Label className="block text-sm font-medium text-ink-sub mb-1">{MEMBERSHIP_TEXT.profile.label}</Label>
+                <Input type="text" value={membershipLabel(profile)} disabled />
+                {profile && profile.role !== 'ADMIN' && !profile.membership?.member && (
+                  <Link to={PRICING_PATH} className="inline-block mt-1 text-sm text-brand hover:underline">
+                    {MEMBERSHIP_TEXT.pricing}
+                  </Link>
+                )}
               </div>
             </div>
           </section>

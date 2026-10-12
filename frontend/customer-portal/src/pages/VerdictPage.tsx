@@ -9,6 +9,8 @@ import { ApplyBand, PageHead, SubPageFrame } from '../components/subpage/SubPage
 import { LoadingSpinner } from '../components/ui/loading-spinner'
 import { VerdictTag, VerdictWhy } from '../components/verdict/VerdictTag'
 import { useAuth } from '../context/AuthContext'
+import { MemberOnlyBox } from '../components/membership/MemberOnlyBox'
+import { MEMBERSHIP_TEXT } from '../data/membershipContent'
 import { ELIGIBILITY_TEXT, eligibilityHref } from '../data/eligibilityContent'
 import { VERDICT_ORDER, VERDICT_PATH, VERDICT_TAG, VERDICT_TEXT as T, verdictExpertHref } from '../data/verdictContent'
 import type { EligibilityNoticeRow, EligibilityVerdict } from '../types'
@@ -38,7 +40,7 @@ function readBack(): Back | null {
  * 판정은 서버가 적격성 진단의 답과 붙인 서류로 낸 값을 그대로 보인다(BIZ-040). 개수는 판정할 수 있는 공고 전체 기준이다.
  */
 export default function VerdictPage() {
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, membership } = useAuth()
   const navigate = useNavigate()
   const navigationType = useNavigationType()
   const [load, setLoad] = useState<Load>({ status: 'loading' })
@@ -56,8 +58,9 @@ export default function VerdictPage() {
   }
 
   useEffect(() => {
-    if (isAuthenticated) fetchRows()
-  }, [isAuthenticated, fetchRows])
+    // 진단과 판정은 회원만 쓴다(CR-157)
+    if (isAuthenticated && membership === 'member') fetchRows()
+  }, [isAuthenticated, membership, fetchRows])
 
   useEffect(() => {
     if (load.status !== 'ok') return
@@ -105,6 +108,8 @@ export default function VerdictPage() {
             </div>
           </div>
         </section>
+      ) : membership === 'free' ? (
+        <MemberOnlyBox title={MEMBERSHIP_TEXT.verdict.title} desc={MEMBERSHIP_TEXT.verdict.desc} />
       ) : load.status === 'loading' ? (
         <section className="cbx pad"><LoadingSpinner fullPage /></section>
       ) : load.status === 'error' ? (

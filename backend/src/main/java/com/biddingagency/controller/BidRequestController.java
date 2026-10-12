@@ -9,6 +9,7 @@ import com.biddingagency.domain.notice.entity.Notice;
 import com.biddingagency.domain.notice.service.NoticeService;
 import com.biddingagency.dto.BidRequestCreateRequest;
 import com.biddingagency.dto.StateTransitionRequest;
+import com.biddingagency.domain.member.service.MembershipService;
 import com.biddingagency.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -37,12 +38,15 @@ public class BidRequestController {
     private final BidFSMService fsmService;
     private final DocumentVersionService documentVersionService;
     private final NoticeService noticeService;
+    private final MembershipService membershipService;
 
     @PostMapping
     @Operation(summary = "입찰 요청 생성", description = "고객은 공고문(noticeId)으로 신청 → 원본 opportunity 기준 BidRequest 생성")
     public ResponseEntity<BidRequestDto> createBidRequest(
             @Valid @RequestBody BidRequestCreateRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
+        // CR-157: 입찰 신청은 공고문 상세에서 하므로 회원만(BIZ-071)
+        membershipService.requireMember(userDetails.getMember().getId());
         // CR-016: 고객이 보유한 id는 noticeId. 신청은 원본 opportunity 단위 → 변환.
         Notice notice = noticeService.findById(request.getOpportunityId());
         UUID opportunityId = notice.getOpportunity().getId();

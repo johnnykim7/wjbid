@@ -127,7 +127,7 @@ export default function CalendarPage() {
                   return (
                     <li key={b.id}>
                       <Link
-                        to={`/search/${b.id}`}
+                        to={`/search/origin/${b.id}`}
                         className="block px-5 py-3 hover:bg-brand-softer transition"
                       >
                         <div className="flex items-start justify-between gap-2 mb-1">
@@ -171,7 +171,7 @@ export default function CalendarPage() {
               <ul className="space-y-2">
                 {onSelectedDay.map((b) => (
                   <li key={b.id} className="flex items-center justify-between text-sm">
-                    <Link to={`/search/${b.id}`} className="text-brand hover:underline truncate">
+                    <Link to={`/search/origin/${b.id}`} className="text-brand hover:underline truncate">
                       <span className="font-mono text-xs text-ink mr-2">
                         {b.solicitationNumber}
                       </span>

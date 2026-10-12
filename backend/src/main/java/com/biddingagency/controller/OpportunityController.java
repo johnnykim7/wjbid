@@ -17,6 +17,10 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.biddingagency.domain.member.service.MembershipService;
+import com.biddingagency.security.CustomUserDetails;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -25,6 +29,7 @@ import java.util.UUID;
  *
  * 고객 노출 단위 = 공고문(Notice, 노출된 것만). id = noticeId.
  * 원본(Opportunity)은 관리자 선별 풀이라 고객에 직접 노출하지 않음.
+ * CR-157: 공고문 내용(목록, 상세, 최근, 요구 서류)은 회원만(BIZ-071). 원본 공고 상세와 첨부는 모두에게 연다.
  */
 @Slf4j
 @RestController
@@ -37,6 +42,7 @@ public class OpportunityController {
     private final NoticeService noticeService;
     private final OpportunityRequirementItemRepository requirementItemRepository;
     private final OpportunityAttachmentRepository attachmentRepository;
+    private final MembershipService membershipService;
 
     /**
      * 노출 공고문 목록 (CR-016)
@@ -46,7 +52,9 @@ public class OpportunityController {
     public ResponseEntity<Page<OpportunityDto>> listOpportunities(
             @RequestParam(defaultValue = "false") boolean includeExpired,
             // 정렬은 쿼리에 고정(게시일 DESC, 2차 수집순 DESC) — Pageable sort 미지정
-            @PageableDefault(size = 20) Pageable pageable) {
+            @PageableDefault(size = 20) Pageable pageable,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        membershipService.requireMember(memberIdOf(userDetails));
         Page<OpportunityDto> notices = noticeService.findVisible(includeExpired, pageable)
                 .map(OpportunityDto::fromNotice);
         return ResponseEntity.ok(notices);
@@ -57,7 +65,9 @@ public class OpportunityController {
      */
     @GetMapping("/{id}")
     @Operation(summary = "공고문 상세", description = "노출 공고문 상세 + 한글화 결과")
-    public ResponseEntity<OpportunityDto> getOpportunity(@PathVariable UUID id) {
+    public ResponseEntity<OpportunityDto> getOpportunity(@PathVariable UUID id,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        membershipService.requireMember(memberIdOf(userDetails));
         return noticeService.findVisibleDetail(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -79,7 +89,9 @@ public class OpportunityController {
      */
     @GetMapping("/{id}/requirements")
     @Operation(summary = "공고 요구사항 목록")
-    public ResponseEntity<List<OpportunityRequirementItem>> getRequirements(@PathVariable UUID id) {
+    public ResponseEntity<List<OpportunityRequirementItem>> getRequirements(@PathVariable UUID id,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        membershipService.requireMember(memberIdOf(userDetails));
         opportunityService.findById(id); // existence check
         return ResponseEntity.ok(requirementItemRepository.findByOpportunityId(id));
     }
@@ -100,10 +112,17 @@ public class OpportunityController {
     @GetMapping("/recent")
     @Operation(summary = "Recently posted", description = "Get recently posted opportunities")
     public ResponseEntity<List<OpportunityDto>> recentlyPosted(
-            @RequestParam(defaultValue = "30") int days) {
+            @RequestParam(defaultValue = "30") int days,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        membershipService.requireMember(memberIdOf(userDetails));
         log.debug("Fetching opportunities posted in last {} days", days);
         List<OpportunityDto> opportunities = noticeService.findVisibleRecentlyPosted(days)
                 .stream().map(OpportunityDto::fromNotice).toList();
         return ResponseEntity.ok(opportunities);
+    }
+
+    // 공개 주소라 토큰이 없거나 지났으면 로그인 정보가 비어 들어온다
+    private static UUID memberIdOf(CustomUserDetails userDetails) {
+        return userDetails != null ? userDetails.getMember().getId() : null;
     }
 }

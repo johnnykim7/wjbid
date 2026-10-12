@@ -125,6 +125,8 @@ export interface MemberProfile {
   phone?: string
   address?: string
   role: string
+  /** 회원 구분 (CR-157). endsOn 은 지금 회원 기간의 끝일, 관리자와 무료회원은 null */
+  membership?: { member: boolean; endsOn: string | null }
 }
 
 export interface Notification {
