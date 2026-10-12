@@ -380,7 +380,7 @@ public class AIWorkflowService {
     }
 
     private List<RequirementDTO> loadRequirementsAsDto(UUID opportunityId) {
-        return requirementItemRepository.findByOpportunityId(opportunityId).stream()
+        return requirementItemRepository.findByOpportunityIdAndReqIdIsNullOrderBySortOrderAsc(opportunityId).stream() // CR-159 BIZ-075
             .map(req -> RequirementDTO.builder()
                 .id(req.getId())
                 .category(req.getCategory().name())

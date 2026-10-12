@@ -8,7 +8,11 @@ import {
   unlockProposalSection,
   getProposalSectionVerification,
   reverifyProposalSection,
+  getProposalCoverage,
 } from '../api/client'
+import { Badge } from '@therecommerce-develop/ds-ui'
+import CoverageBand from '../components/CoverageBand'
+import type { Coverage } from '../components/CoverageBand'
 
 // ── 타입 (BE ProposalTreeDto 대응) ──
 interface SectionNode {
@@ -106,6 +110,8 @@ export default function ProposalTreePage() {
   const [detailLoading, setDetailLoading] = useState(false)
   const [acting, setActing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [coverage, setCoverage] = useState<Coverage | null>(null)
+  const [coverageFailed, setCoverageFailed] = useState(false)
 
   const loadTree = useCallback(async () => {
     if (!documentId) return
@@ -120,9 +126,34 @@ export default function ProposalTreePage() {
     }
   }, [documentId])
 
+  // CR-159 커버리지는 트리와 따로 불러 실패해도 트리는 그대로 둔다
+  const loadCoverage = useCallback(async () => {
+    if (!documentId) return
+    setCoverageFailed(false)
+    try {
+      const res = await getProposalCoverage(documentId)
+      setCoverage(res.data)
+    } catch {
+      setCoverageFailed(true)
+    }
+  }, [documentId])
+
   useEffect(() => {
     loadTree()
-  }, [loadTree])
+    loadCoverage()
+  }, [loadTree, loadCoverage])
+
+  const sectionTitle = (sectionId: string) => {
+    for (const ch of chapters) {
+      const s = ch.sections.find((x) => x.id === sectionId)
+      if (s) return `${s.subfactorLabel ? `${s.subfactorLabel} ` : ''}${s.title || '(무제)'}`
+    }
+    return sectionId
+  }
+  const refsOf = (sectionId: string) =>
+    coverage?.matrixReady ? coverage.sections.find((s) => s.sectionId === sectionId)?.refs ?? [] : null
+  const unknownIn = (sectionId: string) =>
+    new Set((coverage?.unknownIds ?? []).filter((u) => u.sectionId === sectionId).map((u) => u.reqId))
 
   const loadDetail = useCallback(async (sectionId: string) => {
     if (!documentId) return
@@ -153,6 +184,7 @@ export default function ProposalTreePage() {
     try {
       await reverifyProposalSection(documentId, detail.id)
       setError(null)
+      await loadCoverage()
       alert('재검증을 시작했습니다. 잠시 후 새로고침하면 결과가 갱신됩니다.')
     } catch {
       setError('재검증 요청에 실패했습니다.')
@@ -170,6 +202,7 @@ export default function ProposalTreePage() {
       await regenerateProposalSection(documentId, detail.id)
       await loadTree()
       await loadDetail(detail.id)
+      await loadCoverage()
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message
       setError(msg || '재생성 요청에 실패했습니다.')
@@ -222,6 +255,14 @@ export default function ProposalTreePage() {
         <div className="mb-4 p-3 bg-red-50 text-red-700 text-sm rounded">{error}</div>
       )}
 
+      <CoverageBand
+        coverage={coverage}
+        failed={coverageFailed}
+        onRetry={loadCoverage}
+        onSelectSection={loadDetail}
+        sectionTitle={sectionTitle}
+      />
+
       <div className="grid grid-cols-12 gap-4">
         {/* ── 좌: 트리 ── */}
         <div className="col-span-4 bg-white border rounded-lg p-3 max-h-[75vh] overflow-y-auto">
@@ -249,10 +290,20 @@ export default function ProposalTreePage() {
                           {s.subfactorLabel ? `${s.subfactorLabel} ` : ''}
                           {s.title || '(무제)'}
                         </span>
-                        <span
-                          className={`shrink-0 text-[11px] px-1.5 py-0.5 rounded ${STATUS_STYLE[s.status]}`}
-                        >
-                          {STATUS_LABEL[s.status]}
+                        <span className="shrink-0 flex items-center gap-1">
+                          {(() => {
+                            const refs = refsOf(s.id)
+                            if (!refs || refs.length === 0) return null
+                            const done = refs.filter((r) => r.fulfilled).length
+                            return (
+                              <span className={`text-[11px] ${done < refs.length ? 'text-amber-700' : 'text-gray-500'}`}>
+                                {done}/{refs.length}
+                              </span>
+                            )
+                          })()}
+                          <span className={`text-[11px] px-1.5 py-0.5 rounded ${STATUS_STYLE[s.status]}`}>
+                            {STATUS_LABEL[s.status]}
+                          </span>
                         </span>
                       </button>
                     </li>
@@ -309,10 +360,32 @@ export default function ProposalTreePage() {
                   {detail.minWords != null ? `${detail.minWords} words` : '—'}
                 </div>
                 <div>
-                  <span className="text-gray-500">요구사항</span>{' '}
-                  {detail.requirementRefs && detail.requirementRefs.length > 0
-                    ? detail.requirementRefs.join(', ')
-                    : '—'}
+                  <span className="text-gray-500">대응 REQ ID</span>{' '}
+                  {(() => {
+                    const refs = refsOf(detail.id)
+                    if (!refs) {
+                      return detail.requirementRefs && detail.requirementRefs.length > 0
+                        ? detail.requirementRefs.join(', ')
+                        : '-'
+                    }
+                    if (refs.length === 0) return '-'
+                    const unknown = unknownIn(detail.id)
+                    const known = refs.filter((r) => !unknown.has(r.reqId))
+                    return (
+                      <span className="inline-flex flex-wrap items-center gap-1 align-middle">
+                        {known.map((r) => (
+                          <Badge key={r.reqId} variant={r.fulfilled ? 'success' : 'warning'} size="sm">
+                            {r.reqId} {r.fulfilled ? '충족' : '누락'}
+                          </Badge>
+                        ))}
+                        {unknown.size > 0 && (
+                          <span className="text-xs text-red-700">
+                            매트릭스에 없는 ID: {[...unknown].join(', ')}
+                          </span>
+                        )}
+                      </span>
+                    )
+                  })()}
                 </div>
               </div>
 

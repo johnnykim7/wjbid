@@ -123,7 +123,7 @@ class PreCheckServiceTest {
 
     private void givenDetail(List<OpportunityRequirementItem> items, List<RequirementFulfillmentMap> maps) {
         given(bidRequestRepository.findByIdWithDetails(bidRequestId)).willReturn(Optional.of(bidRequest));
-        given(requirementRepository.findByOpportunityIdOrderBySortOrderAsc(opportunityId)).willReturn(items);
+        given(requirementRepository.findByOpportunityIdAndReqIdIsNullOrderBySortOrderAsc(opportunityId)).willReturn(items);
         given(fulfillmentMapRepository.findWithClientDocumentByBidRequestIds(List.of(bidRequestId))).willReturn(maps);
     }
 
@@ -281,5 +281,21 @@ class PreCheckServiceTest {
         service.upload(member, bidRequestId, license.getId(), file);
 
         assertThat(savedClientDocument().getPageCount()).isEqualTo(3);
+    }
+
+    @Test
+    @DisplayName("TC-COMP-027 고객서류올림_매트릭스줄_찾을수없음")
+    void 고객서류올림_매트릭스줄_찾을수없음() throws Exception {
+        OpportunityRequirementItem matrixLine = item("The offeror shall submit a quality control plan.",
+                FulfillmentParty.CLIENT_UPLOAD, true, null);
+        ReflectionTestUtils.setField(matrixLine, "reqId", "REQ-001");
+        given(bidRequestRepository.findByIdWithDetails(bidRequestId)).willReturn(Optional.of(bidRequest));
+        given(requirementRepository.findById(matrixLine.getId())).willReturn(Optional.of(matrixLine));
+        MockMultipartFile file = new MockMultipartFile("file", "a.pdf", "application/pdf", pdf(1));
+
+        assertThatThrownBy(() -> service.upload(member, bidRequestId, matrixLine.getId(), file))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(e -> assertThat(statusOf(e)).isEqualTo(HttpStatus.NOT_FOUND));
+        then(fulfillmentMapRepository).should(never()).save(any());
     }
 }

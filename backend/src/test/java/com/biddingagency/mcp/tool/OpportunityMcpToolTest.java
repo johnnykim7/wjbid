@@ -118,7 +118,7 @@ class OpportunityMcpToolTest {
                 .isBlocker(true)
                 .requirementJson(Map.of())
                 .build());
-        given(requirementItemRepository.findByOpportunityId(oppId)).willReturn(List.of(item));
+        given(requirementItemRepository.findByOpportunityIdAndReqIdIsNullOrderBySortOrderAsc(oppId)).willReturn(List.of(item));
 
         // when
         String result = opportunityMcpTool.getOpportunityRequirements(Map.of("opportunityId", oppId.toString()));
@@ -127,5 +127,34 @@ class OpportunityMcpToolTest {
         assertThat(result).contains("Submit proposal");
         assertThat(result).contains("DOCUMENT");
         assertThat(result).contains("\"count\" : 1");
+    }
+
+    // TC-COMP-012 (CR-159): MCP 공고 요구사항은 제출 서류 줄만 준다(BIZ-075)
+    @Test
+    @DisplayName("TC-COMP-012 MCP공고요구사항_매트릭스줄제외")
+    void MCP공고요구사항_매트릭스줄제외() {
+        UUID oppId = UUID.randomUUID();
+        Opportunity opp = createTestOpportunity(oppId);
+        List<OpportunityRequirementItem> submission = List.of(requirementRow(opp, "License", null), requirementRow(opp, "Insurance", null));
+        List<OpportunityRequirementItem> all = new java.util.ArrayList<>(submission);
+        all.add(requirementRow(opp, "Quality control plan", "REQ-001"));
+        all.add(requirementRow(opp, "Past performance", "REQ-002"));
+        all.add(requirementRow(opp, "Key personnel", "REQ-003"));
+        org.mockito.Mockito.lenient().when(requirementItemRepository.findByOpportunityId(oppId)).thenReturn(all);
+        given(requirementItemRepository.findByOpportunityIdAndReqIdIsNullOrderBySortOrderAsc(oppId)).willReturn(submission);
+
+        String result = opportunityMcpTool.getOpportunityRequirements(Map.of("opportunityId", oppId.toString()));
+
+        assertThat(result).contains("\"count\" : 2");
+    }
+
+    private OpportunityRequirementItem requirementRow(Opportunity opp, String title, String reqId) {
+        return TestHelper.withId(OpportunityRequirementItem.builder()
+                .opportunity(opp)
+                .category(reqId == null ? RequirementCategory.DOCUMENT : RequirementCategory.TECHNICAL)
+                .title(title)
+                .requirementJson(Map.of())
+                .reqId(reqId)
+                .build());
     }
 }

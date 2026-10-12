@@ -368,7 +368,9 @@ public class NoticeService {
                              Map<String, Object> requiredDocumentsJson,
                              Map<String, Object> llmPromptPresetJson,
                              Map<String, Object> contentJson,
-                             List<Map<String, Object>> extractedFactsJson) {
+                             List<Map<String, Object>> extractedFactsJson,
+                             Map<String, Object> complianceMatrixJson,
+                             Map<String, Object> factorTreeJson) {
         Notice notice = findById(noticeId);
 
         // CR-004: 정제 출력 필수키 검증 — 누락 시 COMPLETED 대신 FAILED로 전이해 빈 한글화 노출 차단
@@ -385,6 +387,9 @@ public class NoticeService {
         }
 
         notice.markCompleted(koreanTitle, summaryJson, documentFormatsJson, requiredDocumentsJson, llmPromptPresetJson, contentJson, extractedFactsJson);
+        // CR-159: 매트릭스와 평가 항목 구조. 보내지 않은 저장(교정 채팅 등)은 앞 분석 값을 그대로 둔다
+        notice.updateComplianceMatrix(complianceMatrixJson);
+        notice.updateFactorTree(factorTreeJson, null);
         Notice saved = noticeRepository.save(notice);
         requirementSyncService.syncFromNotice(saved);
 

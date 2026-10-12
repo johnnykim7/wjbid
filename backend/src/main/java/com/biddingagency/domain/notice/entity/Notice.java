@@ -79,6 +79,10 @@ public class Notice extends BaseEntity {
     @Column(name = "price_items_json", columnDefinition = "longtext")
     private String priceItemsJsonRaw;
 
+    /** CR-159: 공고 분석이 낸 컴플라이언스 매트릭스 그대로. 요구 항목의 매트릭스 줄을 맞추는 원천(BIZ-045). NULL 가능 */
+    @Column(name = "compliance_matrix_json", columnDefinition = "longtext")
+    private String complianceMatrixJsonRaw;
+
     /**
      * CR-038: 공고문 분석 추출 사실의 근거(JSON 배열). 각 원소 = {key,value,sourceFile,sourceQuote,page,confidence}.
      * markCompleted 에 포함시켜 전체치환 — 교정 채팅(CR-033)이 Notice 통째 덮어쓸 때 facts 도 함께 보존되도록.
@@ -134,6 +138,11 @@ public class Notice extends BaseEntity {
     /** CR-028: Price 항목·수량·단위 추천 (단가 제외) */
     public Map<String, Object> getPriceItemsJson() {
         return parseJson(priceItemsJsonRaw);
+    }
+
+    /** CR-159: 컴플라이언스 매트릭스. NULL 이면 매트릭스를 내지 않은 분석 */
+    public Map<String, Object> getComplianceMatrixJson() {
+        return parseJson(complianceMatrixJsonRaw);
     }
 
     /** CR-038: 추출 사실 목록(JSON 배열). 근거 추적·교정 채팅용. NULL 가능 */
@@ -254,6 +263,13 @@ public class Notice extends BaseEntity {
     public void updateFactorTree(Map<String, Object> factorTreeJson, Map<String, Object> priceItemsJson) {
         if (factorTreeJson != null) this.factorTreeJsonRaw = toJsonString(factorTreeJson);
         if (priceItemsJson != null) this.priceItemsJsonRaw = toJsonString(priceItemsJson);
+    }
+
+    /**
+     * CR-159: 매트릭스를 담는다. 교정 채팅처럼 매트릭스를 보내지 않는 저장이 앞 분석의 매트릭스를 지우지 않게 null 이면 그대로 둔다.
+     */
+    public void updateComplianceMatrix(Map<String, Object> complianceMatrixJson) {
+        if (complianceMatrixJson != null) this.complianceMatrixJsonRaw = toJsonString(complianceMatrixJson);
     }
 
     // Business methods — 노출 축 (게이트②)

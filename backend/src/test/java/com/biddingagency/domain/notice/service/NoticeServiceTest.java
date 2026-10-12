@@ -83,7 +83,7 @@ class NoticeServiceTest {
         newAnalyzingNotice(noticeId);
 
         Notice result = noticeService.saveResult(
-                noticeId, "한글 제목", validSummary(), null, validRequiredDocs(), null, null, null);
+                noticeId, "한글 제목", validSummary(), null, validRequiredDocs(), null, null, null, null, null);
 
         assertThat(result.getGenerationStatus()).isEqualTo(NoticeGenerationStatus.COMPLETED);
         then(eventPublisher).should(never()).publishEvent(any(OpportunityAnalysisCompletedEvent.class));
@@ -97,7 +97,7 @@ class NoticeServiceTest {
         newAnalyzingNotice(noticeId);
 
         Notice result = noticeService.saveResult(
-                noticeId, "  ", validSummary(), null, validRequiredDocs(), null, null, null);
+                noticeId, "  ", validSummary(), null, validRequiredDocs(), null, null, null, null, null);
 
         assertThat(result.getGenerationStatus()).isEqualTo(NoticeGenerationStatus.FAILED);
         assertThat(result.getErrorMessage()).contains("koreanTitle");
@@ -111,7 +111,7 @@ class NoticeServiceTest {
         newAnalyzingNotice(noticeId);
 
         Notice result = noticeService.saveResult(
-                noticeId, "한글 제목", Map.of("scope", "범위만 있음"), null, validRequiredDocs(), null, null, null);
+                noticeId, "한글 제목", Map.of("scope", "범위만 있음"), null, validRequiredDocs(), null, null, null, null, null);
 
         assertThat(result.getGenerationStatus()).isEqualTo(NoticeGenerationStatus.FAILED);
         assertThat(result.getErrorMessage()).contains("summary.overview");
@@ -125,7 +125,7 @@ class NoticeServiceTest {
         newAnalyzingNotice(noticeId);
 
         Notice result = noticeService.saveResult(
-                noticeId, "한글 제목", validSummary(), null, Map.of("documents", List.of()), null, null, null);
+                noticeId, "한글 제목", validSummary(), null, Map.of("documents", List.of()), null, null, null, null, null);
 
         assertThat(result.getGenerationStatus()).isEqualTo(NoticeGenerationStatus.FAILED);
         assertThat(result.getErrorMessage()).contains("requiredDocuments.documents");
@@ -138,7 +138,7 @@ class NoticeServiceTest {
         UUID noticeId = UUID.randomUUID();
         newAnalyzingNotice(noticeId);
 
-        noticeService.saveResult(noticeId, null, null, null, null, null, null, null);
+        noticeService.saveResult(noticeId, null, null, null, null, null, null, null, null, null);
 
         ArgumentCaptor<OpportunityAnalysisCompletedEvent> captor =
                 ArgumentCaptor.forClass(OpportunityAnalysisCompletedEvent.class);
@@ -339,5 +339,20 @@ class NoticeServiceTest {
         OpportunityDto dto = noticeService.findVisibleDetail(noticeId).orElseThrow();
 
         assertThat(List.of(dto.id(), dto.opportunityId())).containsExactly(noticeId.toString(), oppId.toString());
+    }
+
+    // TC-COMP-009 (CR-159): 분석 저장이 평가 항목 구조를 그대로 담는다
+    @Test
+    @DisplayName("TC-COMP-009 분석저장_평가항목구조_채움")
+    void 분석저장_평가항목구조_채움() {
+        UUID noticeId = UUID.randomUUID();
+        newAnalyzingNotice(noticeId);
+        Map<String, Object> factorTree = Map.of("method", "BEST_VALUE_TRADEOFF",
+                "factors", List.of(Map.of("factorId", "1", "title", "Technical", "relativeImportance", "most important")));
+
+        Notice result = noticeService.saveResult(
+                noticeId, "한글 제목", validSummary(), null, validRequiredDocs(), null, null, null, null, factorTree);
+
+        assertThat(result.getFactorTreeJson()).isEqualTo(factorTree);
     }
 }

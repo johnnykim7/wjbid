@@ -1,5 +1,6 @@
 package com.biddingagency.domain.proposal.service;
 
+import com.biddingagency.domain.compliance.repository.RequirementFulfillmentMapRepository;
 import com.biddingagency.domain.proposal.entity.*;
 import com.biddingagency.domain.proposal.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,7 @@ public class ProposalService {
     private final ProposalSectionRepository sectionRepository;
     private final ProposalBlockRepository blockRepository;
     private final VerificationLogService verificationLogService;
+    private final RequirementFulfillmentMapRepository fulfillmentMapRepository;
 
     // ─────────────────────────────────────────────
     // 트리 조회
@@ -133,6 +135,8 @@ public class ProposalService {
         // 기존 chapter 삭제 → section/block 은 FK ON DELETE CASCADE 로 함께 제거
         chapterRepository.deleteByDocumentId(documentId);
         chapterRepository.flush();
+        // CR-159 BIZ-077: 절 id 가 바뀌므로 지운 절이 남긴 충족 매핑도 지운다. 다시 만든 절의 검증이 다시 채운다
+        fulfillmentMapRepository.deleteSectionMapsByDocumentId(documentId);
 
         int chapterOrder = 0;
         for (ChapterInput ci : chapters) {

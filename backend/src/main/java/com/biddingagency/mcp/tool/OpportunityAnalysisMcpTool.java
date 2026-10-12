@@ -91,6 +91,19 @@ public class OpportunityAnalysisMcpTool {
                                 "isGate(boolean — 미충족 시 평가 제외/입찰 부적격), sourceRef(근거 위치)}]")
                         ))
                     ),
+                    "complianceMatrix", Map.ofEntries(
+                        Map.entry("type", "object"),
+                        Map.entry("description", "컴플라이언스 매트릭스 (CR-159). 요구 하나에 한 줄, 원문 그대로. REQ ID 는 서버가 준다"),
+                        Map.entry("properties", Map.of(
+                            "lines", Map.of("type", "array", "description",
+                                "[{text(원문 그대로), translation, sourceFile, page, clause, quote(원문 인용), level('SHALL'|'SHOULD'|'MAY'), " +
+                                "verb(요구 동사), category('TECHNICAL'|'FORMAT'|'SUBMISSION'|'DEADLINE'|'ELIGIBILITY'|'OTHER'), " +
+                                "fulfillmentParty('CLIENT_UPLOAD'|'PLATFORM_GENERATED'|'SYSTEM_FORM'), factorId, factorTitle, " +
+                                "queryCandidate(boolean), ambiguity(모호한 점), draftQuery(질의안)}]")
+                        ))
+                    ),
+                    "factorTree", Map.of("type", "object", "description",
+                        "평가 항목 구조 (CR-159). {method('LPTA'|'BEST_VALUE_TRADEOFF'), factors:[{factorId, title, relativeImportance, subfactors:[{subfactorId, title}]}]}"),
                     "llmPromptPreset", Map.of("type", "object", "description", "LLM 프롬프트 프리셋 (내부용)"),
                     "contentJson", Map.of("type", "object", "description", "TipTap JSON 본문 — NOTICE_VIEW 템플릿 골격을 채워서 반환 (PDF 풍부도). 노드 타입: noticeHeader/metaGrid/kvTable/dataTable/groupedList/calloutList 등 커스텀 + heading/paragraph/bulletList 표준")
                 ),
@@ -154,9 +167,12 @@ public class OpportunityAnalysisMcpTool {
         Map<String, Object> contentJson = coerceToMap(args.get("contentJson"));
         // CR-038: 추출 사실(근거 부착) 배열. 없으면 null → markCompleted 가 기존값 보존.
         List<Map<String, Object>> facts = coerceToList(args.get("facts"));
+        Map<String, Object> complianceMatrix = coerceToMap(args.get("complianceMatrix"));
+        Map<String, Object> factorTree = coerceToMap(args.get("factorTree"));
 
         Notice notice = noticeService.saveResult(
-                noticeId, koreanTitle, summary, documentFormats, requiredDocuments, llmPromptPreset, contentJson, facts);
+                noticeId, koreanTitle, summary, documentFormats, requiredDocuments, llmPromptPreset, contentJson, facts,
+                complianceMatrix, factorTree);
 
         log.info("MCP save_opportunity_analysis: noticeId={}, status={}", noticeId, notice.getGenerationStatus());
 

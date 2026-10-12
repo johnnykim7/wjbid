@@ -5,6 +5,8 @@ import com.biddingagency.domain.notice.entity.Notice;
 import com.biddingagency.domain.opportunity.entity.Opportunity;
 import com.biddingagency.domain.opportunity.entity.OpportunityRequirementItem;
 import com.biddingagency.domain.opportunity.entity.RequirementCategory;
+import com.biddingagency.domain.opportunity.entity.RequirementLevel;
+import com.biddingagency.domain.opportunity.repository.OpportunityRepository;
 import com.biddingagency.domain.opportunity.repository.OpportunityRequirementItemRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,6 +20,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -30,12 +33,14 @@ import static org.mockito.Mockito.never;
 
 /**
  * TC-PRE-001 ~ TC-PRE-006: 공고 분석의 제출 서류로 요구 항목 맞추기 (CR-141, BIZ-045, BIZ-046)
+ * TC-COMP-001 ~ TC-COMP-008: 컴플라이언스 매트릭스 줄 맞추기 (CR-159, BIZ-045, BIZ-074, BIZ-075)
  */
 @ExtendWith(MockitoExtension.class)
 class RequirementSyncServiceTest {
 
     @Mock private OpportunityRequirementItemRepository requirementRepository;
     @Mock private RequirementFulfillmentMapRepository fulfillmentMapRepository;
+    @Mock private OpportunityRepository opportunityRepository;
 
     @InjectMocks private RequirementSyncService syncService;
 
@@ -190,5 +195,176 @@ class RequirementSyncServiceTest {
 
         assertThatCode(() -> syncService.syncFromNotice(notice(null))).doesNotThrowAnyException();
         assertThat(savedItems()).isEmpty();
+    }
+
+    // ===== CR-159 컴플라이언스 매트릭스 =====
+
+    private static final String QC = "The offeror shall describe its quality control plan.";
+    private static final String PP = "The offeror shall provide three past performance references.";
+    private static final String PAGES = "Proposals should not exceed 20 pages.";
+    private static final String STAFF = "The offeror shall demonstrate key personnel qualifications.";
+
+    private static String line(String clause, String text, String level, String category, String party) {
+        return """
+                {"text":"%s","clause":"%s","level":"%s","verb":"describe","category":"%s","fulfillmentParty":"%s"}
+                """.formatted(text, clause, level, category, party);
+    }
+
+    private static String matrix(String... lines) {
+        return "{\"lines\":[" + String.join(",", lines) + "]}";
+    }
+
+    private static final String MATRIX_3 = matrix(
+            line("L.4.1", QC, "SHALL", "TECHNICAL", "PLATFORM_GENERATED"),
+            line("L.4.2", PP, "SHALL", "TECHNICAL", "PLATFORM_GENERATED"),
+            line("L.3", PAGES, "SHOULD", "FORMAT", "PLATFORM_GENERATED"));
+
+    private Notice matrixNotice(String requiredDocumentsJson, String matrixJson) {
+        Notice notice = Notice.builder().opportunity(opportunity)
+                .requiredDocumentsJsonRaw(requiredDocumentsJson).complianceMatrixJsonRaw(matrixJson).build();
+        ReflectionTestUtils.setField(notice, "id", UUID.randomUUID());
+        return notice;
+    }
+
+    private OpportunityRequirementItem matrixRow(String reqId, String clause, String text) {
+        Map<String, Object> json = new HashMap<>();
+        json.put(RequirementSyncService.KEY_SOURCE_KEY, RequirementSyncService.matrixKey(clause, text));
+        json.put(RequirementSyncService.KEY_TEXT, text);
+        OpportunityRequirementItem item = OpportunityRequirementItem.builder()
+                .opportunity(opportunity)
+                .category(RequirementCategory.TECHNICAL)
+                .title(text)
+                .requirementJson(json)
+                .reqId(reqId)
+                .reqLevel(RequirementLevel.SHALL)
+                .sortOrder(Integer.parseInt(reqId.substring(4)))
+                .build();
+        ReflectionTestUtils.setField(item, "id", UUID.randomUUID());
+        return item;
+    }
+
+    private void givenNumbering(int lastReqNo) {
+        ReflectionTestUtils.setField(opportunity, "lastReqNo", lastReqNo);
+        given(opportunityRepository.findByIdForUpdate(opportunityId)).willReturn(Optional.of(opportunity));
+    }
+
+    @Test
+    @DisplayName("TC-COMP-001 첫분석_매트릭스3줄_REQ001부터")
+    void 첫분석_매트릭스3줄_REQ001부터() {
+        given(requirementRepository.findByOpportunityIdOrderBySortOrderAsc(opportunityId)).willReturn(List.of());
+        givenNumbering(0);
+
+        syncService.syncFromNotice(matrixNotice(null, MATRIX_3));
+
+        assertThat(savedItems()).extracting(OpportunityRequirementItem::getReqId)
+                .containsExactly("REQ-001", "REQ-002", "REQ-003");
+        assertThat(opportunity.getLastReqNo()).isEqualTo(3);
+    }
+
+    @Test
+    @DisplayName("TC-COMP-002 다시분석_같은원문_번호와매핑유지")
+    void 다시분석_같은원문_번호와매핑유지() {
+        List<OpportunityRequirementItem> before = List.of(
+                matrixRow("REQ-001", "L.4.1", QC), matrixRow("REQ-002", "L.4.2", PP), matrixRow("REQ-003", "L.3", PAGES));
+        given(requirementRepository.findByOpportunityIdOrderBySortOrderAsc(opportunityId)).willReturn(before);
+
+        syncService.syncFromNotice(matrixNotice(null, MATRIX_3));
+
+        assertThat(savedItems()).isEmpty();
+        then(fulfillmentMapRepository).should(never()).deleteByRequirementItemIds(anyCollection());
+        assertThat(before).extracting(OpportunityRequirementItem::getReqId).containsExactly("REQ-001", "REQ-002", "REQ-003");
+    }
+
+    @Test
+    @DisplayName("TC-COMP-003 다시분석_새줄_마지막번호다음")
+    void 다시분석_새줄_마지막번호다음() {
+        given(requirementRepository.findByOpportunityIdOrderBySortOrderAsc(opportunityId)).willReturn(List.of(
+                matrixRow("REQ-001", "L.4.1", QC), matrixRow("REQ-002", "L.4.2", PP), matrixRow("REQ-003", "L.3", PAGES)));
+        givenNumbering(3);
+
+        syncService.syncFromNotice(matrixNotice(null, matrix(
+                line("L.4.1", QC, "SHALL", "TECHNICAL", "PLATFORM_GENERATED"),
+                line("L.4.2", PP, "SHALL", "TECHNICAL", "PLATFORM_GENERATED"),
+                line("L.3", PAGES, "SHOULD", "FORMAT", "PLATFORM_GENERATED"),
+                line("L.4.3", STAFF, "SHALL", "TECHNICAL", "PLATFORM_GENERATED"))));
+
+        assertThat(savedItems()).extracting(OpportunityRequirementItem::getReqId).containsExactly("REQ-004");
+        assertThat(opportunity.getLastReqNo()).isEqualTo(4);
+    }
+
+    @Test
+    @DisplayName("TC-COMP-004 사라진줄_매핑과지움_번호다시안씀")
+    void 사라진줄_매핑과지움_번호다시안씀() {
+        OpportunityRequirementItem gone = matrixRow("REQ-003", "L.3", PAGES);
+        given(requirementRepository.findByOpportunityIdOrderBySortOrderAsc(opportunityId)).willReturn(List.of(
+                matrixRow("REQ-001", "L.4.1", QC), matrixRow("REQ-002", "L.4.2", PP), gone));
+        givenNumbering(3);
+
+        syncService.syncFromNotice(matrixNotice(null, matrix(
+                line("L.4.1", QC, "SHALL", "TECHNICAL", "PLATFORM_GENERATED"),
+                line("L.4.2", PP, "SHALL", "TECHNICAL", "PLATFORM_GENERATED"),
+                line("L.4.3", STAFF, "SHALL", "TECHNICAL", "PLATFORM_GENERATED"))));
+
+        then(fulfillmentMapRepository).should().deleteByRequirementItemIds(List.of(gone.getId()));
+        assertThat(savedItems()).extracting(OpportunityRequirementItem::getReqId).containsExactly("REQ-004");
+    }
+
+    @Test
+    @DisplayName("TC-COMP-005 매트릭스줄_Shall고객업로드_막는항목아님")
+    void 매트릭스줄_Shall고객업로드_막는항목아님() {
+        given(requirementRepository.findByOpportunityIdOrderBySortOrderAsc(opportunityId)).willReturn(List.of());
+        givenNumbering(0);
+
+        syncService.syncFromNotice(matrixNotice(null, matrix(
+                line("L.5", "The offeror shall submit a current business license.", "SHALL", "ELIGIBILITY", "CLIENT_UPLOAD"))));
+
+        assertThat(savedItems()).extracting(OpportunityRequirementItem::getIsBlocker).containsExactly(false);
+    }
+
+    @Test
+    @DisplayName("TC-COMP-006 매트릭스줄_분류DOCUMENT_OTHER로")
+    void 매트릭스줄_분류DOCUMENT_OTHER로() {
+        given(requirementRepository.findByOpportunityIdOrderBySortOrderAsc(opportunityId)).willReturn(List.of());
+        givenNumbering(0);
+
+        syncService.syncFromNotice(matrixNotice(null, matrix(
+                line("L.5", "The offeror shall submit a current business license.", "SHALL", "DOCUMENT", "CLIENT_UPLOAD"),
+                line("L.6", "The offeror shall be registered in SAM.", "SHALL", "UNKNOWN", "CLIENT_UPLOAD"))));
+
+        assertThat(savedItems()).extracting(OpportunityRequirementItem::getCategory)
+                .containsExactly(RequirementCategory.OTHER, RequirementCategory.OTHER);
+    }
+
+    @Test
+    @DisplayName("TC-COMP-007 제출서류와매트릭스_같이맞춤_서로안지움")
+    void 제출서류와매트릭스_같이맞춤_서로안지움() {
+        given(requirementRepository.findByOpportunityIdOrderBySortOrderAsc(opportunityId)).willReturn(List.of());
+        givenNumbering(0);
+
+        syncService.syncFromNotice(matrixNotice("""
+                {"documents":[{"name":"Business License","mandatory":true},{"name":"Insurance","mandatory":false}]}
+                """, MATRIX_3));
+
+        assertThat(savedItems()).extracting(OpportunityRequirementItem::getReqId)
+                .containsExactly(null, null, "REQ-001", "REQ-002", "REQ-003");
+        then(fulfillmentMapRepository).should(never()).deleteByRequirementItemIds(anyCollection());
+    }
+
+    @Test
+    @DisplayName("TC-COMP-008 매트릭스없는분석_제출서류줄만")
+    void 매트릭스없는분석_제출서류줄만() {
+        OpportunityRequirementItem license = existing("Business License", null);
+        OpportunityRequirementItem req1 = matrixRow("REQ-001", "L.4.1", QC);
+        OpportunityRequirementItem req2 = matrixRow("REQ-002", "L.4.2", PP);
+        given(requirementRepository.findByOpportunityIdOrderBySortOrderAsc(opportunityId)).willReturn(List.of(license, req1, req2));
+
+        syncService.syncFromNotice(matrixNotice("""
+                {"documents":[{"name":"Business License","mandatory":true}]}
+                """, null));
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<java.util.Collection<UUID>> captor = ArgumentCaptor.forClass(java.util.Collection.class);
+        then(fulfillmentMapRepository).should().deleteByRequirementItemIds(captor.capture());
+        assertThat(captor.getValue()).containsExactlyInAnyOrder(req1.getId(), req2.getId());
     }
 }

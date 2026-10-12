@@ -5,7 +5,9 @@ import com.biddingagency.domain.opportunity.entity.Opportunity;
 import com.biddingagency.domain.opportunity.entity.OpportunityVisibility;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -21,6 +23,11 @@ import java.util.UUID;
  */
 @Repository
 public interface OpportunityRepository extends JpaRepository<Opportunity, UUID> {
+
+    /** CR-159: REQ 번호를 줄 때 같은 공고를 동시에 맞추는 다른 저장이 같은 번호를 주지 않게 잠근다(BIZ-074) */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT o FROM Opportunity o WHERE o.id = :id")
+    Optional<Opportunity> findByIdForUpdate(@Param("id") UUID id);
 
     /**
      * Find by notice ID
