@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  /* 캡처 규격: 폭 615px 고정 (= A4 본문 폭 168mm, 1px≈0.48pt 인쇄). 높이는 내용에 따라 자동.
+     폰트 크기는 본문(12pt)과 어울리도록 설계됨 — 임의 축소 금지.
+     텍스트 슬롯({...})만 교체하고 구조/스타일은 유지. 항목 수는 가감 가능.
+     브라우저에서 열어 텍스트 더블클릭으로 직접 수정 가능. capture_diagram.py가 #stage를 캡처한다. */
+  :root{
+    --navy:#1e3a5f; --teal:#0d7377; --accent:#e8590c;
+    --gray:#5c6670; --light:#f4f6f8; --line:#d8dee4;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;font-family:'Pretendard',sans-serif;}
+  body{background:#fff;}
+  #stage{width:992px;padding:8px;background:#fff;}
+  .dg-title{font-size:35px;font-weight:700;color:var(--navy);margin-bottom:5px;}
+  .dg-sub{font-size:24px;color:var(--gray);margin-bottom:20px;}
+  .badge{display:inline-block;font-size:22px;font-weight:700;color:#fff;padding:2px 9px;border-radius:4px;margin-bottom:7px;}
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <div class="dg-title">{도식 제목}</div>
+  <div class="dg-sub">{부제}</div>
+  <style>
+    .layer{border:2px solid var(--line);border-radius:12px;padding:11px 15px;margin-bottom:10px;display:flex;align-items:center;gap:15px;}
+    .lname{width:118px;flex-shrink:0;font-size:25px;font-weight:800;color:#fff;background:var(--navy);border-radius:8px;padding:9px;text-align:center;line-height:1.4;}
+    .layer:nth-child(2) .lname{background:var(--teal);}
+    .layer:nth-child(3) .lname{background:var(--accent);}
+    .boxes{display:flex;flex-wrap:wrap;gap:7px;flex:1;}
+    .box{background:var(--light);border:1px solid var(--line);border-radius:8px;padding:7px 11px;font-size:23px;font-weight:600;color:#222;}
+  </style>
+  <div class="layers">
+    <div class="layer">
+      <div class="lname">{계층 1<br>예: 서비스}</div>
+      <div class="boxes"><div class="box">{구성요소}</div><div class="box">{구성요소}</div><div class="box">{구성요소}</div></div>
+    </div>
+    <div class="layer">
+      <div class="lname">{계층 2<br>예: 플랫폼}</div>
+      <div class="boxes"><div class="box">{구성요소}</div><div class="box">{구성요소}</div></div>
+    </div>
+    <div class="layer">
+      <div class="lname">{계층 3<br>예: 인프라}</div>
+      <div class="boxes"><div class="box">{구성요소}</div><div class="box">{구성요소}</div><div class="box">{구성요소}</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- 편집 안내 (캡처 영역 #stage 밖 — PNG에는 포함되지 않음) -->
+<div class="edit-hint">✎ 텍스트를 <b>더블클릭</b>하면 바로 수정할 수 있습니다. 수정 후 저장하고
+<code>capture_diagram.py</code>로 재캡처하세요. (폭 992px 고정 = A4 본문 폭 168mm, 높이는 내용에 따라 자동)</div>
+<style>
+.edit-hint{max-width:992px;margin:14px 0;padding:10px 14px;background:#FFF8E6;border:1px solid #E8D9A0;
+border-radius:6px;font-size:14px;color:#6B5B1E;font-family:'Pretendard',sans-serif;}
+#stage [contenteditable="true"]{outline:2px dashed #E8590C;outline-offset:2px;}
+</style>
+<script>
+document.querySelectorAll('#stage *').forEach(function(el){
+  if(el.children.length===0 && el.textContent.trim()){
+    el.addEventListener('dblclick',function(e){e.stopPropagation();el.contentEditable='true';el.focus();});
+    el.addEventListener('blur',function(){el.contentEditable='false';});
+    el.addEventListener('keydown',function(e){if(e.key==='Escape')el.blur();});
+  }
+});
+</script>
+</body>
+</html>

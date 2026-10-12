@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  /* 캡처 규격: 폭 615px 고정 (= A4 본문 폭 168mm, 1px≈0.48pt 인쇄). 높이는 내용에 따라 자동.
+     폰트 크기는 본문(12pt)과 어울리도록 설계됨 — 임의 축소 금지.
+     텍스트 슬롯({...})만 교체하고 구조/스타일은 유지. 항목 수는 가감 가능.
+     브라우저에서 열어 텍스트 더블클릭으로 직접 수정 가능. capture_diagram.py가 #stage를 캡처한다. */
+  :root{
+    --navy:#1e3a5f; --teal:#0d7377; --accent:#e8590c;
+    --gray:#5c6670; --light:#f4f6f8; --line:#d8dee4;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;font-family:'Pretendard',sans-serif;}
+  body{background:#fff;}
+  #stage{width:992px;padding:8px;background:#fff;}
+  .dg-title{font-size:35px;font-weight:700;color:var(--navy);margin-bottom:5px;}
+  .dg-sub{font-size:24px;color:var(--gray);margin-bottom:20px;}
+  .badge{display:inline-block;font-size:22px;font-weight:700;color:#fff;padding:2px 9px;border-radius:4px;margin-bottom:7px;}
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <div class="dg-title">{도식 제목}</div>
+  <div class="dg-sub">{부제}</div>
+  <style>
+    .cards{display:flex;gap:12px;}
+    .card{flex:1;border:2px solid var(--line);border-radius:14px;padding:16px;background:#fff;}
+    .chead{font-size:22px;font-weight:800;color:var(--teal);letter-spacing:1px;margin-bottom:5px;}
+    .cname{font-size:27px;font-weight:800;color:var(--navy);margin-bottom:9px;line-height:1.35;}
+    .citem{font-size:23px;color:#333;line-height:1.55;margin:5px 0;padding-left:9px;position:relative;}
+    .citem::before{content:'▪';position:absolute;left:0;color:var(--accent);}
+    .cfoot{margin-top:10px;padding-top:7px;border-top:1px dashed var(--line);font-size:22px;font-weight:700;color:var(--teal);}
+  </style>
+  <div class="cards">
+    <div class="card"><div class="chead">01</div><div class="cname">{요소 1}</div>
+      <div class="citem">{내용}</div><div class="citem">{내용}</div><div class="cfoot">→ {고객 효용}</div></div>
+    <div class="card"><div class="chead">02</div><div class="cname">{요소 2}</div>
+      <div class="citem">{내용}</div><div class="citem">{내용}</div><div class="cfoot">→ {고객 효용}</div></div>
+    <div class="card"><div class="chead">03</div><div class="cname">{요소 3}</div>
+      <div class="citem">{내용}</div><div class="citem">{내용}</div><div class="cfoot">→ {고객 효용}</div></div>
+  </div>
+</div>
+
+<!-- 편집 안내 (캡처 영역 #stage 밖 — PNG에는 포함되지 않음) -->
+<div class="edit-hint">✎ 텍스트를 <b>더블클릭</b>하면 바로 수정할 수 있습니다. 수정 후 저장하고
+<code>capture_diagram.py</code>로 재캡처하세요. (폭 992px 고정 = A4 본문 폭 168mm, 높이는 내용에 따라 자동)</div>
+<style>
+.edit-hint{max-width:992px;margin:14px 0;padding:10px 14px;background:#FFF8E6;border:1px solid #E8D9A0;
+border-radius:6px;font-size:14px;color:#6B5B1E;font-family:'Pretendard',sans-serif;}
+#stage [contenteditable="true"]{outline:2px dashed #E8590C;outline-offset:2px;}
+</style>
+<script>
+document.querySelectorAll('#stage *').forEach(function(el){
+  if(el.children.length===0 && el.textContent.trim()){
+    el.addEventListener('dblclick',function(e){e.stopPropagation();el.contentEditable='true';el.focus();});
+    el.addEventListener('blur',function(){el.contentEditable='false';});
+    el.addEventListener('keydown',function(e){if(e.key==='Escape')el.blur();});
+  }
+});
+</script>
+</body>
+</html>
