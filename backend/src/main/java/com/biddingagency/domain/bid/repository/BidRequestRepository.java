@@ -75,6 +75,12 @@ public interface BidRequestRepository extends JpaRepository<BidRequest, UUID> {
     List<BidRequest> findByStateIn(@Param("states") List<BidRequestState> states);
 
     /**
+     * 상태로 찾되 공고를 함께 불러온다. 마감 알림이 공고 마감일을 읽는다 (CR-156)
+     */
+    @Query("SELECT br FROM BidRequest br JOIN FETCH br.opportunity WHERE br.state IN :states")
+    List<BidRequest> findByStateInWithOpportunity(@Param("states") List<BidRequestState> states);
+
+    /**
      * Count by state
      */
     long countByState(BidRequestState state);

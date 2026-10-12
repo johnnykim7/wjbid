@@ -15,6 +15,8 @@ public final class SettingKey {
     public static final String NOTICE_SAMPLE_ID = "NOTICE_SAMPLE_ID";
     /** 서류 만료 메일을 보내는 날(만료 며칠 전, 쉼표로 나눔). 비어 있거나 읽을 수 없으면 보내지 않음 (POL-016, CR-136) */
     public static final String DOC_EXPIRY_ALERT_DAYS = "DOC_EXPIRY_ALERT_DAYS";
+    /** 입찰 요청 마감 알림을 보내는 날(마감 며칠 전, 쉼표로 나눔). 비어 있거나 읽을 수 없으면 보내지 않음 (POL-009, CR-156) */
+    public static final String DEADLINE_ALERT_DAYS = "DEADLINE_ALERT_DAYS";
 
     /** 쪽수 조건을 숫자로 읽을 때 쓰는 쪽 단위 낱말(쉼표로 나눔, 대소문자 무시). 비어 있으면 쪽수 조건은 모두 사람 확인 (POL-028, CR-141) */
     public static final String PRE_CHECK_PAGE_UNITS = "PRE_CHECK_PAGE_UNITS";

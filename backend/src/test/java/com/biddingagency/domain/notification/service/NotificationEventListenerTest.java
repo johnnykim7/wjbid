@@ -213,54 +213,96 @@ class NotificationEventListenerTest {
         );
     }
 
-    @Test
-    @DisplayName("마감D7이벤트_DEADLINE_D7타입으로알림")
-    void onDeadlineApproaching_D7_타입매핑() {
-        // given
-        Member admin = createAdmin();
-        given(memberRepository.findByRole(Member.Role.ADMIN)).willReturn(List.of(admin));
+    // CR-156: 마감 알림은 관리자 전원과 그 요청을 낸 고객에게, 받는 사람마다 한 번
 
-        UUID bidRequestId = UUID.randomUUID();
-        DeadlineApproachingEvent event = new DeadlineApproachingEvent(
-                bidRequestId, 7, LocalDateTime.now().plusDays(7));
+    private static final LocalDateTime DEADLINE = LocalDateTime.of(2026, 10, 19, 17, 0);
 
-        // when
-        listener.onDeadlineApproaching(event);
+    private Member withId(Member m) {
+        org.springframework.test.util.ReflectionTestUtils.setField(m, "id", UUID.randomUUID());
+        return m;
+    }
 
-        // then
-        then(notificationService).should().sendNotification(
-                eq(NotificationType.DEADLINE_D7),
-                eq("admin@test.com"), any(),
-                contains("D-7"),
-                any(),
-                eq(bidRequestId), eq("BidRequest"),
-                contains("DEADLINE_D7")
-        );
+    private Member admin(String email) {
+        return withId(Member.builder().email(email).passwordHash("hash").companyName("Agency")
+                .role(Member.Role.ADMIN).build());
+    }
+
+    private BidRequest deadlineRequest(UUID id, Member customer) {
+        BidRequest br = BidRequest.builder()
+                .member(customer)
+                .opportunity(Opportunity.builder().title("USFK Facility Maintenance").noticeId("W912-26-R-0001")
+                        .responseDeadline(DEADLINE).build())
+                .state(BidRequestState.DOCS_PENDING)
+                .build();
+        org.springframework.test.util.ReflectionTestUtils.setField(br, "id", id);
+        return br;
+    }
+
+    private ArgumentCaptor<String> sentTo() {
+        ArgumentCaptor<String> emails = ArgumentCaptor.forClass(String.class);
+        then(notificationService).should(atLeastOnce()).sendNotification(eq(NotificationType.DEADLINE_ALERT),
+                emails.capture(), any(), anyString(), any(), any(), eq("BidRequest"), anyString());
+        return emails;
     }
 
     @Test
-    @DisplayName("마감D1이벤트_DEADLINE_D1타입으로알림")
-    void onDeadlineApproaching_D1_타입매핑() {
-        // given
-        Member admin = createAdmin();
-        given(memberRepository.findByRole(Member.Role.ADMIN)).willReturn(List.of(admin));
-
+    @DisplayName("TC-DEADLINE-010 마감알림_관리자전원과고객에게_발송")
+    void 마감알림_관리자전원과고객_각각발송() {
         UUID bidRequestId = UUID.randomUUID();
-        DeadlineApproachingEvent event = new DeadlineApproachingEvent(
-                bidRequestId, 1, LocalDateTime.now().plusDays(1));
+        given(memberRepository.findByRole(Member.Role.ADMIN))
+                .willReturn(List.of(admin("a1@test.com"), admin("a2@test.com")));
+        given(bidRequestRepository.findByIdWithDetails(bidRequestId))
+                .willReturn(Optional.of(deadlineRequest(bidRequestId, withId(createCustomer()))));
 
-        // when
-        listener.onDeadlineApproaching(event);
+        listener.onDeadlineApproaching(new DeadlineApproachingEvent(bidRequestId, 7, DEADLINE));
 
-        // then
-        then(notificationService).should().sendNotification(
-                eq(NotificationType.DEADLINE_D1),
-                anyString(), any(),
-                contains("D-1"),
-                any(),
-                eq(bidRequestId), eq("BidRequest"),
-                contains("DEADLINE_D1")
-        );
+        assertThat(sentTo().getAllValues()).containsExactly("a1@test.com", "a2@test.com", "customer@test.com");
+    }
+
+    @Test
+    @DisplayName("TC-DEADLINE-004 마감알림_받는사람마다_마감일과시점을담은멱등키")
+    void 마감알림_받는사람마다_다른멱등키() {
+        UUID bidRequestId = UUID.randomUUID();
+        Member a1 = admin("a1@test.com");
+        Member a2 = admin("a2@test.com");
+        Member customer = withId(createCustomer());
+        given(memberRepository.findByRole(Member.Role.ADMIN)).willReturn(List.of(a1, a2));
+        given(bidRequestRepository.findByIdWithDetails(bidRequestId))
+                .willReturn(Optional.of(deadlineRequest(bidRequestId, customer)));
+
+        listener.onDeadlineApproaching(new DeadlineApproachingEvent(bidRequestId, 3, DEADLINE));
+
+        ArgumentCaptor<String> keys = ArgumentCaptor.forClass(String.class);
+        then(notificationService).should(times(3)).sendNotification(any(), anyString(), any(), anyString(), any(),
+                any(), anyString(), keys.capture());
+        String prefix = "DEADLINE_" + bidRequestId + "_2026-10-19_3_";
+        assertThat(keys.getAllValues())
+                .containsExactly(prefix + a1.getId(), prefix + a2.getId(), prefix + customer.getId());
+    }
+
+    @Test
+    @DisplayName("TC-DEADLINE-010 요청한고객이관리자_한번만발송")
+    void 요청한고객이관리자_마감알림_한번만발송() {
+        UUID bidRequestId = UUID.randomUUID();
+        Member a1 = admin("a1@test.com");
+        given(memberRepository.findByRole(Member.Role.ADMIN)).willReturn(List.of(a1));
+        given(bidRequestRepository.findByIdWithDetails(bidRequestId))
+                .willReturn(Optional.of(deadlineRequest(bidRequestId, a1)));
+
+        listener.onDeadlineApproaching(new DeadlineApproachingEvent(bidRequestId, 1, DEADLINE));
+
+        assertThat(sentTo().getAllValues()).containsExactly("a1@test.com");
+    }
+
+    @Test
+    @DisplayName("TC-DEADLINE-010 입찰요청없음_알림미발송")
+    void 입찰요청없음_마감알림_미발송() {
+        UUID bidRequestId = UUID.randomUUID();
+        given(bidRequestRepository.findByIdWithDetails(bidRequestId)).willReturn(Optional.empty());
+
+        listener.onDeadlineApproaching(new DeadlineApproachingEvent(bidRequestId, 7, DEADLINE));
+
+        then(notificationService).shouldHaveNoInteractions();
     }
 
     @Test
