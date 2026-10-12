@@ -159,7 +159,7 @@ public class NotificationEventListener {
      * CR-018: BidRequest 상태 전이 → 고객 대상 진행 알림 3종.
      * - REVIEW   : 제안서 생성 완료 (GENERATING→REVIEW = AI 생성 완료)
      * - SUBMITTED: 입찰 접수(제출) 완료
-     * - AWARDED  : 입찰 합격
+     * - AWARDED  : 입찰 낙찰
      * 그 외 전이(NOT_AWARDED 포함)는 고객 알림 미발송(MVP).
      */
     @Async
@@ -179,7 +179,7 @@ public class NotificationEventListener {
             }
             case AWARDED -> {
                 type = NotificationType.BID_AWARDED_CUSTOMER;
-                subject = "[Bidding Agency] 입찰 결과 — 합격";
+                subject = "[Bidding Agency] 입찰 결과 — 낙찰";
             }
             default -> { return; }  // 그 외 상태는 고객 알림 없음
         }

@@ -145,8 +145,8 @@ export const STATE_LABEL: Record<string, string> = {
   REVIEW: '관리자 검토',
   CONFIRMED: '확정',
   SUBMITTED: '제출 완료',
-  AWARDED: '합격',
-  NOT_AWARDED: '불합격',
+  AWARDED: '낙찰',
+  NOT_AWARDED: '탈락',
   CLOSED: '종료',
 }
 

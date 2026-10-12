@@ -1,24 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getAdminBidRequests, transitionBidRequest } from '../api/client'
+import { STATE_LABELS } from '../utils/bidState'
 
 const ALL_STATES = [
   'CREATED', 'DOCS_PENDING', 'DOCS_RECEIVED',
   'ANALYZING', 'GENERATING', 'REVIEW',
   'CONFIRMED', 'SUBMITTED', 'CLOSED',
 ]
-
-const STATE_LABELS: Record<string, string> = {
-  CREATED: '신청 접수',
-  DOCS_PENDING: '문서 대기',
-  DOCS_RECEIVED: '문서 접수',
-  ANALYZING: '분석 중',
-  GENERATING: '문서 생성',
-  REVIEW: '관리자 검토',
-  CONFIRMED: '확정',
-  SUBMITTED: '제출 완료',
-  CLOSED: '종료',
-}
 
 const STATE_COLORS: Record<string, string> = {
   CREATED: 'bg-gray-100 text-gray-600',
