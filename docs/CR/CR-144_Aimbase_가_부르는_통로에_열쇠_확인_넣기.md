@@ -35,7 +35,7 @@
 
 Aimbase 안의 Claude CLI 는 Aimbase 자신의 MCP(aimbase-server)에만 붙고, 우리 도구는 Aimbase 를 거쳐 1~3 으로 부른다(ClaudeCliAdapterConfig.java:140~162).
 
-### 3.2 운영 등록 (지금 값, 백업 [기록/Aimbase_MCP_등록_백업_CR-144_20261011.json](기록/Aimbase_MCP_등록_백업_CR-144_20261011.json))
+### 3.2 운영 등록 (지금 값, 백업 [기록/Aimbase_MCP_등록_백업_CR-144_20261011.json](../기록/Aimbase_MCP_등록_백업_CR-144_20261011.json))
 
 - 이름 bidding-agency-mcp, id 2176f92d-a167-476d-8ced-9687eb598e76, 테넌트 bidding_system
 - 전송 sse, 주소 http://59.8.160.12:8183/api/mcp, 자동 시작 켬, 상태 disconnected, 마지막 수정 2026-07-30
@@ -75,7 +75,7 @@ Aimbase 안의 Claude CLI 는 Aimbase 자신의 MCP(aimbase-server)에만 붙고
 
 ## 4. 정할 것
 
-승인요청 [기록/승인요청_CR-144_열쇠_싣는_방법_20261011.md](기록/승인요청_CR-144_열쇠_싣는_방법_20261011.md)
+승인요청 [기록/승인요청_CR-144_열쇠_싣는_방법_20261011.md](../기록/승인요청_CR-144_열쇠_싣는_방법_20261011.md)
 
 ## 5. 결정
 
@@ -127,13 +127,13 @@ Aimbase 창과 망 복구 창은 컨타가 연다. 규칙 번호 BIZ-061.
 ### 7.3 운영 열쇠와 Aimbase 등록 (10/12 00:26, 컨타 승인)
 
 - 새 서버 /opt/wjbid/app/.env 에 MCP_API_KEY 한 줄을 넣었다. 값은 서버에서 만든 64자이고 어디에도 찍지 않았다. 고치기 전 파일은 .env.bak-pre-cr144 로 두었다(권한 600 유지).
-- Aimbase 등록 bidding-agency-mcp 에 config.headers X-API-Key 를 실어 고쳤다(PUT). 고치기 전 등록은 [기록/Aimbase_MCP_등록_백업_CR-144_새서버_20261012.json](기록/Aimbase_MCP_등록_백업_CR-144_새서버_20261012.json).
+- Aimbase 등록 bidding-agency-mcp 에 config.headers X-API-Key 를 실어 고쳤다(PUT). 고치기 전 등록은 [기록/Aimbase_MCP_등록_백업_CR-144_새서버_20261012.json](../기록/Aimbase_MCP_등록_백업_CR-144_새서버_20261012.json).
 - 다시 연결한 뒤 등록은 connected, 도구 19개, 머리글 값은 "****" 로 가려져 보인다. Aimbase 로그 "Registered 19 tool(s)" 와 BE 로그 "MCP SSE 연결" 이 같은 시각(00:26:52)에 남았다.
 - BE 는 아직 열쇠를 확인하지 않는 판이다. 확인은 배포 뒤 켜진다.
 
 ### 7.4 운영 배포와 확인 (10/12 00:46~00:50, 컨타 승인 00:33)
 
-- `./deploy_aws.sh be a05e1cb`. 배포 전 a05e1cb 를 따로 빌드해 운영 jar 와 항목별로 대조했고, 새로 들어가는 것은 CR-144 뿐이었다([승인요청 문서](기록/승인요청_CR-144_새서버_BE배포_20261012.md)). 서버 compose 는 CUSTOMER_PORTAL_URL 두 줄(4ad3e8d)이 같이 들어갔다.
+- `./deploy_aws.sh be a05e1cb`. 배포 전 a05e1cb 를 따로 빌드해 운영 jar 와 항목별로 대조했고, 새로 들어가는 것은 CR-144 뿐이었다([승인요청 문서](../기록/승인요청_CR-144_새서버_BE배포_20261012.md)). 서버 compose 는 CUSTOMER_PORTAL_URL 두 줄(4ad3e8d)이 같이 들어갔다.
 - BE 00:46:46 기동. 컨테이너에 MCP_API_KEY 64자가 들어갔고 열쇠 빈값 경고는 없다.
 
 | 순번 | 확인 | 결과 |

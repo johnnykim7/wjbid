@@ -49,7 +49,7 @@
 
 ## 4. 정할 것
 
-승인요청 [기록/승인요청_CR-145_방화벽_예외_20261011.md](기록/승인요청_CR-145_방화벽_예외_20261011.md)
+승인요청 [기록/승인요청_CR-145_방화벽_예외_20261011.md](../기록/승인요청_CR-145_방화벽_예외_20261011.md)
 
 ## 5. 결정
 
@@ -66,7 +66,7 @@
 ## 6. 반영
 
 - 옛 서버용으로 만들었으나 쓰지 않았다(7.1, 서버 이전). 새 서버는 방화벽이 꺼져 있고 주소가 host.docker.internal 이라 고칠 것이 없었다.
-- 스크립트 [기록/운영설정_ufw_CR-145_8183.sh](기록/운영설정_ufw_CR-145_8183.sh): 백업(user.rules, user6.rules, ufw status, iptables-save), 도커 대역 3개에서 8183 허용 3줄을 맨 앞에 더함, Aimbase 컨테이너에서 연결 검사, 실패하면 더한 규칙을 지움. 끝 문구 CR145_FW_OK / ROLLED_BACK / ABORTED / ALREADY_OPEN
+- 스크립트 [기록/운영설정_ufw_CR-145_8183.sh](../기록/운영설정_ufw_CR-145_8183.sh): 백업(user.rules, user6.rules, ufw status, iptables-save), 도커 대역 3개에서 8183 허용 3줄을 맨 앞에 더함, Aimbase 컨테이너에서 연결 검사, 실패하면 더한 규칙을 지움. 끝 문구 CR145_FW_OK / ROLLED_BACK / ABORTED / ALREADY_OPEN
 
 ## 7. 확인
 

@@ -698,7 +698,7 @@
   - `contractPeriod`/`siteVisit`(4·5번 신규 섹션 값) = LLM 추출 필드라 **기존 분석본엔 없음 → 재분석해야 채워짐**(실측: 완료 8건 전부 0). 미재분석 시 "해당 없음" 표시.
   - 1번 표 6행 값(공고유형/NAICS 등) = **opportunity 메타라 재분석 불필요**, 기존 8건도 즉시 채워짐.
 - **변경 사항**:
-  1. **WF 정의([opportunity-analysis.steps.v2.json](workflows/opportunity-analysis.steps.v2.json))**: verify `response_schema.summary`에 `contractPeriod`/`siteVisit`(string) 추가. extract_facts 프롬프트 분석 항목에 계약기간(contractPeriod)·현장설명회(siteVisit) 명시. verify Gap Check 체크리스트에 계약기간 추가. _meta version v8. **운영 PUT 완료**(허용 필드만, connection_id·adapter 무손실 diff 검증 — summary 필드 추가 2개/제거 0, AGENT_CALL connection/timeout 무변경).
+  1. **WF 정의([opportunity-analysis.steps.v2.json](../workflows/opportunity-analysis.steps.v2.json))**: verify `response_schema.summary`에 `contractPeriod`/`siteVisit`(string) 추가. extract_facts 프롬프트 분석 항목에 계약기간(contractPeriod)·현장설명회(siteVisit) 명시. verify Gap Check 체크리스트에 계약기간 추가. _meta version v8. **운영 PUT 완료**(허용 필드만, connection_id·adapter 무손실 diff 검증 — summary 필드 추가 2개/제거 0, AGENT_CALL connection/timeout 무변경).
   2. **BE([NoticeAdminDto.java](../backend/src/main/java/com/biddingagency/domain/notice/dto/NoticeAdminDto.java))**: `noticeTypeKo`(opp.typeKo ?? opp.type)·`naicsLabelKo`(opp.naicsLabelKo) 2필드 추가. opportunity 직접 매핑(LLM 무관) → 소급 즉시 반영.
   3. **FE([NoticeDocumentView.tsx](../frontend/admin-console/src/components/NoticeDocumentView.tsx))**: NoticeSummary에 contractPeriod·siteVisit, Props에 noticeTypeKo·naicsLabelKo·responseDeadline 추가. 렌더를 10섹션 고정 번호 골격으로 재작성(EmptySection "해당 없음"). basicRows를 옛 6행(값 있는 행만)으로 재구성. 죽은 withIssuedDate 헬퍼 삭제. [NoticeAdminDetailPage.tsx](../frontend/admin-console/src/pages/NoticeAdminDetailPage.tsx) 호출부 새 필드 전달 + NoticeDetail 타입 확장.
 - **규모**: 중규모(화면 구조 + 응답포맷 schema + DTO 변경). 데이터 모델·이벤트·FSM 무변경. 사용자 합의로 설계 캐스케이드(T1~T3) 생략, 본 CR 이력 + workflows JSON으로 갈음.
@@ -735,7 +735,7 @@
   - "전체 1년씩 표기"(용역 가정)는 적용 안 함 — 사용자가 무시 지시.
   - required 강제 범위 = **summary 10개 전체**(어떤 공고든 10섹션 골격이 항상 동일하게 채워지도록 근본 고정).
 - **변경 사항(운영 Aimbase WF만, BE/FE 코드 무변경)**:
-  1. **WF 정의([opportunity-analysis.steps.v2.json](workflows/opportunity-analysis.steps.v2.json))** — verify `response_schema.summary.required`: `[overview]` → **10개 전체**(키 생략 원천 차단). extract_facts·verify 프롬프트에 "★계약기간 추출 원칙★: PWS/원문 문구 그대로 추출, 변환·추측 금지, 없으면 빈 문자열이되 키 생략 금지" 추가. _meta version v9. **운영 PUT 완료**(HTTP 200, updatedAt 06-18 05:25). domain·connection_id(cli-runner-bidding-001) 무손실 검증.
+  1. **WF 정의([opportunity-analysis.steps.v2.json](../workflows/opportunity-analysis.steps.v2.json))** — verify `response_schema.summary.required`: `[overview]` → **10개 전체**(키 생략 원천 차단). extract_facts·verify 프롬프트에 "★계약기간 추출 원칙★: PWS/원문 문구 그대로 추출, 변환·추측 금지, 없으면 빈 문자열이되 키 생략 금지" 추가. _meta version v9. **운영 PUT 완료**(HTTP 200, updatedAt 06-18 05:25). domain·connection_id(cli-runner-bidding-001) 무손실 검증.
 - **함정 교훈(CR-112 갱신)**: WF PUT 400의 실제 원인 규명. `/api/v1/workflows`는 `WorkflowController`(DTO 8필드: id/name/**domain**/triggerConfig/steps/errorHandling/outputSchema/inputSchema)이지 PlatformWorkflowController(category/description)가 아님. **GET 응답을 그대로 PUT하면 GET 전용 추가필드(_meta/projectId/graphMode/active/category/description/updatedAt)가 unknown property로 400**. DTO 8필드만 추려 보내야 통과.
 - **규모**: 소~중(WF 프롬프트·스키마 보정, CR-117 후속 버그보정). BE/FE/데이터모델/마이그레이션 무변경. 설계 캐스케이드 생략, 본 CR 이력 + workflows JSON으로 갈음.
 - **상태**: **WF 수정·검증 완료(2026-06-18)**. 사용자 결정으로 이 공고 재분석(E2E)은 **보류** — 다음 분석되는 공고부터 자동 적용. 기존 분석본 contractPeriod는 재분석 시 채워짐(원문에 PoP 있으면 값, 없으면 빈 문자열+키 유지).
@@ -784,10 +784,10 @@
 - **책임 경계**: 분할 제어 메커니즘(CLI subagent 옵션)은 **Aimbase 플랫폼이 처리**(어댑터 옵션 따라 동작하도록 정리 완료). bidding-agency는 그 위에서 WF 정의 분리 + input 구성만.
 - **결정(분리 축 A — 자료/파일축)**: 첨부+본문을 파일별로 FOREACH 분할, 각 에이전트가 **10항목 전원 공유 + 자기 파일 1개만 Read**. 파일 수만큼 1M씩 분산 → 안 터짐. 단일 파일 1M 초과는 운영에 없음(최대 33.8MB 도면도 ~600K). 항목축(B)·단계분리(C)는 기각/보류.
 - **변경 사항**:
-  1. **WF 정의 v3** [opportunity-analysis.steps.v3.json](workflows/opportunity-analysis.steps.v3.json) — STEP3 단일 AGENT_CALL→**FOREACH(`items={{input.analysisTargets}}`, parallel, collect=append)**, body 에이전트는 `{{item.targetPath}}` 한 파일만 분석. STEP4 verify 프롬프트에 **①배열 입력 안내**(FOREACH append 출력=파일별 결과 List, ForeachStepExecutor 실측) **②항목(key)별 머지 지시**(중복 통합·근거 보존·충돌 시 권위원문 채택). STEP5 save 무변경(verify.structured_data만 참조). PUT용 WorkflowController 8필드만(CR-112 함정 회피).
+  1. **WF 정의 v3** [opportunity-analysis.steps.v3.json](../workflows/opportunity-analysis.steps.v3.json) — STEP3 단일 AGENT_CALL→**FOREACH(`items={{input.analysisTargets}}`, parallel, collect=append)**, body 에이전트는 `{{item.targetPath}}` 한 파일만 분석. STEP4 verify 프롬프트에 **①배열 입력 안내**(FOREACH append 출력=파일별 결과 List, ForeachStepExecutor 실측) **②항목(key)별 머지 지시**(중복 통합·근거 보존·충돌 시 권위원문 채택). STEP5 save 무변경(verify.structured_data만 참조). PUT용 WorkflowController 8필드만(CR-112 함정 회피).
   2. **BE** [NoticeService.java](../backend/src/main/java/com/biddingagency/domain/notice/service/NoticeService.java) — analyze input 에 `analysisTargets` 추가 + `buildAnalysisTargets()`(description.txt + attachments/<fileName>, 작업장 적재 경로와 일치). 기존 attachmentFiles/opportunityText 유지. compileJava 통과.
   3. **백업** [opportunity-analysis.backup.json](../backend/docs/aimbase-workflows/backup/opportunity-analysis.backup.json) — 운영 현행(updatedAt 06-20) 롤백용 보존.
-- **규모**: 중(WF 구조 변경). 새 화면/API/테이블 없음, 데이터모델/마이그레이션 무변경. 설계서 [CR-122_extract_facts_분리_설계.md](workflows/CR-122_extract_facts_분리_설계.md).
+- **규모**: 중(WF 구조 변경). 새 화면/API/테이블 없음, 데이터모델/마이그레이션 무변경. 설계서 [CR-122_extract_facts_분리_설계.md](../workflows/CR-122_extract_facts_분리_설계.md).
 - **상태**: 설계·v3·BE코드 완료(compileJava 통과). **미착수**: ①Aimbase WF v3 PUT ②BE 배포 ③E2E 실측(대용량 공고로 1M 안 터지는지·verify 머지·save 단일구조 검증). 운영 PUT/배포는 사용자 승인 대기.
 
 ### CR-123: 공고분석 verify anchor 기반 grep 재설계 (2026-06-28)
@@ -797,12 +797,12 @@
 - **핵심 통찰**: extract는 fragment 원문을 보며 fact를 뽑으므로 그 순간 근거가 눈앞에 있음. 그때 fact에 **anchor(원문 영어 5~10단어)** 를 남기면 verify는 "그 anchor가 그 파일에 있나" 단순 기계 grep으로 축소. anchor가 영어라 영어 원문에 그대로 grep(한↔영 매칭 문제 소멸), extract가 본 걸 받아쓰는 거라 extra 비용 거의 없음. → 사용자가 제시한 "코드 grep 정석"이 비로소 성립(이전엔 grep 대상 sourceQuote가 비어 불가능).
 - **결정(2-track)**: ①extract: 각 fact에 `anchor`(원문 영어 짧은 구절, 통째인용 금지) 추가. ②verify Track1=환각검증을 코드(기계) grep으로 — anchor를 sourceFile에 `grep -F`, 1,840개 전수, 샘플링·축소 없음, LLM 불필요. ③verify Track2=gap-check만 경량 LLM 유지(원문엔 있는데 빠진 항목 점검 + 최종 summary/requiredDocuments 통합).
 - **grep 수행 위치(실측)**: 작업장(description.txt/attachments/)은 Aimbase 컨테이너 내부, BE는 작업장 파일 미접근(LLMPlatformClient는 실행/폴링만) → **anchor grep은 WF 안(Aimbase 도구)에서 수행**. BE 무변경.
-- **규모**: 중(WF 정의 + extract/verify 프롬프트 재설계). 새 화면/API/테이블 없음, 데이터모델/마이그레이션 무변경, BE 무변경(예상). 설계서 [CR-123_verify_anchor_grep_재설계.md](workflows/CR-123_verify_anchor_grep_재설계.md).
+- **규모**: 중(WF 정의 + extract/verify 프롬프트 재설계). 새 화면/API/테이블 없음, 데이터모델/마이그레이션 무변경, BE 무변경(예상). 설계서 [CR-123_verify_anchor_grep_재설계.md](../workflows/CR-123_verify_anchor_grep_재설계.md).
 - **상태**: 선행 조치(11c2ce7) 완료·E2E 통과. 재설계 설계 문서 작성 완료. **미착수**: ①extract anchor 추가 ②verify grep 전환(STEP 구조는 Aimbase 도구 역량 실측 후 확정) ③WF v4 PUT ④E2E 검증. 구현은 사용자 승인 대기.
 
 ### CR-124: Customer Portal UI 전면 개편 — Design System 도입 (2026-06-29)
 
-- **배경/목표**: customer-portal UI 전면 교체. 컨셉 정본 = [customer-portal-military-poc.html](ui-mockup/customer-portal-military-poc.html)(낙점) — **상단 GNB형 + 나라장터식 차분 톤 + Noto Sans KR + 풀 밀리터리(네이비) 리브랜딩**. 메인(랜딩)은 **현 운영 HomePage 유지**(poc 메인 폐기, 독수리 네이비 히어로 유지). 구현은 **Design System(`@therecommerce-develop/ds-ui` v0.3.0) 컴포넌트로 재구축** — 소비앱은 DS만 import(메트로닉 직접 복사 금지).
+- **배경/목표**: customer-portal UI 전면 교체. 컨셉 정본 = [customer-portal-military-poc.html](../ui-mockup/customer-portal-military-poc.html)(낙점) — **상단 GNB형 + 나라장터식 차분 톤 + Noto Sans KR + 풀 밀리터리(네이비) 리브랜딩**. 메인(랜딩)은 **현 운영 HomePage 유지**(poc 메인 폐기, 독수리 네이비 히어로 유지). 구현은 **Design System(`@therecommerce-develop/ds-ui` v0.3.0) 컴포넌트로 재구축** — 소비앱은 DS만 import(메트로닉 직접 복사 금지).
 - **DS 도입(실측)**: GitHub Packages(`.npmrc`+`GITHUB_TOKEN`), 설치 정본=`bp-backoffice2`. entry에 `dist/style.css` import + `@theme inline` CSS변수로 **WJbid 네이비 테마(wjbid.css)** 신규. 스택 호환 확인(React19/TW4.1/Radix/TanStack/lucide). 직결 컴포넌트: Header·**CategoryNav(horizontal=GNB)**·Footer·Breadcrumb / DataGrid·PageHeader·StatSummary·StatusFlow·Timeline·Pagination·Accordion(FAQ)·Calendar(입찰캘린더).
 - **IA 확정(약 30화면, 기존12+신규~18)**: 공개=홈/소개/프로세스/가이드/요금/**공지(/notices)**/**FAQ(/faq)**/**고객센터(/support)**/로그인/가입. 로그인후 GNB=공고검색(검색·상세·**마감임박**·관심·**캘린더**·**저장검색**)/내제안서(목록·상세·**진행현황FSM**)/**서류함(/documents)**/알림. 계정드롭다운=프로필·**결제내역(/billing)**·로그아웃. **법적⚖️=/terms·/privacy·/refund·/disclaimer**(4개 개별)+푸터 사업자정보.
 - **회원가입/회원 정책(확정)**: 가입 필수 = 이메일·비번 + **회사명·사업자등록번호·담당자명·연락처**(핵심4). 가입 후 프로필 = 주소·**UEI·CAGE**. BE Member 실측: company_name(필수)·business_registration_number/contact_person/phone(nullable) **이미 존재** → 가입 검증 레벨에서 필수화. **데이터모델 변경**: member에 `uei`(VARCHAR20)·`cage_code`(VARCHAR10) 컬럼 신규(Flyway). 가입 동의=이용약관(필수)·개인정보(필수)·마케팅(선택).
@@ -909,7 +909,7 @@
 - **영향 모듈**: 고객 포털만. 속페이지 틀 부품(공통 틀 폴더 밖), 서비스 안내·입찰 교실·항목별 준비 안내·공지사항·자주 묻는 질문 화면, 요금 안내와 1:1 문의의 틀, 메뉴 정의(항목 키와 목적지), 홈 도움 구역 목록과 "준비 중" 링크, 회원가입 안내의 등록 대행 링크. 서버 변경 없음
 - **영향 설계서**: T1-1, T1-2, T3-3, T3-4, execution-spec. 확인하고 영향 없음: T1-3~T1-7(규칙·정책·상태·이벤트 없음), T2, T3-1·T3-2(테이블·API 없음), T3-5(서버 서비스 없음)
 - **계약**: 상담·참가 신청은 CR-132 의 `/support?type=<유형코드>&title=<제목>` 으로 연다
-- **규모**: 중(새 화면 12개와 속페이지 틀, 테이블·API 없음). 문서 [CR-133_메뉴_속_화면_계획과_첫_묶음_구현.md](CR-133_메뉴_속_화면_계획과_첫_묶음_구현.md), 정리표 [기록/CR-133_메뉴_속_화면_정리표.md](기록/CR-133_메뉴_속_화면_정리표.md).
+- **규모**: 중(새 화면 12개와 속페이지 틀, 테이블·API 없음). 문서 [CR-133_메뉴_속_화면_계획과_첫_묶음_구현.md](CR-133_메뉴_속_화면_계획과_첫_묶음_구현.md), 정리표 [기록/CR-133_메뉴_속_화면_정리표.md](../기록/CR-133_메뉴_속_화면_정리표.md).
 - **상태**: 완료(배포 10/11 07:16, 완료 인정 사용자 07:25 /전승, 구현 1aabc77·7eb3669)
 
 ### CR-134: 홈 첫 화면 시선 분산 정리 (2026-10-11)
@@ -953,7 +953,7 @@
 - **변경 타입**: 계획 + 변경(첫 항목. 접수 응답만 주던 자격 진단 요청을 지우고 회원 답 저장으로 바꿈)
 - **영향 모듈**: N. 자격 진단, C. 공고 열람(공고 상세 단추), P. 메뉴 속 화면(맞춤 판정 메뉴 목적지)
 - **영향 설계서**: T1-1(BID-QUAL-001), T1-2, T1-3(BIZ-032~033), T1-7, T3-1(V42 eligibility_answers), T3-2(E), T3-3, T3-4, T3-5(TC-QUAL-001~015), execution-spec. 확인하고 영향 없음: T1-4(정책값 없음), T1-5(상태 전이 없음), T1-6(이벤트 없음), T2-1(새 라이브러리 없음)
-- **규모**: 계획은 문서만. 첫 항목은 중(새 표 1개, API 3개, 고객 화면 2개). 문서 [CR-137_메뉴_속_화면_4묶음_큰_기능_9곳_계획과_첫_항목.md](CR-137_메뉴_속_화면_4묶음_큰_기능_9곳_계획과_첫_항목.md), 계획 [기록/CR-137_큰_기능_9곳_계획.md](기록/CR-137_큰_기능_9곳_계획.md)
+- **규모**: 계획은 문서만. 첫 항목은 중(새 표 1개, API 3개, 고객 화면 2개). 문서 [CR-137_메뉴_속_화면_4묶음_큰_기능_9곳_계획과_첫_항목.md](CR-137_메뉴_속_화면_4묶음_큰_기능_9곳_계획과_첫_항목.md), 계획 [기록/CR-137_큰_기능_9곳_계획.md](../기록/CR-137_큰_기능_9곳_계획.md)
 - **상태**: 진행중(순서 승인 10/11 09:26, 컨셉 승인 09:45, 목업 확정 09:54, 구현과 로컬 확인 끝, 운영 배포 10:28, 완료 인정 대기)
 
 ### CR-138: 운영 시각 9시간 어긋남과 관리자 주소 바로 열기 (2026-10-11)
@@ -1108,8 +1108,8 @@
 
 ### CR-151: 메인과 곳곳 사진 교체 (2026-10-12)
 
-- **배경(사용자)**: 10/12 07:32 "메인화면하고 간간히 나오는 사진들을 보면 중국인가 하는 이상한 사진들이 잇어요 그거좀 세련된 유럽 미국인으로 변경해주시구요. 그리고 메인화면은. 아무래도 군사 관련이니 비행기나 배.. 뭐 그런것으로 해주세요" [origins/원본_사진교체_20261012.md](origins/원본_사진교체_20261012.md)
-- **대상**: 고객 포털 사진 4장(2025-04 한미 조달설명회 현장)을 바꾼다. 홈은 군용기와 함정 4장, 로그인, 회원가입, 서비스 안내는 유럽·미국인 사진 4장. 사진 자리와 문구는 그대로. 출처는 [기록/고객화면_사진_출처.md](기록/고객화면_사진_출처.md)
+- **배경(사용자)**: 10/12 07:32 "메인화면하고 간간히 나오는 사진들을 보면 중국인가 하는 이상한 사진들이 잇어요 그거좀 세련된 유럽 미국인으로 변경해주시구요. 그리고 메인화면은. 아무래도 군사 관련이니 비행기나 배.. 뭐 그런것으로 해주세요" [origins/원본_사진교체_20261012.md](../origins/원본_사진교체_20261012.md)
+- **대상**: 고객 포털 사진 4장(2025-04 한미 조달설명회 현장)을 바꾼다. 홈은 군용기와 함정 4장, 로그인, 회원가입, 서비스 안내는 유럽·미국인 사진 4장. 사진 자리와 문구는 그대로. 출처는 [기록/고객화면_사진_출처.md](../기록/고객화면_사진_출처.md)
 - **변경 타입**: 화면 사진 교체
 - **영향 모듈**: 고객 포털 홈, 로그인, 회원가입, SNS 가입, 서비스 안내, 항목별 준비 안내
 - **영향 설계서**: T3-3 화면 구조(홈, 서비스 안내, 로그인, 회원가입의 사진 줄)
@@ -1118,7 +1118,7 @@
 
 ### CR-152: 모은 공고를 누르면 우리 공고 상세로 (2026-10-12)
 
-- **배경(사용자)**: 10/12 07:51 "그런데 공고를 클릭하면 우리 번역 상세화면으로 가야지", 07:52 "왜 SAM연결인가요?", 07:54 공고문이 없는 공고도 우리 상세 화면으로 여는 1번 선택 "그렇죠 우리 상세화면에서 SAM가기를 누르면 되죠" [origins/원본_모은공고_상세연결_20261012.md](origins/원본_모은공고_상세연결_20261012.md)
+- **배경(사용자)**: 10/12 07:51 "그런데 공고를 클릭하면 우리 번역 상세화면으로 가야지", 07:52 "왜 SAM연결인가요?", 07:54 공고문이 없는 공고도 우리 상세 화면으로 여는 1번 선택 "그렇죠 우리 상세화면에서 SAM가기를 누르면 되죠" [origins/원본_모은공고_상세연결_20261012.md](../origins/원본_모은공고_상세연결_20261012.md)
 - **현황(상용 실측 10/12 07:50)**: 모은 공고 398건 중 공개 한글 공고문이 있는 것 21건. 나머지 377건은 줄을 누르면 SAM.gov 원문이 새 창으로 열렸다(CR-135 규칙). 한글 제목 395건, 모아 둔 원문 본문 51건
 - **대상 기능 ID**: BID-BROWSE-002, BID-MKT-001~006 과 기지 지도(줄 누름 규칙)
 - **변경 타입**: 변경
@@ -1130,7 +1130,7 @@
 
 ### CR-153: 고객 화면 사진 자동 교체(관리자 사진 묶음) (2026-10-12)
 
-- **배경(사용자)**: 10/12 07:58 "메인사진하고, 간간히 들어가는 사진들은 주기적으로 자동으로 변경하게 할수 없나요?", 08:00 "1"(관리자 화면에서 자리별 사진 묶음을 올리고 고객 화면은 방문마다 돌려 보이기) [origins/원본_사진자동교체_20261012.md](origins/원본_사진자동교체_20261012.md)
+- **배경(사용자)**: 10/12 07:58 "메인사진하고, 간간히 들어가는 사진들은 주기적으로 자동으로 변경하게 할수 없나요?", 08:00 "1"(관리자 화면에서 자리별 사진 묶음을 올리고 고객 화면은 방문마다 돌려 보이기) [origins/원본_사진자동교체_20261012.md](../origins/원본_사진자동교체_20261012.md)
 - **대상 기능 ID**: BID-SITE-001(관리자 사진 묶음 관리), BID-SITE-002(고객 화면 사진 고르기)
 - **변경 타입**: 신규
 - **대상**: 고객 화면 사진 자리 10곳(홈 4, 로그인, 회원가입, 서비스 안내 4묶음)이 코드에 박힌 경로 대신 DB 의 사진 묶음을 읽고 방문마다 한 장을 고른다. 관리자 콘솔에 「고객 화면 사진」 화면을 더해 자리별로 올리고 숨기고 지운다. 올린 사진은 가로 1600, 400KB 안팎 JPEG 로 줄여 저장한다. 처음 배포 때 지금 사진 8장이 자리마다 들어 있어 화면은 그대로다
@@ -1139,3 +1139,14 @@
 - **규모**: 중(새 표 2, 새 API 6, 관리자 새 화면 1). 문서 [CR-153_고객_화면_사진_자동_교체_관리자_사진_묶음.md](CR-153_고객_화면_사진_자동_교체_관리자_사진_묶음.md)
 - **다른 CR 과 이어짐**: 운영에 V53 을 V52(CR-146)보다 먼저 올리려 spring.flyway.out-of-order 를 켠다. CR-146 을 운영에 올릴 때 이 설정이 있어야 V52 가 들어간다
 - **상태**: 상용 배포 완료(10/12 08:43 `./deploy_aws.sh all ed3840b`, 갈래 deploy/cr153 은 운영 6ec8dd7 에 이 CR 만 얹음, V53 적용, 운영 화면과 공고 분석 1건 확인 09:05). 바뀌는 방식 선택 칸과 순서 화살표는 사용자 답이 오기 전까지 뺌
+
+### CR-154: 용어표 도입과 입찰 결과 이름 낙찰, 탈락 (2026-10-12)
+
+- **배경(사용자)**: 10/12 08:01 용어 적용 지시 "시스템 전반적으로 검수좀", 08:04 "1"(설계서와 CR 문서를 검사가 보는 자리로 옮김), 09:54 "1"(입찰 결과 이름을 원문대로 낙찰, 탈락으로, 관리자 화면 상태 이름을 설계서와 같게, 원문에 없는 상태 이름 14개 승인)
+- **대상 기능 ID**: 없음(이름 변경)
+- **변경 타입**: 변경
+- **대상**: 설계서 자리(docs/AI-SDLC)와 CR 문서 자리(docs/CR), 용어표 신설, 입찰 상태 AWARDED, NOT_AWARDED 의 이름, 관리자 콘솔 입찰 상태 이름표
+- **영향 모듈**: 고객 포털 입찰 상태 / 관리자 콘솔 입찰 관리, 대시보드, 입찰 상세 / BE 입찰 상태 이름, 낙찰 알림 메일 제목
+- **영향 설계서**: T1-10 1.0(신설), T1-5 1.4, T1-6 1.6. T3 는 영향 없음(입찰 결과 이름 없음)
+- **규모**: 소(이름 변경과 문서 자리 이동). 문서 [CR-154_용어표_도입과_입찰_결과_이름_낙찰_탈락.md](CR-154_용어표_도입과_입찰_결과_이름_낙찰_탈락.md)
+- **상태**: 구현 완료, 로컬 확인 전
