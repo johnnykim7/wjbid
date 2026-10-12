@@ -39,8 +39,8 @@ public class OpportunityTranslationService {
 
     /**
      * 비동기 자동 번역 — 수집 NEW 행에 대해 호출. 별도 스레드라 수집 흐름을 막지 않음.
-     * CR-035: 제목(+type 라벨)만 번역한다. 본문(noticedesc) fetch는 SAM 쿼터를 추가로 소진하므로
-     * 수집 시점에 일괄 호출하지 않고, 관리자가 상세에서 "한글 번역하기" 누를 때 그 1건만 fetch한다.
+     * CR-155: 제목에 더해 SAM 본문을 받아 저장하고 한글로 옮긴다(모은 공고를 고객에게 다 보이므로).
+     * 원문 본문과 한글 본문이 이미 있으면 SAM 본문 조회를 아끼려고 받지 않는다. 실패는 비워 두고 넘어간다(BIZ-070).
      * CR-139: 번역은 저장 단위 밖에서 받고, 받은 뒤 공고를 다시 읽어 짧게 저장한다.
      * 번역 동안 DB 연결을 잡지 않고, 엔티티는 모든 칸을 다시 쓰므로 처음 읽은 공고를 저장하면
      * 그 사이 수집이 넣은 낙찰 정보(CR-136)를 옛 값으로 덮는다.
@@ -53,6 +53,9 @@ public class OpportunityTranslationService {
             return;
         }
         String titleKo = hasText(opp.getTitleKo()) ? null : requestTitleTranslation(opp);
+        String body = hasText(opp.getDescriptionBody()) ? opp.getDescriptionBody() : fetchDescription(opp);
+        String bodyKo = body == null || hasText(opp.getDescriptionSummaryKo())
+                ? null : requestDescriptionTranslation(opp, body);
         transactionTemplate.executeWithoutResult(status ->
                 opportunityRepository.findById(opportunityId).ifPresent(fresh -> {
                     // type 한글 라벨은 코드 매핑(LLM 불필요) — 비어있으면 채움
@@ -63,6 +66,14 @@ public class OpportunityTranslationService {
                     if (titleKo != null && !hasText(fresh.getTitleKo())) {
                         fresh.applyTitleTranslation(titleKo);
                         log.info("[CR-022] 제목 번역 완료 noticeId={}, titleKo={}", fresh.getNoticeId(), titleKo);
+                    }
+                    // 받는 동안 관리자 한글 번역이 먼저 채운 본문은 덮지 않는다
+                    if (body != null && !hasText(fresh.getDescriptionBody())) {
+                        fresh.applyDescriptionBody(body);
+                    }
+                    if (bodyKo != null && !hasText(fresh.getDescriptionSummaryKo())) {
+                        fresh.applyDescriptionTranslation(bodyKo);
+                        log.info("[CR-155] 본문 번역 완료 noticeId={}, len={}", fresh.getNoticeId(), bodyKo.length());
                     }
                 }));
     }
@@ -160,6 +171,28 @@ public class OpportunityTranslationService {
             return hasText(titleKo) ? titleKo : null;
         } catch (RuntimeException e) {
             log.warn("[CR-022] 제목 번역 실패 noticeId={}: {}", opp.getNoticeId(), e.getMessage());
+            return null;
+        }
+    }
+
+    /** 원문 본문을 받기만 한다(저장하지 않음). 못 받으면 null. */
+    private String fetchDescription(Opportunity opp) {
+        try {
+            String body = resolveDescription(opp);
+            return hasText(body) ? body : null;
+        } catch (RuntimeException e) {
+            log.warn("[CR-155] 본문 받기 실패 noticeId={}: {}", opp.getNoticeId(), e.getMessage());
+            return null;
+        }
+    }
+
+    /** 본문 번역 요청만 한다(저장하지 않음). 실패하거나 빈 결과면 null. */
+    private String requestDescriptionTranslation(Opportunity opp, String body) {
+        try {
+            String translated = llmPlatformClient.translateOpportunityDescription(opp.getTitle(), body);
+            return hasText(translated) ? translated.trim() : null;
+        } catch (RuntimeException e) {
+            log.warn("[CR-155] 본문 번역 실패 noticeId={}: {}", opp.getNoticeId(), e.getMessage());
             return null;
         }
     }

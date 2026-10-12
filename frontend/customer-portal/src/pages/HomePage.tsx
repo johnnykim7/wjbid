@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useState } from 'react'
 import { Link, useOutletContext } from 'react-router-dom'
 import { Button } from '@therecommerce-develop/ds-ui'
-import { getNearDeadline, getOpportunities } from '../api/client'
+import { marketApi } from '../api/market'
 import { useAuth } from '../context/AuthContext'
 import { MEMBER_PRICE_PENDING_LABEL, formatWon, usePricing } from '../hooks/usePricing'
 import { Icon } from '../components/layout/Icon'
@@ -9,7 +9,8 @@ import { SitePhoto } from '../components/SitePhoto'
 import { comingSoonHref, findMenuItem, menuHref, serviceHref } from '../components/layout/menu'
 import type { MemberSummary } from '../components/layout/useMemberSummary'
 import { daysUntil, ddayLabel } from '../utils/dday'
-import type { Opportunity } from '../types'
+import type { CollectedQuery, MarketRow } from '../types/market'
+import { rowTarget } from '../components/market/marketUtils'
 import {
   BENEFIT_FIT,
   BENEFIT_TRANSLATE,
@@ -66,20 +67,24 @@ function todayMd() {
   return `${pad(t.getMonth() + 1)}.${pad(t.getDate())}`
 }
 
-function BidRow({ o, member }: { o: Opportunity; member: boolean }) {
-  const days = daysUntil(o.responseDeadline)
-  const dl = deadlineParts(o.responseDeadline)
+/** 마감 전 공고 화면과 같은 기준의 모은 공고 (CR-155, BIZ-069) */
+const OPEN_QUERY: CollectedQuery = { openOnly: true, latestOnly: true, size: LIST_ROWS }
+
+function BidRow({ o, member }: { o: MarketRow; member: boolean }) {
+  const deadline = o.responseDeadline?.slice(0, 10)
+  const days = daysUntil(deadline)
+  const dl = deadlineParts(deadline)
   return (
     <li>
       <span className={`dd ${days !== null && days <= SOON_DAYS ? 'u' : 'n'}`}>{ddayLabel(days)}</span>
-      <Link className="t" to={`/search/${o.id}`}>
-        <b>{o.title}</b>
+      <Link className="t" to={rowTarget(o) ?? '/search'}>
+        <b>{o.titleKo || o.title}</b>
         <span>
           <i className="mono">{o.solicitationNumber}</i>
           {member && <em className="fit no">판정 준비 중</em>}
         </span>
       </Link>
-      <span>{o.type && <span className="bd r">{o.type}</span>}</span>
+      <span>{(o.typeKo || o.type) && <span className="bd r">{o.typeKo || o.type}</span>}</span>
       <span className="loc">{o.placeOfPerformance && <b><Icon name="pin" />{o.placeOfPerformance}</b>}</span>
       <span className="dl">{dl && <>{dl.md}<small>({dl.dow})</small></>}</span>
     </li>
@@ -94,22 +99,29 @@ export default function HomePage() {
   const [loaded, setLoaded] = useState(false)
   const [failed, setFailed] = useState(false)
   const [total, setTotal] = useState(0)
-  const [latest, setLatest] = useState<Opportunity[]>([])
-  const [soon, setSoon] = useState<Opportunity[]>([])
+  const [latest, setLatest] = useState<MarketRow[]>([])
+  const [soon, setSoon] = useState<MarketRow[]>([])
+  const [soonTotal, setSoonTotal] = useState(0)
   const [tab, setTab] = useState<'soon' | 'latest'>('soon')
   const [helpTab, setHelpTab] = useState<'faq' | 'notice'>('faq')
 
   useEffect(() => {
     let alive = true
-    Promise.allSettled([getOpportunities(0, LIST_ROWS), getNearDeadline(SOON_DAYS)]).then(([all, near]) => {
+    Promise.allSettled([
+      marketApi.collected(OPEN_QUERY),
+      marketApi.collected({ ...OPEN_QUERY, sort: 'DEADLINE', dueWithinDays: SOON_DAYS }),
+    ]).then(([all, near]) => {
       if (!alive) return
       if (all.status === 'fulfilled') {
-        setLatest(all.value.data.content ?? [])
-        setTotal(all.value.data.totalElements ?? 0)
+        setLatest(all.value.content ?? [])
+        setTotal(all.value.totalElements ?? 0)
       } else {
         setFailed(true)
       }
-      if (near.status === 'fulfilled') setSoon(near.value.data ?? [])
+      if (near.status === 'fulfilled') {
+        setSoon(near.value.content ?? [])
+        setSoonTotal(near.value.totalElements ?? 0)
+      }
       setLoaded(true)
     })
     return () => {
@@ -119,7 +131,7 @@ export default function HomePage() {
 
   // 금액 자리. 불러오는 동안은 비워 두고, 금액이 없으면 요금 출처의 안내 문구를 쓴다(CR-129 4.2.1)
   const monthly = priceLoading ? ' ' : price != null ? `월 ${formatWon(price)}` : MEMBER_PRICE_PENDING_LABEL
-  const rows = tab === 'soon' ? soon.slice(0, LIST_ROWS) : latest
+  const rows = tab === 'soon' ? soon : latest
   const showEmpty = loaded && !failed && total === 0
   const countText = (n: number | null) => (n == null ? '-' : n)
 
@@ -168,7 +180,7 @@ export default function HomePage() {
             <Button className={`wj-reset${tab === 'latest' ? ' on' : ''}`} onClick={() => setTab('latest')}>최신 공고</Button>
           </div>
           {loaded && !failed && (
-            <span className="cnt">{total}건 · {SOON_DAYS}일 안 마감 <b>{soon.length}건</b></span>
+            <span className="cnt">{total}건 · {SOON_DAYS}일 안 마감 <b>{soonTotal}건</b></span>
           )}
         </div>
         <ul className="bids">

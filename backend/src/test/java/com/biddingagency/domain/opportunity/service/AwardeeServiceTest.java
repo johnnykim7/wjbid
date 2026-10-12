@@ -37,7 +37,7 @@ class AwardeeServiceTest {
     private static MarketSource award(String name, String uei, String amount, LocalDate posted) {
         return new MarketSource(UUID.randomUUID(), "N-" + UUID.randomUUID(), null, "Award", null,
                 "Award Notice", null, posted.atStartOfDay(), null, null,
-                amount == null ? null : new BigDecimal(amount), name, uei, (String) null);
+                amount == null ? null : new BigDecimal(amount), name, uei, null, null, (String) null);
     }
 
     private AwardeesResponse run(AwardeeSort sort, MarketSource... sources) {

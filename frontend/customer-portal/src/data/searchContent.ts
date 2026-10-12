@@ -6,4 +6,5 @@ export const SEARCH_TEXT = {
   /** 검색어 없이 0건이면 검색 실패가 아니라 지금 열린 공고가 없는 것이다 */
   emptyOpen: { title: '지금 마감 전 공고가 없습니다', desc: '새 공고가 올라오면 여기에 보입니다' },
   emptySearch: { title: '검색 결과가 없습니다', desc: '마감 전 공고에서 찾지 못했습니다. 다른 낱말로 찾아 보세요' },
+  loadError: { title: '마감 전 공고를 불러오지 못했습니다', desc: '잠시 후 다시 시도해주세요.' },
 }

@@ -93,7 +93,7 @@ export default function BookmarksPage() {
                 <TableRow
                   key={bid.id}
                   className="cursor-pointer"
-                  onClick={() => navigate(`/search/${bid.id}`)}
+                  onClick={() => navigate(`/search/origin/${bid.id}`)}
                 >
                   <TableCell className="whitespace-nowrap align-top">
                     <div className="font-bold text-ink text-xs">{bid.solicitationNumber}</div>

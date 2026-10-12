@@ -104,21 +104,12 @@ export const snsRegister = (data: {
 }) => api.post('/auth/sns/register', data)
 
 // Opportunities
-export const getOpportunities = (page = 0, size = 20) =>
-  api.get('/opportunities', { params: { page, size } })
-
 export const getOpportunity = (id: string) =>
   api.get(`/opportunities/${id}`)
 
 /** 원본 공고 상세 (CR-152). 공개 공고문이 있으면 publicNoticeId 가 온다 */
 export const getOriginOpportunity = (opportunityId: string) =>
   api.get(`/opportunities/origin/${opportunityId}`)
-
-export const searchOpportunities = (keyword: string, page = 0) =>
-  api.get('/opportunities/search', { params: { keyword, page, size: 20 } })
-
-export const getNearDeadline = (days = 7) =>
-  api.get('/opportunities/near-deadline', { params: { days } })
 
 // Bid Requests
 export const createBidRequest = (opportunityId: string) =>

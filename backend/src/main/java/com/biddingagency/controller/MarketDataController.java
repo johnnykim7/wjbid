@@ -9,6 +9,8 @@ import com.biddingagency.domain.opportunity.dto.MarketResponses.NaicsResponse;
 import com.biddingagency.domain.opportunity.dto.MarketResponses.SampleResponse;
 import com.biddingagency.domain.opportunity.service.MarketDataService;
 import com.biddingagency.domain.opportunity.service.MarketDataService.AwardSort;
+import com.biddingagency.domain.opportunity.service.MarketDataService.CollectedFilter;
+import com.biddingagency.domain.opportunity.service.MarketDataService.CollectedSort;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -37,7 +39,8 @@ public class MarketDataController {
     private final MarketDataService marketDataService;
 
     @GetMapping("/collected")
-    @Operation(summary = "모은 공고 목록", description = "게시일 최신순. 묶음, 유형, 게시 달, 업종 대분류, 기한 남은 것만, 공고번호별 마지막 판만")
+    @Operation(summary = "모은 공고 목록", description = "게시일 최신순 또는 마감순. 묶음, 유형, 게시 달, 업종 대분류, "
+            + "기한 남은 것만, 공고번호별 마지막 판만, 검색어, 마감까지 남은 날")
     public ResponseEntity<CollectedResponse> collected(
             @RequestParam(required = false) MarketGroup group,
             @RequestParam(required = false) String type,
@@ -45,10 +48,17 @@ public class MarketDataController {
             @RequestParam(required = false) String sector,
             @RequestParam(defaultValue = "false") boolean openOnly,
             @RequestParam(defaultValue = "false") boolean latestOnly,
+            @RequestParam(required = false) String q,
+            @RequestParam(defaultValue = "LATEST") CollectedSort sort,
+            @RequestParam(required = false) Integer dueWithinDays,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(marketDataService.collected(group, blankToNull(type), parseMonth(month),
-                blankToNull(sector), openOnly, latestOnly, Math.max(page, 0), clampSize(size)));
+        if (dueWithinDays != null && dueWithinDays < 1) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "dueWithinDays 는 1 이상이어야 합니다");
+        }
+        CollectedFilter filter = new CollectedFilter(group, blankToNull(type), parseMonth(month), blankToNull(sector),
+                openOnly, latestOnly, blankToNull(q), sort, dueWithinDays);
+        return ResponseEntity.ok(marketDataService.collected(filter, Math.max(page, 0), clampSize(size)));
     }
 
     @GetMapping("/amendments")

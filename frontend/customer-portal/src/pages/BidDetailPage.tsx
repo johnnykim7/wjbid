@@ -13,6 +13,7 @@ import { VerdictBox } from '../components/verdict/VerdictBox'
 import { VERDICT_BOX_TEXT } from '../data/verdictContent'
 import NoticeDocumentView from '../components/NoticeDocumentView'
 import { ELIGIBILITY_TEXT, eligibilityHref } from '../data/eligibilityContent'
+import { ORIGIN_TEXT } from '../data/originContent'
 
 /** origin: 공개 공고문이 없는 모은 공고를 원문으로 보이는 원본 공고 상세 (CR-152) */
 export default function BidDetailPage({ origin = false }: { origin?: boolean }) {
@@ -22,6 +23,7 @@ export default function BidDetailPage({ origin = false }: { origin?: boolean }) 
   const [loading, setLoading] = useState(true)
   const [isBookmarked, setIsBookmarked] = useState(false)
   const [bookmarkLoading, setBookmarkLoading] = useState(false)
+  const [showOriginal, setShowOriginal] = useState(false)
   const [aiModalOpen, setAiModalOpen] = useState(false)
   // 우리 회사 판정 상자(CR-140). 판정할 수 없는 공고(404)는 상자를 두지 않는다
   const [verdict, setVerdict] = useState<{ status: 'ok'; detail: EligibilityDetail } | { status: 'error' } | null>(null)
@@ -51,10 +53,13 @@ export default function BidDetailPage({ origin = false }: { origin?: boolean }) 
         }
         const res = await getOpportunity(id!)
         setBid(res.data)
-        try {
-          const bRes = await checkBookmark(id!)
-          setIsBookmarked(bRes.data?.bookmarked ?? false)
-        } catch { /* 북마크 확인 실패 시 무시 */ }
+        // 관심 공고는 공고문 번호가 아니라 모은 공고 번호로 저장한다(CR-155)
+        if (res.data.opportunityId) {
+          try {
+            const bRes = await checkBookmark(res.data.opportunityId)
+            setIsBookmarked(bRes.data?.bookmarked ?? false)
+          } catch { /* 북마크 확인 실패 시 무시 */ }
+        }
       } catch {
         setBid(null)
       } finally {
@@ -65,14 +70,15 @@ export default function BidDetailPage({ origin = false }: { origin?: boolean }) 
   }, [id, opportunityId, origin, navigate])
 
   const toggleBookmark = async () => {
-    if (!bid || bookmarkLoading) return
+    const opportunityKey = bid?.opportunityId
+    if (!opportunityKey || bookmarkLoading) return
     setBookmarkLoading(true)
     try {
       if (isBookmarked) {
-        await removeBookmark(bid.id)
+        await removeBookmark(opportunityKey)
         setIsBookmarked(false)
       } else {
-        await addBookmark(bid.id)
+        await addBookmark(opportunityKey)
         setIsBookmarked(true)
       }
     } catch { /* ignore */ } finally {
@@ -444,7 +450,9 @@ export default function BidDetailPage({ origin = false }: { origin?: boolean }) 
                 {origin && (
                   <div className="flex items-center gap-2 px-4 py-3 bg-brand-soft border border-brand-line rounded-lg">
                     <i className="fa-solid fa-circle-info text-brand" />
-                    <span className="text-sm text-brand font-medium">아직 한글 공고문이 없는 공고라 원문을 보여 드립니다.</span>
+                    <span className="text-sm text-brand font-medium">
+                      {bid.descriptionKo ? ORIGIN_TEXT.bannerTranslated : ORIGIN_TEXT.bannerOriginal}
+                    </span>
                   </div>
                 )}
                 {bid.analysis?.analysisStatus === 'ANALYZING' && (
@@ -456,9 +464,31 @@ export default function BidDetailPage({ origin = false }: { origin?: boolean }) 
 
                 <div>
                   <h3 className="text-lg font-bold text-ink mb-3">Description (공고 내용)</h3>
-                  {bid.description ? (
-                    <div className="text-ink-sub leading-relaxed text-sm bg-surface p-5 rounded-lg border border-line whitespace-pre-wrap">
-                      {bid.description}
+                  {origin && bid.descriptionKo ? (
+                    /* 한글 본문을 먼저, 원문은 펼쳐 본다 (CR-155) */
+                    <div className="space-y-3">
+                      <div className="text-ink-sub leading-relaxed text-sm bg-surface p-5 rounded-lg border border-line whitespace-pre-wrap">
+                        {bid.descriptionKo}
+                      </div>
+                      {bid.description && (
+                        <>
+                          <DsButton variant="ghost" mode="link" onClick={() => setShowOriginal((v) => !v)}>
+                            {showOriginal ? ORIGIN_TEXT.hideOriginal : ORIGIN_TEXT.showOriginal}
+                          </DsButton>
+                          {showOriginal && (
+                            <div className="text-ink-sub leading-relaxed text-sm bg-surface p-5 rounded-lg border border-line whitespace-pre-wrap">
+                              {bid.description}
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  ) : bid.description ? (
+                    <div className="space-y-3">
+                      {origin && <p className="text-sm text-ink-mute">{ORIGIN_TEXT.translating}</p>}
+                      <div className="text-ink-sub leading-relaxed text-sm bg-surface p-5 rounded-lg border border-line whitespace-pre-wrap">
+                        {bid.description}
+                      </div>
                     </div>
                   ) : (
                     <div className="text-sm bg-surface p-5 rounded-lg border border-line flex items-start gap-3">

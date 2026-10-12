@@ -40,6 +40,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -69,7 +70,26 @@ public class MarketDataService {
             // 같은 시각이면 DB 의 id 순서(바이트 순)를 따른다. UUID.compareTo 는 부호 있는 비교라 DB 와 순서가 다르다
             .thenComparing(s -> s.id().toString());
 
+    private static final Comparator<MarketSource> DEADLINE_FIRST = Comparator
+            .comparing(MarketSource::responseDeadline, Comparator.nullsLast(Comparator.naturalOrder()))
+            .thenComparing(LATEST_FIRST);
+
     public enum AwardSort { LATEST, AMOUNT }
+
+    public enum CollectedSort { LATEST, DEADLINE }
+
+    /**
+     * 모은 공고 목록 거르기 (T3-2 C-2 collected).
+     *
+     * @param latestOnly    같은 공고번호는 마지막 판만 (업종별 발주의 최근 공고, 마감 전 공고)
+     * @param q             한글 제목, 원문 제목, 공고번호에서 찾는 검색어 (CR-155)
+     * @param sort          null 이면 게시일 최신순 (CR-155)
+     * @param dueWithinDays 마감이 지금부터 이 날 수 안인 것만 (CR-155)
+     */
+    public record CollectedFilter(MarketGroup group, String type, YearMonth month, String sector,
+                                  boolean openOnly, boolean latestOnly, String q, CollectedSort sort,
+                                  Integer dueWithinDays) {
+    }
 
     private final OpportunityRepository opportunityRepository;
     private final MarketRowAssembler rowAssembler;
@@ -80,29 +100,30 @@ public class MarketDataService {
 
     /**
      * 모은 공고 목록 (BID-MKT-001, 005, 006).
+     * 마감 전 공고 화면과 첫 화면도 쓴다(BID-BROWSE-001, 005).
      * total 과 자료 기간은 묶음·달·업종 거르기까지, 유형별 건수는 유형을 뺀 모든 거르기를 건 결과다.
-     *
-     * @param latestOnly 같은 공고번호는 마지막 판만 (업종별 발주의 최근 공고)
      */
-    public CollectedResponse collected(MarketGroup group, String type, YearMonth month, String sector,
-                                       boolean openOnly, boolean latestOnly, int page, int size) {
+    public CollectedResponse collected(CollectedFilter f, int page, int size) {
         List<MarketSource> all = opportunityRepository.findMarketSources();
         List<MarketSource> base = all.stream()
-                .filter(s -> group == null || s.group() == group)
-                .filter(s -> month == null || (s.postedDate() != null && YearMonth.from(s.postedDate()).equals(month)))
-                .filter(s -> sector == null || sector.equals(naicsMapper.sectorOf(s.naicsCode())))
+                .filter(s -> f.group() == null || s.group() == f.group())
+                .filter(s -> f.month() == null
+                        || (s.postedDate() != null && YearMonth.from(s.postedDate()).equals(f.month())))
+                .filter(s -> f.sector() == null || f.sector().equals(naicsMapper.sectorOf(s.naicsCode())))
                 .toList();
 
         LocalDateTime now = nowKst();
-        List<MarketSource> narrowed = openOnly
-                ? base.stream().filter(s -> MarketRowAssembler.isOpen(s, now)).toList()
-                : base;
-        if (latestOnly) narrowed = latestPerSolicitation(narrowed);
+        List<MarketSource> narrowed = base.stream()
+                .filter(s -> !f.openOnly() || MarketRowAssembler.isOpen(s, now))
+                .filter(s -> f.dueWithinDays() == null || dueWithin(s, now, f.dueWithinDays()))
+                .toList();
+        if (f.latestOnly()) narrowed = latestPerSolicitation(narrowed);
+        if (f.q() != null) narrowed = narrowed.stream().filter(s -> matches(s, f.q())).toList();
 
         List<TypeCount> typeCounts = typeCounts(narrowed);
         List<MarketSource> filtered = narrowed.stream()
-                .filter(s -> type == null || type.equals(s.type()))
-                .sorted(LATEST_FIRST)
+                .filter(s -> f.type() == null || f.type().equals(s.type()))
+                .sorted(f.sort() == CollectedSort.DEADLINE ? DEADLINE_FIRST : LATEST_FIRST)
                 .toList();
 
         MarketRowAssembler.Context ctx = rowAssembler.context(all);
@@ -301,6 +322,20 @@ public class MarketDataService {
                 .map(e -> new SubCodeCount(e.getKey(), e.getValue()))
                 .sorted(Comparator.comparingLong(SubCodeCount::count).reversed().thenComparing(SubCodeCount::code))
                 .toList();
+    }
+
+    private static boolean dueWithin(MarketSource s, LocalDateTime now, int days) {
+        return MarketRowAssembler.isOpen(s, now) && !s.responseDeadline().isAfter(now.plusDays(days));
+    }
+
+    private static boolean matches(MarketSource s, String q) {
+        String needle = q.toLowerCase(Locale.ROOT);
+        return containsIgnoreCase(s.titleKo(), needle) || containsIgnoreCase(s.title(), needle)
+                || containsIgnoreCase(s.solicitationNumber(), needle);
+    }
+
+    private static boolean containsIgnoreCase(String value, String lowerNeedle) {
+        return value != null && value.toLowerCase(Locale.ROOT).contains(lowerNeedle);
     }
 
     private static List<MarketSource> latestPerSolicitation(List<MarketSource> sources) {
