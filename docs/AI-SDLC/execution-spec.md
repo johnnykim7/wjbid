@@ -1,6 +1,6 @@
 # 실행 지시서: SAM.gov Bidding Agency Platform
 
-> 설계 버전: 1.11 | 최종 수정: 2026-10-12 | 관련 CR: CR-003, CR-132, CR-133, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-146, CR-147, CR-153, CR-155, CR-157
+> 설계 버전: 1.12 | 최종 수정: 2026-10-12 | 관련 CR: CR-003, CR-132, CR-133, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-146, CR-147, CR-153, CR-155, CR-157, CR-159
 
 > **프로젝트:** bidding-agency-platform (미군 조달 입찰 AI 대행 서비스)
 > **프로젝트 유형:** 풀스택 (BE: Java 17 + Spring Boot 3.2 / FE: React 19 × 2)
@@ -545,6 +545,8 @@ sequenceDiagram
 | 제출 전 검사, 입찰 건별 제출 전 검사, 입찰 상세 제출 서류 (CR-141) | `GET /bid-requests/my/pre-check`, `GET /bid-requests/{id}/pre-check`, `POST/DELETE /bid-requests/{id}/required-document-slots/{itemId}[/upload, /from-vault]`, `GET /member-documents`, `PATCH /bid-requests/{id}/state` | 로그인, 자기 입찰 건만(BIZ-049). 필수 서류 빠지면 서류 접수 전환을 막고 형식·쪽수는 경고만(BIZ-046~048) |
 | 고객 화면 사진 자리(홈, 로그인, 회원가입, SNS 가입, 서비스 안내, 준비 안내) (CR-153) | `GET /site-photos`, `GET /site-photos/{id}/image` | 로그인 없이. 앱 시작 때 한 번 받고 브라우저에 남겨 둔다. 사진이 없거나 못 받으면 사진 없이(BIZ-067) |
 | 관리자 고객 화면 사진 (CR-153) | `GET/POST /admin/site-photos`, `PATCH/DELETE /admin/site-photos/{id}` | 올린 사진은 가로 1600, 400KB 안팎 JPEG 로 다시 저장(BIZ-068, POL-039) |
+| Admin 공고문 관리 상세의 컴플라이언스 매트릭스 (CR-159) | `GET /admin/notices/{id}/compliance-matrix` | 읽기만. 매트릭스 줄은 공고 분석이 내고 서버가 REQ ID 를 맞춰 준다(BIZ-073~075). 워크플로우는 Aimbase 범용 스킬 묶음 뒤 |
+| Admin 제안서 Section 관리 (CR-030, CR-159) | `GET /admin/bid-documents/{documentId}/chapters`, `/sections/{sectionId}[/verification]`, `POST .../regenerate, /lock, /unlock, /reverify`, `GET .../coverage` | 커버리지 검증은 볼 때 계산, 경고만 하고 막지 않는다(BIZ-078) |
 
 ### 8-4. 리뷰 체크리스트
 

@@ -1,6 +1,6 @@
 # SAM.gov Bidding Agency Platform API 설계
 
-> 설계 버전: 1.17 | 최종 수정: 2026-10-12 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-144, CR-146, CR-147, CR-152, CR-153, CR-155, CR-157
+> 설계 버전: 1.18 | 최종 수정: 2026-10-12 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-144, CR-146, CR-147, CR-152, CR-153, CR-155, CR-157, CR-159
 
 > 단계: 3. Detail Design | 실행스펙 섹션 3에 포함
 >
@@ -101,6 +101,7 @@
 | **POST** | **/admin/notices/{id}/cancel** | **강제 중단 (CR-039)** — ANALYZING만 허용. Aimbase 워크플로우 취소 best-effort 후 결과 무관 FAILED 전환. 비-ANALYZING은 무시(idempotent) | 🔒 ADMIN | BID-NOTICE |
 | PATCH | /admin/notices/{id} | 한글화 결과 보정 (관리자 수동) | 🔒 ADMIN | BID-NOTICE |
 | **DELETE** | **/admin/notices/{id}** | **공고문 삭제 (CR-040)** — hard delete. VISIBLE/ANALYZING이면 409 거부. 고아 VerificationLog 함께 제거, 원본 Opportunity 보존 | 🔒 ADMIN | BID-NOTICE |
+| GET | /admin/notices/{id}/compliance-matrix | 컴플라이언스 매트릭스 (CR-159). 공고의 매트릭스 줄과 질의 후보, 평가 항목 구조 | 🔒 ADMIN | BID-OPP-006 |
 
 **POST /admin/notices/{id}/cancel 응답 (CR-039)**:
 ```json
@@ -109,6 +110,17 @@
 > 강제 중단 후 generationStatus가 FAILED가 되므로 FE 재생성 버튼 disabled(=ANALYZING 조건)가 풀려 재시도 가능. 우리 쪽 상태는 Aimbase 응답과 무관하게 항상 즉시 FAILED (BIZ-021).
 > **Aimbase 취소 연동 (CR-105)**: `POST /api/v1/workflows/runs/{runId}/cancel` 협조적 중지. `LLMPlatformClient.cancelWorkflowRun`은 @Async — cancel 후 응답이 running이면 `GET /workflows/runs/{runId}`를 2.5초 간격 폴링해 terminal 확정까지 백그라운드 대기(가이드 §4-7). 우리 화면 잠금 해제(즉시 FAILED)는 비동기라 폴링에 막히지 않음.
 > **stuck 자동 정리**: `NoticeStuckCleanupScheduler`(@Scheduled)가 analysis_started_at 임계분(POL-012, 기본 60분) 초과 ANALYZING 건을 동일 cancel 경로로 자동 FAILED. API 호출 아님(백그라운드).
+
+**GET /admin/notices/{id}/compliance-matrix 응답 (CR-159)**:
+
+| 칸 | 설명 |
+|----|------|
+| lines | 매트릭스 줄, REQ ID 순. 줄마다 reqId, level(SHALL, SHOULD, MAY), text(원문 그대로), translation, sourceFile, page, clause, quote, verb, category, fulfillmentParty, factorId, factorTitle, queryCandidate |
+| questions | 질의 후보 줄. reqId, ambiguity(모호한 점), draftQuery(질의(안)) |
+| factorTree | 평가 항목 구조(공고문 factor_tree_json 그대로). 없으면 null |
+
+- 요구 항목의 매트릭스 줄(T3-1)에서 읽는다. 매트릭스 줄이 없는 공고는 lines, questions 가 빈 배열이다
+- 공고문이 없으면 404
 
 ---
 
@@ -545,6 +557,36 @@ CR-137 전에 있던 `POST /opportunities/{id}/qualification-check`(AI 자격 �
 
 ---
 
+## J-2. 제안서 트리 (Admin, CR-030, CR-159)
+
+베이스 경로 `/admin/bid-documents/{documentId}`. 구현체: [ProposalAdminController](../backend/src/main/java/com/biddingagency/controller/admin/ProposalAdminController.java). CR-030 의 일곱은 이 문서에 빠져 있던 것을 CR-159 에서 옮겨 적었다.
+
+| 메서드 | 경로 | 설명 | 인증 | 기능 ID |
+|--------|------|------|------|---------|
+| GET | /chapters | 장과 절 트리. CR-159: 절마다 requirementRefs(대응 REQ ID) | 🔒 ADMIN | BID-DOC-001 |
+| GET | /sections/{sectionId} | 절 본문 블록과 메타 | 🔒 ADMIN | BID-DOC-001 |
+| POST | /sections/{sectionId}/regenerate | 그 절만 다시 작성 | 🔒 ADMIN | BID-DOC-001 |
+| POST | /sections/{sectionId}/lock | 절 잠금(다시 작성 막음) | 🔒 ADMIN | BID-DOC-001 |
+| POST | /sections/{sectionId}/unlock | 절 잠금 해제 | 🔒 ADMIN | BID-DOC-001 |
+| GET | /sections/{sectionId}/verification | 절 검증 결과(최신 1건) | 🔒 ADMIN | BID-DOC-001 |
+| POST | /sections/{sectionId}/reverify | 본문은 두고 검증만 다시 | 🔒 ADMIN | BID-DOC-001 |
+| GET | /coverage | 커버리지 검증 (CR-159, BIZ-078) | 🔒 ADMIN | BID-COMP-002 |
+
+**GET /coverage 응답 (CR-159)**:
+
+| 칸 | 설명 |
+|----|------|
+| matrixReady | 그 공고에 매트릭스 줄이 있으면 true. false 면 아래 칸은 비고 화면은 "매트릭스 없음" 을 보인다 |
+| targetCount | 대상(Shall, 플랫폼 생성) 줄 수 |
+| fulfilledCount | 대상 가운데 이 문서의 절로 충족된 줄 수 |
+| missing | 누락 REQ. 줄마다 reqId, text, unmapped(매핑 안 된 REQ 이면 true) |
+| unknownIds | 절이 들고 있으나 매트릭스에 없는 REQ ID. 줄마다 reqId, sectionId, sectionTitle |
+| sections | 절마다 sectionId, refs(reqId, fulfilled) |
+
+- 볼 때마다 계산한다(저장하지 않는다). 문서가 없으면 404
+
+---
+
 ## K. 회원 관리 — Admin (Member Admin)
 
 | 메서드 | 경로 | 설명 | 인증 | 기능 ID |
@@ -752,12 +794,20 @@ CR-137 전에 있던 `POST /opportunities/{id}/qualification-check`(AI 자격 �
 | get_document_template | 문서 템플릿 조회 | documentType | BID-MCP-003 |
 | transition_bid_state | 입찰 상태 전이 | bidRequestId, targetState | BID-MCP-004 |
 | get_opportunity_analysis | 공고 사전 분석 결과 조회 (CR-003) | opportunityId | BID-MCP-002 |
-| save_opportunity_analysis | 공고 사전 분석 결과 저장 (CR-003) | opportunityId, summary, documentFormats, requiredDocuments, llmPromptPreset | BID-MCP-002 |
+| save_opportunity_analysis | 공고 사전 분석 결과 저장 (CR-003). CR-159: complianceMatrix(줄, 질의 후보), factorTree 를 더 받아 공고문에 담고 요구 항목의 매트릭스 줄을 맞춘다 | opportunityId, summary, documentFormats, requiredDocuments, llmPromptPreset, complianceMatrix, factorTree | BID-MCP-002 |
 | get_past_submissions | 과거 제출 이력 조회 (CR-003) | memberId, limit | BID-MCP-002 |
 | get_reference_samples | 공고유형 매칭 성공 제안서 원본 파일 메타+다운로드URL 조회 (CR-013-R) | industryType | BID-RFP-003 |
 | save_pattern_guide | 공고유형별 패턴 가이드 저장 — Aimbase 콜백 (CR-013-R) | industryType, guide{골격/체크리스트/금기} | BID-RFP-003 |
+| get_proposal_design_input | 제안서 설계 입력 (CR-028). 공고 본문, 공고문 요약, 요구서류, factorTree. CR-159: complianceMatrix(reqId, level, text, verb, fulfillmentParty, factorId, factorTitle) 를 더 준다 | documentId | BID-DOC-001 |
+| save_proposal_structure | 제안서 장과 절 트리 저장 (CR-028). CR-159: 절의 requirementRefs 는 매트릭스의 REQ ID 만 받고, 없는 ID 가 있으면 전체 거부하며 그 ID 들을 준다. 응답에 unassignedReqIds(어느 절에도 없는 대상 REQ ID)를 더한다. 매트릭스 줄이 없는 공고는 검사하지 않는다(BIZ-076) | documentId, chapters[{factorLabel, factorTitle, sourceSection, sections[{subfactorLabel, title, scope, requirementRefs, minWords}]}] | BID-DOC-001 |
+| get_section_context | 절 작성 입력 (CR-028). 절 범위, requirementRefs, 참조 샘플. CR-159: requirements[{reqId, text, translation, verb, level, factorId, factorTitle}] 를 더 준다 | sectionId | BID-DOC-001 |
+| save_section_blocks | 절 블록 저장 (CR-028). CR-159 변경 없음 | sectionId, blocks | BID-DOC-001 |
+| get_section_verify_input | 절 검증 입력 (CR-031). CR-159: requirements(get_section_context 와 같은 꼴)를 더 준다 | sectionId | BID-DOC-001 |
+| get_notice_verify_input | 공고문 검증 입력 (CR-031). CR-159 변경 없음 | noticeId | BID-OPP-006 |
+| save_verification_result | 검증 결과 저장 (CR-031). CR-159: 제안서 절이면 requirementChecks[{reqId, answered, evidenceQuote, reason}] 를 더 받아 충족 매핑을 채운다(BIZ-077) | targetType, targetId, verdict, attempt, hallucinations, missingFromSource, wordCount, requirementChecks | BID-COMP-001 |
 
 > CR-141: save_requirements(LLM 추출 요구사항 저장)를 걷어냈다. 요구 항목은 공고 분석에서 채운다(BIZ-045).
+> CR-159: get_opportunity_requirements 는 제출 서류 줄만 준다(BIZ-075). get_proposal_design_input 부터 save_verification_result 까지 일곱은 CR-028, CR-031 에서 들어왔으나 이 표에 빠져 있던 것을 옮겨 적었다.
 > 모든 MCP Tool은 무상태(BIZ-013). 각 호출은 독립적으로 처리.
 > requestId를 멱등 키로 사용.
 
@@ -831,16 +881,20 @@ app.aimbase:
 | M. FlowGuard 연동 | 5 | — (CR-001) |
 | B-2. 공고 관리 (Admin) | 8 | CR-003 |
 | P. 성공 제안서 패턴 (Admin) | 13 | CR-013 |
-| MCP Tools | 12 | 5, CR-003, CR-013, CR-141 |
+| B-3. 공고문 관리 (Admin) | 9 | CR-016, CR-039, CR-040, CR-159 |
+| J-2. 제안서 트리 (Admin) | 8 | CR-030, CR-159 |
+| MCP Tools | 19 | 5, CR-003, CR-013, CR-028, CR-031, CR-141 |
 | MCP SSE 엔드포인트 | 2 | CR-002 |
 | Aimbase 워크플로우 호출 | 2 | CR-002 |
-| **합계** | **REST 123 + MCP 12 + SSE 2 + Aimbase 2** | |
+| **합계** | **REST 140 + MCP 19 + SSE 2 + Aimbase 2** | |
 
 > CR-141: G 는 문서 3, 슬롯 3(올리기, 서류함에서 고르기, 빼기. 목록 조회는 걷어냄), 제출 전 검사 2 다. 그전에는 슬롯을 세지 않았다.
 
 > CR-147: REST 124 에서 재발주 조회 둘(C-4)과 회원 계약 다섯(C-5)을 빼 117 이다.
 
 > CR-153: 고객 화면 사진 관리자 4(B-6)와 공개 2(C-6)를 더해 123 이다.
+
+> CR-159: 이 표에 없던 B-3 공고문 관리 8 과 J-2 제안서 트리 7, 이번에 더한 둘(컴플라이언스 매트릭스, 커버리지 검증)을 넣어 REST 140 이다. MCP 는 표에 빠져 있던 제안서와 검증 도구 일곱을 넣어 19 다.
 
 ---
 

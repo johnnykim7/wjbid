@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<style>
+  /* 간지(장 표지) 풀블리드 템플릿 — A4 세로 비율 (1240×1754, 캡처 시 2x = 300dpi급)
+     텍스트 슬롯만 교체해 장마다 재사용. 테마: body에 class="pub" 또는 class="ent" */
+  :root{
+    --navy:#1E3A5F; --navy-deep:#14273D; --navy-darker:#0E1C2E;
+    --teal:#0D7377; --gray:#8A97A5; --line:rgba(255,255,255,.14);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;
+    font-family:'Pretendard','Malgun Gothic',sans-serif;}
+  #stage{width:1240px;height:1754px;position:relative;overflow:hidden;
+    background:linear-gradient(160deg,var(--navy) 0%,var(--navy-deep) 55%,var(--navy-darker) 100%);}
+  body.pub #stage{ /* 공공: 채도 낮춘 차콜 네이비 */
+    background:linear-gradient(160deg,#2A3542 0%,#1F2833 55%,#161D26 100%);}
+
+  /* 미세 그리드 텍스처 */
+  .grid{position:absolute;inset:0;
+    background-image:linear-gradient(var(--line) 1px,transparent 1px),
+                     linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:124px 124px;opacity:.35;}
+
+  /* 우측 대형 워터마크 장번호 */
+  .wm{position:absolute;right:-60px;top:340px;
+    font-size:920px;font-weight:800;line-height:1;
+    color:transparent;-webkit-text-stroke:2px rgba(255,255,255,.10);}
+
+  /* 상단 라벨 */
+  .top{position:absolute;top:96px;left:110px;right:110px;
+    display:flex;justify-content:space-between;align-items:center;
+    border-top:2px solid rgba(255,255,255,.55);padding-top:26px;}
+  .top .doc{font-size:26px;letter-spacing:10px;color:rgba(255,255,255,.75);font-weight:600;}
+  .top .co{font-size:24px;color:rgba(255,255,255,.55);}
+
+  /* 중앙 장 정보 */
+  .chap{position:absolute;left:110px;top:610px;}
+  .chap .num{font-size:64px;font-weight:700;color:#7FD1D4;letter-spacing:6px;margin-bottom:22px;}
+  body.pub .chap .num{color:rgba(255,255,255,.75);}
+  .chap .bar{width:96px;height:8px;background:#0D7377;margin-bottom:44px;}
+  body.pub .chap .bar{background:rgba(255,255,255,.85);}
+  .chap .title{font-size:110px;font-weight:800;color:#fff;line-height:1.18;letter-spacing:-1px;}
+
+  /* 장 내 목차 */
+  .list{position:absolute;left:110px;top:1150px;}
+  .list .it{display:flex;align-items:baseline;gap:26px;margin-bottom:34px;}
+  .list .n{font-size:30px;font-weight:700;color:#7FD1D4;min-width:44px;}
+  body.pub .list .n{color:rgba(255,255,255,.65);}
+  .list .t{font-size:34px;color:rgba(255,255,255,.85);font-weight:500;}
+
+  /* 하단 사업명 */
+  .foot{position:absolute;left:110px;right:110px;bottom:96px;
+    border-bottom:2px solid rgba(255,255,255,.55);padding-bottom:26px;
+    display:flex;justify-content:space-between;align-items:baseline;}
+  .foot .pj{font-size:26px;color:rgba(255,255,255,.6);}
+  .foot .pg{font-size:24px;color:rgba(255,255,255,.4);letter-spacing:4px;}
+</style>
+</head>
+<body class="ent">
+<div id="stage">
+  <div class="grid"></div>
+  <div class="wm">{Ⅰ}</div>
+  <div class="top">
+    <div class="doc">기 술 제 안 서</div>
+    <div class="co">주식회사 에이엑스</div>
+  </div>
+  <div class="chap">
+    <div class="num">CHAPTER {Ⅰ}</div>
+    <div class="bar"></div>
+    <div class="title">{사업의 이해}</div>
+  </div>
+  <div class="list">
+    <div class="it"><div class="n">01</div><div class="t">{추진 배경 및 필요성}</div></div>
+    <div class="it"><div class="n">02</div><div class="t">{사업 범위 및 요구사항 분석}</div></div>
+  </div>
+  <div class="foot">
+    <div class="pj">{○○공사 AI 에이전트 기반 업무 자동화 플랫폼 구축}</div>
+    <div class="pg">Ⅰ · Ⅱ · Ⅲ · Ⅳ</div>
+  </div>
+</div>
+</body>
+</html>
