@@ -22,6 +22,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -95,6 +96,28 @@ class NotificationEventListenerTest {
         // then: ADMIN 조회조차 하지 않고 즉시 리턴, 알림 미발송
         then(memberRepository).shouldHaveNoInteractions();
         then(notificationService).shouldHaveNoInteractions();
+    }
+
+    @Test
+    @DisplayName("공고수집완료_관리자둘_회차와관리자별멱등키로각각발송")
+    void onOpportunitiesCollected_관리자별_멱등키() {
+        // CR-163: 키가 회차 ID 하나뿐이면 첫 관리자만 받고, 회차 ID 가 비면 첫 회차 뒤로 모두 막힌다
+        UUID runId = UUID.fromString("00000000-0000-0000-0000-000000000163");
+        Member first = createAdmin();
+        Member second = createAdmin();
+        ReflectionTestUtils.setField(first, "id", UUID.fromString("00000000-0000-0000-0000-00000000000a"));
+        ReflectionTestUtils.setField(second, "id", UUID.fromString("00000000-0000-0000-0000-00000000000b"));
+        given(memberRepository.findByRole(Member.Role.ADMIN)).willReturn(List.of(first, second));
+
+        listener.onOpportunitiesCollected(new OpportunitiesCollectedEvent(runId, 5, 5, 2, 7));
+
+        ArgumentCaptor<String> keys = ArgumentCaptor.forClass(String.class);
+        then(notificationService).should(times(2)).sendNotification(
+                eq(NotificationType.COLLECTION_COMPLETE), anyString(), any(), anyString(), any(),
+                eq(runId), eq("CollectorRun"), keys.capture());
+        assertThat(keys.getAllValues()).containsExactly(
+                "COLLECTION_" + runId + "_" + first.getId(),
+                "COLLECTION_" + runId + "_" + second.getId());
     }
 
     // CR-126: 수집 실패 알림 — 성공 이벤트의 0건 스킵에 묻히지 않아야 한다

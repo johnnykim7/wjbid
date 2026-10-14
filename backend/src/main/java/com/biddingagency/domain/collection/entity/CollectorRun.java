@@ -48,16 +48,29 @@ public class CollectorRun extends BaseEntity {
     @Column(name = "triggered_by", nullable = false, length = 50)
     private String triggeredBy;
 
-    public void complete(int totalFetched, int newCount, int updatedCount) {
-        this.completedAt = LocalDateTime.now();
+    /** 끝난 시각이 비어 있는 동안은 진행 중이다. 성공 여부 칸이 필수라 시작할 때는 false 로 둔다 */
+    public static CollectorRun start(String keyword, String triggeredBy, LocalDateTime startedAt) {
+        return CollectorRun.builder()
+                .keyword(keyword)
+                .triggeredBy(triggeredBy)
+                .startedAt(startedAt)
+                .success(false)
+                .build();
+    }
+
+    public void complete(LocalDateTime completedAt, int totalFetched, int newCount, int updatedCount) {
+        this.completedAt = completedAt;
         this.totalFetched = totalFetched;
         this.newCount = newCount;
         this.updatedCount = updatedCount;
         this.success = true;
     }
 
-    public void fail(String errorMessage) {
-        this.completedAt = LocalDateTime.now();
+    public void fail(LocalDateTime completedAt, int totalFetched, int newCount, int updatedCount, String errorMessage) {
+        this.completedAt = completedAt;
+        this.totalFetched = totalFetched;
+        this.newCount = newCount;
+        this.updatedCount = updatedCount;
         this.success = false;
         this.errorMessage = errorMessage;
     }

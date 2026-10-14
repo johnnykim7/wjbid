@@ -84,7 +84,7 @@ public class NotificationEventListener {
                     admin.getEmail(), admin.getId(),
                     "[Bidding Agency] 공고 수집 완료", vars,
                     event.getEntityId(), "CollectorRun",
-                    "COLLECTION_" + event.getEntityId());
+                    "COLLECTION_" + event.getEntityId() + "_" + admin.getId());
         }
     }
 
