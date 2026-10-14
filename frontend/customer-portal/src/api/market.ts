@@ -9,6 +9,7 @@ import type {
   MonthlyResponse,
   NaicsResponse,
   SampleResponse,
+  SiteStats,
 } from '../types/market'
 
 /** 메뉴 속 화면 2묶음 (CR-135, T3-2 C-2). 모두 로그인 없이 부른다 */
@@ -29,4 +30,6 @@ export const marketApi = {
   monthly: () => api.get<MonthlyResponse>('/opportunities/stats/monthly').then((r) => r.data),
 
   naics: () => api.get<NaicsResponse>('/opportunities/stats/naics').then((r) => r.data),
+
+  siteStats: () => api.get<SiteStats>('/opportunities/stats/site').then((r) => r.data),
 }

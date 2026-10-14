@@ -13,8 +13,8 @@ const STEPS = [
   {
     no: 2,
     title: '제안서 작성 신청',
-    desc: '관심 있는 공고를 선택하고 "제안서 작성" 버튼을 클릭하면 입찰 프로세스가 시작됩니다.',
-    icon: 'fa-solid fa-wand-magic-sparkles',
+    desc: '관심 있는 공고를 선택하고 "제안서 작성" 버튼을 누르면 입찰 준비가 시작됩니다.',
+    icon: 'fa-solid fa-file-pen',
     color: 'bg-brand-soft text-brand',
   },
   {
@@ -27,8 +27,8 @@ const STEPS = [
   {
     no: 4,
     title: '요구사항 분석',
-    desc: '공고 요구사항을 추출하고 자격 요건 충족 여부를 검토합니다.',
-    icon: 'fa-solid fa-robot',
+    desc: '공고 요구사항을 정리하고 자격 요건을 갖췄는지 검토합니다.',
+    icon: 'fa-solid fa-list-check',
     color: 'bg-brand-soft text-brand',
   },
   {
@@ -40,8 +40,8 @@ const STEPS = [
   },
   {
     no: 6,
-    title: '전문가 검토 & 제출',
-    desc: '입찰 전문가가 최종 검토 후 SAM.gov에 제출합니다. 진행 상황은 실시간으로 확인 가능합니다.',
+    title: '최종 검토와 제출',
+    desc: '최종 검토 후 SAM.gov에 제출합니다. 진행 상황은 내 제안서 화면에서 확인할 수 있습니다.',
     icon: 'fa-solid fa-paper-plane',
     color: 'bg-brand-soft text-brand',
   },
@@ -50,15 +50,15 @@ const STEPS = [
 const FAQS = [
   {
     q: '제안서의 품질은 어떤가요?',
-    a: '초안은 SAM.gov 공고 요구사항을 정밀 분석하여 작성됩니다. 이후 입찰 전문가가 내용을 검토·보완하여 최종 품질을 보장합니다.',
+    a: '초안은 SAM.gov 공고 요구사항에 맞춰 작성하고, 제출 전에 검토와 보완을 거칩니다.',
   },
   {
     q: '어떤 서류를 준비해야 하나요?',
-    a: '공고마다 다르지만, 일반적으로 회사 프로필, 과거 수행 실적(Past Performance), 관련 자격증/인증서가 필요합니다. 시스템이 필요 서류를 안내합니다.',
+    a: '공고마다 다르지만, 일반적으로 회사 프로필, 과거 수행 실적(Past Performance), 관련 자격증/인증서가 필요합니다. 공고마다 필요한 서류는 공고 상세 화면에서 안내합니다.',
   },
   {
     q: '마감일이 임박한 공고도 신청 가능한가요?',
-    a: '최소 D-3 이전 신청을 권장합니다. 요구사항 분석과 문서 작성에 약 1-2일, 전문가 검토에 1일이 소요됩니다.',
+    a: '마감 3일 전까지 신청하시기 바랍니다. 서류 작성에 1~2일, 담당자 검토에 1일이 걸립니다.',
   },
   {
     q: '비용은 어떻게 되나요?',
@@ -75,14 +75,14 @@ export default function GuidePage() {
       <div className="text-center mb-8 pt-2">
         <h1 className="text-2xl font-bold text-ink">입찰 대행 서비스 가이드</h1>
         <p className="mt-2 text-ink-mute">
-          SAM.gov 미군(USFK) 정부 조달 입찰을 전문가가 분석하고 제안서를 작성해드립니다.
+          SAM.gov 에 올라온 주한미군(USFK) 조달 입찰의 공고 검토와 제안서 작성을 돕습니다.
         </p>
         <div className="flex justify-center gap-3 mt-6">
           <Button onClick={() => navigate('/search')}>
             <i className="fa-solid fa-magnifying-glass mr-2" /> 공고 검색하기
           </Button>
           <Button variant="outline" onClick={() => navigate('/pricing')}>
-            요금제 보기
+            요금 안내
           </Button>
         </div>
       </div>
@@ -90,7 +90,7 @@ export default function GuidePage() {
       {/* Steps */}
       <div className="max-w-5xl mx-auto px-6 py-16">
         <h2 className="text-2xl font-extrabold text-ink text-center mb-2">이용 절차</h2>
-        <p className="text-ink-mute text-center mb-12">6단계로 간편하게 입찰에 참여하세요.</p>
+        <p className="text-ink-mute text-center mb-12">입찰은 아래 6단계로 진행합니다.</p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {STEPS.map(step => (
@@ -131,9 +131,9 @@ export default function GuidePage() {
       {/* CTA */}
       <div className="text-center px-6 py-16">
         <h2 className="text-xl font-bold text-ink mb-3">지금 시작하세요</h2>
-        <p className="text-ink-mute mb-6">전문가가 입찰 제안서를 작성하는 동안, 본업에 집중하세요.</p>
+        <p className="text-ink-mute mb-6">관심 있는 공고를 찾는 것부터 시작합니다.</p>
         <Button variant="accent" size="lg" onClick={() => navigate('/search')}>
-          <i className="fa-solid fa-rocket mr-2" /> 공고 검색 시작
+          <i className="fa-solid fa-magnifying-glass mr-2" /> 공고 검색 시작
         </Button>
       </div>
     </div>

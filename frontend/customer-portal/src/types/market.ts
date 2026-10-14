@@ -72,6 +72,13 @@ export interface AmendmentsResponse extends Paged<AmendmentGroup>, DataRange {
   versionCount: number
 }
 
+/** 사이트 자료 규모 (CR-162, T3-2 C-3a). 숫자는 서버가 조회 때마다 센다 */
+export interface SiteStats {
+  federalContracts: number
+  notices: number
+  openNotices: number
+}
+
 export interface SampleResponse {
   notice: Opportunity
   originalTitle: string | null

@@ -61,9 +61,9 @@ export function AiProposalModal({
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string }; status?: number } }
       if (err.response?.status === 409) {
-        setError('이미 해당 공고에 대한 입찰 요청이 존재합니다.')
+        setError('이미 제안서 작성을 신청한 공고입니다.')
       } else {
-        setError('입찰 요청 생성에 실패했습니다. 다시 시도해주세요.')
+        setError('신청하지 못했습니다. 다시 시도해 주세요.')
       }
       setSubmitting(false)
     }
@@ -75,7 +75,7 @@ export function AiProposalModal({
         <DialogHeader>
           <div className="flex items-center gap-3">
             <div className="bg-brand-soft text-brand p-2 rounded-lg">
-              <i className="fa-solid fa-wand-magic-sparkles" />
+              <i className="fa-solid fa-file-pen" />
             </div>
             <div>
               <DialogTitle>제안서 작성 신청</DialogTitle>
@@ -87,7 +87,7 @@ export function AiProposalModal({
         <DialogBody>
           <div>
             <p className="text-sm text-ink-sub mb-3">
-              아래 공고에 대한 제안서 작성을 신청합니다.
+              아래 공고의 제안서 작성을 신청합니다.
             </p>
             <div className="bg-surface border border-line rounded-lg px-4 py-3 text-sm font-medium text-ink line-clamp-2">
               {noticeTitle}
@@ -95,7 +95,7 @@ export function AiProposalModal({
             <div className="mt-4 p-3 bg-brand-soft rounded-lg border border-brand-line">
               <p className="text-xs text-brand">
                 <i className="fa-solid fa-circle-info mr-1" />
-                신청 후 <strong>내 제안서</strong> 화면으로 이동합니다. 필요서류를 업로드하면 요구사항 분석 및 문서 작성이 진행됩니다.
+                신청 후 <strong>공고별 서류</strong> 화면으로 이동합니다. 필요 서류를 올리시면 제안서 작성을 진행합니다.
               </p>
             </div>
             {error && (
@@ -115,7 +115,7 @@ export function AiProposalModal({
             {submitting ? (
               <><i className="fa-solid fa-spinner fa-spin mr-1" /> 신청 중...</>
             ) : (
-              <><i className="fa-solid fa-wand-magic-sparkles mr-1" /> 신청하기</>
+              '신청하기'
             )}
           </Button>
         </DialogFooter>

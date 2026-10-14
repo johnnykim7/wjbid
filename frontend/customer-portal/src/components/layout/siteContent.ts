@@ -1,6 +1,6 @@
 /** 공통 틀(유틸 띠, 머리말, 꼬리말) 문구 (CR-127). 문구를 바꿀 때는 이 파일만 고친다. */
 
-export const SERVICE_LINE = '미군·연방 조달 입찰 정보 서비스'
+export const SERVICE_LINE = '(주)우진이엔씨가 운영하는 미군·연방 조달 입찰 정보 서비스'
 export const LOGO_LABEL = 'WOOJIN 홈'
 
 export const searchHref = (keyword?: string) =>
@@ -31,4 +31,4 @@ export const COMPANY = {
   email: 'woojinenc25@gmail.com',
 }
 
-export const COPYRIGHT = '© 2026 (주)우진이엔씨 · WJbid 미군·연방 조달 입찰 대행 서비스'
+export const COPYRIGHT = '© 2026 (주)우진이엔씨 · WJbid 미군·연방 조달 입찰 정보 서비스'

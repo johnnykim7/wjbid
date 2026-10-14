@@ -54,12 +54,9 @@
 .wj .stp i { position:relative; font-style:normal; width:44px; height:44px; border-radius:50%; background:white; border:2px solid var(--color-brand); color:var(--color-brand); font-size:19px; font-weight:800; display:grid; place-items:center; }
 .wj .stp li:first-child i { background:var(--color-brand); color:white; }
 .wj .stp b { display:block; margin-top:14px; font-size:17.5px; font-weight:800; letter-spacing:-.03em; line-height:1.4; }
-.wj .stp p { margin:6px 0 0; font-size:15.5px; line-height:1.6; color:var(--color-ink-sub); }
 .wj .xnote { display:flex; align-items:flex-start; gap:10px; margin-top:24px; padding:15px 18px; border-radius:10px; background:var(--color-brand-softer); border:1px solid color-mix(in srgb, var(--color-brand-soft) 65%, var(--color-brand-line)); font-size:16px; line-height:1.6; color:color-mix(in srgb, var(--color-brand-deep) 50%, var(--color-ink-sub)); }
 .wj .xnote svg { width:20px; height:20px; color:var(--color-brand); margin-top:2px; stroke-width:2.2; }
 .wj .xnote a { color:var(--color-brand); font-weight:800; white-space:nowrap; }
-.wj .tw { display:grid; grid-template-columns:minmax(0,1.25fr) minmax(0,1fr); gap:20px; margin-top:20px; }
-.wj .tw .cbx + .cbx { margin-top:0; }
 .wj .chk { list-style:none; margin:18px 0 0; padding:0; display:grid; gap:12px; }
 .wj .chk li { display:flex; align-items:flex-start; gap:10px; font-size:17px; line-height:1.5; font-weight:600; }
 .wj .chk li svg { width:20px; height:20px; margin-top:2px; color:var(--color-success); stroke-width:2.6; }
@@ -68,8 +65,6 @@
 .wj .lnk svg { width:16px; height:16px; stroke-width:2.6; }
 .wj .cost b.big { display:block; margin-top:16px; font-size:27px; font-weight:800; letter-spacing:-.04em; }
 .wj .cost p { margin:8px 0 0; font-size:16.5px; line-height:1.65; color:var(--color-ink-sub); }
-.wj .cost .fr2 { margin-top:18px; padding:14px 16px; border-radius:10px; background:var(--color-surface); font-size:15.5px; line-height:1.6; color:var(--color-ink-sub); }
-.wj .cost .fr2 b { color:var(--color-ink); }
 .wj .apply { display:flex; align-items:center; gap:24px; margin-top:20px; padding:28px 36px; border-radius:14px; background:var(--color-brand-softer); border:1px solid color-mix(in srgb, var(--color-brand-soft) 56%, var(--color-brand-line)); }
 .wj .apply .icn { width:56px; height:56px; border-radius:12px; background:white; border:1px solid color-mix(in srgb, var(--color-brand-soft) 56%, var(--color-brand-line)); display:grid; place-items:center; color:var(--color-brand); }
 .wj .apply .icn svg { width:28px; height:28px; }

@@ -87,9 +87,9 @@ export default function ProfilePage() {
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h2 className="text-xl font-bold text-ink">기업 프로필 설정</h2>
+            <h2 className="text-xl font-bold text-ink">회사 정보</h2>
             <p className="text-sm text-ink-mute mt-1">
-              이 정보를 바탕으로 귀사에 최적화된 제안서를 작성합니다.
+              이 정보는 제안서 작성과 입찰 자격 진단에 쓰입니다.
             </p>
           </div>
           <Button variant="primary" onClick={handleSave} disabled={saving}>
@@ -125,14 +125,6 @@ export default function ProfilePage() {
                 />
               </div>
               <div>
-                <Label className="block text-sm font-medium text-ink-sub mb-1">역할</Label>
-                <Input
-                  type="text"
-                  value={profile?.role ?? ''}
-                  disabled
-                />
-              </div>
-              <div>
                 <Label className="block text-sm font-medium text-ink-sub mb-1">{MEMBERSHIP_TEXT.profile.label}</Label>
                 <Input type="text" value={membershipLabel(profile)} disabled />
                 {profile && profile.role !== 'ADMIN' && !profile.membership?.member && (
@@ -144,10 +136,10 @@ export default function ProfilePage() {
             </div>
           </section>
 
-          {/* 기업 정보 */}
+          {/* 회사 정보 */}
           <section>
             <h3 className="text-lg font-bold text-ink border-b border-line pb-2 mb-4">
-              기업 정보
+              회사 정보
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>

@@ -67,4 +67,14 @@ public final class MarketResponses {
     public record NaicsResponse(List<SectorStat> sectors, long noneCount, long codedCount, long total,
                                 LocalDate dataFrom, LocalDate dataTo) {
     }
+
+    /**
+     * 사이트 자료 규모 (CR-162, T3-2 C-3a).
+     *
+     * @param federalContracts 미 연방 계약 자료 행 수
+     * @param notices          모은 공고 수. 같은 공고번호는 한 건
+     * @param openNotices      마감 전 공고 수. 첫 화면 건수와 같은 기준(BIZ-069)
+     */
+    public record SiteStats(long federalContracts, long notices, long openNotices) {
+    }
 }

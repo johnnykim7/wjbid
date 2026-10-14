@@ -156,7 +156,7 @@ export default function DocumentsPage() {
   }
 
   const handleDelete = async (doc: MemberDocumentDto) => {
-    if (!window.confirm(`"${doc.displayName || doc.fileName}" 서류를 삭제할까요?`)) return
+    if (!window.confirm(`"${doc.displayName || doc.fileName}" 서류를 삭제하시겠습니까?`)) return
     setBusyKey(doc.id)
     try {
       await deleteMemberDocument(doc.id)
@@ -171,7 +171,7 @@ export default function DocumentsPage() {
   // ── 기타 서류: 제목 + 파일 + 설명 모달 ──
   const submitOther = async () => {
     if (!otherTitle.trim() || !otherFile) {
-      setError('문서제목과 파일을 모두 입력하세요.')
+      setError('서류 이름과 파일을 모두 입력하세요.')
       return
     }
     setOtherSubmitting(true)
@@ -222,7 +222,7 @@ export default function DocumentsPage() {
           iconColor="text-success"
         />
         <StatCard
-          label="고정 서류 미등록"
+          label="공통 서류 미등록"
           value={stats.fixedMissing}
           unit="건"
           icon="fa-solid fa-triangle-exclamation"
@@ -382,7 +382,7 @@ export default function DocumentsPage() {
           <DialogBody className="space-y-4">
             <div>
               <label className="block text-xs font-medium text-ink-sub mb-1">
-                문서제목 <span className="text-danger">*</span>
+                서류 이름 <span className="text-danger">*</span>
               </label>
               <input
                 type="text"

@@ -3,13 +3,14 @@ import { Link, useOutletContext } from 'react-router-dom'
 import { Button } from '@therecommerce-develop/ds-ui'
 import { marketApi } from '../api/market'
 import { useAuth } from '../context/AuthContext'
+import { MEMBERSHIP_TEXT } from '../data/membershipContent'
 import { MEMBER_PRICE_PENDING_LABEL, formatWon, usePricing } from '../hooks/usePricing'
 import { Icon } from '../components/layout/Icon'
 import { SitePhoto } from '../components/SitePhoto'
 import { comingSoonHref, findMenuItem, menuHref, serviceHref } from '../components/layout/menu'
 import type { MemberSummary } from '../components/layout/useMemberSummary'
 import { daysUntil, ddayLabel } from '../utils/dday'
-import type { CollectedQuery, MarketRow } from '../types/market'
+import type { CollectedQuery, MarketRow, SiteStats } from '../types/market'
 import { rowTarget } from '../components/market/marketUtils'
 import {
   BENEFIT_FIT,
@@ -26,6 +27,8 @@ import {
   RELATED_SITES,
   SAMPLE_NOTICE,
   SERVICE_MAP,
+  SITE_STATS_ITEMS,
+  TODAY_LABEL,
   SOON_DAYS,
   TIER_LABEL,
   TIER_NOTE,
@@ -81,7 +84,7 @@ function BidRow({ o, member }: { o: MarketRow; member: boolean }) {
         <b>{o.titleKo || o.title}</b>
         <span>
           <i className="mono">{o.solicitationNumber}</i>
-          {member && <em className="fit no">판정 준비 중</em>}
+          {member && <em className="fit no">자격 진단 준비 중</em>}
         </span>
       </Link>
       <span>{(o.typeKo || o.type) && <span className="bd r">{o.typeKo || o.type}</span>}</span>
@@ -92,7 +95,7 @@ function BidRow({ o, member }: { o: MarketRow; member: boolean }) {
 }
 
 export default function HomePage() {
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, membership } = useAuth()
   const member = useOutletContext<MemberSummary>()
   const { memberMonthlyPrice: price, loading: priceLoading } = usePricing()
 
@@ -104,6 +107,7 @@ export default function HomePage() {
   const [soonTotal, setSoonTotal] = useState(0)
   const [tab, setTab] = useState<'soon' | 'latest'>('soon')
   const [helpTab, setHelpTab] = useState<'faq' | 'notice'>('faq')
+  const [siteStats, setSiteStats] = useState<SiteStats | null>(null)
 
   useEffect(() => {
     let alive = true
@@ -128,6 +132,26 @@ export default function HomePage() {
       alive = false
     }
   }, [])
+
+  // 숫자를 못 받으면 줄을 숨긴다 (CR-162)
+  useEffect(() => {
+    let alive = true
+    marketApi.siteStats().then((s) => alive && setSiteStats(s)).catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [])
+  // 줄이 넘칠 때 숫자와 이름이 갈라지지 않도록 항목 단위로 묶는다
+  const statsLine = siteStats && (
+    <p className="sz">
+      {SITE_STATS_ITEMS(siteStats).map((t, i) => (
+        <Fragment key={t}>
+          {i > 0 && ' · '}
+          <span>{t}</span>
+        </Fragment>
+      ))}
+    </p>
+  )
 
   // 금액 자리. 불러오는 동안은 비워 두고, 금액이 없으면 요금 출처의 안내 문구를 쓴다(CR-129 4.2.1)
   const monthly = priceLoading ? ' ' : price != null ? `월 ${formatWon(price)}` : MEMBER_PRICE_PENDING_LABEL
@@ -156,6 +180,7 @@ export default function HomePage() {
       <div className="empty">
         <div className="tx">
           <h3>{HEADLINE}</h3>
+          {statsLine}
           <Link className="smp" to={itemHref('bids', 'notice-sample')}>
             <small>{SAMPLE_NOTICE.caption}</small>
             <b>{SAMPLE_NOTICE.title}</b>
@@ -204,7 +229,7 @@ export default function HomePage() {
   const right = isAuthenticated ? (
     <div className="st side">
       <div className="today me">
-        <h4>{member.companyName ?? ''} 님<span>회원 · 오늘 확인할 것</span></h4>
+        <h4>{member.companyName ?? ''} 님<span>{membership !== 'loading' && `${MEMBERSHIP_TEXT.headerTag[membership]} · `}{TODAY_LABEL}</span></h4>
         <div className="g">
           <Link to="/bookmarks"><b>{countText(member.bookmarkCount)}</b><span>관심 공고</span></Link>
           <Link to="/proposals"><b>{countText(member.bidRequestCount)}</b><span>입찰 신청</span></Link>
@@ -212,11 +237,11 @@ export default function HomePage() {
         </div>
       </div>
       <div className="mine">
-        <h4>우리 회사 맞춤 판정<Link to="/profile">회사 정보 고치기</Link></h4>
+        <h4>입찰 자격 진단<Link to="/profile">회사 정보 고치기</Link></h4>
         <div className="fitwait">
           <span className="tag">준비 중</span>
-          <p>공고마다 우리 회사가 참여할 수 있는지, 무엇이 모자란지 판정하는 기능을 준비하고 있습니다.</p>
-          <p>회사 정보를 미리 넣어 두시면 기능이 열릴 때 바로 판정해 드립니다.</p>
+          <p>공고마다 우리 회사가 참여할 수 있는지, 무엇이 모자란지 진단하는 기능을 준비하고 있습니다.</p>
+          <p>회사 정보를 미리 넣어 두시면 기능이 열린 뒤 진단 결과를 볼 수 있습니다.</p>
           <Link to="/profile">회사 정보 넣기<Icon name="cr" /></Link>
         </div>
       </div>
@@ -243,9 +268,10 @@ export default function HomePage() {
         <div className="im"><SitePhoto slot={IMAGES.intro} /><span className="tag">USFK 입찰 첫걸음</span></div>
         <div className="bx">
           <h3>{HEADLINE}</h3>
+          {statsLine}
           <div className="fr"><b>무료 회원</b>{benefits}</div>
           <div className="up">
-            <span>상세 번역·적격성 판정은 <b>회원</b></span>
+            <span>상세 번역·입찰 자격 진단은 <b>회원</b></span>
             <Link to="/pricing">{monthly}<Icon name="cr" /></Link>
           </div>
           {start}
@@ -277,7 +303,7 @@ export default function HomePage() {
 
       <section className="band g" id="svc">
         <div className="wrap">
-          <div className="bh"><small>서비스</small><h2>입찰하는 순서대로 도와 드립니다</h2><p>찾기부터 낙찰 뒤까지, 단계마다 필요한 것만 고르세요</p></div>
+          <div className="bh"><small>서비스</small><h2>입찰 단계별 서비스</h2><p>찾기부터 낙찰 뒤까지, 단계마다 필요한 것만 고르세요</p></div>
           <div className="smap">
             {SERVICE_MAP.map((c) => (
               <div className="sc" key={c.no}>
@@ -306,8 +332,8 @@ export default function HomePage() {
         <div className="wrap">
           <div className="bh">
             <small>회원 혜택</small>
-            <h2>회원은 한 걸음 더 봅니다</h2>
-            <p>{price != null ? `월 ${formatWon(price)}으로 ` : ''}공고를 끝까지 읽고, 할 수 있는 공고만 고릅니다</p>
+            <h2>회원이 쓸 수 있는 기능</h2>
+            <p>{price != null ? `월 ${formatWon(price)}으로 ` : ''}공고문 상세 번역(첨부 포함)과 새 공고 알림을 이용할 수 있습니다</p>
           </div>
           <div className="b2">
             <div className="fc">
@@ -348,7 +374,7 @@ export default function HomePage() {
 
       <section className="band g">
         <div className="wrap">
-          <div className="bh"><small>요금</small><h2>무료로 시작하고, 필요할 때 넓히세요</h2><p>회원은 월 단위, 대행과 컨설팅은 건마다 상담합니다</p></div>
+          <div className="bh"><small>요금</small><h2>무료로 시작하고, 필요하면 회원으로 바꿀 수 있습니다</h2><p>회원은 월 단위, 대행과 컨설팅은 건마다 상담합니다</p></div>
           <div className="plans">
             <div className="pc">
               <h4>{PLAN_FREE.name}</h4>

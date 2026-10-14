@@ -176,7 +176,7 @@ export default function BidDetailPage({ origin = false }: { origin?: boolean }) 
           {/* 제안서는 공고문에 붙는다. 원본 공고 상세에는 두지 않는다 */}
           {!origin && (
             <Button variant="accent" onClick={() => setAiModalOpen(true)}>
-              <i className="fa-solid fa-wand-magic-sparkles mr-1" /> 제안서 작성
+              <i className="fa-solid fa-file-pen mr-1" /> 제안서 작성
             </Button>
           )}
         </div>
@@ -235,13 +235,13 @@ export default function BidDetailPage({ origin = false }: { origin?: boolean }) 
             {bid.analysis?.analysisStatus === 'COMPLETED' ? (
               /* ── 정리된 공고문 (분석 완료) ── */
               <div className="space-y-8">
-                {/* 분석 배지 */}
+                {/* 정리 배지 */}
                 <div className="flex items-center gap-2">
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-success-soft text-success rounded-full text-xs font-semibold">
-                    <i className="fa-solid fa-wand-magic-sparkles" /> 분석 완료
+                    <i className="fa-solid fa-circle-check" /> 공고문 정리 완료
                   </span>
                   {bid.analysis.analyzedAt && (
-                    <span className="text-xs text-ink-mute">{bid.analysis.analyzedAt} 분석</span>
+                    <span className="text-xs text-ink-mute">{bid.analysis.analyzedAt} 기준</span>
                   )}
                 </div>
 
@@ -453,7 +453,7 @@ export default function BidDetailPage({ origin = false }: { origin?: boolean }) 
                 <details className="border border-line rounded-lg">
                   <summary className="px-5 py-3 text-sm font-medium text-ink-sub cursor-pointer hover:bg-surface select-none">
                     <i className="fa-solid fa-chevron-right mr-2 text-xs" />
-                    SAM.gov 원본 보기
+                    SAM.gov 원문 보기
                   </summary>
                   <div className="px-5 pb-4">
                     {bid.description ? (
@@ -461,7 +461,7 @@ export default function BidDetailPage({ origin = false }: { origin?: boolean }) 
                         {bid.description}
                       </div>
                     ) : (
-                      <p className="text-sm text-ink-mute mt-2">원본 본문이 제공되지 않은 공고입니다.</p>
+                      <p className="text-sm text-ink-mute mt-2">원문 본문이 없는 공고입니다.</p>
                     )}
                     {bid.samUrl && (
                       <a href={bid.samUrl} target="_blank" rel="noopener noreferrer"
@@ -493,12 +493,12 @@ export default function BidDetailPage({ origin = false }: { origin?: boolean }) 
                 {bid.analysis?.analysisStatus === 'ANALYZING' && (
                   <div className="flex items-center gap-2 px-4 py-3 bg-brand-soft border border-brand-line rounded-lg">
                     <i className="fa-solid fa-spinner fa-spin text-brand" />
-                    <span className="text-sm text-brand font-medium">분석이 진행 중입니다...</span>
+                    <span className="text-sm text-brand font-medium">공고문을 정리하고 있습니다.</span>
                   </div>
                 )}
 
                 <div>
-                  <h3 className="text-lg font-bold text-ink mb-3">Description (공고 내용)</h3>
+                  <h3 className="text-lg font-bold text-ink mb-3">공고 내용</h3>
                   {origin && bid.descriptionKo ? (
                     /* 한글 본문을 먼저, 원문은 펼쳐 본다 (CR-155) */
                     <div className="space-y-3">
@@ -543,7 +543,7 @@ export default function BidDetailPage({ origin = false }: { origin?: boolean }) 
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-bold text-ink mb-3">Attachments / Links (첨부 파일)</h3>
+                  <h3 className="text-lg font-bold text-ink mb-3">첨부 파일·링크</h3>
                   {bid.resourceLinks && bid.resourceLinks.length > 0 ? (
                     <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {bid.resourceLinks.map((url) => {

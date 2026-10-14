@@ -61,15 +61,6 @@ export const MENU: MenuGroup[] = [
     ],
   },
   {
-    key: 'fit',
-    label: '맞춤 판정',
-    items: [
-      { key: 'profile', label: '회사 정보', to: '/profile' },
-      { key: 'eligibility', label: '적격성 진단', to: '/fit/eligibility' },
-      { key: 'opportunity-fit', label: '공고별 판정', to: '/fit/verdicts' },
-    ],
-  },
-  {
     key: 'documents',
     label: '서류함',
     to: '/documents',
@@ -92,7 +83,7 @@ export const MENU: MenuGroup[] = [
       { key: 'site-visit', label: '현장 설명회', to: serviceHref('site-visit') },
       { key: 'invoicing', label: '대금 청구', to: serviceHref('invoicing') },
       { key: 'translation', label: '서류 영문 번역', to: serviceHref('translation') },
-      { key: 'teaming', label: '팀 구성 찾기', to: serviceHref('teaming') },
+      { key: 'teaming', label: '팀 구성 협력사 찾기', to: serviceHref('teaming') },
     ],
   },
   {
@@ -109,6 +100,16 @@ export const MENU: MenuGroup[] = [
       { key: 'forms', label: '서식 모음', to: academyHref('forms') },
       { key: 'pricing', label: '요금 안내', to: '/pricing' },
       { key: 'kakao', label: '카카오톡 알림' },
+    ],
+  },
+  // 발주사가 무엇인지 알기 어렵다며 맨 끝으로 보내 달라고 했다(CR-162, 원문 6장 1)
+  {
+    key: 'fit',
+    label: '입찰 자격 진단',
+    items: [
+      { key: 'profile', label: '회사 정보', to: '/profile' },
+      { key: 'eligibility', label: '참가 자격 확인', to: '/fit/eligibility' },
+      { key: 'opportunity-fit', label: '공고별 판정', to: '/fit/verdicts' },
     ],
   },
 ]

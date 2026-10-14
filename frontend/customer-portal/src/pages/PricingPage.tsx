@@ -33,7 +33,7 @@ interface FeatureRow {
 
 const HEAD = {
   title: '요금 안내',
-  desc: '무료로 시작하고, 필요할 때 회원으로 넓히세요. 회원은 월 단위, 대행과 컨설팅은 건마다 상담합니다',
+  desc: '무료로 시작하고, 필요하면 회원으로 바꿀 수 있습니다. 회원은 월 단위, 대행과 컨설팅은 건마다 상담합니다',
 }
 
 // 결제 연동 전이라 회원 신청은 1:1 문의로 받는다
@@ -42,20 +42,20 @@ const PLANS: PlanInfo[] = [
   { key: 'member', title: '회원', audience: '입찰을 꾸준히 하는 회사', cta: '회원으로 시작', ctaTo: '/support', highlight: '추천' },
 ]
 const FREE_PRICE = '0원'
-const CURRENT_PLAN = '현재 플랜'
+const CURRENT_PLAN = '이용 중'
 const PER_MONTH = '/ 월'
 
-const COMPARE = { title: '무엇이 다른가요', head: ['서비스', '무료', '회원'] }
+const COMPARE = { title: '무료와 회원 비교', head: ['서비스', '무료', '회원'] }
 
 const FEATURES: FeatureRow[] = [
   { title: 'SAM.gov 공고 검색', free: true, member: true },
-  { title: '공고 한글로 보기 (SAM 번역 수준)', free: true, member: true },
+  { title: '공고 한글로 보기 (SAM.gov 공고 본문만)', free: true, member: true },
   { title: '관심 공고 저장', free: true, member: true },
   { title: '서류함, 제출 전 검사', free: true, member: true },
   { title: '입찰 교육 자료', free: true, member: true },
   { title: '새 공고 알림', free: false, member: true },
   { title: '공고문 상세 번역 (첨부 포함)', free: false, member: true },
-  { title: '적격성 진단 (우리 회사 맞춤 판정)', free: false, member: true },
+  { title: '입찰 자격 진단', free: false, member: true },
   { title: '입찰 신청', free: false, member: true },
 ]
 
@@ -63,7 +63,7 @@ const SERVICES_HEAD = { title: '대행·컨설팅', note: '건마다 상담 뒤 
 
 const SERVICE_ITEMS: { title: string; desc: string; to: string; pending?: boolean }[] = [
   { title: 'SAM.gov·PIEE 등록 대행', desc: '처음 등록하는 회사도 순서대로', to: serviceHref('sam-registration') },
-  { title: '제안서 자문·검토', desc: '고객이 쓴 제안서를 전문가가 검토하고 보완점 안내', to: comingSoonHref('proposal-review'), pending: true },
+  { title: '제안서 자문·검토', desc: '고객이 쓴 제안서를 검토하고 보완할 점을 안내', to: comingSoonHref('proposal-review'), pending: true },
   { title: '현장 설명회 동행, 기지 출입 지원', desc: '출입 절차부터 통역까지', to: serviceHref('site-visit') },
   { title: '대금 청구 대행', desc: '계약 서류 정리와 PIEE 대금 청구', to: serviceHref('invoicing') },
   { title: '서류 영문 번역', desc: '등기부등본, 재무제표, 실적 증명을 영문으로', to: serviceHref('translation') },

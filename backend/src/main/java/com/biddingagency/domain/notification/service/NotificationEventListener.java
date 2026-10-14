@@ -175,15 +175,15 @@ public class NotificationEventListener {
         switch (toState) {
             case REVIEW -> {
                 type = NotificationType.PROPOSAL_READY_CUSTOMER;
-                subject = "[Bidding Agency] 제안서 생성이 완료되었습니다";
+                subject = "제안서가 준비되었습니다";
             }
             case SUBMITTED -> {
                 type = NotificationType.BID_SUBMITTED_CUSTOMER;
-                subject = "[Bidding Agency] 입찰 제출이 접수되었습니다";
+                subject = "입찰 제출이 접수되었습니다";
             }
             case AWARDED -> {
                 type = NotificationType.BID_AWARDED_CUSTOMER;
-                subject = "[Bidding Agency] 입찰 결과 — 낙찰";
+                subject = "입찰 결과: 낙찰";
             }
             default -> { return; }  // 그 외 상태는 고객 알림 없음
         }
@@ -275,7 +275,7 @@ public class NotificationEventListener {
         Map<String, Object> vars = Map.of(
                 "daysLeft", String.valueOf(event.getDaysRemaining()),
                 "opportunityTitle", br.getOpportunity().getTitle());
-        String subject = String.format("[Bidding Agency] 마감 D-%d 알림", event.getDaysRemaining());
+        String subject = String.format("입찰 마감 D-%d 알림", event.getDaysRemaining());
         String keyPrefix = "DEADLINE_" + event.getEntityId() + "_" + event.getDeadline().toLocalDate()
                 + "_" + event.getDaysRemaining() + "_";
 
@@ -328,7 +328,7 @@ public class NotificationEventListener {
             notificationService.sendNotification(
                     NotificationType.OPPORTUNITY_APPROVED,
                     customer.getEmail(), customer.getId(),
-                    "[Bidding Agency] 신규 입찰 공고 등록", vars,
+                    "신규 입찰 공고 등록", vars,
                     opp.getId(), "Opportunity",
                     "OPP_APPROVED_" + opp.getId() + "_" + customer.getId());
         }
