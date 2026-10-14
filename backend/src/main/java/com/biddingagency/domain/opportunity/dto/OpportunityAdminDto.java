@@ -1,6 +1,7 @@
 package com.biddingagency.domain.opportunity.dto;
 
 import com.biddingagency.domain.opportunity.entity.Opportunity;
+import com.biddingagency.domain.opportunity.entity.PieeFetchStatus;
 import lombok.Builder;
 import lombok.Data;
 
@@ -75,9 +76,17 @@ public class OpportunityAdminDto {
     /** CR-043: PIEE 입찰서류 링크 오류 표식. true = 관리자가 'PIEE 링크 오류'로 표시(목록 뱃지·상세 경고) */
     private Boolean pieeLinkBroken;
 
+    // CR-160: PIEE 입찰서류 받기 결과(BIZ-079). 받지 않는 공고는 pieeFetchStatus 가 null
+    private PieeFetchStatus pieeFetchStatus;
+    private LocalDateTime pieeFetchStatusAt;
+    private Integer pieeFileCount;
+    private String pieeFetchMessage;
+    /** POL-040 PIEE_NOTICE_URL 에 공고번호를 넣은 주소. 공고번호가 비면 null */
+    private String pieeUrl;
+
     @SuppressWarnings("unchecked")
     public static OpportunityAdminDto from(Opportunity opp, long attachmentCount,
-                                           long manualFetchRequiredCount, int noticeCount) {
+                                           long manualFetchRequiredCount, int noticeCount, String pieeUrl) {
         Map<String, Object> raw = opp.getRawJson();
         String setAside = null;
         String naics = null;
@@ -132,6 +141,11 @@ public class OpportunityAdminDto {
                 .setAsideKo(opp.getSetAsideKo())
                 .naicsLabelKo(opp.getNaicsLabelKo())
                 .pieeLinkBroken(opp.isPieeLinkBroken())
+                .pieeFetchStatus(opp.getPieeFetchStatus())
+                .pieeFetchStatusAt(opp.getPieeFetchStatusAt())
+                .pieeFileCount(opp.getPieeFileCount())
+                .pieeFetchMessage(opp.getPieeFetchMessage())
+                .pieeUrl(pieeUrl)
                 .build();
     }
 
@@ -142,7 +156,7 @@ public class OpportunityAdminDto {
     }
 
     public static OpportunityAdminDto fromList(Opportunity opp, long attachmentCount,
-                                               long manualFetchRequiredCount, int noticeCount) {
+                                               long manualFetchRequiredCount, int noticeCount, String pieeUrl) {
         return OpportunityAdminDto.builder()
                 .id(opp.getId())
                 .noticeId(opp.getNoticeId())
@@ -158,6 +172,11 @@ public class OpportunityAdminDto {
                 .noticeCount(noticeCount)
                 .translatedAt(opp.getTranslatedAt())
                 .pieeLinkBroken(opp.isPieeLinkBroken())
+                .pieeFetchStatus(opp.getPieeFetchStatus())
+                .pieeFetchStatusAt(opp.getPieeFetchStatusAt())
+                .pieeFileCount(opp.getPieeFileCount())
+                .pieeFetchMessage(opp.getPieeFetchMessage())
+                .pieeUrl(pieeUrl)
                 .build();
     }
 }

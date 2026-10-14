@@ -131,9 +131,10 @@ public class AttachmentAutoDownloadService {
                             attachment.getFileName());
                     String contentType = headerValue(response.getHeaders("Content-Type"));
                     String storageUrl = storageService.store(
-                            "opportunity-attachments/" + attachment.getOpportunity().getId(),
+                            AttachmentFiles.storagePrefix(attachment.getOpportunity().getId()),
                             fileName, body);
                     attachment.applyAutoDownloadSuccess(fileName, (long) body.length, contentType, storageUrl);
+                    attachment.recordContentHash(AttachmentFiles.sha256(body));
                     attachmentRepository.save(attachment);
                     log.info("[CR-025] 자동 다운로드 성공: attachmentId={}, fileName={}, {} bytes",
                             attachmentId, fileName, body.length);

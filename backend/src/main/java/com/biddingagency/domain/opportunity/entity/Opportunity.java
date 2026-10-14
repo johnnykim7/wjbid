@@ -4,6 +4,7 @@ import com.biddingagency.common.BaseEntity;
 import com.biddingagency.domain.rfp.entity.IndustryType;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -14,8 +15,12 @@ import java.util.Map;
  * Opportunity entity (공고)
  *
  * Represents a contract opportunity from SAM.gov
+ *
+ * <p>CR-160: 바뀐 칸만 쓴다. PIEE 받기 일꾼이 받기 결과 칸을 따로 고치는 동안 번역 같은 다른 저장이
+ * 옛 받기 결과로 덮어쓰지 않게 하려는 것이다.
  */
 @Entity
+@DynamicUpdate
 @Table(name = "opportunities",
         indexes = {
                 @Index(name = "idx_opportunities_notice_id", columnList = "notice_id"),
@@ -147,6 +152,23 @@ public class Opportunity extends BaseEntity {
     @Builder.Default
     private Integer lastReqNo = 0;
 
+    /** CR-160: PIEE 입찰서류 받기 결과. null 이면 받지 않는 공고(BIZ-079) */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "piee_fetch_status", length = 20)
+    private PieeFetchStatus pieeFetchStatus;
+
+    /** CR-160: 받기 결과가 마지막으로 바뀐 시각(서울). 기다림 상한과 멈춤 판정에 쓴다 */
+    @Column(name = "piee_fetch_status_at")
+    private LocalDateTime pieeFetchStatusAt;
+
+    /** CR-160: 마지막으로 받은 압축에 든 파일 수 */
+    @Column(name = "piee_file_count")
+    private Integer pieeFileCount;
+
+    /** CR-160: 받기 실패 사유 */
+    @Column(name = "piee_fetch_message", length = 500)
+    private String pieeFetchMessage;
+
     // Business methods
 
     /** CR-159: 다음 REQ 번호를 준다(BIZ-074) */
@@ -186,6 +208,13 @@ public class Opportunity extends BaseEntity {
     /** CR-042: 삭제 여부. */
     public boolean isDeleted() {
         return this.deletedAt != null;
+    }
+
+    /** CR-160: 수집이 PIEE 입찰서류 받기를 건다. 다시 들어온 공고도 처음부터 다시 받는다 */
+    public void waitPieeFetch(LocalDateTime now) {
+        this.pieeFetchStatus = PieeFetchStatus.WAITING;
+        this.pieeFetchStatusAt = now;
+        this.pieeFetchMessage = null;
     }
 
     /** CR-043: PIEE 링크 오류 표식 설정. null 방어 포함. */

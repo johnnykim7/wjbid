@@ -17,6 +17,9 @@ public interface StorageService {
      */
     String store(String keyPrefix, String fileName, byte[] content);
 
+    /** CR-160: 흐름을 그대로 저장한다. 수백 MB 짜리 PIEE 압축 안 파일을 메모리에 올리지 않으려고 둔다 */
+    String store(String keyPrefix, String fileName, java.io.InputStream content);
+
     /** storageUrl로 저장된 바이트를 로드 */
     byte[] load(String storageUrl);
 

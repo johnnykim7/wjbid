@@ -36,6 +36,9 @@ class OpportunityServiceTest {
     @Mock
     private NoticeRepository noticeRepository;
 
+    @Mock
+    private PieeSettings pieeSettings;
+
     @InjectMocks
     private OpportunityService opportunityService;
 

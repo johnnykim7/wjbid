@@ -57,6 +57,21 @@ public class LocalFileStorageService implements StorageService {
     }
 
     @Override
+    public String store(String keyPrefix, String fileName, java.io.InputStream content) {
+        String original = sanitize(fileName);
+        String relativePath = keyPrefix + "/" + UUID.randomUUID() + "_" + original;
+        Path target = resolveWithin(relativePath);
+        try {
+            Files.createDirectories(target.getParent());
+            long size = Files.copy(content, target);
+            log.info("[storage] 흐름 저장: {} ({} bytes)", relativePath, size);
+            return relativePath;
+        } catch (IOException e) {
+            throw new UncheckedIOException("파일 저장 실패: " + relativePath, e);
+        }
+    }
+
+    @Override
     public byte[] load(String storageUrl) {
         try {
             return Files.readAllBytes(resolveWithin(storageUrl));
