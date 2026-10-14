@@ -13,6 +13,7 @@ import com.biddingagency.domain.event.OpportunityAnalysisCompletedEvent;
 import com.biddingagency.domain.event.OpportunityApprovedEvent;
 import com.biddingagency.domain.member.entity.Member;
 import com.biddingagency.domain.member.repository.MemberRepository;
+import com.biddingagency.domain.member.service.MembershipService;
 import com.biddingagency.domain.notification.entity.NotificationType;
 import com.biddingagency.domain.opportunity.entity.Opportunity;
 import com.biddingagency.domain.opportunity.repository.OpportunityRepository;
@@ -50,6 +51,7 @@ public class NotificationEventListener {
     private final MemberRepository memberRepository;
     private final OpportunityRepository opportunityRepository;
     private final BidRequestRepository bidRequestRepository;
+    private final MembershipService membershipService;
 
     @Value("${app.customer-portal-url:http://localhost:3183}")
     private String customerPortalUrl;
@@ -294,7 +296,8 @@ public class NotificationEventListener {
     }
 
     /**
-     * CR-006: 공고 노출 승인(VISIBLE) 시 전체 고객에게 신규 공고 등록 알림.
+     * CR-006: 공고 노출 승인(VISIBLE) 시 신규 공고 등록 알림.
+     * CR-161: 무료회원은 공고문을 볼 수 없으므로(BIZ-071) 오늘 회원 기간 안의 고객에게만 보낸다.
      */
     @Async
     @EventListener
@@ -312,7 +315,10 @@ public class NotificationEventListener {
         String detailUrl = customerPortalUrl + "/search/origin/" + opp.getId();
 
         List<Member> customers = memberRepository.findByRole(Member.Role.CUSTOMER);
-        for (Member customer : customers) {
+        Map<UUID, LocalDate> paid = membershipService.currentEndsOn(
+                customers.stream().map(Member::getId).toList());
+        List<Member> members = customers.stream().filter(c -> paid.containsKey(c.getId())).toList();
+        for (Member customer : members) {
             Map<String, Object> vars = Map.of(
                     "customerName", displayName(customer),
                     "opportunityTitle", oppTitle,
@@ -326,6 +332,7 @@ public class NotificationEventListener {
                     opp.getId(), "Opportunity",
                     "OPP_APPROVED_" + opp.getId() + "_" + customer.getId());
         }
-        log.info("OpportunityApproved 고객 알림 발송: opp={}, 대상 {}명", opp.getId(), customers.size());
+        log.info("OpportunityApproved 고객 알림 발송: opp={}, 대상 {}명 (고객 {}명 중 회원)",
+                opp.getId(), members.size(), customers.size());
     }
 }
