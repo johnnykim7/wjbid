@@ -1234,4 +1234,4 @@
 - **영향 모듈**: BE NotificationEventListener / 고객 포털 PricingPage
 - **영향 설계서**: T1-1 BID-NOTIFY-001, BID-PRICE-001
 - **규모**: 소. 문서 [CR-161_새_공고_알림_결제_회원만.md](CR-161_새_공고_알림_결제_회원만.md)
-- **상태**: 구현, 시험 505건 통과. 배포 전
+- **상태**: 완료. 상용 배포 10/14 17:03 (deploy/cr161-prod 2dfa2e2, all)
