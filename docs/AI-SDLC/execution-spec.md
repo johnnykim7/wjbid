@@ -1,6 +1,6 @@
 # 실행 지시서: SAM.gov Bidding Agency Platform
 
-> 설계 버전: 1.12 | 최종 수정: 2026-10-12 | 관련 CR: CR-003, CR-132, CR-133, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-146, CR-147, CR-153, CR-155, CR-157, CR-159
+> 설계 버전: 1.13 | 최종 수정: 2026-10-14 | 관련 CR: CR-003, CR-132, CR-133, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-146, CR-147, CR-153, CR-155, CR-157, CR-159, CR-160
 
 > **프로젝트:** bidding-agency-platform (미군 조달 입찰 AI 대행 서비스)
 > **프로젝트 유형:** 풀스택 (BE: Java 17 + Spring Boot 3.2 / FE: React 19 × 2)
@@ -195,6 +195,11 @@ SAM.gov에 올라오는 미군(USFK) 조달 입찰 공고를 자동 수집하고
 - **(CR-019)** 수집 시 SAM `resourceLinks`를 OpportunityAttachment로 적재. 외부 사이트라 자동 다운로드 불가하면 `MANUAL_FETCH_REQUIRED` 표식 (BIZ-020)
 - **(CR-019)** 관리자 수동 업로드 → StorageService 실제 저장 + SUCCESS 전이 (`MANUAL_FETCH_REQUIRED` 행 갱신 또는 신규)
 - **(CR-019)** 공고문 한글화(NoticeService) 시 SUCCESS 첨부의 다운로드 URL을 워크플로우 입력 `attachmentFiles[]`로 전달 → Aimbase parse_document 발췌 반영
+- **(CR-160)** 수집 때 새 공고(정정 새 판 포함)와 내용이 바뀐 공고는 PIEE 받기 결과를 WAITING 으로 건다. 낙찰 공지, 공고번호 빈 공고, `PIEE_FETCH_ENABLED=false` 는 걸지 않는다 (BIZ-079)
+- **(CR-160)** PIEE 받기 일꾼(`@Scheduled`, `app.piee.fetch-interval-ms`)이 WAITING 공고를 오래된 순으로 하나씩 집는다. 그 공고의 SAM 첨부가 PENDING 이면 `PIEE_SAM_WAIT_MINUTES` 까지 미룬다. WAITING 에서 FETCHING 은 조건부 갱신으로 한 번만 잡는다. FETCHING 이 `PIEE_TIMEOUT_SECONDS` 두 배를 넘으면 FAILED
+- **(CR-160)** 받기: `PIEE_NOTICE_URL` 을 쿠키를 보관하며 연다(끝 주소가 `index.xhtml` 이면 NOT_FOUND). 같은 쿠키로 `viewPublicNotice.xhtml` 에 양식을 보낸다(`form_SUBMIT=1`, 화면의 `javax.faces.ViewState`, `form:_idcl=downloadAllAttachments`). 단추가 없으면 DONE 0개. 응답은 임시 파일로 받고 `PIEE_MAX_ZIP_MB` 를 넘으면 끊는다. 압축 파일마다 SHA-256 을 세어 BIZ-080 으로 넣거나 건너뛴다. 임시 파일은 끝나면 지운다. 새 라이브러리 없이 지금 쓰는 Apache HttpClient 5 와 java.util.zip 을 쓴다
+- **(CR-160)** 압축 풀기와 첨부 넣기는 서비스(OpportunityAttachmentIngestService)로 옮겨 관리자 손 올리기(CR-037)와 같이 쓴다. 컨트롤러는 받고 돌려주기만 한다. SAM 자동 받기와 손 올리기도 content_sha256 을 남긴다
+- **(CR-160)** OpportunityAdminDto 에 pieeFetchStatus, pieeFetchStatusAt, pieeFileCount, pieeFetchMessage, pieeUrl. 관리자 원본 공고 상세 PIEE 칸이 받기 결과 한 줄을 보이고 PIEE 입찰서류 보기 주소를 pieeUrl 로 쓴다
 
 **핵심 검증:** cron 수집 → DB 저장 → 중복 검출 → 첨부 다운로드 → **사전 분석 자동 트리거** → 관리자 이메일 수신 → **관리자 승인 → 사용자 노출**
 

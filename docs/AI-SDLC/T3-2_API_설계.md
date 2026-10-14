@@ -1,6 +1,6 @@
 # SAM.gov Bidding Agency Platform API 설계
 
-> 설계 버전: 1.18 | 최종 수정: 2026-10-12 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-144, CR-146, CR-147, CR-152, CR-153, CR-155, CR-157, CR-159
+> 설계 버전: 1.19 | 최종 수정: 2026-10-14 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-144, CR-146, CR-147, CR-152, CR-153, CR-155, CR-157, CR-159, CR-160
 
 > 단계: 3. Detail Design | 실행스펙 섹션 3에 포함
 >
@@ -84,6 +84,7 @@
 > 사전 분석은 첨부파일 다운로드 완료 시 자동 트리거됨. 수동 트리거는 재분석 또는 수동 업로드 후 사용.
 > 승인(approve)은 OpportunityAnalysis 상태가 COMPLETED일 때만 가능.
 > **CR-019 첨부 보강**: 관리자 원본 목록/상세 응답(OpportunityAdminDto)에 `manualFetchRequiredCount`(외부서 가져와야 할 첨부 수)를 포함해 "가져와야 함" 표식을 노출한다. 첨부 목록(`GET /admin/opportunities/{id}/attachments` 신규)은 각 첨부의 downloadStatus(SUCCESS/MANUAL_FETCH_REQUIRED 등)와 sourceUrl(외부 다운로드 링크)을 반환.
+> **CR-160 PIEE 받기 결과**: 관리자 원본 목록/상세 응답(OpportunityAdminDto)에 `pieeFetchStatus`(WAITING, FETCHING, DONE, NOT_FOUND, FAILED, 받지 않는 공고는 null), `pieeFetchStatusAt`, `pieeFileCount`, `pieeFetchMessage`, `pieeUrl`(POL-040 `PIEE_NOTICE_URL` 에 공고번호를 넣은 주소, 공고번호가 비면 null)을 더한다. 새 엔드포인트는 없다.
 
 ---
 
