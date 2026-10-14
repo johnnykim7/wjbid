@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@therecommerce-develop/ds-ui'
 import { useAuth } from '../../context/AuthContext'
+import { MEMBERSHIP_TEXT } from '../../data/membershipContent'
 import { CiLogo, Icon } from './Icon'
 import { MENU, menuHref } from './menu'
 import {
@@ -21,7 +22,7 @@ import type { MemberSummary } from './useMemberSummary'
 export function AppHeader({ member }: { member: MemberSummary }) {
   const navigate = useNavigate()
   const { pathname, search } = useLocation()
-  const { isAuthenticated, logout } = useAuth()
+  const { isAuthenticated, logout, membership } = useAuth()
   const [menuOpen, setMenuOpen] = useState(false)
   const [field, setField] = useState(SEARCH_FIELDS[0].value)
   const [keyword, setKeyword] = useState('')
@@ -59,7 +60,12 @@ export function AppHeader({ member }: { member: MemberSummary }) {
           <span>{SERVICE_LINE}</span>
           {isAuthenticated ? (
             <nav>
-              <Link className="b" to="/profile">{member.companyName ?? ''} 님</Link>
+              <span className="who">
+                <Link className="b" to="/profile">{member.companyName ?? ''} 님</Link>
+                {membership !== 'loading' && (
+                  <span className={`mt ${membership}`}>{MEMBERSHIP_TEXT.headerTag[membership]}</span>
+                )}
+              </span>
               <Button className="wj-reset" onClick={logout}>로그아웃</Button>
               <Link to="/support">고객센터</Link>
             </nav>

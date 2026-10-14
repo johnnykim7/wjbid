@@ -370,7 +370,7 @@ class NotificationEventListenerTest {
         then(notificationService).should().sendNotification(
                 eq(NotificationType.PROPOSAL_READY_CUSTOMER),
                 eq("customer@test.com"), any(),
-                contains("제안서 생성"),
+                contains("제안서가 준비"),
                 any(),
                 eq(bidRequestId), eq("BidRequest"),
                 eq("BR_STATE_" + bidRequestId + "_REVIEW")

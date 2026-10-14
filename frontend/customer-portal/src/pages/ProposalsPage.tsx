@@ -60,13 +60,13 @@ function StateGuide({ state, onUpload }: { state: string; onUpload: () => void }
         <div className="w-16 h-16 bg-brand-soft rounded-full flex items-center justify-center mb-4">
           <i className="fa-solid fa-cloud-arrow-up text-2xl text-brand" />
         </div>
-        <h3 className="text-lg font-bold text-ink mb-2">필요서류 제출이 필요합니다</h3>
+        <h3 className="text-lg font-bold text-ink mb-2">필요 서류를 제출해 주세요</h3>
         <p className="text-sm text-ink-mute max-w-xs mb-5">
           공고가 요구하는 서류를 업로드한 뒤 ‘문서 제출 완료’를 누르면<br />
           요구사항 분석과 문서 작성이 시작됩니다.
         </p>
         <Button variant="accent" onClick={onUpload}>
-          <i className="fa-solid fa-arrow-up-from-bracket mr-2" /> 제출 서류 등록하러 가기
+          <i className="fa-solid fa-arrow-up-from-bracket mr-2" /> 제출 서류 등록
         </Button>
       </div>
     )
@@ -79,8 +79,8 @@ function StateGuide({ state, onUpload }: { state: string; onUpload: () => void }
         </div>
         <h3 className="text-lg font-bold text-ink mb-2">요구사항 분석 중</h3>
         <p className="text-sm text-ink-mute max-w-xs">
-          공고를 분석하고 요구사항을 추출하고 있습니다.<br />
-          잠시 후 문서 작성이 시작됩니다.
+          공고 요구사항을 검토하고 있습니다.<br />
+          검토가 끝나면 문서 작성을 시작합니다.
         </p>
         <div className="mt-4 flex gap-1.5">
           {[0, 1, 2].map((i) => (
@@ -98,8 +98,8 @@ function StateGuide({ state, onUpload }: { state: string; onUpload: () => void }
         </div>
         <h3 className="text-lg font-bold text-ink mb-2">문서 작성 / 검토 중</h3>
         <p className="text-sm text-ink-mute max-w-xs">
-          제안서 문서를 작성하거나 내부 검토가 진행 중입니다.<br />
-          문서가 생성되면 좌측에서 확인하세요.
+          제안서 문서를 작성하거나 검토하고 있습니다.<br />
+          문서가 준비되면 왼쪽 목록에서 확인할 수 있습니다.
         </p>
       </div>
     )
@@ -227,7 +227,7 @@ export default function ProposalsPage() {
                       onClick={(e) => { e.stopPropagation(); navigate(`/proposals/${p.id}`) }}
                       className="h-auto px-0 py-0 text-xs text-brand hover:underline hover:bg-transparent"
                     >
-                      상세 &rarr;
+                      상세 보기
                     </DsButton>
                   </div>
                 </div>

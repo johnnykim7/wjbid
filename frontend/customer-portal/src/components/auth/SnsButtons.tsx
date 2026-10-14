@@ -60,7 +60,7 @@ export function SnsButtons({ place, returnTo }: { place: 'login' | 'register'; r
   }
   return (
     <div className="snsq">
-      <p className="snst">SNS 로 간편 가입</p>
+      <p className="snst">SNS 계정으로 가입</p>
       {buttons}
       <div className="or"><span>또는 이메일로 가입</span></div>
     </div>

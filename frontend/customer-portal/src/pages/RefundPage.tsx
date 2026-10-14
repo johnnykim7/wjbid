@@ -64,7 +64,7 @@ export default function RefundPage() {
 
         <div className="text-center mt-12">
           <Link to="/" className="text-sm font-semibold text-brand hover:underline">
-            ← 홈으로 돌아가기
+            홈으로 돌아가기
           </Link>
         </div>
       </div>

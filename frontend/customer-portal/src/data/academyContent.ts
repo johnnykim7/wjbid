@@ -47,17 +47,17 @@ export const ARTICLES: Article[] = [
   {
     name: '찾기',
     goLabel: '1. 찾기로',
-    title: '1. 미군 공고는 어디에 올라오나요',
+    title: '1. 미군 공고가 올라오는 곳',
     lead: '주한미군 공고도 미 연방정부 공고와 같이 SAM.gov 의 계약 기회(Contract Opportunities)에 올라옵니다.',
     sections: [
       {
-        title: '누가 공고를 내나요',
+        title: '공고를 내는 곳',
         body: '주한미군 육군 공고는 411번째 계약지원대대(411th CSB)와 그 아래 계약 부서가 냅니다. WJbid 는 이 부서들의 공고를 모아 한글로 정리합니다.',
       },
       {
         title: '공고 유형',
         table: {
-          head: ['유형', '무엇인가요'],
+          head: ['유형', '설명'],
           rows: [
             { name: '사전 수요 조사', en: 'Sources Sought', desc: '본 공고를 내기 전에 이 일을 할 수 있는 회사가 있는지 알아봅니다. 답하면 본 공고를 미리 준비할 수 있습니다.' },
             { name: '사전 공고', en: 'Presolicitation', desc: '곧 낼 입찰을 미리 알립니다.' },
@@ -73,7 +73,7 @@ export const ARTICLES: Article[] = [
   {
     name: '판단',
     goLabel: '2. 판단으로',
-    title: '2. 이 공고, 우리 회사가 할 수 있나요',
+    title: '2. 우리 회사가 할 수 있는 공고 선택',
     lead: '공고문을 열면 무엇을, 어디서, 언제까지 해야 하는지와 누가 낼 수 있는지를 먼저 찾습니다.',
     sections: [
       {
@@ -87,7 +87,7 @@ export const ARTICLES: Article[] = [
       {
         title: '평가 방식',
         table: {
-          head: ['방식', '무엇인가요'],
+          head: ['방식', '설명'],
           rows: [
             { name: '최저가 적격 선정', en: 'LPTA', desc: '기술 기준을 넘은 회사 가운데 가장 낮은 가격을 낸 회사를 고릅니다.' },
             { name: '가격 대비 가치', en: 'Tradeoff', desc: '기술, 실적, 가격을 함께 보고 정부에 가장 이로운 제안을 고릅니다.' },
@@ -110,7 +110,7 @@ export const ARTICLES: Article[] = [
       {
         title: '등록과 계정',
         table: {
-          head: ['갖출 것', '무엇인가요'],
+          head: ['갖출 것', '설명'],
           rows: [
             { name: 'NCAGE 코드', en: 'NATO Commercial and Government Entity Code', desc: '미국 밖 회사가 받는 업체 코드입니다. SAM.gov 등록 전에 받습니다.' },
             { name: 'Login.gov 계정', desc: 'SAM.gov 에 들어갈 때 쓰는 본인 인증 계정입니다.' },
@@ -228,7 +228,7 @@ export const FORMS_TEXT = {
   desc: '미군 공고에 답할 때 자주 쓰는 미 연방 표준 서식과 준비물입니다',
   formsTitle: '표준 서식',
   formsNote: '원본은 미 연방 조달청(GSA) 서식 자료실에서 받습니다',
-  head: ['서식', '이름', '언제 쓰나요', '받는 곳'],
+  head: ['서식', '이름', '쓰는 때', '받는 곳'],
   sourceLabel: 'GSA',
   sourceUrl: 'https://www.gsa.gov/forms',
   bringTitle: '견적을 낼 때 흔히 함께 내는 것',

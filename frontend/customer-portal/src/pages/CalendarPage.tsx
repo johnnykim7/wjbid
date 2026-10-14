@@ -81,7 +81,7 @@ export default function CalendarPage() {
     <div className="space-y-6">
       <div className="mb-6">
         <h2 className="text-xl font-bold text-ink">입찰 캘린더</h2>
-        <p className="text-sm text-ink-mute mt-1">관심 공고의 마감일을 달력에서 한눈에 확인하세요.</p>
+        <p className="text-sm text-ink-mute mt-1">관심 공고의 마감일을 달력에서 확인합니다.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

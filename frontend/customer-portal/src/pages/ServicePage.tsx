@@ -11,7 +11,10 @@ import { SERVICE_TEXT, TIER_TAG_CLASS, consultTitle, findService, inquiryHref } 
 
 const GROUP_KEY = 'services'
 
-/** 등록·컨설팅 서비스 안내 (CR-133, T3-3 「등록·컨설팅 서비스 안내」, 화면 정본 sam). 서비스 7개가 이 한 틀에 내용만 바꾼다 */
+/**
+ * 등록·컨설팅 서비스 안내 (CR-133, T3-3 「등록·컨설팅 서비스 안내」, 화면 정본 sam). 서비스 7개가 이 한 틀에 내용만 바꾼다.
+ * 발주사가 설명을 간략하게 해 달라고 해 진행 순서는 단계 이름만, 비용은 한 줄만 둔다(CR-162, 원문 7장)
+ */
 export default function ServicePage() {
   const { key = '' } = useParams()
   const service = findService(key)
@@ -54,41 +57,20 @@ export default function ServicePage() {
             </div>
           ))}
         </div>
-        <h2 className="h2 sech">{SERVICE_TEXT.stepsTitle} <small>{service.steps.basis}</small></h2>
-        <ol className="stp" style={{ '--n': service.steps.items.length } as CSSProperties}>
-          {service.steps.items.map((s, i) => (
-            <li key={s.name}><i>{i + 1}</i><b>{s.name}</b><p>{s.desc}</p></li>
+        <h2 className="h2 sech">{SERVICE_TEXT.stepsTitle}</h2>
+        <ol className="stp" style={{ '--n': service.steps.length } as CSSProperties}>
+          {service.steps.map((name, i) => (
+            <li key={name}><i>{i + 1}</i><b>{name}</b></li>
           ))}
         </ol>
-        <div className="xnote">
-          <Icon name="alert" />
-          <span>
-            {service.note.text}
-            {service.note.link && <> <Link to={service.note.link.to}>{service.note.link.label}</Link></>}
-          </span>
-        </div>
       </section>
 
-      <div className="tw">
-        <section className="cbx pad">
-          <h2 className="h2">{SERVICE_TEXT.prepareTitle}</h2>
-          <ul className="chk">
-            {service.prepare.items.map((p) => (
-              <li key={p.name}><Icon name="ok" /><div>{p.name}{p.desc && <span>{p.desc}</span>}</div></li>
-            ))}
-          </ul>
-          {service.prepare.vault && <Link className="lnk" to="/documents">{SERVICE_TEXT.vaultLink}<Icon name="cr" /></Link>}
-        </section>
-        <section className="cbx pad cost">
-          <h2 className="h2">{SERVICE_TEXT.costTitle}</h2>
-          <b className="big">{service.cost.big}</b>
-          <p>{service.cost.desc}</p>
-          {service.cost.fact && (
-            <div className="fr2"><b>{service.cost.fact.strong}</b>{service.cost.fact.rest && ` ${service.cost.fact.rest}`}</div>
-          )}
-          <Link className="lnk" to="/pricing">{SERVICE_TEXT.pricingLink}<Icon name="cr" /></Link>
-        </section>
-      </div>
+      <section className="cbx pad cost">
+        <h2 className="h2">{SERVICE_TEXT.costTitle}</h2>
+        <b className="big">{SERVICE_TEXT.costBig}</b>
+        <p>{SERVICE_TEXT.costDesc}</p>
+        <Link className="lnk" to="/pricing">{SERVICE_TEXT.pricingLink}<Icon name="cr" /></Link>
+      </section>
 
       <ApplyBand
         icon="headset"

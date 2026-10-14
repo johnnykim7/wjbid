@@ -55,7 +55,7 @@ function MemberTagCell({ hasNotice }: { hasNotice: boolean }) {
 }
 
 const AGENCIES = [
-  '모든 발주처 (Agency)',
+  '모든 발주처',
   'Dept. of Defense (DoD)',
   'Dept. of Veterans Affairs (VA)',
   'General Services Admin (GSA)',
@@ -188,22 +188,21 @@ export default function SearchPage() {
             unit="건"
           />
           <StatCard
-            label="관심 공고 (북마크)"
+            label="관심 공고"
             value={stats.bookmarks}
             unit="건"
             iconColor="text-brand"
           />
           <StatCard
-            label="나의 입찰 요청"
+            label="입찰 신청"
             value={stats.proposals}
             unit="건"
             iconColor="text-brand"
           />
           <StatCard
             dark
-            label="제안서 작성"
-            value="→"
-            unit="내 제안서"
+            label="내 제안서"
+            value=""
             action={
               <Button
                 variant="ghost"
@@ -211,7 +210,7 @@ export default function SearchPage() {
                 onClick={() => navigate('/proposals')}
                 className="text-xs bg-white/20 hover:bg-white/30 text-white"
               >
-                보러가기
+                목록 보기
               </Button>
             }
           />
@@ -224,7 +223,7 @@ export default function SearchPage() {
               <i className="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-ink-mute text-sm z-10" />
               <Input
                 type="text"
-                placeholder="공고번호, 키워드(예: IT Support), 기관명 검색..."
+                placeholder="공고번호, 키워드(예: IT Support), 발주처 검색"
                 value={keyword}
                 onChange={(e) => setKeyword(e.target.value)}
                 className="w-full pl-10"
@@ -246,8 +245,8 @@ export default function SearchPage() {
                   <SelectValue placeholder="상태 선택" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="active">Active (진행중)</SelectItem>
-                  <SelectItem value="updated">Updated (수정됨)</SelectItem>
+                  <SelectItem value="active">진행 중</SelectItem>
+                  <SelectItem value="updated">수정됨</SelectItem>
                 </SelectContent>
               </Select>
               <Button type="submit">
@@ -336,7 +335,7 @@ export default function SearchPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            title={bookmarkedIds.has(bid.id) ? '북마크 제거' : '관심 공고 저장'}
+                            title={bookmarkedIds.has(bid.id) ? '관심 공고 해제' : '관심 공고 저장'}
                             className={bookmarkedIds.has(bid.id) ? 'text-brand' : 'text-ink-mute hover:text-brand'}
                             onClick={(e) => toggleBookmark(bid, e)}
                           >

@@ -57,7 +57,7 @@ export default function BookmarksPage() {
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-bold text-ink mb-6">
-        관심 공고 (북마크)
+        관심 공고
         {bookmarks.length > 0 && (
           <span className="ml-2 text-sm font-normal text-ink-mute">{bookmarks.length}건</span>
         )}
@@ -67,7 +67,7 @@ export default function BookmarksPage() {
         <div className="bg-white rounded-xl border border-line p-16 text-center text-ink-mute shadow-sm">
           <i className="fa-regular fa-bookmark text-4xl mb-3 block" />
           <p className="font-medium">저장된 관심 공고가 없습니다.</p>
-          <p className="text-sm mt-1">입찰 검색에서 관심 공고를 저장해보세요.</p>
+          <p className="text-sm mt-1">입찰 검색에서 관심 공고를 저장할 수 있습니다.</p>
           <Button
             variant="primary"
             size="sm"
@@ -117,7 +117,7 @@ export default function BookmarksPage() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      title="북마크 제거"
+                      title="관심 공고 해제"
                       className="text-brand hover:text-danger mr-3"
                       disabled={removingId === bid.id}
                       onClick={(e) => handleRemove(bid, e)}
@@ -133,7 +133,7 @@ export default function BookmarksPage() {
                       className="text-brand hover:text-brand-strong"
                       onClick={(e) => openAiModal(bid, e)}
                     >
-                      <i className="fa-solid fa-wand-magic-sparkles text-lg" />
+                      <i className="fa-solid fa-file-pen text-lg" />
                     </Button>
                   </TableCell>
                 </TableRow>

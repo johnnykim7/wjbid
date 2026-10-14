@@ -338,7 +338,8 @@ public class MarketDataService {
         return value != null && value.toLowerCase(Locale.ROOT).contains(lowerNeedle);
     }
 
-    private static List<MarketSource> latestPerSolicitation(List<MarketSource> sources) {
+    /** 같은 공고번호는 게시가 가장 늦은 판 하나만 남긴다. 사이트 자료 규모도 같은 계산을 쓴다(CR-162) */
+    static List<MarketSource> latestPerSolicitation(List<MarketSource> sources) {
         Map<String, MarketSource> latest = sources.stream()
                 .filter(s -> s.solKey() != null)
                 .collect(Collectors.toMap(MarketSource::solKey, Function.identity(),

@@ -126,7 +126,7 @@ export default function SavedSearchesPage() {
 
               <div className="flex items-center justify-between border-t border-line-soft pt-3">
                 <span className="text-xs text-ink-mute">
-                  최근 매칭{' '}
+                  최근 맞는 공고{' '}
                   <span className="font-bold text-ink">{s.lastMatched}</span>건
                 </span>
                 <div className="flex gap-2">
@@ -145,7 +145,7 @@ export default function SavedSearchesPage() {
 
       <p className="mt-6 text-xs text-ink-mute">
         <i className="fa-solid fa-circle-info mr-1" />
-        저장한 검색·알림 구독은 현재 화면 시연용 더미 데이터입니다. (BE 미연동)
+        저장한 검색과 알림 구독은 준비 중입니다. 지금 보이는 목록은 예시입니다.
       </p>
     </div>
   )

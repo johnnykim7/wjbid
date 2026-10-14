@@ -144,7 +144,7 @@ export default function ProposalDetailPage() {
       <div className="bg-white border-b border-line px-6 flex gap-1">
         {([
           { key: 'uploads', label: '제출 서류', icon: 'fa-solid fa-cloud-arrow-up', count: preCheck?.clientItems.length ?? 0 },
-          { key: 'documents', label: '생성 문서', icon: 'fa-solid fa-file-lines', count: documents.length },
+          { key: 'documents', label: '작성 문서', icon: 'fa-solid fa-file-lines', count: documents.length },
           { key: 'history', label: '진행 이력', icon: 'fa-solid fa-clock-rotate-left', count: history.length },
         ] as const).map(tab => (
           <button
@@ -174,9 +174,9 @@ export default function ProposalDetailPage() {
               <div className="w-16 h-16 bg-brand-soft rounded-full flex items-center justify-center mb-4">
                 <i className="fa-solid fa-file-circle-plus text-2xl text-brand" />
               </div>
-              <h3 className="text-lg font-bold text-ink mb-2">아직 생성된 문서가 없습니다</h3>
+              <h3 className="text-lg font-bold text-ink mb-2">아직 작성된 문서가 없습니다</h3>
               <p className="text-sm text-ink-mute max-w-xs">
-                요구사항 분석과 문서 생성이 끝나면 여기에 표시됩니다.
+                문서 작성이 끝나면 여기에 표시됩니다.
               </p>
             </div>
           ) : (

@@ -26,7 +26,7 @@ import java.util.Map;
 public class DocumentExpiryNotificationListener {
 
     /** 알림 이력 제목. 메일 제목은 템플릿이 정한다 */
-    private static final String LOG_SUBJECT = "서류 유효기간 %d일 전: %s";
+    private static final String LOG_SUBJECT = "서류 유효기간 만료 %d일 전: %s";
     private static final String EXPIRY_PATH = "/documents/expiry";
     static final String REFERENCE_TYPE = "MemberDocument";
 

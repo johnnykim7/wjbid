@@ -194,7 +194,7 @@ export function EmailCodeField({ id, email, onEmailChange, verified, onVerifiedC
           <div id={`${codeId}-hint`} className="hint">
             메일이 오지 않으면 스팸함을 확인해 주세요
             <Button type="button" variant="ghost" className="wj-reset tlnk" onClick={send} disabled={sending || resendIn > 0}>
-              인증번호 다시 받기{resendIn > 0 ? ` (${resendIn}초)` : ''}
+              인증번호 재요청{resendIn > 0 ? ` (${resendIn}초)` : ''}
             </Button>
           </div>
         </div>

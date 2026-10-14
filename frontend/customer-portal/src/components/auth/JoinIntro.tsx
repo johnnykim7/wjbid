@@ -22,7 +22,7 @@ export function JoinIntro({ image, tag, title, children }: { image: SitePhotoSlo
       <div className="bx">
         <h3>{title}</h3>
         <div className="fr"><b>무료 회원</b><ul>{FREE_BENEFITS.map((t) => <li key={t}><Icon name="ok" />{t}</li>)}</ul></div>
-        <div className="up"><span>상세 번역·적격성 판정은 <b>회원</b></span><Link to="/pricing">{monthly}<Icon name="cr" /></Link></div>
+        <div className="up"><span>상세 번역·입찰 자격 진단은 <b>회원</b></span><Link to="/pricing">{monthly}<Icon name="cr" /></Link></div>
         {children}
         <div className="sam"><Icon name="check" /><span>제출 때 SAM 등록이 필요할 수 있습니다</span><Link to={serviceHref('sam-registration')}>등록 대행<Icon name="cr" /></Link></div>
       </div>

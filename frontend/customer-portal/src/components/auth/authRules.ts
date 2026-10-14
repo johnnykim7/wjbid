@@ -1,6 +1,6 @@
 /** 이메일 가입과 SNS 가입이 같이 쓰는 검사 규칙과 문구 (CR-131, CR-146) */
 
-export const REQUIRED = '꼭 넣어 주세요'
+export const REQUIRED = '필수 입력 항목입니다'
 export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 export const COUNT_WORD = ['', '한', '두', '세', '네', '다섯', '여섯', '일곱', '여덟']
 

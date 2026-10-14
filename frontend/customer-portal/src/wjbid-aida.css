@@ -20,6 +20,10 @@
 .wj .util .wrap { display: flex; align-items: center; justify-content: space-between; height: 36px; }
 .wj .util nav { display: flex; gap: 18px; color: var(--color-ink-sub); }
 .wj .util nav a.b { color: var(--color-brand); font-weight: 600; }
+.wj .util nav .who { display: inline-flex; align-items: center; gap: 6px; }
+.wj .util nav .mt { display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: 4px; border: 1px solid; font-size: 12px; font-weight: 600; }
+.wj .util nav .mt.member { background: var(--color-brand-soft); border-color: var(--color-brand-line); color: var(--color-brand); }
+.wj .util nav .mt.free { background: var(--color-surface); border-color: var(--color-line); color: var(--color-ink-mute); }
 .wj .hd > .wrap { height: 92px; display: flex; align-items: center; gap: 40px; }
 .wj .logo { display: flex; align-items: center; flex: 0 0 auto; }
 .wj .logo .ci { width: auto; height: 48px; flex: none; color: var(--color-ink); }
@@ -138,14 +142,16 @@ footer.wj .info span + span::before { content: ""; display: inline-block; width:
 .wj .ph .tabs > * { height: 34px; font-size: 15px; padding: 0px 13px; }
 .wj .ph .cnt { font-size: 15px; color: var(--color-ink-sub); font-weight: 600; }
 .wj .ph .cnt b { color: var(--color-danger); font-weight: 800; }
-.wj .bids li { grid-template-columns: 64px minmax(0px, 1fr) 112px 118px 96px; gap: 16px; min-height: 73px; padding: 9px 0px; }
+/* 발주사가 첫 화면 공고 줄이 커 보인다고 해 줄였다 (CR-162, 원문 3장 1) */
+.wj .bids li { grid-template-columns: 64px minmax(0px, 1fr) 112px 118px 96px; gap: 16px; min-height: 60px; padding: 8px 0px; }
 .wj .dd { height: 30px; font-size: 15px; border-radius: 7px; }
-.wj .bids .t b { font-size: 18px; font-weight: 700; color: var(--color-ink); }
-.wj .bids .t span { font-size: 14.5px; color: var(--color-ink-sub); margin-top: 2px; }
+.wj .bids .t b { font-size: 16px; font-weight: 600; color: var(--color-ink); }
+.wj .bids .t span { font-size: 13.5px; color: var(--color-ink-sub); margin-top: 2px; }
 .wj .bd { height: 29px; padding: 0px 11px; font-size: 15px; border-radius: 6px; }
-.wj .bids .loc b { font-size: 15.5px; gap: 4px; }
+.wj .bids .bd { height: 26px; padding: 0px 9px; font-size: 14px; }
+.wj .bids .loc b { font-size: 14px; gap: 4px; }
 .wj .bids .loc b svg { width: 15px; height: 15px; }
-.wj .bids .dl { font-size: 17px; font-weight: 800; color: var(--color-ink); }
+.wj .bids .dl { font-size: 15px; font-weight: 700; color: var(--color-ink); }
 .wj .bids .dl small { font-size: 14px; color: var(--color-ink-sub); font-weight: 600; }
 .wj .fs { display: grid; grid-template-columns: minmax(0px, 1fr) 372px; gap: 28px; margin-top: 24px; align-items: start; }
 .wj .side { gap: 14px; }
@@ -228,6 +234,9 @@ footer.wj { font-size: 14px; }
 .wj .intro .im { height: 106px; }
 .wj .intro .bx { flex: 1 1 0%; display: flex; flex-direction: column; padding: 18px 22px; }
 .wj .intro h3 { font-size: 21.5px; }
+/* 대표 문장 아래 사이트 자료 규모 한 줄 (CR-162) */
+.wj .sz { margin: 8px 0 0; font-size: 14px; font-weight: 600; line-height: 1.5; color: var(--color-brand); letter-spacing: -0.02em; }
+.wj .sz span { white-space: nowrap; }
 .wj .fr { margin-top: 14px; }
 .wj .intro .bigb { margin-top: 14px; }
 .wj .intro .up { margin: 12px 0px 0px; padding: 10px 12px; border-radius: 9px; border: 1px dashed var(--color-brand-line); font-size: 14.5px; color: var(--color-ink); display: flex; align-items: center; justify-content: space-between; gap: 8px; }
