@@ -161,7 +161,7 @@ public class BidRequest extends BaseEntity {
             case DOCS_PENDING -> "문서 대기";
             case DOCS_RECEIVED -> "문서 접수 완료";
             case ANALYZING -> "분석 중";
-            case GENERATING -> "문서 생성 중";
+            case GENERATING -> "문서 작성 중";
             case REVIEW -> "관리자 검토";
             case CONFIRMED -> "확정";
             case SUBMITTED -> "제출 완료";
