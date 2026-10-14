@@ -1,6 +1,6 @@
 # 실행 지시서: SAM.gov Bidding Agency Platform
 
-> 설계 버전: 1.13 | 최종 수정: 2026-10-14 | 관련 CR: CR-003, CR-132, CR-133, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-146, CR-147, CR-153, CR-155, CR-157, CR-159, CR-160
+> 설계 버전: 1.14 | 최종 수정: 2026-10-15 | 관련 CR: CR-003, CR-132, CR-133, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-146, CR-147, CR-153, CR-155, CR-157, CR-159, CR-160, CR-162
 
 > **프로젝트:** bidding-agency-platform (미군 조달 입찰 AI 대행 서비스)
 > **프로젝트 유형:** 풀스택 (BE: Java 17 + Spring Boot 3.2 / FE: React 19 × 2)
@@ -228,6 +228,10 @@ SAM.gov에 올라오는 미군(USFK) 조달 입찰 공고를 자동 수집하고
 | 2 | `docs/AI-SDLC/T3-3_화면_구조.md` | 공고 검색, 공고 상세, 즐겨찾기, 가이드 |
 | 3 | `docs/AI-SDLC/T3-4_화면_상호작용.md` | 공고 상세 — 입찰 신청 (자격 진단 부분) |
 | 4 | `docs/AI-SDLC/T3-2_API_설계.md` | C, D, E API |
+
+- **(CR-162)** 사이트 자료 규모 `GET /opportunities/stats/site` 는 공개 조회다. 서비스가 미 연방 계약 자료 행 수, 모은 공고(지운 것 제외, 같은 공고번호 한 건), 마감 전 공고(모은 공고 목록의 마감 전, 같은 공고번호 하나만과 같은 계산)를 센다. 마감 전 판정과 같은 공고번호 하나만 남기는 계산은 모은 공고 목록의 것을 그대로 써 숫자가 어긋나지 않게 한다. 숫자를 저장하거나 고정하지 않는다(BIZ-082)
+- **(CR-162)** 고객 포털: 메뉴 정의에서 맞춤 판정 묶음을 입찰 자격 진단으로 바꿔 맨 뒤로, 사이트 정보의 서비스 한 줄과 저작권 줄, 유틸 띠 회원 구분 꼬리표(AuthContext 의 membership, loading 이면 비움), 홈 공고 줄 글자 크기(wjbid-aida.css), 대표 문장 아래 자료 규모 한 줄(못 받으면 숨김), 등록·컨설팅 안내 간략화(화면 정의 파일의 단계 설명, 안내 상자, 준비할 것을 지우고 비용 한 줄)
+- **(CR-162)** 고객 화면 문구는 CR-162 점검표(docs/CR/CR-162_고객화면_문구와_배치.md 부록)대로 고친다. 점검표 고칠 문구에 옛 이름(적격성 진단 등)이 남아 있으면 용어표 「고객 화면 이름」 이 우선한다. 요술봉, 로봇, 로켓 아이콘은 서류, 확인, 돋보기 아이콘으로. 고객 알림 제목의 "[Bidding Agency]" 머리말을 뺀다(BIZ-081)
 
 **핵심 검증:** 공고 목록 페이징/검색/필터 → 상세 + 요구사항 + 첨부 → 북마크 토글
 
@@ -517,7 +521,7 @@ sequenceDiagram
 
 | 화면 | 주요 API | 비고 |
 |------|---------|------|
-| 홈 | `GET /site-photos`, `GET /opportunities/collected` | 문구는 정적 콘텐츠. 사진 자리 넷은 사진 목록에서 방문마다 한 장(CR-153). 마감 전 공고 목록과 건수는 모은 공고에서 `openOnly`, `latestOnly`, `sort`, `dueWithinDays` 로(CR-155) |
+| 홈 | `GET /site-photos`, `GET /opportunities/collected`, `GET /opportunities/stats/site` (CR-162) | 문구는 정적 콘텐츠. 사진 자리 넷은 사진 목록에서 방문마다 한 장(CR-153). 마감 전 공고 목록과 건수는 모은 공고에서 `openOnly`, `latestOnly`, `sort`, `dueWithinDays` 로(CR-155) |
 | 회원가입 | `POST /auth/email-codes`, `/auth/email-codes/verify`, `/auth/register` | 이메일 인증번호 확인을 마친 주소만 가입 (BIZ-062, CR-146) |
 | SNS 가입·로그인 | `GET /auth/sns/providers`, `/oauth2/authorization/{provider}`, `/auth/sns/signup/{ticket}`, `POST /auth/sns/register`, `/auth/sns/login` | 네이버, 카카오(구글 보류). 키가 있는 곳만 (CR-146) |
 | 공고 검색 | ~~`GET /opportunities`, `/search`, `/near-deadline`~~ `GET /opportunities/collected` (CR-155) | 필터, 페이징. CR-155: 모은 공고 중 마감 전인 것 전부(BIZ-069), 검색어 `q`, 줄을 누르면 공고문 상세 또는 원본 공고 상세. CR-147: 화면 이름 마감 전 공고, 속페이지 틀, 숫자 칸은 검색어와 상관없는 마감 전 공고 전체 건수, 빈 상태 두 가지 |
