@@ -1,5 +1,7 @@
 package com.biddingagency.integration.samgov.scheduler;
 
+import com.biddingagency.domain.collection.entity.CollectorRun;
+import com.biddingagency.domain.collection.repository.CollectorRunRepository;
 import com.biddingagency.domain.event.CollectionFailedEvent;
 import com.biddingagency.domain.event.OpportunitiesCollectedEvent;
 import com.biddingagency.integration.samgov.client.OpportunityCollectorService;
@@ -31,6 +33,11 @@ public class OpportunityCollectionScheduler {
     private final ApplicationEventPublisher eventPublisher;
     /** CR-126: 수집 실패 시 HTTP status(401/403) 판별용 — CR-036 계측 재사용. */
     private final SamApiCallLogRepository samApiCallLogRepository;
+    private final CollectorRunRepository collectorRunRepository;
+    private final Clock clock;
+
+    private static final String TRIGGER_SCHEDULED = "SCHEDULED";
+    private static final String TRIGGER_MANUAL = "MANUAL";
 
     /** 스케줄 수집 on/off. SAM 일일 쿼터 보호용으로 운영에서 끌 수 있다. 수동 트리거는 영향 없음. */
     @Value("${app.sam-gov.scheduler.enabled:true}")
@@ -62,6 +69,7 @@ public class OpportunityCollectionScheduler {
 
         // Collect last 30 days
         int daysBack = 30;
+        CollectorRun run = startRun(TRIGGER_SCHEDULED);
 
         // MAIN Keywords (411TH CSB - primary target)
         log.info("Collecting MAIN keywords...");
@@ -80,9 +88,11 @@ public class OpportunityCollectionScheduler {
         int totalFetched = totalCollected + totalChanged + totalUnchanged;
         log.info("====== Collection completed: {} new ({} target), {} changed, {} unchanged, {} duplicate(CR-042), {} errors ======",
                 totalCollected, totalTargetNew, totalChanged, totalUnchanged, totalDuplicate, totalErrors);
+        finishRun(run, totalFetched, totalCollected, totalChanged, totalErrors);
 
+        // 수집 완료 메일의 멱등키가 회차 ID 로 만들어진다. 비어 있으면 모든 회차가 첫 회차와 같은 키가 되어 막힌다
         eventPublisher.publishEvent(new OpportunitiesCollectedEvent(
-                null, totalCollected, totalTargetNew, totalChanged, totalFetched));
+                run.getId(), totalCollected, totalTargetNew, totalChanged, totalFetched));
 
         // CR-126: 실패는 성공 이벤트와 분리해 발행한다.
         // OpportunitiesCollected의 소비자는 타깃 신규 0건이면 발송을 스킵하므로(CR-015),
@@ -135,6 +145,7 @@ public class OpportunityCollectionScheduler {
         int totalUnchanged = 0;
         int totalDuplicate = 0;
         int totalErrors = 0;
+        CollectorRun run = startRun(TRIGGER_MANUAL);
 
         for (String keyword : MAIN_KEYWORDS) {
             OpportunityCollectorService.CollectionResult result =
@@ -148,5 +159,22 @@ public class OpportunityCollectionScheduler {
 
         log.info("Manual collection completed: {} new, {} changed, {} unchanged, {} duplicate(CR-042), {} errors",
                 totalCollected, totalChanged, totalUnchanged, totalDuplicate, totalErrors);
+        finishRun(run, totalCollected + totalChanged + totalUnchanged, totalCollected, totalChanged, totalErrors);
+    }
+
+    /** 회차 시작에 먼저 남겨 두면 도중에 서버가 내려가도 끝나지 않은 회차로 보인다 */
+    private CollectorRun startRun(String triggeredBy) {
+        return collectorRunRepository.save(
+                CollectorRun.start(String.join(",", MAIN_KEYWORDS), triggeredBy, LocalDateTime.now(clock)));
+    }
+
+    private void finishRun(CollectorRun run, int totalFetched, int newCount, int updatedCount, int errors) {
+        LocalDateTime completedAt = LocalDateTime.now(clock);
+        if (errors == 0) {
+            run.complete(completedAt, totalFetched, newCount, updatedCount);
+        } else {
+            run.fail(completedAt, totalFetched, newCount, updatedCount, "errors=" + errors);
+        }
+        collectorRunRepository.save(run);
     }
 }

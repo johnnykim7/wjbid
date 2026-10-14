@@ -1,6 +1,9 @@
 package com.biddingagency.integration.samgov.scheduler;
 
+import com.biddingagency.domain.collection.entity.CollectorRun;
+import com.biddingagency.domain.collection.repository.CollectorRunRepository;
 import com.biddingagency.domain.event.CollectionFailedEvent;
+import com.biddingagency.domain.event.OpportunitiesCollectedEvent;
 import com.biddingagency.integration.samgov.client.OpportunityCollectorService;
 import com.biddingagency.integration.samgov.quota.SamApiCallLog;
 import com.biddingagency.integration.samgov.quota.SamApiCallLogRepository;
@@ -9,14 +12,18 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
@@ -38,13 +45,31 @@ class OpportunityCollectionSchedulerTest {
     private ApplicationEventPublisher eventPublisher;
     @Mock
     private SamApiCallLogRepository samApiCallLogRepository;
+    @Mock
+    private CollectorRunRepository collectorRunRepository;
 
-    @InjectMocks
+    private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-10-15T06:00:00Z"), ZoneId.of("Asia/Seoul"));
+    private static final UUID RUN_ID = UUID.fromString("00000000-0000-0000-0000-000000000163");
+
     private OpportunityCollectionScheduler scheduler;
 
     @BeforeEach
     void enableScheduler() {
+        scheduler = new OpportunityCollectionScheduler(
+                collectorService, eventPublisher, samApiCallLogRepository, collectorRunRepository, CLOCK);
         ReflectionTestUtils.setField(scheduler, "schedulerEnabled", true);
+        // 저장할 때 ID 가 붙는 것을 흉내 낸다. 시작과 끝에 같은 회차를 두 번 저장한다
+        lenient().when(collectorRunRepository.save(any(CollectorRun.class))).thenAnswer(inv -> {
+            CollectorRun run = inv.getArgument(0);
+            if (run.getId() == null) ReflectionTestUtils.setField(run, "id", RUN_ID);
+            return run;
+        });
+    }
+
+    private CollectorRun savedRun() {
+        ArgumentCaptor<CollectorRun> captor = ArgumentCaptor.forClass(CollectorRun.class);
+        then(collectorRunRepository).should(times(2)).save(captor.capture());
+        return captor.getValue();
     }
 
     /** 수집 결과: 신규/타깃/변경/무변경/중복/오류 */
@@ -157,5 +182,65 @@ class OpportunityCollectionSchedulerTest {
         then(eventPublisher).should(atLeastOnce()).publishEvent(captor.capture());
         assertThat(captor.getAllValues())
                 .noneMatch(CollectionFailedEvent.class::isInstance);
+    }
+
+    // CR-163: 수집 회차가 수집 이력에 남지 않아 수집 이력 조회가 늘 비고, 수집 완료 메일 멱등키가 COLLECTION_null 로 고정됐다
+
+    @Test
+    @DisplayName("스케줄수집_오류0건_성공회차로남음")
+    void 스케줄수집_오류0건_성공회차로남음() {
+        givenCollectionResult(5, 3, 0);
+        givenTodaySearchLog(200, null);
+
+        scheduler.collectOpportunities();
+
+        CollectorRun run = savedRun();
+        assertThat(run.getSuccess()).isTrue();
+        assertThat(run.getCompletedAt()).isEqualTo(LocalDateTime.of(2026, 10, 15, 15, 0));
+        assertThat(run.getTriggeredBy()).isEqualTo("SCHEDULED");
+        assertThat(run.getNewCount()).isEqualTo(5);
+    }
+
+    @Test
+    @DisplayName("스케줄수집_오류있음_실패회차로남음")
+    void 스케줄수집_오류있음_실패회차로남음() {
+        givenCollectionResult(0, 0, 1);
+        givenTodaySearchLog(401, null);
+
+        scheduler.collectOpportunities();
+
+        CollectorRun run = savedRun();
+        assertThat(run.getSuccess()).isFalse();
+        assertThat(run.getCompletedAt()).isNotNull();
+        assertThat(run.getErrorMessage()).isEqualTo("errors=1");
+    }
+
+    @Test
+    @DisplayName("스케줄수집_완료이벤트에_회차ID실림")
+    void 스케줄수집_완료이벤트에_회차ID실림() {
+        givenCollectionResult(5, 3, 0);
+        givenTodaySearchLog(200, null);
+
+        scheduler.collectOpportunities();
+
+        ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
+        then(eventPublisher).should(atLeastOnce()).publishEvent(captor.capture());
+        OpportunitiesCollectedEvent event = captor.getAllValues().stream()
+                .filter(OpportunitiesCollectedEvent.class::isInstance)
+                .map(OpportunitiesCollectedEvent.class::cast)
+                .findFirst().orElseThrow();
+        assertThat(event.getEntityId()).isEqualTo(RUN_ID);
+    }
+
+    @Test
+    @DisplayName("수동수집_MANUAL회차로남음")
+    void 수동수집_MANUAL회차로남음() {
+        givenCollectionResult(2, 1, 0);
+
+        scheduler.triggerManualCollection(7);
+
+        CollectorRun run = savedRun();
+        assertThat(run.getTriggeredBy()).isEqualTo("MANUAL");
+        assertThat(run.getSuccess()).isTrue();
     }
 }
