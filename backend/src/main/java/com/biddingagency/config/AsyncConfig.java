@@ -44,4 +44,18 @@ public class AsyncConfig {
         executor.initialize();
         return executor;
     }
+
+    /**
+     * CR-160: PIEE 입찰서류 받기 전용. 받기 일꾼이 한 번에 한 공고만 넘기므로 한 줄이면 된다(BIZ-079).
+     */
+    @Bean(name = "pieeFetchExecutor")
+    public Executor pieeFetchExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(1);
+        executor.setMaxPoolSize(1);
+        executor.setQueueCapacity(10);
+        executor.setThreadNamePrefix("piee-fetch-");
+        executor.initialize();
+        return executor;
+    }
 }

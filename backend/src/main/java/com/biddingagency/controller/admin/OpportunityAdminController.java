@@ -8,7 +8,10 @@ import com.biddingagency.domain.opportunity.entity.Opportunity;
 import com.biddingagency.domain.opportunity.entity.OpportunityAttachment;
 import com.biddingagency.domain.opportunity.repository.OpportunityAttachmentRepository;
 import com.biddingagency.domain.opportunity.service.AttachmentAutoDownloadService;
+import com.biddingagency.domain.opportunity.service.AttachmentFiles;
+import com.biddingagency.domain.opportunity.service.OpportunityAttachmentIngestService;
 import com.biddingagency.domain.opportunity.service.OpportunityService;
+import com.biddingagency.domain.opportunity.service.PieeSettings;
 import com.biddingagency.integration.storage.StorageService;
 import com.biddingagency.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
@@ -48,6 +51,8 @@ public class OpportunityAdminController {
     private final StorageService storageService;
     private final AttachmentAutoDownloadService attachmentAutoDownloadService;
     private final com.biddingagency.domain.opportunity.service.OpportunityTranslationService translationService;
+    private final OpportunityAttachmentIngestService attachmentIngestService;
+    private final PieeSettings pieeSettings;
 
     @GetMapping
     @Operation(summary = "원본 공고 목록 (관리자)",
@@ -66,7 +71,8 @@ public class OpportunityAdminController {
                     long manualFetchCount = attachmentRepository.countByOpportunityIdAndDownloadStatus(
                             opp.getId(), AttachmentDownloadStatus.MANUAL_FETCH_REQUIRED);
                     int noticeCount = noticeService.findByOpportunityId(opp.getId()).size();
-                    return OpportunityAdminDto.fromList(opp, attachmentCount, manualFetchCount, noticeCount);
+                    return OpportunityAdminDto.fromList(opp, attachmentCount, manualFetchCount, noticeCount,
+                            pieeSettings.noticeUrl(opp.getSolicitationNumber()).orElse(null));
                 });
         return ResponseEntity.ok(page);
     }
@@ -85,7 +91,8 @@ public class OpportunityAdminController {
         long manualFetchCount = attachmentRepository.countByOpportunityIdAndDownloadStatus(
                 id, AttachmentDownloadStatus.MANUAL_FETCH_REQUIRED);
         int noticeCount = noticeService.findByOpportunityId(id).size();
-        return ResponseEntity.ok(OpportunityAdminDto.from(opp, attachmentCount, manualFetchCount, noticeCount));
+        return ResponseEntity.ok(OpportunityAdminDto.from(opp, attachmentCount, manualFetchCount, noticeCount,
+                pieeSettings.noticeUrl(opp.getSolicitationNumber()).orElse(null)));
     }
 
     @PostMapping("/manual")
@@ -156,106 +163,13 @@ public class OpportunityAdminController {
     public ResponseEntity<Map<String, Object>> uploadAttachment(
             @PathVariable UUID id,
             @RequestParam("files") List<MultipartFile> files) {
-        Opportunity opp = opportunityService.findById(id);
-        java.util.List<String> uploaded = new java.util.ArrayList<>();
-
-        for (MultipartFile file : files) {
-            String originalName = file.getOriginalFilename();
-            if (isZip(originalName, file.getContentType())) {
-                // CR-037: ZIP 자동 해제 — 각 엔트리를 개별 첨부로 등록 (평탄화)
-                try (java.util.zip.ZipInputStream zis =
-                             new java.util.zip.ZipInputStream(file.getInputStream())) {
-                    java.util.zip.ZipEntry entry;
-                    while ((entry = zis.getNextEntry()) != null) {
-                        if (entry.isDirectory()) {
-                            zis.closeEntry();
-                            continue;
-                        }
-                        String entryName = flatten(entry.getName());
-                        if (entryName == null || entryName.isBlank()) {
-                            zis.closeEntry();
-                            continue;
-                        }
-                        byte[] content = zis.readAllBytes();
-                        zis.closeEntry();
-                        if (content.length == 0) continue;
-                        String storageUrl = storageService.store(
-                                "opportunity-attachments/" + id, entryName, content);
-                        saveUploadedAttachment(id, opp, entryName, (long) content.length,
-                                guessContentType(entryName), storageUrl);
-                        uploaded.add(entryName);
-                        log.info("[CR-037] ZIP 엔트리 업로드: opportunityId={}, zip={}, entry={}, size={}",
-                                id, originalName, entryName, content.length);
-                    }
-                } catch (java.io.IOException e) {
-                    log.error("[CR-037] ZIP 해제 실패: opportunityId={}, zip={}", id, originalName, e);
-                    throw new IllegalArgumentException("ZIP 파일 해제 실패: " + originalName);
-                }
-            } else {
-                // 일반 단일 파일 (기존 CR-019 경로)
-                String fileName = flatten(originalName);
-                String storageUrl = storageService.store("opportunity-attachments/" + id, file);
-                saveUploadedAttachment(id, opp, fileName, file.getSize(),
-                        file.getContentType(), storageUrl);
-                uploaded.add(fileName != null ? fileName : "");
-                log.info("[CR-019] 관리자 첨부 업로드(SUCCESS): opportunityId={}, fileName={}, storageUrl={}",
-                        id, fileName, storageUrl);
-            }
-        }
-
+        List<String> uploaded = attachmentIngestService.ingestUploads(id, files);
         return ResponseEntity.ok(Map.of(
                 "status", "UPLOADED",
                 "count", uploaded.size(),
                 "fileNames", uploaded,
                 "opportunityId", id.toString()
         ));
-    }
-
-    /** 업로드된 첨부 1건을 저장 — 동일 파일명의 '가져와야 함' 행이 있으면 채워 SUCCESS 전이, 없으면 신규. */
-    private void saveUploadedAttachment(UUID id, Opportunity opp, String fileName,
-                                        Long fileSize, String contentType, String storageUrl) {
-        OpportunityAttachment attachment = attachmentRepository
-                .findByOpportunityIdAndDownloadStatus(id, AttachmentDownloadStatus.MANUAL_FETCH_REQUIRED)
-                .stream()
-                .filter(a -> fileName != null && fileName.equals(a.getFileName()))
-                .findFirst()
-                .orElseGet(() -> OpportunityAttachment.builder()
-                        .opportunity(opp)
-                        .sourceUrl("admin-upload")
-                        .build());
-        attachment.applyUpload(fileName, fileSize, contentType, storageUrl);
-        attachmentRepository.save(attachment);
-    }
-
-    /** CR-037: ZIP 여부 판별 — 확장자 또는 content-type. */
-    private boolean isZip(String fileName, String contentType) {
-        if (fileName != null && fileName.toLowerCase().endsWith(".zip")) return true;
-        return contentType != null
-                && (contentType.equals("application/zip")
-                || contentType.equals("application/x-zip-compressed"));
-    }
-
-    /** CR-037: 경로 평탄화 — 마지막 세그먼트(파일명)만 사용. zip-slip 자동 회피. */
-    private String flatten(String name) {
-        if (name == null) return null;
-        String normalized = name.replace('\\', '/');
-        int idx = normalized.lastIndexOf('/');
-        return idx >= 0 ? normalized.substring(idx + 1) : normalized;
-    }
-
-    /** 파일명 확장자로 content-type 추정 (ZIP 엔트리는 MultipartFile content-type이 없으므로). */
-    private String guessContentType(String fileName) {
-        if (fileName == null) return "application/octet-stream";
-        String lower = fileName.toLowerCase();
-        if (lower.endsWith(".pdf")) return "application/pdf";
-        if (lower.endsWith(".doc")) return "application/msword";
-        if (lower.endsWith(".docx")) return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-        if (lower.endsWith(".xls")) return "application/vnd.ms-excel";
-        if (lower.endsWith(".xlsx")) return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-        if (lower.endsWith(".txt")) return "text/plain";
-        if (lower.endsWith(".png")) return "image/png";
-        if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
-        return "application/octet-stream";
     }
 
     @PostMapping("/{id}/attachments/{attachmentId}/auto-fetch")
@@ -327,7 +241,7 @@ public class OpportunityAdminController {
             throw new IllegalArgumentException("첨부가 해당 공고 소속이 아님: " + attachmentId);
         }
         // CR-034: SAM 수집 첨부(원본)는 삭제 불가 — 관리자 수동 업로드분만 삭제 허용
-        if (!"admin-upload".equals(attachment.getSourceUrl())) {
+        if (!AttachmentFiles.ADMIN_UPLOAD_SOURCE.equals(attachment.getSourceUrl())) {
             return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN).body(Map.of(
                     "status", "FORBIDDEN",
                     "reason", "SAM 수집 첨부는 삭제할 수 없습니다. 관리자가 직접 업로드한 첨부만 삭제 가능합니다.",

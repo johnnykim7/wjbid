@@ -10,7 +10,8 @@ import java.time.LocalDateTime;
 @Table(name = "opportunity_attachments",
         indexes = {
                 @Index(name = "idx_opp_attachments_opportunity", columnList = "opportunity_id"),
-                @Index(name = "idx_opp_attachments_status", columnList = "download_status")
+                @Index(name = "idx_opp_attachments_status", columnList = "download_status"),
+                @Index(name = "idx_opp_attachments_sha256", columnList = "content_sha256")
         })
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -48,6 +49,15 @@ public class OpportunityAttachment extends BaseEntity {
     /** CR-025: 자동 다운로드 실패 사유 (FAILED 시 보관) */
     @Column(name = "failure_reason", length = 500)
     private String failureReason;
+
+    /** CR-160: 저장한 파일 내용의 SHA-256. 같은 파일을 가린다(BIZ-080) */
+    @Column(name = "content_sha256", length = 64)
+    private String contentSha256;
+
+    /** CR-160: 저장한 파일 내용의 해시를 남긴다 */
+    public void recordContentHash(String sha256) {
+        this.contentSha256 = sha256;
+    }
 
     public void markDownloaded(String storageUrl) {
         this.storageUrl = storageUrl;

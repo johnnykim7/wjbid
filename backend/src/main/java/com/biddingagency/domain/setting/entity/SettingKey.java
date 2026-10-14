@@ -54,6 +54,17 @@ public final class SettingKey {
     /** 고객 화면 사진 저장 무게 목표(KB). 비었거나 1 보다 작으면 400 (POL-039, CR-153) */
     public static final String SITE_PHOTO_SAVE_MAX_KB = "SITE_PHOTO_SAVE_MAX_KB";
 
+    /** 수집 때 PIEE 입찰서류 받기를 건다. false 가 아니면 켠다 (POL-040, CR-160) */
+    public static final String PIEE_FETCH_ENABLED = "PIEE_FETCH_ENABLED";
+    /** PIEE 공개 공고 주소. {solNo} 자리에 공고번호. 비어 있으면 받지 않는다 (POL-040, CR-160) */
+    public static final String PIEE_NOTICE_URL = "PIEE_NOTICE_URL";
+    /** PIEE 입찰서류 압축 무게 상한(MB). 비었거나 1 보다 작으면 1024 (POL-040, CR-160) */
+    public static final String PIEE_MAX_ZIP_MB = "PIEE_MAX_ZIP_MB";
+    /** PIEE 입찰서류 한 번 받기 시간 상한(초). 비었거나 1 보다 작으면 900 (POL-040, CR-160) */
+    public static final String PIEE_TIMEOUT_SECONDS = "PIEE_TIMEOUT_SECONDS";
+    /** PIEE 받기 전에 그 공고의 SAM 첨부를 기다리는 상한(분). 비었거나 1 보다 작으면 10 (POL-040, CR-160) */
+    public static final String PIEE_SAM_WAIT_MINUTES = "PIEE_SAM_WAIT_MINUTES";
+
     private SettingKey() {
     }
 }

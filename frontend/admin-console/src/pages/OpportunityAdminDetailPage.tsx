@@ -49,6 +49,35 @@ interface OpportunityDetail {
   manualFetchRequiredCount: number
   noticeCount: number
   pieeLinkBroken?: boolean          // CR-043: PIEE 링크 오류 표식
+  // CR-160: PIEE 입찰서류 받기 결과. 받지 않는 공고는 null
+  pieeFetchStatus?: 'WAITING' | 'FETCHING' | 'DONE' | 'NOT_FOUND' | 'FAILED' | null
+  pieeFetchStatusAt?: string | null
+  pieeFileCount?: number | null
+  pieeFetchMessage?: string | null
+  pieeUrl?: string | null
+}
+
+// CR-160: 서버가 서울 시각을 시간대 없이 보내므로 브라우저 시간대로 바꾸지 않고 글자 그대로 자른다
+function formatSeoulShort(value?: string | null): string {
+  if (!value || value.length < 16) return ''
+  return `${value.slice(5, 7)}/${value.slice(8, 10)} ${value.slice(11, 16)}`
+}
+
+function pieeFetchLine(opp: OpportunityDetail): { text: string; tone: 'ok' | 'busy' | 'muted' | 'error' } | null {
+  const at = formatSeoulShort(opp.pieeFetchStatusAt)
+  switch (opp.pieeFetchStatus) {
+    case 'DONE':
+      return { text: `PIEE 입찰서류 ${opp.pieeFileCount ?? 0}개 받음 (${at})`, tone: 'ok' }
+    case 'WAITING':
+    case 'FETCHING':
+      return { text: 'PIEE 입찰서류 받는 중', tone: 'busy' }
+    case 'NOT_FOUND':
+      return { text: `PIEE 에 이 공고가 없습니다 (${at})`, tone: 'muted' }
+    case 'FAILED':
+      return { text: `PIEE 입찰서류 받기 실패 (${at}): ${opp.pieeFetchMessage ?? ''}`, tone: 'error' }
+    default:
+      return null
+  }
 }
 
 interface Attachment {
@@ -373,18 +402,31 @@ export default function OpportunityAdminDetailPage() {
                 아래에서 공고번호 <span className="font-semibold">{opp.solicitationNumber}</span>로 확인 후,
                 필요한 파일을 받아 "수동 업로드" 하세요.
               </p>
+              {(() => {
+                const line = pieeFetchLine(opp)
+                if (!line) return null
+                const toneClass = {
+                  ok: 'text-green-700',
+                  busy: 'text-gray-600',
+                  muted: 'text-gray-500',
+                  error: 'text-red-700',
+                }[line.tone]
+                return <p className={`text-xs font-medium mb-2 ${toneClass}`}>{line.text}</p>
+              })()}
               <div className="flex items-center gap-2 flex-wrap">
-                <a
-                  href={`https://piee.eb.mil/sol/xhtml/unauth/search/oppMgmtLink.xhtml?solNo=${encodeURIComponent(opp.solicitationNumber)}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-white ${
-                    opp.pieeLinkBroken ? 'bg-red-600 hover:bg-red-700' : 'bg-amber-600 hover:bg-amber-700'
-                  }`}
-                >
-                  <i className="fa-solid fa-up-right-from-square" />
-                  PIEE 입찰서류 보기
-                </a>
+                {opp.pieeUrl && (
+                  <a
+                    href={opp.pieeUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-white ${
+                      opp.pieeLinkBroken ? 'bg-red-600 hover:bg-red-700' : 'bg-amber-600 hover:bg-amber-700'
+                    }`}
+                  >
+                    <i className="fa-solid fa-up-right-from-square" />
+                    PIEE 입찰서류 보기
+                  </a>
+                )}
                 <button
                   type="button"
                   onClick={handleTogglePieeLinkBroken}
@@ -420,7 +462,8 @@ export default function OpportunityAdminDetailPage() {
                         <span className="ml-2 font-normal text-xs text-gray-400">{formatFileSize(a.fileSize)}</span>
                       )}
                     </div>
-                    {a.sourceUrl && a.sourceUrl !== 'admin-upload' && (
+                    {/* CR-160: PIEE 에서 받은 파일의 출처는 주소가 아니라 "piee:공고번호/압축 안 경로" 라 링크를 걸지 않는다 */}
+                    {a.sourceUrl && a.sourceUrl !== 'admin-upload' && !a.sourceUrl.startsWith('piee:') && (
                       <a href={a.sourceUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline truncate inline-block max-w-full">
                         <i className="fa-solid fa-external-link mr-1" />외부 원본 링크
                       </a>

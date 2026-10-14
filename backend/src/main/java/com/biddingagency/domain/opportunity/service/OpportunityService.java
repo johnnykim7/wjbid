@@ -3,6 +3,7 @@ package com.biddingagency.domain.opportunity.service;
 import com.biddingagency.domain.opportunity.NoticeTypeTranslator;
 import com.biddingagency.domain.opportunity.entity.Opportunity;
 import com.biddingagency.domain.opportunity.entity.OpportunityAttachment;
+import com.biddingagency.domain.opportunity.entity.PieeFetchStatus;
 import com.biddingagency.domain.opportunity.repository.OpportunityAttachmentRepository;
 import com.biddingagency.domain.opportunity.repository.OpportunityRepository;
 import com.biddingagency.domain.rfp.entity.IndustryType;
@@ -32,6 +33,7 @@ public class OpportunityService {
     private final OpportunityAttachmentRepository attachmentRepository;
     private final AttachmentAutoDownloadService attachmentAutoDownloadService;
     private final com.biddingagency.domain.notice.repository.NoticeRepository noticeRepository;
+    private final PieeSettings pieeSettings;
 
     /**
      * Find opportunity by ID
@@ -191,6 +193,7 @@ public class OpportunityService {
                         existing.updateContent(title, type, organizationName, postedDate,
                                 responseDeadline, uiLink, descriptionLink, rawJson, contentHash);
                         existing.assignIndustryType(industryType); // CR-014: 재수집 시 재분류
+                        armPieeFetch(existing);
                         log.info("Opportunity updated: {}", noticeId);
                         return new UpsertOutcome(existing, UpsertResult.CHANGED);
                     }
@@ -220,8 +223,23 @@ public class OpportunityService {
                     log.info("New opportunity created: {}", noticeId);
                     // CR-019: 신규 공고의 SAM 첨부(resourceLinks)를 적재 (외부 링크 → MANUAL_FETCH_REQUIRED)
                     ingestResourceLinks(saved, resourceLinks);
+                    armPieeFetch(saved);
                     return new UpsertOutcome(saved, UpsertResult.NEW);
                 });
+    }
+
+    /**
+     * CR-160: PIEE 입찰서류 받기를 건다(BIZ-079). 낙찰 공지, 공고번호가 빈 공고, 받기를 끈 때는 걸지 않는다.
+     * 지금 받는 중이면 그 받기가 끝나게 둔다.
+     */
+    private void armPieeFetch(Opportunity opportunity) {
+        if (!pieeSettings.enabled()
+                || AwardInfo.isAwardNotice(opportunity.getType())
+                || pieeSettings.noticeUrl(opportunity.getSolicitationNumber()).isEmpty()
+                || opportunity.getPieeFetchStatus() == PieeFetchStatus.FETCHING) {
+            return;
+        }
+        opportunity.waitPieeFetch(pieeSettings.now());
     }
 
     /**

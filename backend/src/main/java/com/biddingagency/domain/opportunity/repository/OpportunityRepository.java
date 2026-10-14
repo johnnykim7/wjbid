@@ -3,12 +3,15 @@ package com.biddingagency.domain.opportunity.repository;
 import com.biddingagency.domain.opportunity.dto.MarketSource;
 import com.biddingagency.domain.opportunity.entity.Opportunity;
 import com.biddingagency.domain.opportunity.entity.OpportunityVisibility;
+import com.biddingagency.domain.opportunity.entity.PieeFetchStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
@@ -149,4 +152,36 @@ public interface OpportunityRepository extends JpaRepository<Opportunity, UUID> 
     /** CR-135: 공고번호들의 모은 공고(지운 것 제외). 목록 줄의 본 공고 나옴, 원래 공고를 채울 때 쓴다 */
     @Query(MARKET_SOURCE_SELECT + " AND TRIM(o.solicitationNumber) IN :sols")
     List<MarketSource> findMarketSourcesBySolicitationNumbers(@Param("sols") Collection<String> sols);
+
+    /** CR-160: 받기를 기다리는 공고, 오래 기다린 것부터(BIZ-079) */
+    List<Opportunity> findByPieeFetchStatusOrderByPieeFetchStatusAtAsc(PieeFetchStatus status);
+
+    long countByPieeFetchStatus(PieeFetchStatus status);
+
+    /** CR-160: 받기 결과를 바꾼다. 지금 결과가 from 일 때만 바꿔서 두 일꾼이 같은 공고를 잡지 않는다 */
+    @Transactional
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE Opportunity o SET o.pieeFetchStatus = :to, o.pieeFetchStatusAt = :at "
+            + "WHERE o.id = :id AND o.pieeFetchStatus = :from")
+    int changePieeFetchStatus(@Param("id") UUID id, @Param("from") PieeFetchStatus from,
+                              @Param("to") PieeFetchStatus to, @Param("at") LocalDateTime at);
+
+    /** CR-160: 받기를 끝낸다. 공고의 다른 칸은 건드리지 않는다 */
+    @Transactional
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE Opportunity o SET o.pieeFetchStatus = :to, o.pieeFetchStatusAt = :at, "
+            + "o.pieeFileCount = :fileCount, o.pieeFetchMessage = :message "
+            + "WHERE o.id = :id AND o.pieeFetchStatus = :from")
+    int finishPieeFetch(@Param("id") UUID id, @Param("from") PieeFetchStatus from,
+                        @Param("to") PieeFetchStatus to, @Param("at") LocalDateTime at,
+                        @Param("fileCount") Integer fileCount, @Param("message") String message);
+
+    /** CR-160: 받는 중에 서버가 내려가 남은 공고를 받기 실패로 바꾼다 */
+    @Transactional
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE Opportunity o SET o.pieeFetchStatus = :to, o.pieeFetchStatusAt = :at, o.pieeFetchMessage = :message "
+            + "WHERE o.pieeFetchStatus = :from AND o.pieeFetchStatusAt < :before")
+    int failStalePieeFetch(@Param("from") PieeFetchStatus from, @Param("to") PieeFetchStatus to,
+                           @Param("before") LocalDateTime before, @Param("at") LocalDateTime at,
+                           @Param("message") String message);
 }
