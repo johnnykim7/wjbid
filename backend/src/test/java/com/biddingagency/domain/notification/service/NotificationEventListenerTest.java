@@ -11,6 +11,7 @@ import com.biddingagency.domain.event.OpportunitiesCollectedEvent;
 import com.biddingagency.domain.event.OpportunityApprovedEvent;
 import com.biddingagency.domain.member.entity.Member;
 import com.biddingagency.domain.member.repository.MemberRepository;
+import com.biddingagency.domain.member.service.MembershipService;
 import com.biddingagency.domain.notification.entity.NotificationType;
 import com.biddingagency.domain.opportunity.entity.Opportunity;
 import com.biddingagency.domain.opportunity.repository.OpportunityRepository;
@@ -22,6 +23,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -43,6 +45,8 @@ class NotificationEventListenerTest {
     private OpportunityRepository opportunityRepository;
     @Mock
     private BidRequestRepository bidRequestRepository;
+    @Mock
+    private MembershipService membershipService;
 
     @InjectMocks
     private NotificationEventListener listener;
@@ -463,7 +467,9 @@ class NotificationEventListenerTest {
         org.springframework.test.util.ReflectionTestUtils.setField(opp, "id", opportunityId);
         org.springframework.test.util.ReflectionTestUtils.setField(listener, "customerPortalUrl", "https://portal.test");
         given(opportunityRepository.findById(opportunityId)).willReturn(Optional.of(opp));
-        given(memberRepository.findByRole(Member.Role.CUSTOMER)).willReturn(List.of(createCustomer()));
+        Member customer = withId(createCustomer());
+        given(memberRepository.findByRole(Member.Role.CUSTOMER)).willReturn(List.of(customer));
+        given(membershipService.currentEndsOn(any())).willReturn(Map.of(customer.getId(), LocalDate.of(2026, 12, 31)));
         ArgumentCaptor<Map<String, Object>> vars = ArgumentCaptor.forClass(Map.class);
 
         // when
@@ -474,5 +480,44 @@ class NotificationEventListenerTest {
                 eq(NotificationType.OPPORTUNITY_APPROVED), eq("customer@test.com"), any(),
                 any(), vars.capture(), eq(opportunityId), eq("Opportunity"), any());
         assertThat(vars.getValue().get("detailUrl")).isEqualTo("https://portal.test/search/origin/" + opportunityId);
+    }
+
+    private UUID approvedOpportunity() {
+        UUID opportunityId = UUID.randomUUID();
+        Opportunity opp = Opportunity.builder().title("USFK Facility Maintenance").noticeId("W912-26-R-0001").build();
+        org.springframework.test.util.ReflectionTestUtils.setField(opp, "id", opportunityId);
+        given(opportunityRepository.findById(opportunityId)).willReturn(Optional.of(opp));
+        return opportunityId;
+    }
+
+    @Test
+    @DisplayName("공고노출승인_무료회원만있음_신규공고알림미발송_CR161")
+    void 무료회원만있음_신규공고알림_미발송() {
+        UUID opportunityId = approvedOpportunity();
+        given(memberRepository.findByRole(Member.Role.CUSTOMER)).willReturn(List.of(withId(createCustomer())));
+        given(membershipService.currentEndsOn(any())).willReturn(Map.of());
+
+        listener.onOpportunityApproved(new OpportunityApprovedEvent(opportunityId, UUID.randomUUID()));
+
+        then(notificationService).shouldHaveNoInteractions();
+    }
+
+    @Test
+    @DisplayName("공고노출승인_회원과무료회원섞임_회원에게만발송_CR161")
+    void 회원과무료회원섞임_신규공고알림_회원에게만발송() {
+        UUID opportunityId = approvedOpportunity();
+        Member paid = withId(Member.builder().email("paid@test.com").passwordHash("hash")
+                .companyName("PaidCo").role(Member.Role.CUSTOMER).build());
+        Member free = withId(Member.builder().email("free@test.com").passwordHash("hash")
+                .companyName("FreeCo").role(Member.Role.CUSTOMER).build());
+        given(memberRepository.findByRole(Member.Role.CUSTOMER)).willReturn(List.of(paid, free));
+        given(membershipService.currentEndsOn(any())).willReturn(Map.of(paid.getId(), LocalDate.of(2026, 12, 31)));
+        ArgumentCaptor<String> emails = ArgumentCaptor.forClass(String.class);
+
+        listener.onOpportunityApproved(new OpportunityApprovedEvent(opportunityId, UUID.randomUUID()));
+
+        then(notificationService).should(atLeastOnce()).sendNotification(eq(NotificationType.OPPORTUNITY_APPROVED),
+                emails.capture(), any(), any(), any(), eq(opportunityId), eq("Opportunity"), any());
+        assertThat(emails.getAllValues()).containsExactly("paid@test.com");
     }
 }
