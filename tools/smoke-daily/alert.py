@@ -7,14 +7,20 @@ import glob
 import html
 import json
 import os
+import re
 import sys
 from datetime import datetime, timedelta, timezone
 from urllib.request import Request, urlopen
 
 KST = timezone(timedelta(hours=9))
 HERE = os.path.dirname(os.path.realpath(__file__))
+# 컨테이너 안 경로 대신 서버에서 찾아갈 경로를 메일에 적는다
+HOST_DIR = os.environ.get('SMOKE_HOST_DIR') or HERE
 SMOKE_DIR = os.path.join(HERE, 'testbook', 'results', '스모크')
 TEMPLATE = 'BID_SMOKE_ALERT'
+# 메일은 기획자가 읽는다. 판정 도구의 말을 업무 말로 바꾸고, 응답 원문은 점검 기록에만 둔다
+STATUS = {'깨짐': '실패(전에는 통과)', '원래 실패': '실패', '자동으로 못 봄': '점검하지 못함'}
+UNSEEN = re.compile(r'^\S+ (\d+)번 (결과 없음|재료 없음·오류)$')
 
 
 def this_report():
@@ -29,13 +35,13 @@ def this_report():
 
 
 def detail_of(row):
-    lines = [f'{row["id"]} {row["title"]} : {row["status"]}']
+    lines = [f'{row["id"]} {row["title"]}: {STATUS.get(row["status"], row["status"])}']
     for c in row.get('checks') or []:
         if c['verdict'] == 'fail':
-            lines.append(f'  - {c["line"]}번 {c["expect"]}')
-            lines.append(f'    이번 결과 {c["got"][:300]}')
+            lines.append(f'  - {c["expect"]}: 확인 안 됨(응답 {c["got"].split(" ", 1)[0]})')
     for u in row.get('unseen') or []:
-        lines.append(f'  - {u}')
+        m = UNSEEN.match(u)
+        lines.append(f'  - {m.group(1)}번: 앞 단계가 막혀 확인하지 못함' if m else f'  - {u}')
     return '\n'.join(lines)
 
 
@@ -51,7 +57,7 @@ def main():
     outdir, report = this_report()
     checked = datetime.now(KST).strftime('%Y-%m-%d %H:%M')
     if report is None:
-        fail_count, summary, details, path = 1, '점검이 결과를 남기지 못했습니다', '로그를 확인해 주십시오.', os.path.join(HERE, 'logs')
+        fail_count, summary, details, path = 1, '점검이 결과를 남기지 못했습니다', '로그를 확인해 주십시오.', os.path.join(HOST_DIR, 'logs')
         target = ''
     else:
         bad = [r for r in report['items'] if r['status'] != '통과']
@@ -61,7 +67,7 @@ def main():
         fail_count = len(bad)
         summary = f'{report["set"]}건 중 통과 {report["set"] - fail_count}건, 통과 못 함 {fail_count}건'
         details = '\n\n'.join(detail_of(r) for r in bad)
-        path = os.path.join(outdir, 'report.md')
+        path = os.path.join(HOST_DIR, os.path.relpath(os.path.join(outdir, 'report.md'), HERE))
         target = ', '.join(sorted(set(report.get('target', {}).values())))
     # 알림 서버가 값을 그대로 HTML 본문에 넣는다
     variables = {'checkedAt': checked, 'target': target, 'summary': summary,

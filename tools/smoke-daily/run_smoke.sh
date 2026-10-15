@@ -14,6 +14,7 @@ docker run --rm \
   -e TESTBOOK_DIR=/smoke/testbook \
   -e CLAUDE_PLUGIN_ROOT=/smoke/plugin \
   -e SMOKE_STARTED="$STARTED" \
+  -e SMOKE_HOST_DIR="$HOME_DIR" \
   -v "$HOME_DIR:/smoke" \
   -w /smoke \
   python:3.12-slim \
