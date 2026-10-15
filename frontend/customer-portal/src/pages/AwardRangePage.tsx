@@ -40,9 +40,15 @@ function tickLabel(p: number): string {
   return unit ? `$${10 ** (p - unit[0])}${unit[1]}` : `$${10 ** p}`
 }
 
+const hasRange = (r: RangeRow) => r.min != null && r.p25 != null && r.p50 != null && r.p75 != null && r.max != null
+
+/** 0건인 줄은 빼고 범위를 낸 줄을 먼저 보인다. 0건 줄이 첫 줄을 차지해 범위가 없는 화면처럼 보였다 (CR-164) */
+const shownRows = (rows: RangeRow[]) =>
+  rows.filter((r) => r.count > 0).sort((a, b) => Number(hasRange(b)) - Number(hasRange(a)))
+
 function RangeLine({ r, axis }: { r: RangeRow; axis: ReturnType<typeof axisOf> }) {
   const [name, kinds] = T.group[r.group]
-  const ready = r.min != null && r.p25 != null && r.p50 != null && r.p75 != null && r.max != null && axis
+  const ready = hasRange(r) && axis
   return (
     <div className="rc-rr">
       <div className="lb"><b>{name}</b><span>{kinds}</span><em>{T.count(r.count)}</em></div>
@@ -224,7 +230,7 @@ export default function AwardRangePage() {
               {total === 0 ? <div className="rc-msg">{T.empty.none}</div> : (
                 <>
                   <p className="rc-nsub">{T.sub(q, total)}</p>
-                  {ok.rows.map((r) => <RangeLine key={r.group} r={r} axis={axis} />)}
+                  {shownRows(ok.rows).map((r) => <RangeLine key={r.group} r={r} axis={axis} />)}
                 </>
               )}
             </section>

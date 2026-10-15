@@ -8,6 +8,7 @@ import com.biddingagency.domain.rfp.entity.IndustryType;
 import com.biddingagency.integration.samgov.dto.SAMOpportunityResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.task.TaskRejectedException;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 
@@ -162,7 +163,12 @@ public class OpportunityCollectorService {
                     log.warn("[CR-022-2] 선별 메타 반영 실패 id={}: {}", oppId, ex.getMessage());
                 }
                 // CR-022 (재구현): 신규 공고 제목/본문 비동기 번역.
-                translationService.translateAsync(oppId);
+                // CR-164: 번역 대기 칸이 차도 아래 낙찰 정보 저장은 이어 간다(BIZ-070).
+                try {
+                    translationService.translateAsync(oppId);
+                } catch (TaskRejectedException ex) {
+                    log.warn("[CR-164] 번역 대기 칸이 차서 번역을 넣지 못함 id={}", oppId);
+                }
             }
             if (data.getAward() != null) {
                 try {

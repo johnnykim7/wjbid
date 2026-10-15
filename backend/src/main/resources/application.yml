@@ -120,6 +120,10 @@ springdoc:
 
 # Application-Specific Configuration
 app:
+  # 수집 때 새 공고 번역 대기 칸. 번역은 한 건씩 차례로 돌고 이 칸을 넘는 번역만 버린다 (CR-164, BIZ-070)
+  async:
+    translation:
+      queue-capacity: ${TRANSLATION_QUEUE_CAPACITY:1000}
   # FlowGuard 시나리오 확인용 무인증 조회 통로(/validation). 운영에서는 닫는다 (CR-143)
   validation-api:
     enabled: false
