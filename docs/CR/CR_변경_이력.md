@@ -1258,7 +1258,7 @@
 - **영향 모듈**: BE OpportunityCollectionScheduler, CollectorRun, NotificationEventListener / 시험항목 items_16, server_vars
 - **영향 설계서**: 없음. T3-1 CollectorRun, T3-2 수집 이력 조회, T1-1 BID-OPP-004 에 이미 있는 동작이다
 - **규모**: 소
-- **상태**: 서버 구현, 전체 시험 514건 통과(10/15). 상용 배포 대기
+- **상태**: 서버 구현, 전체 시험 514건 통과(10/15). 상용 배포 10/15 09:33 커밋 d4097e9(deploy/cr163-prod = f3d0ae3 위에 130ff7e 의 서버 수정만, be). 배포 뒤 Aimbase 재연결 connected 도구 19개. 첫 수집 이력은 12:00 회차에서 확인
 
 ### CR-164: 낙찰정보 채우기와 수집 번역 한 줄 (2026-10-15)
 
