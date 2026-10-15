@@ -1,4 +1,5 @@
 """이번 스모크 결과를 읽어 통과하지 못한 항목이 있으면 알림 서버로 관리자 메일을 보낸다.
+SMOKE_NOTIFY_SUCCESS=true 이면 전부 통과한 날에도 통과 메일을 보낸다.
 
 스모크는 전에 통과한 적이 있는 줄이 실패할 때만 깨짐으로 친다. 매일 점검은 상용이 지금 도는지를 보는 것이라
 원래 실패와 자동으로 못 봄도 알린다. 결과가 없으면 점검 자체가 돌지 못한 것이라 그것도 알린다.
@@ -18,6 +19,7 @@ HERE = os.path.dirname(os.path.realpath(__file__))
 HOST_DIR = os.environ.get('SMOKE_HOST_DIR') or HERE
 SMOKE_DIR = os.path.join(HERE, 'testbook', 'results', '스모크')
 TEMPLATE = 'BID_SMOKE_ALERT'
+TEMPLATE_OK = 'BID_SMOKE_OK'
 # 메일은 기획자가 읽는다. 판정 도구의 말을 업무 말로 바꾸고, 응답 원문은 점검 기록에만 둔다
 STATUS = {'깨짐': '실패(전에는 통과)', '원래 실패': '실패', '자동으로 못 봄': '점검하지 못함'}
 UNSEEN = re.compile(r'^\S+ (\d+)번 (결과 없음|재료 없음·오류)$')
@@ -45,8 +47,8 @@ def detail_of(row):
     return '\n'.join(lines)
 
 
-def send(to, variables):
-    body = json.dumps({'email': to, 'templateCode': TEMPLATE, 'variables': variables}).encode()
+def send(to, template, variables):
+    body = json.dumps({'email': to, 'templateCode': template, 'variables': variables}).encode()
     req = Request(os.environ['BP_NOTIFICATION_URL'].rstrip('/') + '/messages/email', data=body, method='POST',
                   headers={'Content-Type': 'application/json', 'X-API-Key': os.environ['BP_NOTIFICATION_API_KEY']})
     with urlopen(req, timeout=30) as r:
@@ -57,25 +59,32 @@ def main():
     outdir, report = this_report()
     checked = datetime.now(KST).strftime('%Y-%m-%d %H:%M')
     if report is None:
-        fail_count, summary, details, path = 1, '점검이 결과를 남기지 못했습니다', '로그를 확인해 주십시오.', os.path.join(HOST_DIR, 'logs')
+        template = TEMPLATE
+        count, summary, details, path = 1, '점검이 결과를 남기지 못했습니다', '로그를 확인해 주십시오.', os.path.join(HOST_DIR, 'logs')
         target = ''
     else:
         bad = [r for r in report['items'] if r['status'] != '통과']
-        if not bad:
-            print(f'전부 통과 {len(report["items"])}건, 메일 없음')
-            return 0
-        fail_count = len(bad)
-        summary = f'{report["set"]}건 중 통과 {report["set"] - fail_count}건, 통과 못 함 {fail_count}건'
-        details = '\n\n'.join(detail_of(r) for r in bad)
         path = os.path.join(HOST_DIR, os.path.relpath(os.path.join(outdir, 'report.md'), HERE))
         target = ', '.join(sorted(set(report.get('target', {}).values())))
+        if bad:
+            template, count = TEMPLATE, len(bad)
+            summary = f'{report["set"]}건 중 통과 {report["set"] - count}건, 통과 못 함 {count}건'
+            details = '\n\n'.join(detail_of(r) for r in bad)
+        elif os.environ.get('SMOKE_NOTIFY_SUCCESS') == 'true':
+            template, count = TEMPLATE_OK, len(report['items'])
+            summary = f'{count}건 모두 통과'
+            details = '\n'.join(f'{r["id"]} {r["title"]}' for r in report['items'])
+        else:
+            print(f'전부 통과 {len(report["items"])}건, 메일 없음')
+            return 0
     # 알림 서버가 값을 그대로 HTML 본문에 넣는다
     variables = {'checkedAt': checked, 'target': target, 'summary': summary,
-                 'details': html.escape(details, quote=False), 'reportPath': path, 'failCount': str(fail_count)}
+                 'details': html.escape(details, quote=False), 'reportPath': path,
+                 'failCount' if template == TEMPLATE else 'passCount': str(count)}
     sent = 0
     for to in [x.strip() for x in os.environ.get('SMOKE_ALERT_TO', '').split(',') if x.strip()]:
         try:
-            print(f'알림 {to} {send(to, variables)}')
+            print(f'알림 {template} {to} {send(to, template, variables)}')
             sent += 1
         except Exception as e:  # 한 사람에게 못 보내도 나머지에게는 보낸다
             print(f'알림 실패 {to} {e}', file=sys.stderr)
