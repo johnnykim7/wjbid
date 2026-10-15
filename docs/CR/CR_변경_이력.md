@@ -1270,4 +1270,4 @@
 - **영향 모듈**: BE AsyncConfig, OpportunityTranslationService, OpportunityCollectorService / 고객 포털 낙찰가 범위
 - **영향 설계서**: T1-3 1.12(BIZ-070), T3-3 1.19(낙찰가 범위 범위 두 줄)
 - **규모**: 소
-- **상태**: 설계(10/15)
+- **상태**: 상용 배포(10/15 09:44, d91bc23 = d4097e9 + 2ea6845, deploy/cr164-prod, all). 배포 뒤 Aimbase 다시 연결, 지난 낙찰 공지 다시 받기로 25건 채움(낙찰 공지 150건 중 업체 이름 135건, 15건은 SAM.gov 에서 공지가 내려감). 한글 제목이 빈 낙찰 공지 38건은 남음
