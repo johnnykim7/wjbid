@@ -1,5 +1,6 @@
 package com.biddingagency.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableAsync;
@@ -55,6 +56,22 @@ public class AsyncConfig {
         executor.setMaxPoolSize(1);
         executor.setQueueCapacity(10);
         executor.setThreadNamePrefix("piee-fetch-");
+        executor.initialize();
+        return executor;
+    }
+
+    /**
+     * CR-164: 수집 때 새 공고 번역 전용. 번역기(Aimbase 실행기)는 동시에 여러 건을 받으면 멈추거나
+     * 메모리가 넘쳐 죽으므로 한 줄로 돌린다(BIZ-070). 한 번에 새 공고가 많이 들어와도 버리지 않도록
+     * 대기 칸은 설정값으로 넉넉히 둔다. 재기동 때 남은 번역은 기다리지 않는다(관리자 번역 단추로 채운다).
+     */
+    @Bean(name = "translationExecutor")
+    public Executor translationExecutor(@Value("${app.async.translation.queue-capacity}") int queueCapacity) {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(1);
+        executor.setMaxPoolSize(1);
+        executor.setQueueCapacity(queueCapacity);
+        executor.setThreadNamePrefix("translate-");
         executor.initialize();
         return executor;
     }

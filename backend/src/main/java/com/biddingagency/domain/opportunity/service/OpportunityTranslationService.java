@@ -44,8 +44,9 @@ public class OpportunityTranslationService {
      * CR-139: 번역은 저장 단위 밖에서 받고, 받은 뒤 공고를 다시 읽어 짧게 저장한다.
      * 번역 동안 DB 연결을 잡지 않고, 엔티티는 모든 칸을 다시 쓰므로 처음 읽은 공고를 저장하면
      * 그 사이 수집이 넣은 낙찰 정보(CR-136)를 옛 값으로 덮는다.
+     * CR-164: 번역기는 한 번에 한 건만 받으므로 수집 번역 전용 한 줄 실행에서 돈다(BIZ-070).
      */
-    @Async("llmTaskExecutor")
+    @Async("translationExecutor")
     public void translateAsync(UUID opportunityId) {
         Opportunity opp = opportunityRepository.findById(opportunityId).orElse(null);
         if (opp == null) {
