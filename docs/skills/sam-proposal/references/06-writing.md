@@ -3,7 +3,7 @@
 **역할**: 섹션 기획서와 목업대로 실제 본문을 작성하고 DOCX로 생산한다.
 **입력**: 섹션 기획서 전체, Winning Theme, 컴플라이언스 매트릭스
 **산출물**: `6-proposal/sections/*.md`, `6-proposal/diagrams/*`, `6-proposal/proposal-final.docx`
-**필수 선행 독서**: `00-writing-style.md` + `/mnt/skills/public/docx/SKILL.md`
+**필수 선행 독서**: `00-writing-style.md` + docx 스킬(있으면)
 
 ## 청크 실행 규칙 (균등 깊이의 핵심)
 
@@ -73,7 +73,7 @@ ES는 본문보다 먼저, 4-Box + Hot Button 구조로 작성한다:
 
 ## DOCX 조립 — AX 표준 서식 v2
 
-1. `/mnt/skills/public/docx/SKILL.md`를 먼저 읽는다.
+1. docx 스킬이 있으면 그 안내서를 먼저 읽는다. 공고의 작성 지시(Section L, 상업 품목은 FAR 52.212-1 에 따른 지시)가 서식을 정하면 아래 표보다 그 지시가 먼저다.
 2. **스타일을 즉흥 정의하지 않는다.** `assets/templates/docx-style.js`를 작업 폴더로 복사해 require한다:
    - `buildStyles(docx, profile)` · `buildNumbering(docx, profile)` · `tableBorders(docx)` · `headlineBox(docx, profile, text)`
    - 프로파일: `'public'`(공공 입찰, 완전 무채) | `'enterprise'`(기업 제안, Navy 1색)
@@ -99,6 +99,6 @@ ES는 본문보다 먼저, 4-Box + Hot Button 구조로 작성한다:
    도식-캡션 페이지 분리, 페이지 끝 고아 제목, 박스-본문 정렬
 7. **Pretendard 배포 규칙**: 수신자 PC에 폰트가 없을 수 있으므로 대외 제출은 PDF(폰트 임베드) 병행 산출이 필수. DOCX는 내부 편집용
 8. RFP 지정 서식(표지·폰트·분량)이 있으면 이 표준 전체보다 **무조건 우선**
-9. 완성본(docx+pdf)을 `/mnt/user-data/outputs/`로 복사 후 present_files로 공유
+9. 완성본(docx+pdf)은 워크플로우가 정한 저장 도구로 넘긴다
 
 작업량이 큰 경우 청크별로 사용자와 중간 점검하며 진행한다.
