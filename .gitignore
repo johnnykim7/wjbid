@@ -106,3 +106,7 @@ rfp/
 
 # Claude Code 로컬 lock
 .claude/scheduled_tasks.lock
+
+# 시험 항목 도구: 화면 콘솔은 build_console.py 로 다시 만든다
+tools/testbook/console/
+__pycache__/

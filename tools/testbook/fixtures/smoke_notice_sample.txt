@@ -1,0 +1,45 @@
+SMOKE TEST SAMPLE - NOT A REAL SOLICITATION
+This document exists only to check that the bidding platform can summarize 
+and translate a notice.
+Do not respond to it.
+
+Solicitation Number: TEST-SMOKE-AI-0001
+Title: Grounds Maintenance Services for Test Contracting Office Building 100
+Issuing Office: Test Contracting Office (fictitious)
+Notice Type: Combined Synopsis/Solicitation
+Set-Aside: Total Small Business
+NAICS: 561730 Landscaping Services
+
+1. Scope of Work
+The contractor shall provide grounds maintenance for Building 100, about 5 
+acres.
+Work includes mowing every two weeks from April to October, trimming hedges 
+twice a year,
+removing leaves in November, and clearing snow from walkways within 4 hours 
+after snowfall ends.
+
+2. Period of Performance
+Base period of 12 months from the date of award. No option periods.
+
+3. Eligibility
+Offerors must be registered in SAM with an active Unique Entity ID at the 
+time of offer.
+Offerors must have completed at least one grounds maintenance contract of 
+similar size in the last 3 years.
+
+4. Evaluation
+Award will be made on a Lowest Price Technically Acceptable basis.
+Technical acceptability is pass or fail based on the past performance 
+reference and the work plan.
+
+5. Key Dates
+Questions due: 2 weeks after posting.
+Offers due: 4 weeks after posting, 10:00 local time.
+Site visit: optional, 1 week after posting.
+
+6. Submission
+Submit one PDF containing the price schedule, a one-page work plan, and one 
+past performance reference.
+
+7. Point of Contact
+Test Contracting Officer, test@example.com

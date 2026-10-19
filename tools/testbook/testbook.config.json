@@ -1,0 +1,54 @@
+{
+  "project": "WJBID",
+  "docs": {
+    "req": "docs/AI-SDLC/T1-1_기능요구사항_명세서.md"
+  },
+  "areas": {
+    "01": "인증/회원",
+    "02": "공고 열람",
+    "03": "입찰 접수",
+    "04": "요금/자격 진단",
+    "05": "고객센터",
+    "06": "메뉴 속 화면",
+    "07": "공고 자료 화면",
+    "08": "제출 전 검사/서류함",
+    "09": "공고 수집",
+    "10": "AI 문서 생성/편집",
+    "11": "컴플라이언스",
+    "12": "관리자/상태 관리",
+    "13": "성공 제안서 패턴",
+    "14": "MCP/알림",
+    "15": "AI 생성 약식",
+    "16": "기본 스모크"
+  },
+  "server": {
+    "api": {
+      "user": "https://woojinusbid.com",
+      "admin": "https://woojinusbid.com"
+    },
+    "guest": "user",
+    "login": {
+      "path": "/api/auth/login",
+      "body": {
+        "email": "{account}",
+        "password": "$QA_PASSWORD"
+      },
+      "ok_status": 200,
+      "token_at": "accessToken",
+      "token_header": "Authorization",
+      "token_prefix": "Bearer "
+    },
+    "session_lost": {
+      "status": 401,
+      "code_at": "",
+      "codes": []
+    },
+    "list": {
+      "data_at": "content",
+      "page_param": "page",
+      "first_page": 0,
+      "total_pages_at": "totalPages"
+    },
+    "lock": "/tmp/testbook-wjbid.lock"
+  }
+}
