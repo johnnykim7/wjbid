@@ -268,14 +268,21 @@ export default function BidDetailPage({ origin = false }: { origin?: boolean }) 
                     <div className="space-y-4">
                       {bid.analysis.summary.overview && (
                         <div className="bg-brand-soft border border-brand-line rounded-lg p-5">
-                          <p className="text-sm text-ink leading-relaxed">{bid.analysis.summary.overview}</p>
+                          <p className="text-sm text-ink leading-relaxed whitespace-pre-line">{bid.analysis.summary.overview}</p>
                         </div>
                       )}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* 과업 한 줄, 연차 한 줄로 써서 길다. 두 칸 너비로 둔다 (CR-167, BIZ-083) */}
                         {bid.analysis.summary.scope && (
-                          <div className="bg-surface rounded-lg p-4 border border-line">
+                          <div className="bg-surface rounded-lg p-4 border border-line md:col-span-2">
                             <div className="text-xs font-semibold text-ink-mute uppercase mb-2">작업 범위</div>
-                            <p className="text-sm text-ink-sub leading-relaxed">{bid.analysis.summary.scope}</p>
+                            <p className="text-sm text-ink-sub leading-relaxed whitespace-pre-line">{bid.analysis.summary.scope}</p>
+                          </div>
+                        )}
+                        {bid.analysis.summary.contractPeriod && (
+                          <div className="bg-surface rounded-lg p-4 border border-line md:col-span-2">
+                            <div className="text-xs font-semibold text-ink-mute uppercase mb-2">계약 기간</div>
+                            <p className="text-sm text-ink-sub leading-relaxed whitespace-pre-line">{bid.analysis.summary.contractPeriod}</p>
                           </div>
                         )}
                         {bid.analysis.summary.eligibility && (
@@ -289,19 +296,19 @@ export default function BidDetailPage({ origin = false }: { origin?: boolean }) 
                                 </DsButton>
                               )}
                             </div>
-                            <p className="text-sm text-ink-sub leading-relaxed">{bid.analysis.summary.eligibility}</p>
+                            <p className="text-sm text-ink-sub leading-relaxed whitespace-pre-line">{bid.analysis.summary.eligibility}</p>
                           </div>
                         )}
                         {bid.analysis.summary.evaluationCriteria && (
                           <div className="bg-surface rounded-lg p-4 border border-line">
                             <div className="text-xs font-semibold text-ink-mute uppercase mb-2">평가 기준</div>
-                            <p className="text-sm text-ink-sub leading-relaxed">{bid.analysis.summary.evaluationCriteria}</p>
+                            <p className="text-sm text-ink-sub leading-relaxed whitespace-pre-line">{bid.analysis.summary.evaluationCriteria}</p>
                           </div>
                         )}
                         {bid.analysis.summary.budgetInfo && (
                           <div className="bg-surface rounded-lg p-4 border border-line">
                             <div className="text-xs font-semibold text-ink-mute uppercase mb-2">예산 정보</div>
-                            <p className="text-sm text-ink-sub leading-relaxed">{bid.analysis.summary.budgetInfo}</p>
+                            <p className="text-sm text-ink-sub leading-relaxed whitespace-pre-line">{bid.analysis.summary.budgetInfo}</p>
                           </div>
                         )}
                       </div>
