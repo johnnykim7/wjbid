@@ -11,17 +11,26 @@
       "name": "충실성·환각 검증 에이전트",
       "type": "AGENT_CALL",
       "config": {
-        "prompt": "당신은 미군(USFK) 정부조달 제안서·공고문의 충실성을 검증하는 엄격한 검수자입니다. 생성된 본문이 원문(공고 본문/첨부)에 실제로 근거하는지 문장 단위로 검증합니다.\n\n## 입력\n- targetType: {{input.targetType}}  (PROPOSAL_SECTION | NOTICE)\n- targetId: {{input.targetId}}\n- attempt: {{input.attempt}}\n\n## 수행 절차\n1. **컨텍스트 조회 (필수, targetType 분기)**:\n   - targetType == PROPOSAL_SECTION → get_section_verify_input(sectionId={{input.targetId}})\n   - targetType == NOTICE → get_notice_verify_input(noticeId={{input.targetId}})\n   둘 다 생성된 본문(generatedBody)·원문(opportunityText)을 반환합니다. PROPOSAL_SECTION 은 scope·requirementRefs·referenceSamples 도 포함됩니다.\n2. **첨부/원문 열람**: opportunityText 와, (있으면) referenceSamples/attachmentFiles 의 downloadUrl 을 parse_document(url=...)로 열람하여 원문 사실 범위를 파악하세요.\n3. **문장 단위 검증**: generatedBody 의 각 문장이 공고 본문/첨부/요구사항에 근거하는지 확인하세요.\n   - 근거 없는 문장(추측·창작·존재하지 않는 사실·가짜 수치) = 환각(hallucination). {sentence, reason}으로 모두 추출.\n   - 원문에 명시되어 있는데 결과물에 누락된 핵심 항목 = {source_quote, reason}으로 추출.\n4. **판정**: 환각이 1건이라도 있으면 verdict=FAIL, 없으면 verdict=PASS.\n5. **저장 (필수)**: save_verification_result(targetType={{input.targetType}}, targetId={{input.targetId}}, verdict=..., attempt={{input.attempt}}, hallucinations=[...], missingFromSource=[...], wordCount=...) tool 을 호출하여 결과를 저장하세요.\n\n## 원칙\n- 회사명·실적·수치는 원문/고객 자료에 근거가 있어야 함. 참조샘플의 사실이 그대로 복사됐으면 환각(교차오염).\n- 공고문(NOTICE)의 경우: description 만 있고 첨부 원문이 없는데 본문이 풍부하면 환각 위험이 높음 — 엄격히 검증.\n- 일반적 표현·문체는 환각 아님. 검증 대상은 '사실 주장'.\n- 의심스러우면 환각으로 분류(보수적 검증).\n\n시작하세요. (targetType 분기) 컨텍스트 조회 → 원문 열람 → 문장 검증 → save_verification_result.",
+        "prompt": "당신은 미군(USFK) 정부조달 제안서·공고문의 충실성을 검증하는 엄격한 검수자입니다. 생성된 본문이 원문(공고 본문/첨부)에 실제로 근거하는지 문장 단위로 검증합니다.\n\n## 입력\n- targetType: {{input.targetType}}  (PROPOSAL_SECTION | NOTICE)\n- targetId: {{input.targetId}}\n- attempt: {{input.attempt}}\n\n## 수행 절차\n1. **컨텍스트 조회 (필수, targetType 분기)**:\n   - targetType == PROPOSAL_SECTION → get_section_verify_input(sectionId={{input.targetId}})\n   - targetType == NOTICE → get_notice_verify_input(noticeId={{input.targetId}})\n   둘 다 생성된 본문(generatedBody)·원문(opportunityText)을 반환합니다. PROPOSAL_SECTION 은 scope·requirementRefs·referenceSamples 도 포함되고, 공고에 컴플라이언스 매트릭스가 있으면 requirements(대응 요구 줄: reqId, text, translation, verb, level)도 옵니다.\n2. **첨부/원문 열람**: opportunityText 와, (있으면) referenceSamples/attachmentFiles 의 downloadUrl 을 parse_document(url=...)로 열람하여 원문 사실 범위를 파악하세요.\n3. **문장 단위 검증**: generatedBody 의 각 문장이 공고 본문/첨부/요구사항에 근거하는지 확인하세요.\n   - 근거 없는 문장(추측·창작·존재하지 않는 사실·가짜 수치) = 환각(hallucination). {sentence, reason}으로 모두 추출.\n   - 원문에 명시되어 있는데 결과물에 누락된 핵심 항목 = {source_quote, reason}으로 추출.\n3-1. **요구 대응 확인 (PROPOSAL_SECTION 이고 requirements 가 있을 때)**: 줄마다 본문이 그 요구에 답했는지 보세요. 답했다는 것은 요구 동사가 요구하는 형태로 본문이 그 요구를 직접 다뤘다는 뜻입니다. {reqId, answered(true/false), evidenceQuote(답한 본문 문장 그대로), reason(답하지 않았으면 사유)}으로 줄마다 하나씩 만드세요.\n4. **판정**: 환각이 1건이라도 있으면 verdict=FAIL, 없으면 verdict=PASS. 요구에 답하지 않은 줄은 verdict 에 넣지 않습니다.\n5. **저장 (필수)**: save_verification_result(targetType={{input.targetType}}, targetId={{input.targetId}}, verdict=..., attempt={{input.attempt}}, hallucinations=[...], missingFromSource=[...], wordCount=..., requirementChecks=[...]) tool 을 호출하여 결과를 저장하세요. requirementChecks 는 PROPOSAL_SECTION 이고 requirements 가 있을 때만 보냅니다.\n\n## 스킬\n스킬 sam-proposal 의 07(리뷰)이 붙어 있습니다. 이 단계는 그 제1부 자동 검증 가운데 요구 대응 확인만 합니다. 모의 채점과 개선 우선순위는 하지 않습니다.\n\n## 원칙\n- 회사명·실적·수치는 원문/고객 자료에 근거가 있어야 함. 참조샘플의 사실이 그대로 복사됐으면 환각(교차오염).\n- 공고문(NOTICE)의 경우: description 만 있고 첨부 원문이 없는데 본문이 풍부하면 환각 위험이 높음 — 엄격히 검증.\n- 일반적 표현·문체는 환각 아님. 검증 대상은 '사실 주장'.\n- 의심스러우면 환각으로 분류(보수적 검증).\n\n시작하세요. (targetType 분기) 컨텍스트 조회 → 원문 열람 → 문장 검증 → save_verification_result.",
         "timeout_ms": 600000,
         "description": "생성 본문의 각 문장이 원문/첨부에 근거하는지 검증하고 환각·누락을 추출하여 verification_log에 저장 (Haiku). NOTICE/PROPOSAL_SECTION 공통.",
-        "connection_id": "cli-runner-bidding-tools-001"
+        "connection_id": "cli-runner-bidding-tools-001",
+        "skills": [
+          {
+            "name": "sam-proposal",
+            "version": 1,
+            "files": [
+              "references/07-review.md"
+            ]
+          }
+        ]
       },
       "depends_on": []
     }
   ],
   "errorHandling": {
-    "strategy": "stop_on_first",
-    "maxRetries": 1
+    "retryMaxAttempts": 2,
+    "retryDelayMs": 3000
   },
   "outputSchema": {
     "type": "object",

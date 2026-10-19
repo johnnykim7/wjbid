@@ -1210,7 +1210,7 @@
 - **영향 설계서**: T1-1 1.19(BID-OPP-006, BID-DOC-001, BID-COMP-001, 002), T1-3 1.9(BIZ-073~078, BIZ-045 덧붙임), T1-10 1.2(컴플라이언스 매트릭스 용어 12개, 매트릭스에 없는 ID 는 10/12 22:49 승인), T3-1 1.15(notices.compliance_matrix_json, opportunity_requirement_items.req_id·req_level, opportunities.last_req_no, V56, 설계를 다시 저장하면 그 문서의 제안서 절 충족 매핑을 지움), T3-2 1.18(관리자 API 둘, MCP 도구 다섯, 빠져 있던 공고문 관리와 제안서 트리와 MCP 도구를 옮겨 적어 REST 140, MCP 19), T3-3 1.16, T3-4 1.13, T3-5 1.15(TC-COMP-001~027, 합계 321), execution-spec 1.12. T1-2 는 기능 수가 그대로라 바뀌지 않는다. T1-4, T1-5, T1-6, T1-7, T2 는 영향 없음(정책 값, 상태, 이벤트, Sprint 항목, 라이브러리 없음)
 - **규모**: 대. 문서 [CR-159_컴플라이언스_매트릭스와_커버리지_검증.md](CR-159_컴플라이언스_매트릭스와_커버리지_검증.md)
 - **선행**: Aimbase 범용 스킬 묶음(Aimbase 레포 `docs/origins/원본_요구사항_스킬묶음_범용화_20261012.md`). 스킬 원문은 [origins/ax-proposal 스킬셋/](../origins/) 에 그대로 풀어 두었다
-- **상태**: 서버와 관리자 화면 구현 완료, 로컬 확인(10/12 V56 적용, 관리자 API 둘, MCP 도구로 매트릭스 저장과 설계 거부, 절 검증 기록, 커버리지 화면). 상용 배포 10/20 05:29 커밋 365329b(deploy/cr159-prod = d91bc23 위에 CR-159, all, 시험 515건 통과). 상용 DB V56 적용(순서 밖, V57 뒤), Aimbase 다시 연결 connected 도구 19개, 관리자 매트릭스 API 200 확인. 스킬 묶음 sam-proposal(docs/skills/sam-proposal, 원본 그대로 두고 32줄만 고침) 1판을 우진비드 AWS Aimbase 에 올림(10/20 05:51). 다음은 워크플로우 변경
+- **상태**: 서버와 관리자 화면 구현 완료, 로컬 확인(10/12 V56 적용, 관리자 API 둘, MCP 도구로 매트릭스 저장과 설계 거부, 절 검증 기록, 커버리지 화면). 상용 배포 10/20 05:29 커밋 365329b(deploy/cr159-prod = d91bc23 위에 CR-159, all, 시험 515건 통과). 상용 DB V56 적용(순서 밖, V57 뒤), Aimbase 다시 연결 connected 도구 19개, 관리자 매트릭스 API 200 확인. 스킬 묶음 sam-proposal(docs/skills/sam-proposal, 원본 그대로 두고 32줄만 고침) 1판을 우진비드 AWS Aimbase 에 올림(10/20 05:51). 제안서 워크플로우 셋(설계, 절 작성, 검증) 상용 반영(10/20 06:01, 정의 docs/workflows/proposal-*.steps.json, 재시도 설정 옛 이름을 같은 값의 새 이름으로). 공고 분석 워크플로우는 CR-167 뒤
 
 ### CR-160: PIEE 입찰서류 자동 받기 (2026-10-14)
 
