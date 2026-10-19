@@ -1,0 +1,59 @@
+{
+  "id": "proposal-design",
+  "name": "proposal-design",
+  "domain": "bidding",
+  "triggerConfig": {
+    "type": "manual"
+  },
+  "steps": [
+    {
+      "id": "design_structure",
+      "name": "제안서 구조(chapter/section 트리) 설계 에이전트",
+      "type": "AGENT_CALL",
+      "config": {
+        "prompt": "당신은 미군(USFK) 정부조달 제안서 구조 설계 전문가입니다. 이 단계는 **본문 작성이 아니라 목차(FACTOR/Subfactor 트리) 설계만** 합니다.\n\n## 입력\n- documentId: {{input.documentId}}\n- documentType: {{input.documentType}}\n- 공고 본문(영문): {{input.opportunityText}}\n\n## 수행 절차\n\n1. **입력 조회 (필수)**: get_proposal_design_input(documentId={{input.documentId}}) tool을 호출하여 공고 한글화 요약·요구서류·공고 본문(noticeContent)과 factorTree를 가져오세요.\n\n2. **트리 도출**:\n   - factorTree가 **있으면(null 아님)**: 그 FACTOR/Subfactor 구조를 그대로 chapter/section으로 복사·검증하세요. 라벨·순서·개수를 절대 바꾸지 마세요.\n   - factorTree가 **null이면**: 공고 본문(noticeContent/opportunityText)의 **Section L (제출지침) / Section M (평가요소)**에서 FACTOR와 Subfactor를 직접 발췌하세요. 공고가 박은 라벨('I', 'A', 'Factor 1' 등)을 **그대로** 보존하세요. 창작 금지.\n   - Subfactor를 강제하지 않은 FACTOR는 section 1개(subfactorLabel=null)로 통합하세요.\n\n3. **각 section에 작성 지침(scope) 부여**: 그 Subfactor가 무엇을 평가하는지, 무엇을 써야 하는지 한국어 1~3문장으로. requirementRefs에는 근거가 된 Section L/M 항목 식별자를, minWords에는 권장 최소 단어 수(보통 1500)를 넣으세요.\n\n4. **저장 (필수)**: save_proposal_structure(documentId={{input.documentId}}, chapters=[...]) tool을 호출하여 트리를 저장하세요.\n\n## 절대 금지\n- 본문(block) 작성 — 이 단계는 구조만. block은 다음 단계(write-section)에서 작성됩니다.\n- 공고에 없는 FACTOR/Subfactor 창작\n- 라벨·순서 변경\n\n시작하세요. get_proposal_design_input 조회 → 트리 도출 → save_proposal_structure 저장.",
+        "timeout_ms": 600000,
+        "description": "공고 Section L/M에서 FACTOR/Subfactor 트리를 발췌·구조화하여 chapter/section으로 저장 (본문 작성 ❌, 구조만)",
+        "connection_id": "cli-runner-bidding-tools-001"
+      },
+      "depends_on": []
+    }
+  ],
+  "errorHandling": {
+    "strategy": "stop_on_first",
+    "maxRetries": 1
+  },
+  "outputSchema": {
+    "type": "object",
+    "properties": {
+      "sectionCount": {
+        "type": "integer"
+      }
+    }
+  },
+  "inputSchema": {
+    "type": "object",
+    "required": [
+      "documentId",
+      "documentType"
+    ],
+    "properties": {
+      "documentId": {
+        "type": "string",
+        "description": "BidDocument UUID"
+      },
+      "bidRequestId": {
+        "type": "string",
+        "description": "입찰 요청 UUID"
+      },
+      "documentType": {
+        "type": "string",
+        "description": "문서 유형 (COVER_LETTER, TECHNICAL_PROPOSAL 등)"
+      },
+      "opportunityText": {
+        "type": "string",
+        "description": "공고 전문 텍스트"
+      }
+    }
+  }
+}

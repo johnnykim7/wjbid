@@ -1,0 +1,46 @@
+{
+  "id": "proposal-write-section",
+  "name": "proposal-write-section",
+  "domain": "bidding",
+  "triggerConfig": {
+    "type": "manual"
+  },
+  "steps": [
+    {
+      "id": "write_section",
+      "name": "제안서 section 본문 작성 에이전트",
+      "type": "AGENT_CALL",
+      "config": {
+        "prompt": "당신은 미군(USFK) 정부조달 제안서 작성 최고 전문가입니다. 이 단계는 **한 개 section의 본문을 충실하게 작성**합니다. **한국어 초안**을 산출하세요.\n\n## 입력\n- sectionId: {{input.sectionId}}\n\n## 수행 절차\n\n1. **컨텍스트 조회 (필수)**: get_section_context(sectionId={{input.sectionId}}) tool을 호출하여 이 section의 scope(작성 지침)·title·minWords·requirementRefs·소속 FACTOR·참조샘플(referenceSamples)을 가져오세요.\n\n2. **참조샘플 열람**: referenceSamples의 각 sample.files[].downloadUrl을 parse_document(url=...) tool로 **최소 2~3개 핵심 섹션** 열람하여 실제 분량·구성·표 양식·톤·강조 패턴을 흡수하세요. **회사명·인력·실적 등 사실은 절대 복사 금지**(BIZ-019 교차오염).\n\n3. **본문 작성 (분량 정책 필수)**:\n   - 이 section 한 곳에 집중. scope가 요구하는 내용을 빠짐없이.\n   - **최소 minWords 단어 이상** (기본 1,500단어, 한국어 약 2~3페이지). 표·불릿만 나열하지 말고 각 항목마다 상세 설명 문단 포함.\n   - **1인칭 주어**(우리, 당사, [회사명])를 매 문단·매 표 행에 박기. 모든 주장에 근거 1:1 매칭.\n   - PWS 문장을 그대로 옮기지 말 것 — '우리는 ~ 합니다' 답안 표현으로.\n\n4. **TipTap block 산출**: 각 block은 {blockType, contentJson, sourceEvidence}. blockType=PARAGRAPH|BULLET_LIST|TABLE|EVIDENCE. contentJson은 TipTap node(heading/paragraph/bulletList/table). mark는 bold(strong 금지)/italic/underline. sourceEvidence에 어떤 고객자료/샘플에서 가져왔는지 표기.\n\n5. **저장 (필수)**: save_section_blocks(sectionId={{input.sectionId}}, blocks=[...]) tool을 호출하여 저장하세요.\n\n## self-check (작성 후)\n1. 분량이 minWords 미만이면 → 부족한 부분 보강 후 다시\n2. 1인칭 주어가 단락마다 나오는가? 안 나오면 다시\n3. 회사명·실적이 '<UNKNOWN>'·가짜 수치이면 → 고객자료 재확인\n\n## 절대 금지\n- 다른 section 내용 작성 (이 section만)\n- 사실 추측·날조 / 샘플 사실 복사 / strong mark 사용\n\n시작하세요. get_section_context → 샘플 열람 → 충실한 본문 → save_section_blocks.",
+        "timeout_ms": 1800000,
+        "description": "한 section의 본문(block)을 충실하게 작성하여 저장. 참조샘플 few-shot 활용, 사실은 고객자료에서만.",
+        "connection_id": "cli-runner-bidding-tools-001"
+      },
+      "depends_on": []
+    }
+  ],
+  "errorHandling": {
+    "strategy": "stop_on_first",
+    "maxRetries": 1
+  },
+  "outputSchema": {
+    "type": "object",
+    "properties": {
+      "blockCount": {
+        "type": "integer"
+      }
+    }
+  },
+  "inputSchema": {
+    "type": "object",
+    "required": [
+      "sectionId"
+    ],
+    "properties": {
+      "sectionId": {
+        "type": "string",
+        "description": "ProposalSection UUID"
+      }
+    }
+  }
+}
