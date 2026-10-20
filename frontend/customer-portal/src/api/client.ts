@@ -1,5 +1,5 @@
 import axios from 'axios'
-import type { EligibilityAnswerValue, EligibilityDetail, EligibilityNoticeRow, EligibilitySaved, VaultListResponse } from '../types'
+import type { EligibilityAnswerValue, EligibilityDetail, EligibilityNoticeRow, EligibilitySaved, OpportunityFile, VaultListResponse } from '../types'
 import type { PreCheckClientItem, PreCheckDetail, PreCheckRow } from '../types/preCheck'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
@@ -110,6 +110,14 @@ export const getOpportunity = (id: string) =>
 /** 원본 공고 상세 (CR-152). 공개 공고문이 있으면 publicNoticeId 가 온다 */
 export const getOriginOpportunity = (opportunityId: string) =>
   api.get(`/opportunities/origin/${opportunityId}`)
+
+/** 받아 둔 공고 첨부 (CR-168). id 는 모은 공고 id */
+export const getOpportunityAttachments = (opportunityId: string) =>
+  api.get<OpportunityFile[]>(`/opportunities/${opportunityId}/attachments`)
+
+/** 로그인 토큰을 실어야 해서 주소를 바로 열지 않고 받아서 저장한다 (CR-168) */
+export const downloadOpportunityAttachment = (opportunityId: string, attachmentId: string) =>
+  api.get<Blob>(`/opportunities/${opportunityId}/attachments/${attachmentId}/download`, { responseType: 'blob' })
 
 // Bid Requests
 export const createBidRequest = (opportunityId: string) =>

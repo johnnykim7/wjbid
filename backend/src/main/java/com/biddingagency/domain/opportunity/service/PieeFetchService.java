@@ -39,7 +39,7 @@ import java.util.zip.ZipFile;
 @RequiredArgsConstructor
 public class PieeFetchService {
 
-    static final String SOURCE_PREFIX = "piee:";
+    public static final String SOURCE_PREFIX = "piee:";
     static final int MESSAGE_MAX = 500;
 
     private final OpportunityRepository opportunityRepository;

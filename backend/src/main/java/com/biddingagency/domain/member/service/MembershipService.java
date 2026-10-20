@@ -53,11 +53,16 @@ public class MembershipService {
         return new Status(endsOn != null, endsOn);
     }
 
-    /** 로그인하지 않았으면 401, 로그인한 무료회원이면 403 (BIZ-071) */
-    public void requireMember(UUID memberId) {
+    /** 로그인하지 않았으면 401. 회원 구분은 보지 않는다 (BIZ-084) */
+    public void requireLogin(UUID memberId) {
         if (memberId == null) {
             throw new MembershipException(MembershipError.LOGIN_REQUIRED);
         }
+    }
+
+    /** 로그인하지 않았으면 401, 로그인한 무료회원이면 403 (BIZ-071) */
+    public void requireMember(UUID memberId) {
+        requireLogin(memberId);
         if (!membershipRepository.findCovering(List.of(memberId), today()).isEmpty()) {
             return;
         }

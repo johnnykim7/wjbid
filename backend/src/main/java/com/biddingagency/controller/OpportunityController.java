@@ -2,10 +2,10 @@ package com.biddingagency.controller;
 
 import com.biddingagency.domain.notice.service.NoticeService;
 import com.biddingagency.domain.opportunity.dto.OpportunityDto;
-import com.biddingagency.domain.opportunity.entity.OpportunityAttachment;
+import com.biddingagency.domain.opportunity.dto.CustomerAttachmentDto;
 import com.biddingagency.domain.opportunity.entity.OpportunityRequirementItem;
-import com.biddingagency.domain.opportunity.repository.OpportunityAttachmentRepository;
 import com.biddingagency.domain.opportunity.repository.OpportunityRequirementItemRepository;
+import com.biddingagency.domain.opportunity.service.CustomerAttachmentService;
 import com.biddingagency.domain.opportunity.service.OpportunityService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -14,6 +14,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,6 +25,7 @@ import com.biddingagency.domain.member.service.MembershipService;
 import com.biddingagency.security.CustomUserDetails;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 
@@ -41,7 +46,7 @@ public class OpportunityController {
     private final OpportunityService opportunityService;
     private final NoticeService noticeService;
     private final OpportunityRequirementItemRepository requirementItemRepository;
-    private final OpportunityAttachmentRepository attachmentRepository;
+    private final CustomerAttachmentService customerAttachmentService;
     private final MembershipService membershipService;
 
     /**
@@ -96,14 +101,21 @@ public class OpportunityController {
         return ResponseEntity.ok(requirementItemRepository.findByOpportunityIdAndReqIdIsNullOrderBySortOrderAsc(id)); // CR-159 BIZ-075 제출 서류 줄만
     }
 
-    /**
-     * Get opportunity attachments
-     */
     @GetMapping("/{id}/attachments")
-    @Operation(summary = "공고 첨부파일 목록")
-    public ResponseEntity<List<OpportunityAttachment>> getAttachments(@PathVariable UUID id) {
-        opportunityService.findById(id); // existence check
-        return ResponseEntity.ok(attachmentRepository.findByOpportunityId(id));
+    @Operation(summary = "공고 첨부파일 목록 (CR-168)", description = "받아 둔 첨부만 고객에게 줄 값으로 준다. id 는 모은 공고 id")
+    public ResponseEntity<List<CustomerAttachmentDto>> getAttachments(@PathVariable UUID id) {
+        return ResponseEntity.ok(customerAttachmentService.list(id));
+    }
+
+    @GetMapping("/{id}/attachments/{attachmentId}/download")
+    @Operation(summary = "받아 둔 첨부 내려받기 (CR-168)", description = "로그인한 고객이면 회원 구분 없음(BIZ-084)")
+    public ResponseEntity<byte[]> downloadAttachment(
+            @PathVariable UUID id,
+            @PathVariable UUID attachmentId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        return customerAttachmentService.load(memberIdOf(userDetails), id, attachmentId)
+                .map(OpportunityController::fileResponse)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     /**
@@ -119,6 +131,17 @@ public class OpportunityController {
         List<OpportunityDto> opportunities = noticeService.findVisibleRecentlyPosted(days)
                 .stream().map(OpportunityDto::fromNotice).toList();
         return ResponseEntity.ok(opportunities);
+    }
+
+    private static ResponseEntity<byte[]> fileResponse(CustomerAttachmentService.Download file) {
+        HttpHeaders headers = new HttpHeaders();
+        String fileName = file.fileName() != null ? file.fileName() : "attachment";
+        headers.setContentDisposition(ContentDisposition.attachment()
+                .filename(fileName, StandardCharsets.UTF_8).build());
+        String ct = file.contentType();
+        headers.setContentType(ct != null && !ct.isBlank()
+                ? MediaType.parseMediaType(ct) : MediaType.APPLICATION_OCTET_STREAM);
+        return new ResponseEntity<>(file.content(), headers, HttpStatus.OK);
     }
 
     // 공개 주소라 토큰이 없거나 지났으면 로그인 정보가 비어 들어온다

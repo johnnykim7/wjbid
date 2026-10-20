@@ -9,8 +9,8 @@ import com.biddingagency.domain.member.MembershipException;
 import com.biddingagency.domain.member.entity.Member;
 import com.biddingagency.domain.member.service.MembershipService;
 import com.biddingagency.domain.notice.service.NoticeService;
-import com.biddingagency.domain.opportunity.repository.OpportunityAttachmentRepository;
 import com.biddingagency.domain.opportunity.repository.OpportunityRequirementItemRepository;
+import com.biddingagency.domain.opportunity.service.CustomerAttachmentService;
 import com.biddingagency.domain.opportunity.service.OpportunityService;
 import com.biddingagency.dto.BidRequestCreateRequest;
 import com.biddingagency.security.CustomUserDetails;
@@ -40,7 +40,7 @@ class MembershipGuardControllerTest {
     @Mock private OpportunityService opportunityService;
     @Mock private NoticeService noticeService;
     @Mock private OpportunityRequirementItemRepository requirementItemRepository;
-    @Mock private OpportunityAttachmentRepository attachmentRepository;
+    @Mock private CustomerAttachmentService customerAttachmentService;
     @Mock private BidRequestService bidRequestService;
     @Mock private BidFSMService fsmService;
     @Mock private DocumentVersionService documentVersionService;
@@ -65,7 +65,7 @@ class MembershipGuardControllerTest {
     @DisplayName("TC-MEM-012 무료회원_공고문상세_공고문조회안함")
     void 무료회원_공고문상세_공고문조회안함() {
         OpportunityController controller = new OpportunityController(
-                opportunityService, noticeService, requirementItemRepository, attachmentRepository, membershipService);
+                opportunityService, noticeService, requirementItemRepository, customerAttachmentService, membershipService);
 
         catchThrowable(() -> controller.getOpportunity(UUID.randomUUID(), freeMember));
 
