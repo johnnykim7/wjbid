@@ -12,6 +12,7 @@ import { Icon } from '../components/layout/Icon'
 import { VerdictBox } from '../components/verdict/VerdictBox'
 import { VERDICT_BOX_TEXT } from '../data/verdictContent'
 import NoticeDocumentView from '../components/NoticeDocumentView'
+import { AttachmentList } from '../components/AttachmentList'
 import { ELIGIBILITY_TEXT, eligibilityHref } from '../data/eligibilityContent'
 import { ORIGIN_TEXT } from '../data/originContent'
 import { CONSULT_PATH, MEMBERSHIP_TEXT, PRICING_PATH } from '../data/membershipContent'
@@ -431,29 +432,7 @@ export default function BidDetailPage({ origin = false }: { origin?: boolean }) 
                   <h3 className="text-lg font-bold text-ink mb-3 flex items-center gap-2">
                     <i className="fa-solid fa-paperclip text-brand" /> 첨부 파일
                   </h3>
-                  {bid.resourceLinks && bid.resourceLinks.length > 0 ? (
-                    <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {bid.resourceLinks.map((url) => {
-                        const filename = url.split('/').pop()?.split('?')[0] ?? url
-                        return (
-                          <li key={url}>
-                            <a href={url} target="_blank" rel="noopener noreferrer"
-                              className="flex items-center p-4 border border-line rounded-lg hover:bg-surface transition">
-                              <div className="w-10 h-10 flex items-center justify-center rounded mr-3 bg-danger-soft text-danger">
-                                <i className="fa-solid fa-file-pdf text-xl" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="text-sm font-bold text-ink truncate">{filename}</div>
-                              </div>
-                              <i className="fa-solid fa-download text-ink-mute ml-2" />
-                            </a>
-                          </li>
-                        )
-                      })}
-                    </ul>
-                  ) : (
-                    <p className="text-sm text-ink-mute">첨부 파일이 없습니다.</p>
-                  )}
+                  <AttachmentList opportunityId={bid.opportunityId} resourceLinks={bid.resourceLinks} samUrl={bid.samUrl} />
                 </div>
 
                 {/* SAM.gov 원본 (접이식) */}
@@ -551,46 +530,7 @@ export default function BidDetailPage({ origin = false }: { origin?: boolean }) 
 
                 <div>
                   <h3 className="text-lg font-bold text-ink mb-3">첨부 파일·링크</h3>
-                  {bid.resourceLinks && bid.resourceLinks.length > 0 ? (
-                    <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {bid.resourceLinks.map((url) => {
-                        const filename = url.split('/').pop()?.split('?')[0] ?? url
-                        const ext = filename.split('.').pop()?.toLowerCase() ?? ''
-                        const isPdf = ext === 'pdf'
-                        const isDoc = ['doc', 'docx'].includes(ext)
-                        const icon = isPdf ? 'fa-solid fa-file-pdf' : isDoc ? 'fa-solid fa-file-word' : 'fa-solid fa-file'
-                        return (
-                          <li key={url}>
-                            <a href={url} target="_blank" rel="noopener noreferrer"
-                              className="flex items-center p-4 border border-line rounded-lg hover:bg-surface transition">
-                              <div className="w-10 h-10 flex items-center justify-center rounded mr-3 bg-surface text-ink-mute">
-                                <i className={`${icon} text-xl`} />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="text-sm font-bold text-ink truncate">{filename}</div>
-                                <div className="text-xs text-ink-mute mt-0.5 truncate">{url}</div>
-                              </div>
-                              <i className="fa-solid fa-arrow-up-right-from-square text-ink-mute ml-2" />
-                            </a>
-                          </li>
-                        )
-                      })}
-                    </ul>
-                  ) : (
-                    <div className="text-sm bg-surface p-5 rounded-lg border border-line flex items-start gap-3">
-                      <i className="fa-solid fa-circle-info text-brand mt-0.5" />
-                      <div>
-                        <p className="text-ink-sub mb-2">첨부 파일 정보가 없습니다.</p>
-                        {bid.samUrl && (
-                          <a href={bid.samUrl} target="_blank" rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 text-brand hover:text-brand-strong font-medium">
-                            <i className="fa-solid fa-arrow-up-right-from-square text-xs" />
-                            SAM.gov에서 첨부 파일 확인
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  )}
+                  <AttachmentList opportunityId={bid.id} resourceLinks={bid.resourceLinks} samUrl={bid.samUrl} />
                 </div>
 
                 {bid.samUrl && (

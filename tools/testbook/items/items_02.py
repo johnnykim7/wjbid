@@ -806,7 +806,7 @@ dict(id='IT-02-073', flow='공고문 상세', kind='정상', title='받아 둔 �
 
 dict(id='IT-02-074', flow='공고문 상세', kind='예외', title='로그인하지 않으면 첨부를 내려받지 못하고, 받아 둔 파일이 없으면 SAM.gov 주소만 보인다',
      pre='받아 둔 파일이 있는 공고 O, 받아 둔 파일이 없고 SAM.gov 첨부 주소만 있는 공고 P',
-     steps='1. 로그아웃한 채 원본 공고 상세(/search/origin/{O})를 열고 내려받기 단추를 누른다\n'
+     steps='1. 로그아웃한 채 원본 공고 상세 주소(/search/origin/{O})를 연다\n'
            '2. 로그인 토큰 없이 GET /api/opportunities/{O}/attachments/{첨부 id}/download 를 부른다\n'
            '3. O 의 첨부 id 로 GET /api/opportunities/{P}/attachments/{그 id}/download 를 로그인해 부른다\n'
            '4. 원본 공고 상세(/search/origin/{P})를 연다',

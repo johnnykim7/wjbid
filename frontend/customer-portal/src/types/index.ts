@@ -27,6 +27,16 @@ export interface Opportunity {
   opportunityId?: string
 }
 
+/** 받아 둔 공고 첨부 한 줄 (CR-168). sourceUrl 은 SAM.gov 첨부만 온다 */
+export interface OpportunityFile {
+  id: string
+  fileName: string | null
+  fileSize: number | null
+  contentType: string | null
+  source: 'SAM' | 'PIEE' | 'UPLOAD'
+  sourceUrl: string | null
+}
+
 export interface AnalysisResult {
   analysisStatus: 'PENDING' | 'ANALYZING' | 'COMPLETED' | 'FAILED'
   analyzedAt?: string
