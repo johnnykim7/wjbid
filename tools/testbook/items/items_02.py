@@ -791,4 +791,30 @@ dict(id='IT-02-072', flow='공고문 상세', kind='정상', title='다시 만�
      judge=['가상', '합동', '합동', '합동', '합동'],
      req=['BID-BROWSE-002', 'BID-OPP-006'], fc=['BID-BROWSE-002', 'BID-OPP-006'], screen='/search/{id}', pri='High'),
 
+dict(id='IT-02-073', flow='공고문 상세', kind='정상', title='받아 둔 첨부가 고객 첨부 칸에 보이고 무료회원도 내려받는다',
+     pre='PIEE 파일과 SAM.gov 파일을 받아 둔 마감 전 공고 O, O 로 만든 공개 공고문 N, 무료회원 로그인',
+     steps='1. 원본 공고 상세(/search/origin/{O})를 연다\n'
+           '2. 받아 둔 파일 한 줄의 내려받기 단추를 누른다\n'
+           '3. 회원으로 다시 로그인해 공고 상세(/search/{N})를 연다\n'
+           '4. 같은 파일을 내려받는다',
+     expect='1. 첨부 칸 맨 위에 받아 둔 파일 줄이 파일 이름, 출처 꼬리표(SAM.gov 또는 PIEE), 크기, 내려받기 단추로 보인다\n'
+            '2. 그 파일 이름으로 저장되고 열린다\n'
+            '3. 공고 상세 첨부 칸에도 같은 받아 둔 파일 줄이 보인다\n'
+            '4. 같은 파일이 받아진다',
+     judge=['가상', '가상', '가상', '가상'],
+     req=['BID-BROWSE-002'], fc=['BID-BROWSE-002'], screen='/search/origin/{opportunityId}', pri='High'),
+
+dict(id='IT-02-074', flow='공고문 상세', kind='예외', title='로그인하지 않으면 첨부를 내려받지 못하고, 받아 둔 파일이 없으면 SAM.gov 주소만 보인다',
+     pre='받아 둔 파일이 있는 공고 O, 받아 둔 파일이 없고 SAM.gov 첨부 주소만 있는 공고 P',
+     steps='1. 로그아웃한 채 원본 공고 상세(/search/origin/{O})를 열고 내려받기 단추를 누른다\n'
+           '2. 로그인 토큰 없이 GET /api/opportunities/{O}/attachments/{첨부 id}/download 를 부른다\n'
+           '3. O 의 첨부 id 로 GET /api/opportunities/{P}/attachments/{그 id}/download 를 로그인해 부른다\n'
+           '4. 원본 공고 상세(/search/origin/{P})를 연다',
+     expect='1. 로그인 화면으로 간다\n'
+            '2. 401 이다\n'
+            '3. 404 다\n'
+            '4. 받아 둔 파일 줄 없이 SAM.gov 첨부 주소 줄만 보인다',
+     judge=['가상', '서버', '서버', '가상'],
+     req=['BID-BROWSE-002'], fc=['BID-BROWSE-002'], screen='/search/origin/{opportunityId}', pri='High'),
+
 ]
