@@ -11,6 +11,11 @@ const DOT_BASE = 4.5
 const DOT_GROW = 1.9
 const LABEL_GAP = 5
 const LABEL_SIZE = { normal: 12.5, selected: 14 }
+/** 가까운 자리가 막혔을 때 볼 먼 자리의 간격(옆, 위아래)과 칸 수 */
+const FAR_STEP = { x: 18, y: 16 }
+const FAR_REACH = { cols: 3, rows: 3 }
+/** 이름표 글자가 기준선 위아래로 차지하는 높이(글자 크기 비율). 넉넉히 잡으면 붙어 있는 기지(험프리스와 오산)의 이름이 서로 밀어낸다 */
+const GLYPH = { up: 0.9, down: 0.2 }
 
 const W = Math.round((BOUNDS.lonMax - BOUNDS.lonMin) * SCALE * COS_LAT + PAD * 2)
 const H = Math.round((BOUNDS.latMax - BOUNDS.latMin) * SCALE + PAD * 2)
@@ -25,7 +30,9 @@ const DMZ = pathOf(KOREA_OUTLINE.slice(0, DMZ_POINTS), false)
 
 type Box = { x1: number; y1: number; x2: number; y2: number }
 type Dot = { base: BaseStat; x: number; y: number; r: number }
-type Label = { id: string; x: number; y: number; anchor: 'start' | 'end'; text: string; selected: boolean }
+type Lead = { x1: number; y1: number; x2: number; y2: number }
+type Spot = { x: number; y: number; anchor: 'start' | 'end'; far: boolean }
+type Label = { id: string; x: number; y: number; anchor: 'start' | 'end'; text: string; selected: boolean; lead: Lead | null }
 
 const overlaps = (a: Box, b: Box) => a.x1 < b.x2 && b.x1 < a.x2 && a.y1 < b.y2 && b.y1 < a.y2
 
@@ -37,8 +44,48 @@ function textWidth(text: string, size: number) {
 }
 
 /**
- * 이름표 자리를 고른다. 공고가 많은 기지부터 점 오른쪽, 왼쪽, 아래, 위 순으로 두어 보고,
- * 다른 이름표나 점과 겹치거나 그림 밖으로 나가면 다음 자리를 본다. 둘 곳이 없으면 이름표 없이 점만 둔다(점 위에 올리면 이름이 뜬다).
+ * 이름표를 둘 수 있는 자리. 점 오른쪽, 왼쪽, 아래, 위의 가까운 여섯 자리를 먼저 보고,
+ * 다 막히면 옆으로 더 떨어지거나 위아래로 줄을 옮긴 먼 자리를 점에서 가까운 순으로 본다.
+ * 가까운 기지가 몰린 곳(평택의 험프리스와 오산)에서도 이름이 빠지지 않게 하려는 것이다.
+ */
+function spotsAround(d: Dot, size: number): Spot[] {
+  const g = d.r + LABEL_GAP
+  const midY = d.y + size * 0.35
+  const near: Spot[] = [
+    { x: d.x + g, y: midY, anchor: 'start', far: false },
+    { x: d.x - g, y: midY, anchor: 'end', far: false },
+    { x: d.x + g * 0.6, y: d.y + g + size * 0.8, anchor: 'start', far: false },
+    { x: d.x - g * 0.6, y: d.y + g + size * 0.8, anchor: 'end', far: false },
+    { x: d.x + g * 0.6, y: d.y - g, anchor: 'start', far: false },
+    { x: d.x - g * 0.6, y: d.y - g, anchor: 'end', far: false },
+  ]
+  const far: (Spot & { dist: number })[] = []
+  for (let row = -FAR_REACH.rows; row <= FAR_REACH.rows; row++) {
+    for (let col = 0; col <= FAR_REACH.cols; col++) {
+      if (row === 0 && col === 0) continue
+      const dx = g + col * FAR_STEP.x
+      const dy = row * FAR_STEP.y
+      const dist = Math.hypot(dx, dy)
+      far.push({ x: d.x + dx, y: midY + dy, anchor: 'start', far: true, dist })
+      far.push({ x: d.x - dx, y: midY + dy, anchor: 'end', far: true, dist })
+    }
+  }
+  far.sort((a, b) => a.dist - b.dist)
+  return [...near, ...far]
+}
+
+/** 먼 자리에 둔 이름표와 점을 잇는 선. 점 가장자리에서 이름표 글자 앞까지 */
+function leadOf(d: Dot, s: Spot, size: number): Lead {
+  const tx = s.anchor === 'start' ? s.x - 2 : s.x + 2
+  const ty = s.y - size * 0.35
+  const a = Math.atan2(ty - d.y, tx - d.x)
+  return { x1: d.x + d.r * Math.cos(a), y1: d.y + d.r * Math.sin(a), x2: tx, y2: ty }
+}
+
+/**
+ * 이름표 자리를 고른다. 고른 기지, 그다음 공고가 많은 기지부터 spotsAround 의 자리를 차례로 두어 보고,
+ * 다른 이름표나 점과 겹치거나 그림 밖으로 나가면 다음 자리를 본다. 먼 자리에 두면 점과 선으로 잇는다.
+ * 그래도 둘 곳이 없으면 이름표 없이 점만 둔다(점 위에 올리면 이름이 뜬다).
  */
 function placeLabels(dots: Dot[], selectedId: string | null, labelOf: (b: BaseStat) => string): Label[] {
   const order = [...dots].sort((a, b) =>
@@ -52,25 +99,16 @@ function placeLabels(dots: Dot[], selectedId: string | null, labelOf: (b: BaseSt
     const size = selected ? LABEL_SIZE.selected : LABEL_SIZE.normal
     const text = labelOf(d.base)
     const w = textWidth(text, size)
-    const g = d.r + LABEL_GAP
-    const tries: { x: number; y: number; anchor: 'start' | 'end' }[] = [
-      { x: d.x + g, y: d.y + size * 0.35, anchor: 'start' },
-      { x: d.x - g, y: d.y + size * 0.35, anchor: 'end' },
-      { x: d.x + g * 0.6, y: d.y + g + size * 0.8, anchor: 'start' },
-      { x: d.x - g * 0.6, y: d.y + g + size * 0.8, anchor: 'end' },
-      { x: d.x + g * 0.6, y: d.y - g, anchor: 'start' },
-      { x: d.x - g * 0.6, y: d.y - g, anchor: 'end' },
-    ]
-    for (const t of tries) {
-      const box: Box = t.anchor === 'start'
-        ? { x1: t.x, y1: t.y - size, x2: t.x + w, y2: t.y + 3 }
-        : { x1: t.x - w, y1: t.y - size, x2: t.x, y2: t.y + 3 }
+    for (const t of spotsAround(d, size)) {
+      const y1 = t.y - size * GLYPH.up
+      const y2 = t.y + size * GLYPH.down
+      const box: Box = t.anchor === 'start' ? { x1: t.x, y1, x2: t.x + w, y2 } : { x1: t.x - w, y1, x2: t.x, y2 }
       const inside = box.x1 >= 2 && box.x2 <= W - 2 && box.y1 >= 2 && box.y2 <= H - 2
       const free = !labelBoxes.some((o) => overlaps(o, box))
         && !dotBoxes.some((o) => o.id !== d.base.id && overlaps(o.box, box))
       if (inside && free) {
         labelBoxes.push(box)
-        out.push({ id: d.base.id, x: t.x, y: t.y, anchor: t.anchor, text, selected })
+        out.push({ id: d.base.id, x: t.x, y: t.y, anchor: t.anchor, text, selected, lead: t.far ? leadOf(d, t, size) : null })
         break
       }
     }
@@ -127,6 +165,9 @@ export function KoreaMap({ bases, selectedId, onSelect, ariaLabel, labelOf, titl
         >
           <title>{titleOf(d.base)}</title>
         </circle>
+      ))}
+      {labels.map((l) => l.lead && (
+        <line key={`lead-${l.id}`} className="lead" x1={l.lead.x1} y1={l.lead.y1} x2={l.lead.x2} y2={l.lead.y2} aria-hidden="true" />
       ))}
       {labels.map((l) => (
         <text key={l.id} className={`lbl${l.selected ? ' on' : ''}`} x={l.x} y={l.y} textAnchor={l.anchor} aria-hidden="true">{l.text}</text>
