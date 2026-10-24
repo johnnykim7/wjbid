@@ -1332,7 +1332,7 @@
 - **영향 모듈**: BE BidFSMService, AIWorkflowService, DocumentReadingService(신규), LLMPlatformClient, ProposalMcpTool, save_client_document_facts(신규), McpAccessGuard, 내려받기 컨트롤러(신규), 관리자 컨트롤러, 서류 올리기와 서류함 복사(해시), V58 / 관리자 콘솔 BidRequestDetailPage, ProposalTreePage, api / Aimbase 워크플로우 정의 client-document-read(신규), proposal-design, proposal-write-section, proposal-verify-fidelity
 - **영향 설계서**: T1-1 1.25(BID-DOC-001, 004, 005), T1-2 1.9(E 모듈 수), T1-3 1.15(BIZ-085~089), T1-5 1.6(ANALYZING 진입 작업, GENERATING 전이 가드), T1-7 1.6(작업 CR-169-1, BID-DOC-004, 005), T1-10 1.5(새 이름 10개, 사용자 승인 10/24 21:18), T3-1 1.17(document_readings, 칸 셋, V58), T3-2 1.22(관리자 API 셋, 절 상세, MCP 도구 다섯, 내려받기, 워크플로우 입력), T3-3 1.23, T3-4 1.17, T3-5 1.20(TC-DOC-210~237), execution-spec 1.15. 영향 없음 확인: T1-4(새 정책값 없음, 30분은 기존 폴링 상한 5초 x 360), T1-6(BidRequestStateChanged 소비 주체에 ANALYZING 진입 AI 작업이 이미 있다), T2-1(iText 8, poi-ooxml 5.2.5 이미 있음). 상세 `CR/CR-169_고객_서류_읽기와_절별_근거_서류.md`
 - **규모**: 중 (묶음 CR-169~175 는 대, 사용자 승인 10/24 21:00)
-- **상태**: 설계 커밋 9fb8d7b, 용어 승인 10/24 21:18, 시험항목 IT-10-041~054 신규와 IT-10-001, IT-12-031, IT-12-034 수정. 구현 10/25(서버, MCP 도구, V58, 관리자 화면, 워크플로우 정의 4개), 서버 단위시험 557건 통과, 로컬 확인 10/25(Aimbase 실제 읽기는 워크플로우 올린 뒤)
+- **상태**: 설계 커밋 9fb8d7b, 용어 승인 10/24 21:18, 시험항목 IT-10-041~054 신규와 IT-10-001, IT-12-031, IT-12-034 수정. 구현 10/25(서버, MCP 도구, V58, 관리자 화면, 워크플로우 정의 4개), 서버 단위시험 557건 통과, 로컬 확인 10/25(Aimbase 실제 읽기는 워크플로우 올린 뒤). 시험준비 10/25: 시딩 도구와 12장면, 서버 조회와 MCP 도구 조회, 관리자 화면 가상 시험 틀. 1차(로컬) 기계 판정 46줄 중 충족 41, 미충족 0, 재료 없음 5
 
 ### CR-170: 캡처플랜, 공고 분석 나머지, 입찰 여부 (2026-10-24 채번)
 
@@ -1385,4 +1385,4 @@
 - **영향 모듈**: 고객 화면 `main.tsx`, `index.css`, `wjbid-theme.css`(삭제) / 관리자 화면 `main.tsx`, `index.css` / 디자인시스템 테마 파일 두 개(그 레포 CR)
 - **영향 설계서**: T3-3 「고객 포털 색 이름표」(값의 자리가 디자인시스템 테마 파일로 바뀐다)
 - **규모**: 소 (화면, API, 데이터 변화 없음. 색 값의 자리만 옮긴다)
-- **상태**: 디자인시스템 회신 대기
+- **상태**: 디자인시스템 CR-DS-012 로 테마 파일 두 개 받음(회신 `bp-platform/design-system/docs/협업/REPLY_CR-176_WJbid_테마파일.md`). 전환 끝(고객 `main.tsx`, `index.css`, 관리자 `main.tsx`, `index.css`, T3-3). 10/25 상용 데이터로 고객 10, 관리자 10 화면을 전환 전후로 찍어 대조: 상태 배지 글자색만 10/23 상용 색으로 돌아가고(고객 미등록, Active 배지) 나머지 화면은 같다. 두 화면 빌드 통과. `wjbid-theme.css` 의 글자 규칙은 `index.css` 끝으로 옮겼고 빈 파일 정리는 사용자가 한다(삭제 명령 차단). 관리자 정보 배지 색은 사용자 결정 대기
