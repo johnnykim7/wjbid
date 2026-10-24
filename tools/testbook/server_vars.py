@@ -23,4 +23,8 @@ VARS = {
     'smoke_notice_id': SMOKE_NOTICE.get(SERVER, ''),
     'since_24h': (NOW - timedelta(hours=24)).strftime('%Y-%m-%dT%H:%M:%S'),
     'run_started': NOW.strftime('%Y-%m-%dT%H:%M:%S'),
+    # 고객 서류 읽기 줄의 상태 시각도 서울 시각이다. 읽는 중 줄이 아직 시간 초과로 넘어가지 않았는지 가른다(IT-10-046)
+    'since_5m': (NOW - timedelta(minutes=5)).strftime('%Y-%m-%dT%H:%M:%S'),
+    # 서류함 서류 만료일 비교 기준. 서버가 서울 날짜로 만료를 가른다(DocumentReadingService.collect)
+    'today': NOW.strftime('%Y-%m-%d'),
 }
