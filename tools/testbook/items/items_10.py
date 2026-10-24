@@ -537,8 +537,8 @@ dict(id='IT-10-046', flow='고객 서류 읽기', kind='예외', title='고객 �
                            ('sql', f"SELECT state, JSON_LENGTH(state_history) AS hist FROM bid_requests WHERE id = {THIS_BID}")],
                     check="r[2][0]['state'] == 'ANALYZING' and r[2][0]['hist'] == r[0][0]['hist']")}),
 
-dict(id='IT-10-047', flow='고객 서류 읽기', kind='예외', title='읽기가 30분 넘게 끝나지 않은 서류는 읽지 못함이 되어 전환을 막지 않는다',
-     pre='관리자 계정, 상태 ANALYZING 이고 후보 서류 한 줄이 READING 이며 status_at 이 31분 전인 입찰 건',
+dict(id='IT-10-047', flow='고객 서류 읽기', kind='예외', title='읽기가 워크플로우 대기 한도를 넘게 끝나지 않은 서류는 읽지 못함이 되어 전환을 막지 않는다',
+     pre='관리자 계정, 상태 ANALYZING 이고 후보 서류 한 줄이 READING 이며 status_at 이 워크플로우 대기 한도(설정 app.aimbase.polling 간격과 횟수, 10/25 상용 60분)보다 오래 전인 입찰 건',
      steps='1. 그 입찰 건의 입찰 상세 관리를 연다\n2. 다음 상태 GENERATING 으로 전환한다',
      expect='1. 1단계에서 그 줄의 상태가 "읽지 못함" 이고 사유 "읽기 시간 초과" 가 보인다\n'
             '2. 2단계 전환이 거부되지 않고 state 가 GENERATING 이 된다',

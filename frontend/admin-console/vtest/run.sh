@@ -23,4 +23,11 @@ trap 'rmdir "$LOCK" 2>/dev/null' EXIT INT TERM
 for a in "$@"; do
   [ "$a" = "-t" ] && export VTEST_ONE=1
 done
+# 로그인처럼 시험 전체가 앞에서 막히면 결과 파일을 새로 쓰지 못한다. 앞 회차 파일이 남아 있으면
+# collect_virtual.py 가 그것을 이번 회차 판정으로 모으므로, 회차를 돌 때는 앞 파일을 .prev 로 밀어 둔다
+if [ -z "$VTEST_ONE" ]; then
+  for f in vtest-out/*.json; do
+    [ -f "$f" ] && mv -f "$f" "$f.prev"
+  done
+fi
 npx vitest run "$@" --config vitest.vtest.config.ts

@@ -554,7 +554,7 @@ CR-137 전에 있던 `POST /opportunities/{id}/qualification-check`(AI 자격 �
 | GET | /admin/document-readings/{readingId} | 고객 서류 사실 목록 (CR-169) | 🔒 ADMIN | BID-DOC-004 |
 | POST | /admin/bid-requests/{id}/document-readings/run | 고객 서류 다시 읽기 (CR-169) | 🔒 ADMIN | BID-DOC-004 |
 
-**POST /admin/bid-requests/{id}/transition (CR-169)**: 입찰 건이 ANALYZING 이 되면 고객 서류 읽기를 비동기로 시작한다. ANALYZING 에서 GENERATING 으로 갈 때 후보 가운데 읽는 중(30분 안)인 서류가 있으면 409 `DOCUMENT_READING_IN_PROGRESS`(BIZ-087).
+**POST /admin/bid-requests/{id}/transition (CR-169)**: 입찰 건이 ANALYZING 이 되면 고객 서류 읽기를 비동기로 시작한다. ANALYZING 에서 GENERATING 으로 갈 때 후보 가운데 읽는 중(워크플로우 대기 한도 안)인 서류가 있으면 409 `DOCUMENT_READING_IN_PROGRESS`(BIZ-087).
 
 **GET /admin/bid-requests/{id}/document-readings 응답 (CR-169)**: `{readingStarted, inProgress, items[]}`. readingStarted 는 그 건이 분석 단계를 지났는지, inProgress 는 읽는 중인 후보가 있는지다. items 줄 하나:
 

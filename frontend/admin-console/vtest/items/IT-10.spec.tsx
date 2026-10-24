@@ -153,11 +153,11 @@ test('IT-10-046 고객 서류를 읽는 중이면 문서 작성 중으로 전환
     `문서 작성 중 선택지 ${radio ? '있음' : '없음'}, 안내 ${notice ? text(notice) : '없음'}, 전환 단추 ${go ? (go.disabled ? '눌리지 않음' : '눌림') : '없음'}`)
 })
 
-test('IT-10-047 읽기가 30분 넘게 끝나지 않은 서류는 읽지 못함이 된다', async () => {
+test('IT-10-047 읽기가 대기 한도를 넘게 끝나지 않은 서류는 읽지 못함이 된다', async () => {
   const ID = 'IT-10-047'
   const id = seedId('10.b047_virtual_bid')
   if (!id) {
-    noMaterial(ID, 1, '시딩 10.b047_virtual_bid(31분 전부터 읽는 중인 입찰 건)가 없다')
+    noMaterial(ID, 1, '시딩 10.b047_virtual_bid(대기 한도보다 오래 읽는 중인 입찰 건)가 없다')
     return
   }
   await openScreen(`/bid-requests/${id}`)
