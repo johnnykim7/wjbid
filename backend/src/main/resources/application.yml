@@ -206,6 +206,8 @@ app:
       proposal-assemble: ${AIMBASE_WF_PROPOSAL_ASSEMBLE:proposal-assemble}
       # CR-031: 충실성·분량 검증 (Haiku)
       proposal-verify-fidelity: ${AIMBASE_WF_PROPOSAL_VERIFY_FIDELITY:proposal-verify-fidelity}
+      # CR-169: 고객 서류 읽기
+      client-document-read: ${AIMBASE_WF_CLIENT_DOCUMENT_READ:client-document-read}
       # CR-022 (재구현): 공고 본문 영→한 번역
       opportunity-description-translation: ${AIMBASE_WF_OPP_DESC_TRANSLATION:translate-opportunity-description}
       # CR-022 (재구현): 공고 제목 영→한 번역

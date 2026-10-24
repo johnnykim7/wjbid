@@ -145,7 +145,7 @@ class ProposalServiceTest {
         given(sectionRepository.save(any(ProposalSection.class))).willAnswer(inv -> inv.getArgument(0));
 
         ProposalSection created = proposalService.createSection(
-                chapterId, "A", "Prior Experience", "작성 지침", List.of("REQ-001"), 500, 0);
+                chapterId, "A", "Prior Experience", "작성 지침", List.of("REQ-001"), List.of(), 500, 0);
 
         assertThat(created.getStatus()).isEqualTo(SectionStatus.PENDING);
         assertThat(created.getChapterId()).isEqualTo(chapterId);

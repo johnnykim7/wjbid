@@ -102,13 +102,14 @@ public class ProposalService {
     @Transactional
     public ProposalSection createSection(UUID chapterId, String subfactorLabel, String title,
                                          String scope, List<String> requirementRefs,
-                                         Integer minWords, int orderNo) {
+                                         List<String> sourceReadingIds, Integer minWords, int orderNo) {
         ProposalSection section = ProposalSection.builder()
                 .chapterId(chapterId)
                 .subfactorLabel(subfactorLabel)
                 .title(title)
                 .scope(scope)
                 .requirementRefs(requirementRefs)
+                .sourceReadingIds(sourceReadingIds)
                 .minWords(minWords)
                 .orderNo(orderNo)
                 .status(SectionStatus.PENDING)
@@ -146,7 +147,7 @@ public class ProposalService {
             List<SectionInput> sections = ci.sections() != null ? ci.sections() : List.of();
             for (SectionInput si : sections) {
                 createSection(chapter.getId(), si.subfactorLabel(), si.title(), si.scope(),
-                        si.requirementRefs(), si.minWords(), sectionOrder++);
+                        si.requirementRefs(), si.sourceReadingIds(), si.minWords(), sectionOrder++);
             }
         }
         return chapterRepository.findByDocumentIdOrderByOrderNoAsc(documentId);
@@ -285,6 +286,7 @@ public class ProposalService {
             String title,
             String scope,
             List<String> requirementRefs,
+            List<String> sourceReadingIds,
             Integer minWords
     ) {}
 }

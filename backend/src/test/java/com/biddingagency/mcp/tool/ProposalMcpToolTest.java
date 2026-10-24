@@ -1,5 +1,6 @@
 package com.biddingagency.mcp.tool;
 
+import com.biddingagency.TestHelper;
 import com.biddingagency.domain.bid.repository.BidRequestRepository;
 import com.biddingagency.domain.bid.service.BidRequestService;
 import com.biddingagency.domain.compliance.entity.FulfillmentStatus;
@@ -16,6 +17,7 @@ import com.biddingagency.domain.opportunity.repository.OpportunityRequirementIte
 import com.biddingagency.domain.proposal.entity.ProposalSection;
 import com.biddingagency.domain.proposal.service.ProposalService;
 import com.biddingagency.domain.proposal.service.VerificationLogService;
+import com.biddingagency.domain.reading.service.DocumentReadingService;
 import com.biddingagency.domain.rfp.service.ReferenceSampleService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -38,6 +40,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 
@@ -57,6 +60,7 @@ class ProposalMcpToolTest {
     @Mock private OpportunityRequirementItemRepository requirementRepository;
     @Mock private RequirementFulfillmentMapRepository fulfillmentMapRepository;
     @Mock private BidDocumentRepository documentRepository;
+    @Mock private DocumentReadingService documentReadingService;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final ComplianceFixture f = new ComplianceFixture();
@@ -69,10 +73,11 @@ class ProposalMcpToolTest {
         ComplianceService complianceService = new ComplianceService(bidRequestRepository, requirementRepository,
                 fulfillmentMapRepository, documentRepository, noticeRepository, proposalService, Clock.systemDefaultZone());
         tool = new ProposalMcpTool(bidRequestService, bidDocumentService, noticeRepository, proposalService,
-                referenceSampleService, verificationLogService, complianceService, objectMapper);
+                referenceSampleService, verificationLogService, complianceService, documentReadingService, objectMapper);
         req1 = f.shallPlatform("REQ-001", ComplianceFixture.QC);
         req2 = f.shallPlatform("REQ-002", ComplianceFixture.PP);
         lenient().when(documentRepository.findById(f.document.getId())).thenReturn(Optional.of(f.document));
+        lenient().when(bidDocumentService.findById(f.document.getId())).thenReturn(f.document);
     }
 
     private void givenMatrix(OpportunityRequirementItem... lines) {
@@ -224,5 +229,40 @@ class ProposalMcpToolTest {
         tool.saveVerificationResult(verifyArgs(section, Map.of("reqId", "REQ-003", "answered", true, "evidenceQuote", "x")));
 
         then(fulfillmentMapRepository).should(never()).save(any());
+    }
+
+    @Test
+    @DisplayName("TC-DOC-233 설계저장_읽음아닌근거_전체거부(도구)")
+    void 설계저장_읽음아닌근거_전체거부() {
+        given(requirementRepository.findByOpportunityIdAndReqIdIsNotNullOrderBySortOrderAsc(f.opportunityId()))
+                .willReturn(List.of());
+        String failedId = UUID.randomUUID().toString();
+        willThrow(new IllegalArgumentException("unknownReadingIds: [" + failedId + "]"))
+                .given(documentReadingService).requireReadableSources(f.bidRequest.getId(), List.of(failedId));
+        Map<String, Object> args = Map.of("documentId", f.document.getId().toString(), "chapters", List.of(Map.of(
+                "factorLabel", "1", "factorTitle", "Technical",
+                "sections", List.of(Map.of("title", "Quality", "requirementRefs", List.of(),
+                        "sourceReadingIds", List.of(failedId))))));
+
+        assertThatThrownBy(() -> tool.saveProposalStructure(args)).isInstanceOf(IllegalArgumentException.class);
+        then(proposalService).should(never()).saveStructure(any(), any());
+    }
+
+    @Test
+    @DisplayName("TC-DOC-236 검증입력_근거서류같이")
+    void 검증입력_근거서류같이() throws Exception {
+        String readingId = UUID.randomUUID().toString();
+        ProposalSection section = TestHelper.withId(ProposalSection.builder().chapterId(f.chapter.getId())
+                .title("Quality").requirementRefs(List.of()).sourceReadingIds(List.of(readingId)).build());
+        givenSection(section);
+        given(bidRequestService.findByIdWithDetails(f.bidRequest.getId())).willReturn(f.bidRequest);
+        given(documentReadingService.sourceDocuments(f.bidRequest.getId(), List.of(readingId))).willReturn(List.of(Map.of(
+                "readingId", readingId, "fileName", "a.pdf", "facts", List.of(Map.of("key", "상호", "value", "우진", "page", "1")))));
+        Map<String, Object> args = Map.of("sectionId", section.getId().toString());
+
+        JsonNode context = objectMapper.readTree(tool.getSectionContext(args)).get("sourceDocuments");
+        JsonNode verify = objectMapper.readTree(tool.getSectionVerifyInput(args)).get("sourceDocuments");
+
+        assertThat(List.<Object>of(context.size(), verify)).containsExactly(1, context);
     }
 }

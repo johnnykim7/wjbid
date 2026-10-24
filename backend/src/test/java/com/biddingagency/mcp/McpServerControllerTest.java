@@ -1,6 +1,7 @@
 package com.biddingagency.mcp;
 
 import com.biddingagency.mcp.tool.DocumentMcpTool;
+import com.biddingagency.mcp.tool.DocumentReadingMcpTool;
 import com.biddingagency.mcp.tool.DocumentTemplateMcpTool;
 import com.biddingagency.mcp.tool.OpportunityAnalysisMcpTool;
 import com.biddingagency.mcp.tool.OpportunityMcpTool;
@@ -40,6 +41,8 @@ class McpServerControllerTest {
     private PatternGuideMcpTool patternGuideMcpTool;
     @Mock
     private ProposalMcpTool proposalMcpTool;
+    @Mock
+    private DocumentReadingMcpTool documentReadingMcpTool;
 
     private McpServerController mcpServerController;
 
@@ -48,7 +51,7 @@ class McpServerControllerTest {
         McpDispatcher dispatcher = new McpDispatcher(
             opportunityMcpTool, documentMcpTool,
             documentTemplateMcpTool, stateMcpTool, opportunityAnalysisMcpTool,
-            patternGuideMcpTool, proposalMcpTool);
+            patternGuideMcpTool, proposalMcpTool, documentReadingMcpTool);
         mcpServerController = new McpServerController(dispatcher);
     }
 

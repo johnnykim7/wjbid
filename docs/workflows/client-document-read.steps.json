@@ -1,0 +1,198 @@
+{
+  "id": "client-document-read",
+  "name": "client-document-read",
+  "domain": "bidding",
+  "triggerConfig": {
+    "type": "manual"
+  },
+  "steps": [
+    {
+      "id": "download_files",
+      "name": "고객 서류 받는 중",
+      "type": "FOREACH",
+      "config": {
+        "items": "{{input.files}}",
+        "item_var": "item",
+        "mode": "parallel",
+        "max_concurrency": 4,
+        "max_items": 100,
+        "collect": "append",
+        "on_item_error": "continue",
+        "body": {
+          "type": "TOOL_CALL",
+          "config": {
+            "tool": "download_file",
+            "input": {
+              "url": "{{item.downloadUrl}}",
+              "file_path": "{{item.workspacePath}}",
+              "overwrite": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "convert_hwp",
+      "name": "HWP 서류 바꾸는 중",
+      "type": "FOREACH",
+      "config": {
+        "items": "{{input.hwpFiles}}",
+        "item_var": "item",
+        "mode": "parallel",
+        "max_concurrency": 2,
+        "max_items": 100,
+        "collect": "append",
+        "on_item_error": "continue",
+        "body": {
+          "type": "AGENT_CALL",
+          "config": {
+            "prompt": "고객 서류 한 개를 HWP 에서 마크다운으로 바꿉니다. 판단할 것은 없고 아래 도구 호출 하나만 합니다.\n\n1. skill_run(name=\"sam-proposal\", script=\"scripts/convert_hwp.py\", args=[\"{{item.workspacePath}}\", \"{{item.convertedPath}}\"]) 을 호출하세요.\n2. 종료 코드가 0 이면 '변환 완료: {{item.convertedPath}}' 한 줄로 답하고 끝냅니다.\n3. 종료 코드가 0 이 아니면 스크립트가 낸 오류 문장을 그대로 한 줄로 답하고 끝냅니다. 다른 방법으로 바꾸려 하지 않습니다(이 서류는 서버가 읽지 못함으로 둡니다).\n\n파일을 직접 읽거나 고치지 않습니다. 결과 파일 내용을 답에 옮기지 않습니다.",
+            "timeout_ms": 300000,
+            "description": "HWP, HWPX 고객 서류를 sam-proposal 스킬 스크립트로 마크다운으로 바꾼다 (CR-169)",
+            "connection_id": "cli-runner-bidding-tools-001",
+            "skills": [
+              {
+                "name": "sam-proposal",
+                "version": 1,
+                "files": [
+                  "scripts/convert_hwp.py"
+                ]
+              }
+            ]
+          }
+        }
+      },
+      "depends_on": [
+        "download_files"
+      ]
+    },
+    {
+      "id": "extract_facts",
+      "name": "고객 서류 읽는 중",
+      "type": "FOREACH",
+      "config": {
+        "items": "{{input.targets}}",
+        "item_var": "item",
+        "mode": "parallel",
+        "max_concurrency": 2,
+        "max_items": 100,
+        "collect": "append",
+        "on_item_error": "continue",
+        "body": {
+          "type": "LARGE_INPUT",
+          "config": {
+            "analysis_action": "extract",
+            "source_file": "{{item.targetPath}}",
+            "connection_id": "cli-runner-bidding-001",
+            "large_input_mode": "auto",
+            "max_parallel": 5,
+            "item_retry_max": 2,
+            "require_full_coverage": false,
+            "focus_areas": [
+              "회사 기본",
+              "인허가",
+              "수행 실적",
+              "인력",
+              "장비",
+              "재무",
+              "보험",
+              "인증"
+            ],
+            "analysis_goal": "고객 회사 서류 한 개에서 제안서 근거로 쓸 회사 사실을 쪽과 원문 구절과 함께 빠짐없이 뽑는다",
+            "custom_instruction": "당신은 미군(USFK) 정부조달 입찰을 준비하는 한국 회사의 서류를 읽는 사람입니다. 지금 보는 조각은 고객 서류 '{{item.targetPath}}' 한 개의 일부입니다(같은 서류의 다른 조각과 다른 서류는 따로 처리됩니다). 이 조각에서 제안서에 근거로 쓸 회사 사실을 빠짐없이 뽑으세요.\n\n[분류 category]\n- COMPANY: 회사 기본. 상호(국문, 영문), 사업자등록번호, 대표자, 주소, 설립일, CAGE, UEI\n- LICENSE: 인허가와 자격. 인허가 종류, 번호, 발급 기관, 유효기간, 기술 자격\n- PAST_PERFORMANCE: 수행 실적. 사업명, 발주처, 계약 번호, 기간, 금액, 수행 내용, 역할\n- PERSONNEL: 인력. 직책, 인원, 자격, 경력 연수\n- EQUIPMENT: 장비와 시설. 장비 종류, 수량, 규격, 보유 형태, 시설 위치\n- FINANCIAL: 재무. 연도별 매출, 자본, 부채비율, 신용등급\n- INSURANCE: 보험. 보험 종류, 보상 한도, 기간\n- CERTIFICATION: 인증. ISO 등 인증 이름, 번호, 유효기간\n- OTHER: 위에 들지 않는 회사 사실\n\n[사실 하나] {category, key(항목 이름, 한국어), value(값), page(이 사실이 나온 쪽 번호), anchor(원문에서 글자 그대로 복사한 짧은 구절), confidence(HIGH, MEDIUM, LOW), readMode(TEXT 또는 VISION), sourceFile(반드시 '{{item.targetPath}}')}\n\n[값] 원문 말 그대로 둡니다. 번역하거나 고치지 않습니다. 영문 표기가 원문에 같이 있으면 함께 적습니다(예: '우진이앤씨 (WOOJIN E&C)'). 금액, 날짜, 번호는 원문 표기 그대로입니다. 한 사실에는 값 하나만 담습니다. 실적 한 건은 사업명, 발주처, 기간, 금액을 각각 사실로 나누고 key 앞에 같은 사업명을 붙여 묶이게 합니다(예: 'Camp Humphreys 배관 공사 / 발주처').\n\n[anchor] 원문에 글자 그대로 있는 5~15자 또는 3~8단어 구절입니다. 요약하거나 번역하지 않습니다. 다음 단계가 이 구절로 원문을 찾아 사실이 진짜 있는지 확인합니다.\n\n[스캔, 사진, 도장] 글자가 없는 쪽(스캔본, 사진으로 찍은 서류, 그림으로 넣은 표)은 쪽 그림을 보고 글자를 읽습니다. 이렇게 읽은 사실은 readMode=VISION 이고 anchor 를 비워도 됩니다. 글자를 확실히 읽지 못했으면 confidence=LOW 로 두고 값은 읽은 만큼만 적습니다. 글자 레이어에서 읽은 사실은 readMode=TEXT 입니다.\n\n[하지 않는 것] 원문에 없는 사실을 추측으로 채우지 않습니다. 같은 사실을 겹쳐 뽑지 않습니다. 회사 사실이 아닌 서식 안내문, 빈 칸 이름, 페이지 머리말은 뽑지 않습니다. 이 조각에 회사 사실이 없으면 facts 를 빈 배열로 둡니다.",
+            "output_schema": {
+              "type": "object",
+              "required": [
+                "facts"
+              ],
+              "properties": {
+                "facts": {
+                  "type": "array",
+                  "description": "이 서류에서 근거와 함께 뽑은 회사 사실 목록",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "category",
+                      "key",
+                      "value",
+                      "sourceFile"
+                    ],
+                    "properties": {
+                      "category": {
+                        "type": "string",
+                        "enum": [
+                          "COMPANY",
+                          "LICENSE",
+                          "PAST_PERFORMANCE",
+                          "PERSONNEL",
+                          "EQUIPMENT",
+                          "FINANCIAL",
+                          "INSURANCE",
+                          "CERTIFICATION",
+                          "OTHER"
+                        ]
+                      },
+                      "key": {
+                        "type": "string"
+                      },
+                      "value": {
+                        "type": "string"
+                      },
+                      "page": {
+                        "type": "string"
+                      },
+                      "anchor": {
+                        "type": "string",
+                        "description": "원문에 글자 그대로 있는 짧은 구절. 글자 인식으로 읽은 사실은 비울 수 있다"
+                      },
+                      "confidence": {
+                        "type": "string",
+                        "enum": [
+                          "HIGH",
+                          "MEDIUM",
+                          "LOW"
+                        ]
+                      },
+                      "readMode": {
+                        "type": "string",
+                        "enum": [
+                          "TEXT",
+                          "VISION"
+                        ]
+                      },
+                      "sourceFile": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "depends_on": [
+        "convert_hwp"
+      ]
+    },
+    {
+      "id": "save",
+      "name": "읽은 내용 저장 중",
+      "type": "TOOL_CALL",
+      "config": {
+        "tool": "save_client_document_facts",
+        "input": {
+          "bidRequestId": "{{input.bidRequestId}}",
+          "targets": "{{input.targets}}",
+          "results": "{{extract_facts.structured_data}}"
+        }
+      },
+      "depends_on": [
+        "extract_facts"
+      ]
+    }
+  ],
+  "errorHandling": null,
+  "outputSchema": null,
+  "inputSchema": null
+}

@@ -47,6 +47,11 @@ public class ProposalSection extends BaseEntity {
     @Column(name = "requirement_refs", columnDefinition = "JSON")
     private List<String> requirementRefs;
 
+    /** 이 절을 쓸 때 보는 고객 서류 읽기 readingId 배열 (CR-169, BIZ-088) */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "source_reading_ids", columnDefinition = "JSON")
+    private List<String> sourceReadingIds;
+
     @Column(name = "min_words")
     private Integer minWords;
 

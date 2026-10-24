@@ -20,6 +20,7 @@ import com.biddingagency.domain.proposal.service.ProposalService.ChapterInput;
 import com.biddingagency.domain.proposal.service.ProposalService.SectionInput;
 import com.biddingagency.domain.proposal.service.VerificationLogService;
 import com.biddingagency.domain.proposal.entity.BlockType;
+import com.biddingagency.domain.reading.service.DocumentReadingService;
 import com.biddingagency.domain.rfp.entity.IndustryType;
 import com.biddingagency.domain.rfp.service.ReferenceSampleService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -53,6 +54,7 @@ public class ProposalMcpTool {
     private final ReferenceSampleService referenceSampleService;
     private final VerificationLogService verificationLogService;
     private final ComplianceService complianceService;
+    private final DocumentReadingService documentReadingService;
     private final ObjectMapper objectMapper;
 
     // ─── 도구 정의 ────────────────────────────────────────────────────────
@@ -64,7 +66,9 @@ public class ProposalMcpTool {
                     "documentId 로 연결된 공고의 한글화 요약·요구서류·공고 본문(content)과, 정제 시 도출된 FACTOR/Subfactor 트리(factorTree)를 반환합니다. " +
                     "factorTree 가 있으면 그대로 chapter/section 으로 복사·검증하고, 없으면(null) 공고 본문(noticeContent/opportunityText)의 Section L/M 에서 FACTOR/Subfactor 를 직접 발췌하세요. " +
                     "CR-159: complianceMatrix(컴플라이언스 매트릭스 줄 [{reqId, level, text, verb, fulfillmentParty, factorId, factorTitle}])가 있으면 " +
-                    "section 마다 답할 reqId 를 requirementRefs 로 정하세요. level=SHALL 이면서 fulfillmentParty=PLATFORM_GENERATED 인 줄은 빠짐없이 어느 section 엔가 걸어야 합니다.",
+                    "section 마다 답할 reqId 를 requirementRefs 로 정하세요. level=SHALL 이면서 fulfillmentParty=PLATFORM_GENERATED 인 줄은 빠짐없이 어느 section 엔가 걸어야 합니다. " +
+                    "CR-169: clientDocuments(고객 서류 [{readingId, fileName, origin, category, fulfills, status, factCount, facts[{category, key, value}]}])를 보고 " +
+                    "section 마다 쓸 근거 서류의 readingId 를 sourceReadingIds 로 정하세요. status=DONE 인 서류만 쓸 수 있습니다.",
             "inputSchema", Map.of(
                 "type", "object",
                 "properties", Map.of(
@@ -78,7 +82,9 @@ public class ProposalMcpTool {
             "description", "design 단계 결과인 chapter/section 트리를 저장합니다 (기존 트리를 비우고 통째 재생성). " +
                     "공고가 박은 라벨·순서를 그대로 보존하세요(창작 금지). LOCKED section 이 하나라도 있으면 거부됩니다. " +
                     "CR-159: 공고에 컴플라이언스 매트릭스가 있으면 requirementRefs 는 그 reqId 만 받고, 없는 ID 가 하나라도 있으면 전체를 거부하며 그 ID 를 알려 줍니다. " +
-                    "저장되면 unassignedReqIds(어느 section 에도 걸리지 않은 SHALL 이면서 PLATFORM_GENERATED 인 reqId)를 돌려줍니다.",
+                    "저장되면 unassignedReqIds(어느 section 에도 걸리지 않은 SHALL 이면서 PLATFORM_GENERATED 인 reqId)를 돌려줍니다. " +
+                    "CR-169: sourceReadingIds 는 get_proposal_design_input 의 clientDocuments 가운데 status=DONE 인 readingId 만 받고, 아닌 id 가 있으면 전체를 거부하며 unknownReadingIds 로 알려 줍니다. " +
+                    "저장되면 unusedReadingIds(어느 section 에도 걸리지 않은 읽음 서류)를 돌려줍니다.",
             "inputSchema", Map.of(
                 "type", "object",
                 "properties", Map.of(
@@ -94,7 +100,8 @@ public class ProposalMcpTool {
                                 "sourceSection", Map.of("type", "string", "description", "NOTICE_L | NOTICE_M | SECTION_K (기본 NOTICE_M)"),
                                 "sections", Map.of("type", "array", "description",
                                     "Subfactor 단위 section 배열. Subfactor 강제 안 한 FACTOR 는 section 1개(subfactorLabel=null)로 통합. " +
-                                    "각 항목: {subfactorLabel, title, scope(작성 지침), requirementRefs(대응 REQ ID 배열, complianceMatrix 의 reqId), minWords(최소 단어 수)}")
+                                    "각 항목: {subfactorLabel, title, scope(작성 지침), requirementRefs(대응 REQ ID 배열, complianceMatrix 의 reqId), " +
+                                    "sourceReadingIds(근거 고객 서류 readingId 배열, clientDocuments 의 status=DONE), minWords(최소 단어 수)}")
                             )
                         ))
                     )
@@ -107,7 +114,9 @@ public class ProposalMcpTool {
             "description", "한 section 의 본문 작성에 필요한 컨텍스트를 조회합니다. " +
                     "section 의 scope(작성 지침)·title·minWords·requirementRefs 와, 소속 공고유형(industryType)에 매칭되는 참조 샘플 파일 목록(referenceSamples)을 반환합니다. " +
                     "CR-159: requirements 에 대응 REQ ID 마다 원문(text), 번역, 요구 동사(verb), 구분(level), 평가항목을 줍니다. 요구 동사가 정하는 형태로 답하세요. " +
-                    "referenceSamples 의 downloadUrl 을 parse_document(url=...)로 읽어 few-shot 으로 참조하되, 사실(회사명·실적·수치)은 복붙하지 마세요.",
+                    "referenceSamples 의 downloadUrl 을 parse_document(url=...)로 읽어 few-shot 으로 참조하되, 사실(회사명·실적·수치)은 복붙하지 마세요. " +
+                    "CR-169: sourceDocuments(이 section 의 근거 고객 서류 [{readingId, fileName, category, facts[{category, key, value, page, anchor, confidence, readMode}]}])가 있으면 " +
+                    "회사명·실적·인력·면허·수치는 이 facts 에서만 가져오고, 쓴 사실의 readingId 와 page 를 block 의 sourceEvidence 에 남기세요.",
             "inputSchema", Map.of(
                 "type", "object",
                 "properties", Map.of(
@@ -147,7 +156,8 @@ public class ProposalMcpTool {
                     "section 의 scope·요구사항(requirementRefs)·현재 작성된 본문(blocks 의 text 평탄화)·" +
                     "공고 본문 텍스트(opportunityText)·참조 샘플 목록을 반환합니다. " +
                     "생성된 본문의 각 문장이 공고 본문/첨부에 근거하는지 검증하세요 — 근거 없는 문장은 환각입니다. " +
-                    "CR-159: requirements 의 reqId 마다 본문이 그 요구에 답했는지 보고 save_verification_result 의 requirementChecks 로 보내세요.",
+                    "CR-159: requirements 의 reqId 마다 본문이 그 요구에 답했는지 보고 save_verification_result 의 requirementChecks 로 보내세요. " +
+                    "CR-169: sourceDocuments(get_section_context 와 같은 꼴)도 근거입니다. 고객 회사에 관한 사실이 sourceDocuments 의 facts 에 없으면 환각입니다.",
             "inputSchema", Map.of(
                 "type", "object",
                 "properties", Map.of(
@@ -231,6 +241,7 @@ public class ProposalMcpTool {
             result.put("priceItems", null);
         }
         result.put("complianceMatrix", complianceService.designInputLines(opp.getId()));
+        result.put("clientDocuments", documentReadingService.designInputDocuments(bidRequest.getId()));
         return toJson(result);
     }
 
@@ -251,6 +262,7 @@ public class ProposalMcpTool {
                         str(s.get("title")),
                         str(s.get("scope")),
                         castStringList(s.get("requirementRefs")),
+                        castStringList(s.get("sourceReadingIds")),
                         intOrNull(s.get("minWords"))
                 ));
             }
@@ -266,6 +278,12 @@ public class ProposalMcpTool {
                 .flatMap(ch -> ch.sections().stream())
                 .flatMap(sec -> sec.requirementRefs().stream())
                 .toList());
+        UUID bidRequestId = bidDocumentService.findById(documentId).getBidRequest().getId();
+        List<String> sourceReadingIds = chapters.stream()
+                .flatMap(ch -> ch.sections().stream())
+                .flatMap(sec -> sec.sourceReadingIds().stream())
+                .toList();
+        documentReadingService.requireReadableSources(bidRequestId, sourceReadingIds);
         List<ProposalChapter> saved = proposalService.saveStructure(documentId, chapters);
         int sectionCount = saved.stream()
                 .mapToInt(ch -> proposalService.getSections(ch.getId()).size()).sum();
@@ -290,7 +308,8 @@ public class ProposalMcpTool {
                 "chapterCount", saved.size(),
                 "sectionCount", sectionCount,
                 "sections", sectionList,
-                "unassignedReqIds", complianceService.unassignedReqIds(documentId)
+                "unassignedReqIds", complianceService.unassignedReqIds(documentId),
+                "unusedReadingIds", documentReadingService.unusedReadingIds(bidRequestId, sourceReadingIds)
         ));
     }
 
@@ -321,6 +340,8 @@ public class ProposalMcpTool {
                 ? referenceSampleService.collect(industryType) : List.of();
         result.put("industryType", industryType != null ? industryType.name() : null);
         result.put("referenceSamples", samples);
+        UUID bidRequestId = bidDocumentService.findById(chapter.getDocumentId()).getBidRequest().getId();
+        result.put("sourceDocuments", documentReadingService.sourceDocuments(bidRequestId, section.getSourceReadingIds()));
         return toJson(result);
     }
 
@@ -384,6 +405,7 @@ public class ProposalMcpTool {
         result.put("blockCount", blocks.size());
         result.put("opportunityText", buildOpportunityText(opp));
         result.put("referenceSamples", samples);
+        result.put("sourceDocuments", documentReadingService.sourceDocuments(bidRequest.getId(), section.getSourceReadingIds()));
         return toJson(result);
     }
 

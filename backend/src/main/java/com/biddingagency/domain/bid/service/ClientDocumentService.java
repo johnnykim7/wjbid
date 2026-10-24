@@ -1,5 +1,6 @@
 package com.biddingagency.domain.bid.service;
 
+import com.biddingagency.common.ContentHash;
 import com.biddingagency.domain.bid.entity.BidRequest;
 import com.biddingagency.domain.bid.entity.ClientDocument;
 import com.biddingagency.domain.bid.repository.ClientDocumentRepository;
@@ -63,6 +64,7 @@ public class ClientDocumentService {
                 .contentType(file.getContentType())
                 .storageUrl(storageUrl)
                 .documentCategory(category)
+                .contentSha256(ContentHash.of(file))
                 .build());
         log.info("Client document uploaded: {} for bid request {}", saved.getId(), bidRequestId);
         return saved;

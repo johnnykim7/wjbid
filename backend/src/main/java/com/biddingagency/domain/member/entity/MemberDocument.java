@@ -58,16 +58,26 @@ public class MemberDocument extends BaseEntity {
     @Column(name = "expires_on")
     private java.time.LocalDate expiresOn;
 
+    /** 파일 내용의 SHA-256. 같은 내용은 한 번만 읽는다 (CR-169, BIZ-085) */
+    @Column(name = "content_sha256", length = 64)
+    private String contentSha256;
+
     public void changeExpiry(java.time.LocalDate expiresOn) {
         this.expiresOn = expiresOn;
     }
 
     /** 파일 교체 (storage_url 갱신 시 기존 파일은 서비스에서 삭제) */
-    public void replaceFile(String fileName, Long fileSize, String contentType, String storageUrl) {
+    public void replaceFile(String fileName, Long fileSize, String contentType, String storageUrl, String contentSha256) {
         this.fileName = fileName;
         this.fileSize = fileSize;
         this.contentType = contentType;
         this.storageUrl = storageUrl;
+        this.contentSha256 = contentSha256;
+    }
+
+    /** CR-169: V58 전에 올린 줄은 비어 있어 읽기를 시작할 때 채운다 */
+    public void recordContentHash(String sha256) {
+        this.contentSha256 = sha256;
     }
 
     public void updateMeta(String displayName, String description) {

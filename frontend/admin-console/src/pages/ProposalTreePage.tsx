@@ -10,8 +10,11 @@ import {
   reverifyProposalSection,
   getProposalCoverage,
 } from '../api/client'
-import { Badge } from '@therecommerce-develop/ds-ui'
+import { Badge, Button } from '@therecommerce-develop/ds-ui'
 import CoverageBand from '../components/CoverageBand'
+import DocumentReadingFacts from '../components/DocumentReadingFacts'
+import { readingStatusLabel } from '../components/documentReading'
+import type { SourceDocument } from '../components/documentReading'
 import type { Coverage } from '../components/CoverageBand'
 
 // ── 타입 (BE ProposalTreeDto 대응) ──
@@ -51,6 +54,7 @@ interface SectionDetail {
   minWords: number | null
   requirementRefs: string[] | null
   blocks: BlockNode[]
+  sourceDocuments: SourceDocument[] | null
 }
 
 type SectionStatus = 'PENDING' | 'DRAFTING' | 'DRAFTED' | 'VERIFIED' | 'NEEDS_REGEN' | 'LOCKED'
@@ -112,6 +116,7 @@ export default function ProposalTreePage() {
   const [error, setError] = useState<string | null>(null)
   const [coverage, setCoverage] = useState<Coverage | null>(null)
   const [coverageFailed, setCoverageFailed] = useState(false)
+  const [openSourceId, setOpenSourceId] = useState<string | null>(null)
 
   const loadTree = useCallback(async () => {
     if (!documentId) return
@@ -160,6 +165,7 @@ export default function ProposalTreePage() {
     setSelectedId(sectionId)
     setDetailLoading(true)
     setVerification(null)
+    setOpenSourceId(null)
     try {
       const res = await getProposalSection(documentId, sectionId)
       setDetail(res.data)
@@ -387,6 +393,33 @@ export default function ProposalTreePage() {
                     )
                   })()}
                 </div>
+              </div>
+
+              {/* 근거 서류 (CR-169) */}
+              <div className="mb-4 text-sm space-y-2">
+                <div className="flex flex-wrap items-center gap-1">
+                  <span className="text-gray-500 mr-1">근거 서류</span>
+                  {(detail.sourceDocuments ?? []).length === 0 ? (
+                    <span className="text-gray-500">근거 서류 없음</span>
+                  ) : (
+                    (detail.sourceDocuments ?? []).map((d) => (
+                      <Button
+                        key={d.readingId}
+                        variant={openSourceId === d.readingId ? 'secondary' : 'outline'}
+                        size="sm"
+                        onClick={() => setOpenSourceId(openSourceId === d.readingId ? null : d.readingId)}
+                      >
+                        {d.fileName} 사실 {d.factCount}
+                        {d.status !== 'DONE' && ` (${readingStatusLabel(d.status)})`}
+                      </Button>
+                    ))
+                  )}
+                </div>
+                {openSourceId && (
+                  <div className="p-2 bg-gray-50 rounded">
+                    <DocumentReadingFacts readingId={openSourceId} />
+                  </div>
+                )}
               </div>
 
               {detail.scope && (

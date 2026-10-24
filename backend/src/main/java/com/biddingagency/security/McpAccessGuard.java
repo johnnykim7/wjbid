@@ -32,6 +32,7 @@ public class McpAccessGuard {
     private static final String HMAC = "HmacSHA256";
     private static final String ATTACHMENT_PREFIX = "/mcp/opportunity-attachments/";
     private static final String RFP_FILE_PREFIX = "/mcp/rfp-files/";
+    private static final String DOCUMENT_READING_PREFIX = "/mcp/document-readings/";
     private static final String DOWNLOAD_SUFFIX = "/download";
 
     private final byte[] apiKey;
@@ -68,8 +69,14 @@ public class McpAccessGuard {
         return signedUrl(RFP_FILE_PREFIX + fileId + DOWNLOAD_SUFFIX);
     }
 
+    /** 고객 서류 읽기 워크플로우가 받을 파일. 읽는 꼴로 바꾼 파일을 준다 (CR-169) */
+    public String documentReadingUrl(UUID readingId) {
+        return signedUrl(DOCUMENT_READING_PREFIX + readingId + DOWNLOAD_SUFFIX);
+    }
+
     public boolean isDownloadPath(String path) {
-        return (path.startsWith(ATTACHMENT_PREFIX) || path.startsWith(RFP_FILE_PREFIX))
+        return (path.startsWith(ATTACHMENT_PREFIX) || path.startsWith(RFP_FILE_PREFIX)
+                || path.startsWith(DOCUMENT_READING_PREFIX))
                 && path.endsWith(DOWNLOAD_SUFFIX);
     }
 

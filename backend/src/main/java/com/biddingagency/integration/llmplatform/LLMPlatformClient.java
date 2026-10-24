@@ -64,6 +64,10 @@ public class LLMPlatformClient {
     @Value("${app.aimbase.workflows.proposal-verify-fidelity:proposal-verify-fidelity}")
     private String proposalVerifyFidelityWorkflowId;
 
+    // CR-169: 고객 서류 읽기. 결과는 Aimbase 가 MCP save_client_document_facts 로 저장한다.
+    @Value("${app.aimbase.workflows.client-document-read:client-document-read}")
+    private String clientDocumentReadWorkflowId;
+
     // CR-022 (재구현): 공고 본문 영→한 번역. 결과는 MCP 콜백 없이 stepResults에서 직접 추출.
     @Value("${app.aimbase.workflows.opportunity-description-translation:translate-opportunity-description}")
     private String opportunityDescriptionTranslationWorkflowId;
@@ -263,6 +267,16 @@ public class LLMPlatformClient {
         log.info("Aimbase: 충실성 검증 시작 target={}/{}, attempt={}",
                 input.get("targetType"), input.get("targetId"), input.get("attempt"));
         return runWorkflowAndWait(proposalVerifyFidelityWorkflowId, input);
+    }
+
+    /**
+     * CR-169 고객 서류 읽기: client-document-read 워크플로우 실행.
+     * 입력: bidRequestId, files, hwpFiles, targets. onRunStarted 로 runId 를 읽기 줄에 남긴다.
+     */
+    public WorkflowRunResponse runClientDocumentRead(Map<String, Object> input,
+                                                     java.util.function.Consumer<String> onRunStarted) {
+        log.info("Aimbase: 고객 서류 읽기 시작 bidRequestId={}", input.get("bidRequestId"));
+        return runWorkflowAndWait(clientDocumentReadWorkflowId, input, onRunStarted);
     }
 
     // ─────────────────────────────────────────────────────────────────────────

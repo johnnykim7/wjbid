@@ -173,6 +173,16 @@ export const getBidDocumentsByBidRequest = (bidRequestId: string) =>
 export const getClientDocuments = (bidRequestId: string) =>
   api.get(`/client-documents/${bidRequestId}`)
 
+// CR-169 고객 서류 읽기
+export const getDocumentReadings = (bidRequestId: string) =>
+  api.get(`/admin/bid-requests/${bidRequestId}/document-readings`)
+
+export const getDocumentReading = (readingId: string) =>
+  api.get(`/admin/document-readings/${readingId}`)
+
+export const rerunDocumentReadings = (bidRequestId: string, readingIds?: string[]) =>
+  api.post(`/admin/bid-requests/${bidRequestId}/document-readings/run`, { readingIds: readingIds ?? null })
+
 // Collection Runs
 export const getCollectionRuns = (page = 0) =>
   api.get('/admin/collection/runs', { params: { page, size: 20 } })
