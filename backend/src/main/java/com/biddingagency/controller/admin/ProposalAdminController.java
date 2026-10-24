@@ -9,6 +9,7 @@ import com.biddingagency.domain.proposal.entity.VerificationLog;
 import com.biddingagency.domain.proposal.entity.VerificationTargetType;
 import com.biddingagency.domain.proposal.service.ProposalService;
 import com.biddingagency.domain.proposal.service.VerificationLogService;
+import com.biddingagency.domain.reading.service.DocumentReadingService;
 import com.biddingagency.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -41,6 +42,7 @@ import java.util.UUID;
 public class ProposalAdminController {
 
     private final ProposalService proposalService;
+    private final DocumentReadingService documentReadingService;
     private final AIWorkflowService aiWorkflowService;
     private final VerificationLogService verificationLogService;
     private final ComplianceService complianceService;
@@ -65,7 +67,8 @@ public class ProposalAdminController {
             @PathVariable UUID sectionId) {
         ProposalSection section = proposalService.getSection(sectionId);
         return ResponseEntity.ok(ProposalTreeDto.SectionDetail.of(
-                section, proposalService.getBlocks(sectionId)));
+                section, proposalService.getBlocks(sectionId),
+                documentReadingService.sourceDocumentTags(section.getSourceReadingIds())));
     }
 
     /**

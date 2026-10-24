@@ -9,6 +9,8 @@ import com.biddingagency.domain.compliance.service.ComplianceService;
 import com.biddingagency.domain.event.BidRequestStateChangedEvent;
 import com.biddingagency.domain.member.entity.Member;
 import com.biddingagency.domain.opportunity.entity.OpportunityRequirementItem;
+import com.biddingagency.domain.reading.DocumentReadingException;
+import com.biddingagency.domain.reading.service.DocumentReadingService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -46,6 +48,8 @@ class BidFSMServiceTest {
     private ComplianceService complianceService;
     @Mock
     private com.biddingagency.domain.document.service.BidDocumentService bidDocumentService;
+    @Mock
+    private DocumentReadingService documentReadingService;
 
     @InjectMocks
     private BidFSMService fsmService;
@@ -466,5 +470,40 @@ class BidFSMServiceTest {
         Member member = Member.builder().build();
         ReflectionTestUtils.setField(member, "id", UUID.randomUUID());
         return member;
+    }
+
+    // TC-DOC-226: 분석 단계 진입 때 고객 서류 읽기를 건다 (CR-169)
+    @Test
+    @DisplayName("TC-DOC-226 분석전환_읽기시작")
+    void 분석전환_읽기시작() {
+        UUID bidRequestId = UUID.randomUUID();
+        BidRequest bidRequest = BidRequest.builder()
+                .state(BidRequestState.DOCS_RECEIVED)
+                .stateHistory(new ArrayList<>())
+                .build();
+        ReflectionTestUtils.setField(bidRequest, "id", bidRequestId);
+        given(bidRequestRepository.findByIdWithDetails(bidRequestId)).willReturn(Optional.of(bidRequest));
+        given(bidRequestRepository.save(any(BidRequest.class))).willAnswer(inv -> inv.getArgument(0));
+
+        fsmService.transition(bidRequestId, BidRequestState.ANALYZING, UUID.randomUUID(), "admin", "");
+
+        then(documentReadingService).should(times(1)).queueForAnalysis(bidRequestId);
+    }
+
+    // TC-DOC-227: 읽는 중인 고객 서류가 있으면 문서 작성 중으로 넘어가지 않는다 (CR-169, BIZ-087)
+    @Test
+    @DisplayName("TC-DOC-227 읽는중_생성전환_거부")
+    void 읽는중_생성전환_거부() {
+        UUID bidRequestId = UUID.randomUUID();
+        BidRequest bidRequest = BidRequest.builder()
+                .state(BidRequestState.ANALYZING)
+                .stateHistory(new ArrayList<>())
+                .build();
+        given(bidRequestRepository.findByIdWithDetails(bidRequestId)).willReturn(Optional.of(bidRequest));
+        willThrow(DocumentReadingException.inProgress()).given(documentReadingService).requireNoReadingInProgress(bidRequestId);
+
+        assertThatThrownBy(() -> fsmService.transition(bidRequestId, BidRequestState.GENERATING, UUID.randomUUID(), "admin", ""))
+                .isInstanceOf(DocumentReadingException.class);
+        assertThat(bidRequest.getState()).isEqualTo(BidRequestState.ANALYZING);
     }
 }

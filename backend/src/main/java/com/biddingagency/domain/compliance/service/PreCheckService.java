@@ -1,5 +1,6 @@
 package com.biddingagency.domain.compliance.service;
 
+import com.biddingagency.common.ContentHash;
 import com.biddingagency.domain.bid.entity.BidRequest;
 import com.biddingagency.domain.bid.entity.BidRequestState;
 import com.biddingagency.domain.bid.entity.ClientDocument;
@@ -173,6 +174,7 @@ public class PreCheckService {
                 .storageUrl(storageUrl)
                 .documentCategory(documentCategory(item))
                 .pageCount(pdfPageCounter.count(fileName, content))
+                .contentSha256(ContentHash.of(content))
                 .build());
         RequirementFulfillmentMap map = link(br, item, doc, member.getId());
         log.info("[CR-141] 요구 서류 올림: bidRequest={}, item={}, doc={}, pages={}",
@@ -355,6 +357,7 @@ public class PreCheckService {
                 .storageUrl(storageUrl)
                 .documentCategory(documentCategory(item))
                 .pageCount(pdfPageCounter.count(vaultDoc.getFileName(), content))
+                .contentSha256(ContentHash.of(content))
                 .build());
     }
 

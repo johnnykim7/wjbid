@@ -24,4 +24,7 @@ public interface MemberDocumentRepository extends JpaRepository<MemberDocument, 
 
     /** CR-136: 만료일이 그날인 서류(만료 메일 대상) */
     List<MemberDocument> findByExpiresOn(java.time.LocalDate expiresOn);
+
+    /** CR-169: 같은 내용의 파일 하나를 읽는 꼴로 내준다 */
+    Optional<MemberDocument> findFirstByContentSha256(String contentSha256);
 }

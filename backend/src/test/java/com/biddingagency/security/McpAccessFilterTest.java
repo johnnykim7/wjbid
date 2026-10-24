@@ -160,4 +160,23 @@ class McpAccessFilterTest {
         assertThat(url).matches("\\Q" + BASE + "/mcp/opportunity-attachments/" + id + "/download?exp="
                 + expires + "&sig=\\E[A-Za-z0-9_-]{43}");
     }
+
+    @Test
+    @DisplayName("TC-DOC-237 서류내려받기_서명없음_거부")
+    void 서류내려받기_서명없음_거부() throws Exception {
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        run(guardAt(KEY, NOW),
+                request("GET", "/mcp/document-readings/" + UUID.randomUUID() + "/download"), response);
+
+        assertThat(response.getStatus()).isEqualTo(401);
+    }
+
+    @Test
+    @DisplayName("서류내려받기_서명주소_통과")
+    void 서류내려받기_서명주소_통과() throws Exception {
+        MockHttpServletRequest request = requestFor(guardAt(KEY, NOW).documentReadingUrl(UUID.randomUUID()));
+        MockFilterChain chain = run(guardAt(KEY, NOW), request, new MockHttpServletResponse());
+
+        assertThat(chain.getRequest()).isSameAs(request);
+    }
 }

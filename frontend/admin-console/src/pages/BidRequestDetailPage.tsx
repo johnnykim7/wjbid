@@ -8,6 +8,8 @@ import {
   regenerateBidDocument,
 } from '../api/client'
 import { STATE_LABELS } from '../utils/bidState'
+import { toast } from '@therecommerce-develop/ds-ui'
+import DocumentReadingPanel from '../components/DocumentReadingPanel'
 
 const STATE_COLORS: Record<string, string> = {
   CREATED: 'bg-gray-100 text-gray-600',
@@ -98,6 +100,10 @@ export default function BidRequestDetailPage() {
   const [transitioning, setTransitioning] = useState(false)
   const [regeneratingType, setRegeneratingType] = useState<string | null>(null)
 
+  // CR-169: 고객 서류를 읽는 중이면 문서 작성 중 전환을 막는다(BIZ-087, 서버도 409 로 막는다)
+  const [readingInProgress, setReadingInProgress] = useState(false)
+  const [readingReloadKey, setReadingReloadKey] = useState(0)
+
   const loadData = async () => {
     if (!id) return
     setLoading(true)
@@ -125,6 +131,7 @@ export default function BidRequestDetailPage() {
 
   // DOCS_RECEIVED → DOCS_PENDING 은 "첨부 반려"(고객 재업로드 요청) — 사유 필수
   const isRejection = bidRequest?.state === 'DOCS_RECEIVED' && selectedState === 'DOCS_PENDING'
+  const blockedByReading = bidRequest?.state === 'ANALYZING' && selectedState === 'GENERATING' && readingInProgress
 
   const handleTransition = async () => {
     if (!id || !selectedState) return
@@ -139,8 +146,14 @@ export default function BidRequestDetailPage() {
       setNotes('')
       setError('')
       loadData()
-    } catch {
-      setError('상태 전환에 실패했습니다.')
+    } catch (err: unknown) {
+      const res = (err as { response?: { status?: number; data?: { error?: string } } })?.response
+      if (res?.status === 409 && res.data?.error === 'DOCUMENT_READING_IN_PROGRESS') {
+        toast.error('고객 서류를 읽는 중입니다. 다 읽은 뒤 전환하세요')
+        setReadingReloadKey((k) => k + 1)
+      } else {
+        setError('상태 전환에 실패했습니다.')
+      }
     } finally {
       setTransitioning(false)
     }
@@ -359,6 +372,13 @@ export default function BidRequestDetailPage() {
         )}
       </div>
 
+      <DocumentReadingPanel
+        bidRequestId={bidRequest.id}
+        bidState={bidRequest.state}
+        reloadKey={readingReloadKey}
+        onInProgressChange={setReadingInProgress}
+      />
+
       {/* Meta Info */}
       <div className="bg-white rounded-xl border border-gray-200 p-5">
         <h2 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
@@ -419,6 +439,9 @@ export default function BidRequestDetailPage() {
                   </label>
                 ))}
               </div>
+              {blockedByReading && (
+                <p className="text-sm text-amber-700 bg-amber-50 px-3 py-2 rounded-lg">고객 서류를 읽는 중입니다</p>
+              )}
               <textarea
                 value={notes}
                 onChange={e => setNotes(e.target.value)}
@@ -433,7 +456,7 @@ export default function BidRequestDetailPage() {
               <button onClick={() => setShowTransition(false)} className="px-4 py-2 text-sm text-gray-600">취소</button>
               <button
                 onClick={handleTransition}
-                disabled={!selectedState || transitioning}
+                disabled={!selectedState || transitioning || blockedByReading}
                 className="px-5 py-2 bg-secondary text-white rounded-lg text-sm font-medium hover:bg-blue-600 disabled:opacity-50"
               >
                 {transitioning ? '처리 중...' : '전환'}

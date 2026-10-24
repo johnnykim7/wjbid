@@ -883,7 +883,7 @@ app.aimbase:
     client-document-read: ${AIMBASE_WF_CLIENT_DOCUMENT_READ:client-document-read}  # CR-169
 ```
 
-**고객 서류 읽기 워크플로우 입력 (CR-169)**: `{bidRequestId, files[{readingId, fileName, downloadUrl, workspacePath}], hwpFiles[{readingId, workspacePath, convertedPath}], targets[{readingId, targetPath}]}`. workspacePath 는 `docs/{readingId}.{확장자}`(그림은 `.pdf`, DOCX, XLSX, PPTX 는 `.txt`), HWP 의 targetPath 는 convertedPath(`docs/{readingId}.md`), 나머지는 workspacePath 다. 읽을 수 없는 형식은 넣지 않는다. 실행이 끝나면 서버가 targets 가운데 아직 읽는 중인 줄을 읽지 못함으로 바꾼다.
+**고객 서류 읽기 워크플로우 입력 (CR-169)**: `{bidRequestId, files[{readingId, fileName, downloadUrl, workspacePath}], hwpFiles[{readingId, workspacePath, convertedPath}], targets[{readingId, targetPath}]}`. workspacePath 는 `docs/{readingId}.{확장자}`(그림은 `.pdf`, DOCX, XLSX, PPTX, TXT, CSV, MD 는 `.txt`, HWP 는 원래 확장자), HWP 의 targetPath 는 convertedPath(`docs/{readingId}.txt`), 나머지는 workspacePath 다. 읽을 수 없는 형식은 넣지 않는다. 실행이 끝나면 서버가 targets 가운데 아직 읽는 중인 줄을 읽지 못함으로 바꾼다.
 
 ---
 

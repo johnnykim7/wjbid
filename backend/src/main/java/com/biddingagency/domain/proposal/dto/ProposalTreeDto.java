@@ -4,6 +4,7 @@ import com.biddingagency.domain.proposal.entity.ProposalBlock;
 import com.biddingagency.domain.proposal.entity.ProposalChapter;
 import com.biddingagency.domain.proposal.entity.ProposalSection;
 import com.biddingagency.domain.proposal.entity.SectionStatus;
+import com.biddingagency.domain.reading.dto.DocumentReadingDto.SourceDocument;
 
 import java.util.List;
 import java.util.Map;
@@ -75,9 +76,11 @@ public record ProposalTreeDto(
             boolean locked,
             Integer minWords,
             List<String> requirementRefs,
-            List<BlockNode> blocks
+            List<BlockNode> blocks,
+            List<SourceDocument> sourceDocuments
     ) {
-        public static SectionDetail of(ProposalSection s, List<ProposalBlock> blocks) {
+        /** sourceDocuments 는 근거 서류 꼬리표 (CR-169). 지금 읽음이 아닌 서류도 상태와 함께 준다 */
+        public static SectionDetail of(ProposalSection s, List<ProposalBlock> blocks, List<SourceDocument> sourceDocuments) {
             return new SectionDetail(
                     s.getId(),
                     s.getSubfactorLabel(),
@@ -87,7 +90,8 @@ public record ProposalTreeDto(
                     s.isLocked(),
                     s.getMinWords(),
                     s.getRequirementRefs(),
-                    blocks.stream().map(BlockNode::of).toList()
+                    blocks.stream().map(BlockNode::of).toList(),
+                    sourceDocuments
             );
         }
     }

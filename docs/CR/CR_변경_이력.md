@@ -1332,7 +1332,7 @@
 - **영향 모듈**: BE BidFSMService, AIWorkflowService, DocumentReadingService(신규), LLMPlatformClient, ProposalMcpTool, save_client_document_facts(신규), McpAccessGuard, 내려받기 컨트롤러(신규), 관리자 컨트롤러, 서류 올리기와 서류함 복사(해시), V58 / 관리자 콘솔 BidRequestDetailPage, ProposalTreePage, api / Aimbase 워크플로우 정의 client-document-read(신규), proposal-design, proposal-write-section, proposal-verify-fidelity
 - **영향 설계서**: T1-1 1.25(BID-DOC-001, 004, 005), T1-2 1.9(E 모듈 수), T1-3 1.15(BIZ-085~089), T1-5 1.6(ANALYZING 진입 작업, GENERATING 전이 가드), T1-7 1.6(작업 CR-169-1, BID-DOC-004, 005), T1-10 1.5(새 이름 10개, 사용자 승인 10/24 21:18), T3-1 1.17(document_readings, 칸 셋, V58), T3-2 1.22(관리자 API 셋, 절 상세, MCP 도구 다섯, 내려받기, 워크플로우 입력), T3-3 1.23, T3-4 1.17, T3-5 1.20(TC-DOC-210~237), execution-spec 1.15. 영향 없음 확인: T1-4(새 정책값 없음, 30분은 기존 폴링 상한 5초 x 360), T1-6(BidRequestStateChanged 소비 주체에 ANALYZING 진입 AI 작업이 이미 있다), T2-1(iText 8, poi-ooxml 5.2.5 이미 있음). 상세 `CR/CR-169_고객_서류_읽기와_절별_근거_서류.md`
 - **규모**: 중 (묶음 CR-169~175 는 대, 사용자 승인 10/24 21:00)
-- **상태**: 설계 커밋 9fb8d7b, 용어 승인 10/24 21:18, 시험항목 IT-10-041~054 신규와 IT-10-001, IT-12-031, IT-12-034 수정
+- **상태**: 설계 커밋 9fb8d7b, 용어 승인 10/24 21:18, 시험항목 IT-10-041~054 신규와 IT-10-001, IT-12-031, IT-12-034 수정. 구현 10/25(서버, MCP 도구, V58, 관리자 화면, 워크플로우 정의 4개), 서버 단위시험 557건 통과, 로컬 확인 10/25(Aimbase 실제 읽기는 워크플로우 올린 뒤)
 
 ### CR-170: 캡처플랜, 공고 분석 나머지, 입찰 여부 (2026-10-24 채번)
 
@@ -1375,3 +1375,14 @@
 - **대상**: 스킬 09 회사소개서와 사전 의향조사 회신, 08 첫 연락 메일
 - **규모**: 미정
 - **상태**: 계획
+
+### CR-176: WJbid 색을 디자인시스템 테마 파일로 (2026-10-24)
+
+- **배경(사용자)**: 10/24 21:19 비딩도 디자인시스템을 쓰는지 물음, 21:20 디자인시스템 공통화가 WJbid 에 영향을 줄 수 있다고 봄, 21:23 색은 소비앱이 고치는 것인지 물음, 21:24 개발 안내서 8장 방식 A(앱별 테마 파일을 디자인시스템 안에 둔다)로 옮기기 "1", 21:25 관리자 화면도 테마 파일을 따로 두고 지금 색 유지 "1"
+- **현황(실측 10/24 소스)**: 두 화면이 ds-ui 를 버전 없이 맥의 디자인시스템 폴더 링크로 받는다(`frontend/*/package-lock.json` 의 `link: true`, `deploy_aws.sh:70`). 색은 앱 안에 있다. 고객 화면은 `src/index.css` 의 `@theme static` 28색과 `src/wjbid-theme.css` 의 ds-ui 변수 잇기, 관리자 화면은 `src/index.css` 의 `@theme` 6색과 `:root`. CR-DS-010 의 모서리, 선, 입력칸 테두리, 보조 글자색은 두 화면이 덮고 있어 영향이 없고, CR-DS-009 의 상태 배지 색만 새어 들어온다
+- **변경 타입**: 변경 (화면 변화 없음)
+- **대상**: (1) 디자인시스템에 `themes/wjbid.css`, `themes/wjbid-admin.css` 를 요청한다(`bp-platform/design-system/docs/협업/REQ_CR-176_WJbid_테마파일.md`). (2) 받은 뒤 두 화면이 `style.css` 다음 줄에서 테마 파일을 불러오고, 색 이름표는 값 없이 테마 파일 변수에 잇는다. `wjbid-theme.css` 와 관리자 `:root` 덮어쓰기는 지운다. (3) 테마 적용 전후 화면 대조
+- **영향 모듈**: 고객 화면 `main.tsx`, `index.css`, `wjbid-theme.css`(삭제) / 관리자 화면 `main.tsx`, `index.css` / 디자인시스템 테마 파일 두 개(그 레포 CR)
+- **영향 설계서**: T3-3 「고객 포털 색 이름표」(값의 자리가 디자인시스템 테마 파일로 바뀐다)
+- **규모**: 소 (화면, API, 데이터 변화 없음. 색 값의 자리만 옮긴다)
+- **상태**: 디자인시스템 회신 대기

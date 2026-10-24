@@ -13,4 +13,7 @@ public interface ClientDocumentRepository extends JpaRepository<ClientDocument, 
     List<ClientDocument> findByMemberId(UUID memberId);
 
     long countByBidRequestId(UUID bidRequestId);
+
+    /** CR-169: 같은 내용의 파일 하나를 읽는 꼴로 내준다 */
+    java.util.Optional<ClientDocument> findFirstByContentSha256(String contentSha256);
 }

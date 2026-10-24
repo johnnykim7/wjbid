@@ -1,5 +1,6 @@
 package com.biddingagency.domain.member.service;
 
+import com.biddingagency.common.ContentHash;
 import com.biddingagency.domain.member.entity.DocumentCategory;
 import com.biddingagency.domain.member.entity.DocumentLanguage;
 import com.biddingagency.domain.member.entity.MemberDocument;
@@ -70,6 +71,7 @@ public class MemberDocumentService {
                 .fileSize(file.getSize())
                 .contentType(file.getContentType())
                 .storageUrl(storageUrl)
+                .contentSha256(ContentHash.of(file))
                 .displayName(resolveDisplayName(category, lang, displayName))
                 .description(category.isFixed() ? null : description)
                 .expiresOn(expiry.keep() ? null : expiry.value())
@@ -90,7 +92,8 @@ public class MemberDocumentService {
             validateFile(file);
             String oldStorageUrl = doc.getStorageUrl();
             String storageUrl = storageService.store("member-docs/" + memberId, file);
-            doc.replaceFile(file.getOriginalFilename(), file.getSize(), file.getContentType(), storageUrl);
+            doc.replaceFile(file.getOriginalFilename(), file.getSize(), file.getContentType(), storageUrl,
+                    ContentHash.of(file));
             // 기존 파일 삭제(실패해도 레코드 갱신은 진행)
             safeDelete(oldStorageUrl);
         }

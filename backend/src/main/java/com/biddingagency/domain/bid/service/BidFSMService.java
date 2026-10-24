@@ -13,6 +13,7 @@ import com.biddingagency.domain.document.service.BidDocumentService;
 import com.biddingagency.domain.event.BidRequestStateChangedEvent;
 import com.biddingagency.domain.member.entity.Member;
 import com.biddingagency.domain.opportunity.entity.OpportunityRequirementItem;
+import com.biddingagency.domain.reading.service.DocumentReadingService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
@@ -38,17 +39,20 @@ public class BidFSMService {
     private final ApplicationEventPublisher eventPublisher;
     private final ComplianceService complianceService;
     private final BidDocumentService bidDocumentService;
+    private final DocumentReadingService documentReadingService;
 
     public BidFSMService(BidRequestRepository bidRequestRepository,
                          @Lazy AIWorkflowService aiWorkflowService,
                          ApplicationEventPublisher eventPublisher,
                          ComplianceService complianceService,
-                         BidDocumentService bidDocumentService) {
+                         BidDocumentService bidDocumentService,
+                         DocumentReadingService documentReadingService) {
         this.bidRequestRepository = bidRequestRepository;
         this.aiWorkflowService = aiWorkflowService;
         this.eventPublisher = eventPublisher;
         this.complianceService = complianceService;
         this.bidDocumentService = bidDocumentService;
+        this.documentReadingService = documentReadingService;
     }
 
     // Valid state transitions map
@@ -161,6 +165,11 @@ public class BidFSMService {
             }
         }
 
+        // BIZ-087 (CR-169): 고객 서류를 읽는 중이면 문서 작성 중으로 넘어가지 않는다
+        if (currentState == BidRequestState.ANALYZING && toState == BidRequestState.GENERATING) {
+            documentReadingService.requireNoReadingInProgress(bidRequestId);
+        }
+
         // Execute transition
         log.info("Transitioning bid request {} from {} to {} by user {}",
                 bidRequestId, currentState, toState, username);
@@ -234,13 +243,15 @@ public class BidFSMService {
 
     /**
      * 상태 전환 후 LLM 워크플로우 비동기 실행
-     * - DOCUMENT_DRAFTING 진입    → 문서 자동 생성
-     * 요구 항목은 공고 분석 저장 때 채우므로 분석 단계 진입에는 AI 작업이 없다 (CR-141, BIZ-045)
+     * - DOCUMENT_DRAFTING 진입: 문서 자동 생성
+     * - ANALYZING 진입: 고객 서류 읽기 (CR-169). 요구 항목은 공고 분석 저장 때 채운다 (CR-141, BIZ-045)
      */
     private void triggerAIWorkflow(BidRequest bidRequest, BidRequestState toState) {
         switch (toState) {
             case GENERATING ->
                 aiWorkflowService.generateDocumentsAsync(bidRequest);
+            case ANALYZING ->
+                documentReadingService.queueForAnalysis(bidRequest.getId());
             default -> { /* 다른 상태는 AI 작업 없음 */ }
         }
     }
