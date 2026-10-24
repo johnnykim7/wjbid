@@ -84,30 +84,125 @@
             "max_parallel": 5,
             "item_retry_max": 2,
             "require_full_coverage": false,
-            "focus_areas": ["계약기간", "제출서류", "평가기준", "현장설명회", "참여자격"],
+            "focus_areas": [
+              "계약기간",
+              "제출서류",
+              "평가기준",
+              "현장설명회",
+              "참여자격"
+            ],
             "analysis_goal": "USFK(미군) 정부조달 공고 RFP 의 fact 를 근거 부착하여 전수 추출(파일 1개 단위)",
-            "custom_instruction": "당신은 미군(USFK) 정부조달 RFP 분석 전문가입니다. 지금 보는 fragment 는 공고 파일 '{{item.targetPath}}' 한 개의 일부입니다(같은 파일의 다른 fragment·다른 파일은 별도로 처리됨). 이 fragment 에서 아래 관점의 fact 를 빠짐없이 추출하세요.\n\n[추출 항목] 한국어 제목 / 핵심요약(overview) / 작업범위(scope, PWS기반) / 계약기간(contractPeriod: 수행기간·기초/옵션연차, 원문 표현 그대로) / 현장설명회(siteVisit: 일시·장소·필수여부) / 참여자격(eligibility: title/description/mandatory/evidenceBy/isGate) / 평가기준(evaluationCriteria, LPTA·BestValue) / 주요일정(keyDates) / 예산(budgetInfo) / 특이사항(specialNotes) / 제출서류(FACTOR>Subfactor 계층) / 양식 / 담당자(contactInfo, POC). 이 fragment 에 해당 내용이 없으면 그 항목은 비운다(추측 금지).\n\n[★충족주체 분류 fulfillmentParty★] 제출서류·자격 fact 마다 충족주체를 분류해 fulfillmentParty 에 담는다 — 트럭·장비·인력·실적증빙 등 고객이 올려야 하는 것 = CLIENT_UPLOAD, 기술제안·가격제안 등 플랫폼이 생성하는 것 = PLATFORM_GENERATED, 정부 지정 양식 = SYSTEM_FORM.\n\n[★도면·이미지·스캔 PDF★] 이 fragment 가 도면·이미지·스캔 등 텍스트 레이어가 거의 없는 페이지(이미지로 첨부된 경우 포함)면: 인용(sourceQuote)을 비워도 되니, 비전(vision)으로 본 도면 내용을 시각적으로 묘사하라 — 도면 종류(평면도/배관도/구조도/전기도 등), 표시된 건물·구역·층·치수·범례, 식별 가능한 텍스트. 이 경우 각 fact 는 confidence=MEDIUM, page 에 해당 도면 페이지 번호를 적고 value 에 '(도면 비전 판독) ' 접두사를 붙여 간결히 묘사한다. 추측이 아니라 실제로 본 도면 내용만 묘사한다.\n\n[★근거 부착(핵심)★] 추출한 모든 fact 에 근거를 남긴다. 각 fact = { key(항목명), value(추출값), sourceFile(반드시 '{{item.targetPath}}'), page(반드시 — 이 fact 가 나온 페이지 번호. 근거 위치는 page 로 표시한다), anchor(필수 — 아래 ★anchor★ 규칙), confidence(HIGH/MEDIUM/LOW), fulfillmentParty(해당 시) }.\n\n[★anchor — 검증용 닻(필수)★] 지금 너는 이 fragment 의 원문을 직접 보고 있다. 그러니 각 fact 마다, 그 fact 의 근거가 된 원문(영어) 문구에서 **그대로 복사한 5~10단어의 짧은 구절**을 anchor 에 적어라. 이 anchor 는 다음 단계가 sourceFile 원문에 문자열 그대로 grep 해서 '이 fact 가 진짜 원문에 있는지' 기계 검증하는 데 쓴다. 규칙:\n  - anchor 는 반드시 원문에 **글자 그대로 존재하는** 연속된 구절이어야 한다(요약·번역·재배열 금지). 고유명사·숫자·날짜·핵심 영어 문구를 우선 고른다. 예: '720 calendar days after NTP', 'pre-proposal site visit will be held', 'Section K- Representation'.\n  - 5~10단어로 짧게. 문장 통째 복사 금지(출력 분량 늘리지 말 것). 한 줄(짧은 구절)이면 충분하다.\n  - 영어 원문 그대로 — 한국어로 옮기지 마라(grep 은 원문 파일에서 영어로 매칭한다).\n  - 도면·이미지·스캔 등 텍스트 레이어가 없어 grep 할 영어 구절이 없으면 anchor 를 비운다(이 경우만 허용).\n\n★출력 분량 최소화(필수)★ 출력이 많을수록 처리 시간이 정비례로 길어진다. 다음을 반드시 지켜 출력을 최대한 짧게:\n  (1) sourceQuote 는 비워라(anchor 가 그 역할을 대체한다). 원문 문장을 통째로 베끼지 말 것 — 근거는 anchor(짧은 구절)+page 로 충분하다.\n  (2) value 는 한국어 한 줄(가능하면 40자 이내)로 핵심만 압축한다. 설명체·수식어·배경 서술 금지. 예: '질소공급시스템 30분 내 275kPa 가압'.\n  (3) fact 는 입찰 판단에 실제로 필요한 핵심 항목만 추출한다. 자명하거나 사소한 내용, 같은 사실의 변형 중복은 만들지 않는다(한 fragment 에서 수십 개를 남발하지 말 것).\n근거 못 찾은 항목은 value 빈칸 + confidence=LOW .\n\n[★줄바꿈 규칙★] siteVisit·contractPeriod·scope·overview·specialNotes·budgetInfo 등 string value 에 여러 정보를 담을 때 `/`·`|`·` - ` 로 한 줄에 잇지 말고 실제 줄바꿈(\\n)으로 분리. 번호 열거도 줄바꿈 분리. 단 한 문장 서술은 억지로 쪼개지 말 것.\n\n[금지] 근거 없는 사실 생성 금지 / sourceFile 을 '{{item.targetPath}}' 외 다른 값으로 표기 금지.",
+            "custom_instruction": "당신은 미군(USFK) 정부조달 RFP 분석 전문가입니다. 지금 보는 fragment 는 공고 파일 '{{item.targetPath}}' 한 개의 일부입니다(같은 파일의 다른 fragment·다른 파일은 별도로 처리됨). 이 fragment 에서 아래 관점의 fact 를 빠짐없이 추출하세요.\n\n[추출 항목] 한국어 제목 / 핵심요약(overview) / 작업범위(scope, PWS기반) / 계약기간(contractPeriod: 수행기간·기초/옵션연차, 원문 표현 그대로) / 현장설명회(siteVisit: 일시·장소·필수여부) / 참여자격(eligibility: title/description/mandatory/evidenceBy/isGate) / 평가기준(evaluationCriteria, LPTA·BestValue) / 주요일정(keyDates) / 예산(budgetInfo) / 특이사항(specialNotes) / 제출서류(FACTOR>Subfactor 계층) / 양식 / 담당자(contactInfo, POC). 이 fragment 에 해당 내용이 없으면 그 항목은 비운다(추측 금지).\n\n[★충족주체 분류 fulfillmentParty★] 제출서류·자격 fact 마다 충족주체를 분류해 fulfillmentParty 에 담는다 — 트럭·장비·인력·실적증빙 등 고객이 올려야 하는 것 = CLIENT_UPLOAD, 기술제안·가격제안 등 플랫폼이 생성하는 것 = PLATFORM_GENERATED, 정부 지정 양식 = SYSTEM_FORM.\n\n[★도면·이미지·스캔 PDF★] 이 fragment 가 도면·이미지·스캔 등 텍스트 레이어가 거의 없는 페이지(이미지로 첨부된 경우 포함)면: 인용(sourceQuote)을 비워도 되니, 비전(vision)으로 본 도면 내용을 시각적으로 묘사하라 — 도면 종류(평면도/배관도/구조도/전기도 등), 표시된 건물·구역·층·치수·범례, 식별 가능한 텍스트. 이 경우 각 fact 는 confidence=MEDIUM, page 에 해당 도면 페이지 번호를 적고 value 에 '(도면 비전 판독) ' 접두사를 붙여 간결히 묘사한다. 추측이 아니라 실제로 본 도면 내용만 묘사한다.\n\n[★근거 부착(핵심)★] 추출한 모든 fact 에 근거를 남긴다. 각 fact = { key(항목명), value(추출값), sourceFile(반드시 '{{item.targetPath}}'), page(반드시 — 이 fact 가 나온 페이지 번호. 근거 위치는 page 로 표시한다), anchor(필수 — 아래 ★anchor★ 규칙), confidence(HIGH/MEDIUM/LOW), fulfillmentParty(해당 시) }.\n\n[★anchor — 검증용 닻(필수)★] 지금 너는 이 fragment 의 원문을 직접 보고 있다. 그러니 각 fact 마다, 그 fact 의 근거가 된 원문(영어) 문구에서 **그대로 복사한 5~10단어의 짧은 구절**을 anchor 에 적어라. 이 anchor 는 다음 단계가 sourceFile 원문에 문자열 그대로 grep 해서 '이 fact 가 진짜 원문에 있는지' 기계 검증하는 데 쓴다. 규칙:\n  - anchor 는 반드시 원문에 **글자 그대로 존재하는** 연속된 구절이어야 한다(요약·번역·재배열 금지). 고유명사·숫자·날짜·핵심 영어 문구를 우선 고른다. 예: '720 calendar days after NTP', 'pre-proposal site visit will be held', 'Section K- Representation'.\n  - 5~10단어로 짧게. 문장 통째 복사 금지(출력 분량 늘리지 말 것). 한 줄(짧은 구절)이면 충분하다.\n  - 영어 원문 그대로 — 한국어로 옮기지 마라(grep 은 원문 파일에서 영어로 매칭한다).\n  - 도면·이미지·스캔 등 텍스트 레이어가 없어 grep 할 영어 구절이 없으면 anchor 를 비운다(이 경우만 허용).\n\n★출력 분량 최소화(필수)★ 출력이 많을수록 처리 시간이 정비례로 길어진다. 다음을 반드시 지켜 출력을 최대한 짧게:\n  (1) sourceQuote 는 비워라(anchor 가 그 역할을 대체한다). 원문 문장을 통째로 베끼지 말 것 — 근거는 anchor(짧은 구절)+page 로 충분하다.\n  (2) value 는 한국어 한 줄(가능하면 40자 이내)로 핵심만 압축한다. 설명체·수식어·배경 서술 금지. 예: '질소공급시스템 30분 내 275kPa 가압'.\n  (3) fact 는 입찰 판단에 실제로 필요한 핵심 항목만 추출한다. 자명하거나 사소한 내용, 같은 사실의 변형 중복은 만들지 않는다(한 fragment 에서 수십 개를 남발하지 말 것).\n근거 못 찾은 항목은 value 빈칸 + confidence=LOW .\n\n[★줄바꿈 규칙★] siteVisit·contractPeriod·scope·overview·specialNotes·budgetInfo 등 string value 에 여러 정보를 담을 때 `/`·`|`·` - ` 로 한 줄에 잇지 말고 실제 줄바꿈(\\n)으로 분리. 번호 열거도 줄바꿈 분리. 단 한 문장 서술은 억지로 쪼개지 말 것.\n\n[★요구 줄 requirements (CR-159 컴플라이언스 매트릭스)★] 이 fragment 에서 응찰자나 계약자에게 무엇을 하라고 요구하는 문장(shall, must, will, should, may, is required to 등)을 빠짐없이 requirements 에 담는다. 대상은 Section L(작성 지시), Section M(평가 기준), Section C 또는 PWS, SOW(과업), 수정 공고(Amendment), 질의응답, 첨부(Section J)다. 줄마다 { text(요구 문장 영어 원문 그대로. 고쳐 쓰거나 줄이지 않는다. 한 문장에 요구가 둘이면 두 줄로 나누고 각 줄은 원문 그대로의 부분), clause(조항 번호, 예: L.3.2, PWS 1.4.1, 52.212-1(b). 없으면 비움), page, sourceFile(반드시 '{{item.targetPath}}'), anchor(text 안에서 그대로 복사한 5~10단어. 다음 단계가 grep 으로 원문을 확인한다), level(shall, must, will 은 SHALL, should 는 SHOULD, may 는 MAY), verb(요구 동사 영어 원문, 예: describe, provide, demonstrate, submit), category(TECHNICAL, FORMAT, SUBMISSION, DEADLINE, ELIGIBILITY, OTHER 가운데 하나), fulfillmentParty(위 충족주체 분류와 같은 기준) }. 번역은 하지 않는다(다음 단계가 한다). 같은 내용을 facts 에 넣었어도 requirements 에 따로 넣는다. 정부가 하는 일(The Government will evaluate 등)처럼 응찰자나 계약자에게 요구하지 않는 문장은 넣지 않는다.\n\n[금지] 근거 없는 사실 생성 금지 / sourceFile 을 '{{item.targetPath}}' 외 다른 값으로 표기 금지.",
             "output_schema": {
               "type": "object",
-              "required": ["facts"],
+              "required": [
+                "facts"
+              ],
               "properties": {
                 "facts": {
                   "type": "array",
                   "description": "이 파일에서 근거 부착하여 추출한 fact 목록(전수 머지 결과).",
                   "items": {
                     "type": "object",
-                    "required": ["key", "value", "sourceFile"],
+                    "required": [
+                      "key",
+                      "value",
+                      "sourceFile"
+                    ],
                     "properties": {
-                      "key": { "type": "string" },
-                      "value": { "type": "string" },
-                      "sourceFile": { "type": "string" },
-                      "sourceQuote": { "type": "string" },
-                      "anchor": { "type": "string", "description": "CR-123: 이 fact 의 근거가 되는 원문(영어) 그대로의 5~10단어 짧은 구절. verify 가 sourceFile 에 문자열 grep 해 환각을 색출하는 검증용 닻. 통째 인용 아님. 도면·이미지 fact 는 비울 수 있음." },
-                      "page": { "type": "string" },
-                      "confidence": { "enum": ["HIGH", "MEDIUM", "LOW"], "type": "string" },
-                      "fulfillmentParty": {
-                        "enum": ["CLIENT_UPLOAD", "PLATFORM_GENERATED", "SYSTEM_FORM"],
+                      "key": {
                         "type": "string"
+                      },
+                      "value": {
+                        "type": "string"
+                      },
+                      "sourceFile": {
+                        "type": "string"
+                      },
+                      "sourceQuote": {
+                        "type": "string"
+                      },
+                      "anchor": {
+                        "type": "string",
+                        "description": "CR-123: 이 fact 의 근거가 되는 원문(영어) 그대로의 5~10단어 짧은 구절. verify 가 sourceFile 에 문자열 grep 해 환각을 색출하는 검증용 닻. 통째 인용 아님. 도면·이미지 fact 는 비울 수 있음."
+                      },
+                      "page": {
+                        "type": "string"
+                      },
+                      "confidence": {
+                        "enum": [
+                          "HIGH",
+                          "MEDIUM",
+                          "LOW"
+                        ],
+                        "type": "string"
+                      },
+                      "fulfillmentParty": {
+                        "enum": [
+                          "CLIENT_UPLOAD",
+                          "PLATFORM_GENERATED",
+                          "SYSTEM_FORM"
+                        ],
+                        "type": "string"
+                      }
+                    }
+                  }
+                },
+                "requirements": {
+                  "type": "array",
+                  "description": "CR-159: 이 파일에서 뽑은 요구 줄(영어 원문 그대로). 다음 단계가 컴플라이언스 매트릭스로 합친다.",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "text",
+                      "sourceFile",
+                      "level"
+                    ],
+                    "properties": {
+                      "text": {
+                        "type": "string"
+                      },
+                      "clause": {
+                        "type": "string"
+                      },
+                      "page": {
+                        "type": "string"
+                      },
+                      "sourceFile": {
+                        "type": "string"
+                      },
+                      "anchor": {
+                        "type": "string"
+                      },
+                      "level": {
+                        "type": "string",
+                        "enum": [
+                          "SHALL",
+                          "SHOULD",
+                          "MAY"
+                        ]
+                      },
+                      "verb": {
+                        "type": "string"
+                      },
+                      "category": {
+                        "type": "string",
+                        "enum": [
+                          "TECHNICAL",
+                          "FORMAT",
+                          "SUBMISSION",
+                          "DEADLINE",
+                          "ELIGIBILITY",
+                          "OTHER"
+                        ]
+                      },
+                      "fulfillmentParty": {
+                        "type": "string",
+                        "enum": [
+                          "CLIENT_UPLOAD",
+                          "PLATFORM_GENERATED",
+                          "SYSTEM_FORM"
+                        ]
                       }
                     }
                   }
@@ -376,6 +471,163 @@
       ]
     },
     {
+      "id": "build_compliance_matrix",
+      "name": "컴플라이언스 매트릭스 만드는 중",
+      "type": "AGENT_CALL",
+      "depends_on": [
+        "extract_facts"
+      ],
+      "config": {
+        "connection_id": "cli-runner-bidding-001",
+        "description": "CR-159: 파일별 요구 줄을 원문과 대조하고 합쳐 컴플라이언스 매트릭스와 평가 항목 구조를 만든다",
+        "timeout_ms": 600000,
+        "skills": [
+          {
+            "name": "sam-proposal",
+            "version": 1,
+            "files": [
+              "references/01-rfp-analysis.md",
+              "assets/templates/compliance-matrix.md"
+            ]
+          }
+        ],
+        "prompt": "당신은 미 연방 조달 공고의 컴플라이언스 매트릭스를 만드는 분석가입니다. 스킬 sam-proposal 의 01(공고 분석)과 컴플라이언스 매트릭스 틀이 붙어 있습니다. STEP 1(컴플라이언스 매트릭스)과 STEP 4(평가 항목과 질의 후보)의 규칙대로 하되, 스킬이 말하는 산출물 파일은 만들지 않고 결과는 아래 response_schema 로만 냅니다.\n\n[입력]\n이전 단계(extract_facts)가 파일마다 뽑은 결과의 배열입니다. 각 원소의 structured_data.requirements 가 그 파일의 요구 줄이고, structured_data.facts 가운데 평가기준(evaluationCriteria)과 제출서류 fact 가 평가 항목의 재료입니다:\n{{extract_facts.structured_data}}\n\n[작업장]\n원문은 작업장의 description.txt(공고 본문)와 attachments/(첨부 원본)에 있습니다. ls, find 로 파일을 처음부터 찾거나 큰 파일을 통째로 Read 하지 말고, 줄이 가리키는 sourceFile 만 builtin_grep 으로 봅니다.\n\n[수행]\n1. 모든 원소의 requirements 를 빠짐없이 모읍니다. 일부 원소만 보고 끝내지 않습니다.\n2. 근거 확인: 줄마다 anchor 를 builtin_grep 으로 그 sourceFile 에서 찾습니다. 찾으면 남기고, 못 찾으면 text 의 다른 핵심 구절로 한 번 더 찾습니다. 그래도 없으면 버립니다. 남긴 줄의 quote 에는 원문에서 찾은 구절을 그대로 적습니다.\n3. 합치기: 같은 요구가 여러 파일이나 조각에서 나왔으면 한 줄로 합칩니다. 수정 공고(Amendment)가 바꾼 요구는 수정 공고 쪽을 남깁니다. 한 문장에 요구가 둘이면 두 줄로 나눕니다. text 는 영어 원문 그대로 두고 고쳐 쓰지 않습니다.\n4. 평가 항목 구조(factorTree): Section M 이나 52.212-2 의 평가 요소, 하위 요소, 상대 중요도, 평가 방식을 냅니다. method 는 LPTA 또는 BEST_VALUE_TRADEOFF 입니다. factorId 는 F1, F2 꼴로, subfactorId 는 F1.1 꼴로 매기고 title 은 원문 이름 그대로 씁니다. relativeImportance 는 원문의 상대 중요도 표현을 한국어로 씁니다(예: 가격보다 중요, 가장 중요). 평가 기준이 없는 공고는 method 를 비우고 factors 를 빈 배열로 둡니다.\n5. 줄마다 factorId, factorTitle 에 그 요구가 걸린 평가 항목(4 의 factorId 와 title)을 적습니다. 걸린 항목이 없으면 비웁니다.\n6. translation: 고객이 읽을 한국어 번역을 답니다. 약어와 규정 번호는 처음 나올 때 한국어 뜻과 원문 약어를 같이 씁니다(예: 성과 기반 작업 기술서(PWS)).\n7. 질의 후보: 모호하거나 해석이 갈리는 줄은 queryCandidate 를 true 로 두고 ambiguity(모호한 점, 한국어)와 draftQuery(계약 담당관에게 보낼 질의안, 영어)를 답니다. 아니면 queryCandidate 를 false 로 둡니다.\n8. level, verb, category, fulfillmentParty 는 이전 단계 값을 확인해 틀렸으면 고칩니다. shall, must, will 은 SHALL, should 는 SHOULD, may 는 MAY 입니다. 트럭, 장비, 인력, 실적 증빙처럼 고객이 내야 하는 것은 CLIENT_UPLOAD, 기술 제안과 가격 제안처럼 제안서로 답하는 것은 PLATFORM_GENERATED, 정부 지정 양식은 SYSTEM_FORM 입니다.\n9. 요구 줄이 하나도 없는 공고(공고 본문뿐인 사전 의향조사 등)는 lines 를 빈 배열로 둡니다.\n\n[출력]\n위 작업을 마친 뒤 response_schema 에 맞춰 structured_output 도구 호출로 냅니다. 자유 텍스트나 코드 블록으로 내지 않습니다. REQ ID 는 서버가 매기므로 쓰지 않습니다. 원문에 없는 요구를 지어 넣지 않습니다.",
+        "response_schema": {
+          "type": "object",
+          "required": [
+            "complianceMatrix",
+            "factorTree"
+          ],
+          "properties": {
+            "complianceMatrix": {
+              "type": "object",
+              "required": [
+                "lines"
+              ],
+              "properties": {
+                "lines": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "text",
+                      "level",
+                      "sourceFile"
+                    ],
+                    "properties": {
+                      "text": {
+                        "type": "string"
+                      },
+                      "translation": {
+                        "type": "string"
+                      },
+                      "sourceFile": {
+                        "type": "string"
+                      },
+                      "page": {
+                        "type": "string"
+                      },
+                      "clause": {
+                        "type": "string"
+                      },
+                      "quote": {
+                        "type": "string"
+                      },
+                      "level": {
+                        "type": "string",
+                        "enum": [
+                          "SHALL",
+                          "SHOULD",
+                          "MAY"
+                        ]
+                      },
+                      "verb": {
+                        "type": "string"
+                      },
+                      "category": {
+                        "type": "string",
+                        "enum": [
+                          "TECHNICAL",
+                          "FORMAT",
+                          "SUBMISSION",
+                          "DEADLINE",
+                          "ELIGIBILITY",
+                          "OTHER"
+                        ]
+                      },
+                      "fulfillmentParty": {
+                        "type": "string",
+                        "enum": [
+                          "CLIENT_UPLOAD",
+                          "PLATFORM_GENERATED",
+                          "SYSTEM_FORM"
+                        ]
+                      },
+                      "factorId": {
+                        "type": "string"
+                      },
+                      "factorTitle": {
+                        "type": "string"
+                      },
+                      "queryCandidate": {
+                        "type": "boolean"
+                      },
+                      "ambiguity": {
+                        "type": "string"
+                      },
+                      "draftQuery": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "factorTree": {
+              "type": "object",
+              "properties": {
+                "method": {
+                  "type": "string",
+                  "description": "LPTA 또는 BEST_VALUE_TRADEOFF, 평가 기준이 없으면 빈 문자열"
+                },
+                "factors": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "factorId": {
+                        "type": "string"
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "relativeImportance": {
+                        "type": "string"
+                      },
+                      "subfactors": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "subfactorId": {
+                              "type": "string"
+                            },
+                            "title": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
       "id": "save",
       "name": "저장 중",
       "type": "TOOL_CALL",
@@ -388,11 +640,14 @@
           "koreanTitle": "{{verify_and_gapcheck.structured_data.koreanTitle}}",
           "documentFormats": "{{verify_and_gapcheck.structured_data.documentFormats}}",
           "llmPromptPreset": "{{verify_and_gapcheck.structured_data.llmPromptPreset}}",
-          "requiredDocuments": "{{verify_and_gapcheck.structured_data.requiredDocuments}}"
+          "requiredDocuments": "{{verify_and_gapcheck.structured_data.requiredDocuments}}",
+          "complianceMatrix": "{{build_compliance_matrix.structured_data.complianceMatrix}}",
+          "factorTree": "{{build_compliance_matrix.structured_data.factorTree}}"
         }
       },
       "depends_on": [
-        "verify_and_gapcheck"
+        "verify_and_gapcheck",
+        "build_compliance_matrix"
       ]
     }
   ],
