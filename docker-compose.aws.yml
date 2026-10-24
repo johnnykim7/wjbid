@@ -39,3 +39,5 @@ services:
       AIMBASE_WF_PROPOSAL_DESIGN: proposal-design
       AIMBASE_WF_PROPOSAL_WRITE_SECTION: proposal-write-section
       AIMBASE_WF_PROPOSAL_ASSEMBLE: proposal-assemble
+      # CR-159: 공고 분석에 매트릭스 단계가 붙어 첨부가 많은 공고는 30분(기본 360 x 5초)을 넘길 수 있다. 끝나기 전에 포기하지 않게 60분
+      AIMBASE_POLL_MAX_ATTEMPTS: 720
