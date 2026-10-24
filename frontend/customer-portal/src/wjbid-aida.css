@@ -8,7 +8,7 @@
    ds-ui 스타일은 cascade layer 안에 있어 레이어 밖인 이 파일이 이긴다. */
 .wj .wj-reset { all: unset; box-sizing: border-box; cursor: pointer; }
 .wj .wj-reset:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; }
-/* 앱 공통 제목 자간(wjbid-theme.css)이 아니라 정본처럼 본문 자간을 물려받는다 */
+/* 앱 공통 제목 자간(index.css)이 아니라 정본처럼 본문 자간을 물려받는다 */
 .wj h1, .wj h2, .wj h3, .wj h4, .wj h5, .wj h6 { letter-spacing: inherit; }
 
 .wj { background: white; font-weight: 400; color: var(--color-ink); font-family: var(--font-sans); font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; letter-spacing: -0.01em; }

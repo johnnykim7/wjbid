@@ -1,41 +1,42 @@
 @import "tailwindcss";
 
 /* 색 이름표. 이름과 뜻은 docs/AI-SDLC/T3-3_화면_구조.md 「고객 포털 색 이름표」.
-   색을 바꿀 때는 강조색 묶음 7개만 바꾼다. 화면 코드에는 16진 색을 쓰지 않는다. */
+   값은 디자인시스템 테마 파일(ds-ui dist/themes/wjbid.css) 한 곳에 있고 여기서는 잇기만 한다(CR-176).
+   색을 바꿀 때는 그 파일의 강조색 묶음 7개만 바꾼다. 화면 코드에는 16진 색을 쓰지 않는다. */
 @theme static {
   /* 강조색 묶음 */
-  --color-brand:        #1a56db;
-  --color-brand-strong: #1546b3;
-  --color-brand-soft:   #edf3ff;
-  --color-brand-softer: #f5f8ff;
-  --color-brand-deep:   #0c1e3d;
-  --color-brand-line:   #b9cdf3;
-  --color-brand-on-dark:#8fb3ff;
+  --color-brand:        var(--wj-brand);
+  --color-brand-strong: var(--wj-brand-strong);
+  --color-brand-soft:   var(--wj-brand-soft);
+  --color-brand-softer: var(--wj-brand-softer);
+  --color-brand-deep:   var(--wj-brand-deep);
+  --color-brand-line:   var(--wj-brand-line);
+  --color-brand-on-dark:var(--wj-brand-on-dark);
 
   /* 고정 색 */
-  --color-ink:          #141d30;
-  --color-ink-sub:      #3d4657;
-  --color-ink-mute:     #6b7384;
-  --color-ink-faint:    #c4c9d2;
-  --color-line:         #e1e5ec;
-  --color-line-soft:    #eef1f5;
-  --color-line-strong:  #c9d0da;
-  --color-surface:      #f6f7f9;
-  --color-surface-warm: #f7f5f1;
-  --color-dark:         #2b313c;
-  --color-dark-text:    #aeb6c3;
-  --color-dark-line:    #424a57;
-  --color-danger:       #d93838;
-  --color-danger-soft:  #fdeeee;
-  --color-success:      #12805c;
-  --color-success-soft: #e8f6ef;
-  --color-warning:      #b45309;
-  --color-warning-soft: #fff4e5;
-  --color-new:          #e8890c;
+  --color-ink:          var(--wj-ink);
+  --color-ink-sub:      var(--wj-ink-sub);
+  --color-ink-mute:     var(--wj-ink-mute);
+  --color-ink-faint:    var(--wj-ink-faint);
+  --color-line:         var(--wj-line);
+  --color-line-soft:    var(--wj-line-soft);
+  --color-line-strong:  var(--wj-line-strong);
+  --color-surface:      var(--wj-surface);
+  --color-surface-warm: var(--wj-surface-warm);
+  --color-dark:         var(--wj-dark);
+  --color-dark-text:    var(--wj-dark-text);
+  --color-dark-line:    var(--wj-dark-line);
+  --color-danger:       var(--wj-danger);
+  --color-danger-soft:  var(--wj-danger-soft);
+  --color-success:      var(--wj-success);
+  --color-success-soft: var(--wj-success-soft);
+  --color-warning:      var(--wj-warning);
+  --color-warning-soft: var(--wj-warning-soft);
+  --color-new:          var(--wj-new);
 
-  /* 회사 CI 색. 로고에만 쓰고 강조색을 바꿔도 그대로 둔다 */
-  --color-ci-red:       #a32d35;
-  --color-ci-gold:      #dea23e;
+  /* 회사 CI 색 */
+  --color-ci-red:       var(--wj-ci-red);
+  --color-ci-gold:      var(--wj-ci-gold);
 
   --font-sans: "Pretendard Variable", Pretendard, system-ui, -apple-system, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
@@ -93,4 +94,22 @@ body {
   border: 1px solid var(--color-line);
   font-family: var(--font-sans);
   line-height: 1.8;
+}
+
+html {
+  font-size: 16px;
+}
+
+/* 기본 15px/500 은 08-17 화면의 무게감 피드백을 지킨 값이다. 홈과 공통 틀은 자기 크기를 따로 준다 */
+body {
+  font-family: var(--font-sans);
+  letter-spacing: -0.01em;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--color-ink);
+}
+
+h1, h2, h3, h4 {
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }
