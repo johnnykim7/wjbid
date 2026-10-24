@@ -1,5 +1,13 @@
 # 영역 12 관리자/상태 관리 시험항목. 근거는 T1-1 기능요구사항 명세서, T1-3 BIZ-072, T1-5 상태 정의, T3-1, T3-2, T3-3, T3-4 화면 설계다.
 
+# 전이 시험은 회차마다 넣는 시딩 입찰 건에만 건다(tools/testbook/seed/12-*.sql). 실제 고객 건이 움직이지 않는다
+ADMIN = 'admin:smoke-admin@example.com'
+THIS_BID = "UNHEX('{val:0:hex}')"
+TRANSITION = '/api/admin/bid-requests/{val:0:id}/transition'
+LAST_STEP = (f"SELECT state, JSON_LENGTH(state_history) AS hist, "
+             f"JSON_UNQUOTE(JSON_EXTRACT(state_history, '$[last].fromState')) AS from_state, "
+             f"JSON_UNQUOTE(JSON_EXTRACT(state_history, '$[last].toState')) AS to_state FROM bid_requests WHERE id = {THIS_BID}")
+
 ITEMS = [
 
 dict(id='IT-12-001', flow='대시보드', kind='정상', title='관리자가 대시보드 통계 카드에서 상태별 입찰 수를 본다',
@@ -290,7 +298,17 @@ dict(id='IT-12-031', flow='상태 전이', kind='정상', title='입찰 요청 �
             '3. state_history 에 DOCS_RECEIVED 에서 ANALYZING 으로의 줄이 더해진다\n'
             '4. ANALYZING 진입 때 고객 서류 읽기만 돌고 상태는 바꾸지 않아 10분 뒤에도 state 가 ANALYZING 그대로다',
      judge=['가상', '가상', '서버', '서버'],
-     req=['BID-FSM-001'], fc=['BID-FSM-001'], screen='관리자 /bid-requests', pri='High'),
+     req=['BID-FSM-001'], fc=['BID-FSM-001'], screen='관리자 /bid-requests', pri='High',
+     probe={3: dict(steps=[('key', '12.b031_server3_bid'),
+                           ('api', ADMIN, 'POST', TRANSITION, {'toState': 'ANALYZING', 'notes': 'IT-12-031 서버 판정'}),
+                           ('sql', LAST_STEP)],
+                    check="r[1]['status'] == 200 and int(r[2][0]['hist']) == int(r[0][0]['hist']) + 1 "
+                          "and r[2][0]['from_state'] == 'DOCS_RECEIVED' and r[2][0]['to_state'] == 'ANALYZING'"),
+            4: dict(steps=[('key', '12.b031_server4_bid'),
+                           ('api', ADMIN, 'POST', TRANSITION, {'toState': 'ANALYZING', 'notes': 'IT-12-031 서버 판정'}),
+                           ('poll', ADMIN, '/api/admin/bid-requests/{val:0:id}', "x['body']['state'] != 'ANALYZING'", 600, 30),
+                           ('sql', f"SELECT state FROM bid_requests WHERE id = {THIS_BID}")],
+                    check="r[1]['status'] == 200 and r[3][0]['state'] == 'ANALYZING'")}),
 
 dict(id='IT-12-032', flow='상태 전이', kind='정상', title='필수 요구 항목을 모두 채운 입찰 건을 DOCS_RECEIVED 로 전이한다',
      pre='관리자 계정, 상태 DOCS_PENDING 이고 공고의 필수 고객 올림 요구 항목을 모두 올린 입찰 요청',
@@ -315,7 +333,12 @@ dict(id='IT-12-034', flow='상태 전이', kind='정상', title='ANALYZING 을 G
             '2. state 가 GENERATING 이고 state_history 에 ANALYZING 에서 GENERATING 으로의 줄이 더해진다\n'
             '3. 생성이 끝나면 상태가 REVIEW 로 바뀌고 생성 문서 목록에 AI 가 그 공고에 맞춰 쓴 제안서가 생긴다',
      judge=['가상', '서버', '합동'],
-     req=['BID-FSM-001'], fc=['BID-FSM-001'], screen='관리자 /bid-requests/{id}', pri='High'),
+     req=['BID-FSM-001'], fc=['BID-FSM-001'], screen='관리자 /bid-requests/{id}', pri='High',
+     probe={2: dict(steps=[('key', '12.b034_server_bid'),
+                           ('api', ADMIN, 'POST', TRANSITION, {'toState': 'GENERATING', 'notes': 'IT-12-034 서버 판정'}),
+                           ('sql', LAST_STEP)],
+                    check="r[1]['status'] == 200 and r[2][0]['state'] == 'GENERATING' and int(r[2][0]['hist']) == int(r[0][0]['hist']) + 1 "
+                          "and r[2][0]['from_state'] == 'ANALYZING' and r[2][0]['to_state'] == 'GENERATING'")}),
 
 dict(id='IT-12-035', flow='상태 전이', kind='정상', title='REVIEW 를 CONFIRMED 로 전이하면 문서가 잠긴다',
      pre='관리자 계정, 상태 REVIEW 이고 생성 문서가 DRAFT 인 입찰 요청',

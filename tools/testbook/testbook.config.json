@@ -50,5 +50,10 @@
       "total_pages_at": "totalPages"
     },
     "lock": "/tmp/testbook-wjbid.lock"
+  },
+  "virtual": {
+    "admin-console": {
+      "dir": "frontend/admin-console"
+    }
   }
 }

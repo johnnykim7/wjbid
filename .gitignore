@@ -110,3 +110,7 @@ rfp/
 # 시험 항목 도구: 화면 콘솔은 build_console.py 로 다시 만든다
 tools/testbook/console/
 __pycache__/
+
+# 시험 재료 키 값과 가상 화면 결과는 대상 서버마다 회차마다 새로 쓴다
+tools/testbook/seed/ids/
+frontend/admin-console/vtest-out/

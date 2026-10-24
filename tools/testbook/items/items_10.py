@@ -26,6 +26,53 @@ def reading_rows(bid):
 
 THIS_BID = "UNHEX('{val:0:hex}')"
 READINGS = '/api/admin/bid-requests/{val:0:id}/document-readings'
+TRANSITION = '/api/admin/bid-requests/{val:0:id}/transition'
+LAST_STEP = (f"SELECT state, JSON_LENGTH(state_history) AS hist, "
+             f"JSON_UNQUOTE(JSON_EXTRACT(state_history, '$[last].fromState')) AS from_state, "
+             f"JSON_UNQUOTE(JSON_EXTRACT(state_history, '$[last].toState')) AS to_state FROM bid_requests WHERE id = {THIS_BID}")
+
+# MCP 열쇠는 저장소에 둘 수 없어 실행기가 환경변수에서 싣는다(run_server 머리글 값)
+MCP_KEY = {'X-API-Key': '$TESTBOOK_MCP_API_KEY'}
+
+
+def mcp(tool, args):
+    return ('api', 'guest', 'POST', '/api/mcp',
+            {'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call', 'params': {'name': tool, 'arguments': args}}, MCP_KEY)
+
+
+def mcp_out(i):
+    """MCP 도구 결과는 JSON 을 글자로 한 번 더 싸서 돌려준다"""
+    return f"r[{i}]['body']['result']['content'][0]['text']"
+
+
+def mcp_json(i):
+    return f"loads({mcp_out(i)})"
+
+
+def mcp_rejected(i, reading):
+    return (f"r[{i}]['body']['result'].get('isError') and "
+            f"('unknownReadingIds: [' + r[0][0]['{reading}'] + ']') in {mcp_out(i)}")
+
+
+def save_structure(reading_cols):
+    return mcp('save_proposal_structure', {'documentId': '{val:0:id}', 'chapters': [
+        {'factorLabel': '1', 'factorTitle': 'Past Performance', 'sections': [
+            {'subfactorLabel': '1.1', 'title': 'Relevant Contracts', 'scope': 'Recent relevant contracts',
+             'requirementRefs': [], 'sourceReadingIds': [f'{{val:0:{c}}}' for c in reading_cols], 'minWords': 200}]}]})
+
+
+# 근거 서류 E 의 읽기 결과를 Aimbase 가 보내는 꼴로 저장한다. 빠진 칸과 소문자 값을 서버가 저장 꼴로 맞추는지까지 본다
+SAVE_E_FACTS = mcp('save_client_document_facts', {
+    'bidRequestId': '{val:0:bid}',
+    'targets': [{'readingId': '{val:0:e}', 'targetPath': 'docs/equipment.pdf'}],
+    'results': [{'index': 0, 'facts': [{'category': 'equipment', 'key': '장비', 'value': '굴삭기 2대'},
+                                       {'category': 'EQUIPMENT', 'key': '수량', 'value': '2', 'page': 3, 'readMode': 'vision'}]}]})
+FACT_FIELDS = "{'category', 'key', 'value', 'page', 'anchor', 'confidence', 'readMode'}"
+SECTION_SOURCES = ("SELECT ps.source_reading_ids FROM proposal_section ps JOIN proposal_chapter pc ON pc.id = ps.chapter_id "
+                   f"WHERE pc.document_id = {THIS_BID}")
+STRUCTURE = ("SELECT HEX(pc.id) AS chapter, pc.factor_label, HEX(ps.id) AS section, ps.subfactor_label, ps.title, ps.source_reading_ids "
+             f"FROM proposal_chapter pc JOIN proposal_section ps ON ps.chapter_id = pc.id WHERE pc.document_id = {THIS_BID} "
+             "ORDER BY pc.order_no, ps.order_no")
 
 ITEMS = [
 
@@ -40,6 +87,21 @@ dict(id='IT-10-001', flow='제안서 자동 작성', kind='정상', title='공�
             '6. 제안서가 공고 사전 분석의 문서 양식과 필요 서류를 반영한다',
      judge=['서버', '서버', '가상', '합동', '합동', '합동'],
      req=['BID-DOC-001'], fc=['BID-DOC-001'], screen='관리자 /bid-requests/{id}', pri='High',
+     probe={1: dict(steps=[('key', '10.b001_bid'),
+                           ('api', ADMIN, 'POST', TRANSITION, {'toState': 'GENERATING', 'notes': 'IT-10-001 서버 판정'}),
+                           ('poll', ADMIN, '/api/admin/bid-requests/{val:0:id}', "x['body']['state'] != 'GENERATING'", 1800, 30),
+                           ('sql', f"SELECT state, JSON_LENGTH(state_history) AS hist, "
+                                   f"JSON_UNQUOTE(JSON_EXTRACT(state_history, '$[last-1].toState')) AS prev_state, "
+                                   f"JSON_UNQUOTE(JSON_EXTRACT(state_history, '$[last].toState')) AS to_state FROM bid_requests WHERE id = {THIS_BID}")],
+                    need="r[0][0]['state'] == 'ANALYZING'",
+                    check="r[1]['status'] == 200 and r[3][0]['state'] == 'REVIEW' and int(r[3][0]['hist']) == int(r[0][0]['hist']) + 2 "
+                          "and r[3][0]['prev_state'] == 'GENERATING' and r[3][0]['to_state'] == 'REVIEW'"),
+            2: dict(steps=[('key', '10.b001_bid'),
+                           ('sql', f"SELECT bd.status, JSON_UNQUOTE(JSON_EXTRACT(v.content_json, '$.type')) AS t FROM bid_documents bd "
+                                   f"LEFT JOIN bid_document_versions v ON v.document_id = bd.id AND v.version_no = 1 "
+                                   f"WHERE bd.bid_request_id = {THIS_BID}")],
+                    need="r[0][0]['state'] != 'ANALYZING'",
+                    check="len(r[1]) > 0 and all(x['status'] == 'DRAFT' and x['t'] == 'doc' for x in r[1])")},
      issue='T1-1 은 "고객이 필요 문서를 제출하면" 자동 작성이라 하고 T1-5 는 CR-141 뒤 ANALYZING 다음 상태로 관리자가 전환한다고 해 생성이 시작되는 때가 어긋난다. Aimbase 가 만드는 최종 Word, PDF 를 어디서 받는지 T3-2, T3-3 에 없다'),
 
 dict(id='IT-10-002', flow='제안서 자동 작성', kind='정상', title='미분류 공고의 입찰 건은 성공 제안서 자산 없이 제안서를 작성한다',
@@ -393,10 +455,7 @@ dict(id='IT-10-041', flow='고객 서류 읽기', kind='정상', title='분석 �
             '5. 5단계에서 펼친 사실 목록에 실적 증명서에 적힌 사업명, 발주처, 계약 금액이 원문 값 그대로 쪽 번호와 함께 보인다',
      judge=['가상', '가상', '가상', '서버', '합동'],
      req=['BID-DOC-004'], fc=['BID-DOC-004'], screen='관리자 /bid-requests/{id}', pri='High',
-     probe={4: dict(steps=[('sql', f"SELECT {uuid_of('br.id')} AS id, HEX(br.id) AS hex FROM bid_requests br "
-                                   f"WHERE br.state NOT IN ('CREATED','DOCS_PENDING','DOCS_RECEIVED','CLOSED') AND EXISTS "
-                                   f"(SELECT 1 FROM document_readings dr WHERE dr.status = 'DONE' AND dr.content_sha256 IN {candidate_shas('br.id')}) "
-                                   "ORDER BY br.updated_at DESC LIMIT 1"),
+     probe={4: dict(steps=[('key', '10.b041_done_bid'),
                            ('api', ADMIN, 'GET', READINGS),
                            ('sql', f"SELECT {uuid_of('dr.id')} AS id, dr.status, dr.fact_count FROM document_readings dr "
                                    f"WHERE dr.content_sha256 IN {candidate_shas(THIS_BID)}")],
@@ -412,7 +471,12 @@ dict(id='IT-10-042', flow='고객 서류 읽기', kind='정상', title='같은 �
             '2. 3단계에서 그 줄의 상태가 읽는 중을 거치지 않고 바로 읽음이며 사실 수가 IT-10-041 의 사업자등록증 줄과 같다\n'
             '3. 4단계 줄 수가 1단계와 같다',
      judge=['가상', '가상', '서버'],
-     req=['BID-DOC-004'], fc=['BID-DOC-004'], screen='관리자 /bid-requests/{id}', pri='High'),
+     req=['BID-DOC-004'], fc=['BID-DOC-004'], screen='관리자 /bid-requests/{id}', pri='High',
+     probe={3: dict(steps=[('key', '10.b042_server_bid'),
+                           ('sql', f"SELECT COUNT(*) AS n FROM document_readings WHERE content_sha256 IN {candidate_shas(THIS_BID)}"),
+                           ('api', ADMIN, 'POST', TRANSITION, {'toState': 'ANALYZING', 'notes': 'IT-10-042 서버 판정'}),
+                           ('sql', f"SELECT COUNT(*) AS n FROM document_readings WHERE content_sha256 IN {candidate_shas(THIS_BID)}")],
+                    check="r[2]['status'] == 200 and int(r[3][0]['n']) == int(r[1][0]['n'])")}),
 
 dict(id='IT-10-043', flow='고객 서류 읽기', kind='정상', title='글자 층이 없는 스캔 서류는 글자 인식으로 읽는다',
      pre='관리자 계정, 상태 DOCS_RECEIVED 입찰 건 1건(공고별 서류로 글자 층이 없는 스캔 PDF 면허증 1개를 올림), Aimbase 고객 서류 읽기 워크플로우가 도는 상태',
@@ -446,10 +510,15 @@ dict(id='IT-10-045', flow='고객 서류 읽기', kind='예외', title='읽을 �
             '3. 3단계 전환이 거부되지 않고 state 가 GENERATING 이 된다',
      judge=['가상', '서버', '서버'],
      req=['BID-DOC-004'], fc=['BID-DOC-004'], screen='관리자 /bid-requests/{id}', pri='Medium',
-     probe={2: dict(steps=[('sql', "SELECT HEX(id) AS hex, file_name, status, read_as FROM document_readings "
-                                   "WHERE LOWER(file_name) LIKE '%.doc'")],
-                    need="len(r[0]) > 0",
-                    check="all(x['status'] == 'UNSUPPORTED' and x['read_as'] == 'NONE' for x in r[0])")}),
+     probe={2: dict(steps=[('key', '10.b045_server2_bid'),
+                           ('api', ADMIN, 'POST', TRANSITION, {'toState': 'ANALYZING', 'notes': 'IT-10-045 서버 판정'}),
+                           ('sql', "SELECT status, read_as FROM document_readings WHERE content_sha256 = '{val:0:doc_sha}'")],
+                    check="r[1]['status'] == 200 and len(r[2]) == 1 and r[2][0]['status'] == 'UNSUPPORTED' and r[2][0]['read_as'] == 'NONE'"),
+            3: dict(steps=[('key', '10.b045_server3_bid'),
+                           ('api', ADMIN, 'POST', TRANSITION, {'toState': 'ANALYZING', 'notes': 'IT-10-045 서버 판정'}),
+                           ('api', ADMIN, 'POST', TRANSITION, {'toState': 'GENERATING', 'notes': 'IT-10-045 서버 판정'}),
+                           ('sql', f"SELECT state FROM bid_requests WHERE id = {THIS_BID}")],
+                    check="r[1]['status'] == 200 and r[2]['status'] == 200 and r[3][0]['state'] == 'GENERATING'")}),
 
 dict(id='IT-10-046', flow='고객 서류 읽기', kind='예외', title='고객 서류를 읽는 중이면 문서 작성 중으로 전환되지 않는다',
      pre='관리자 계정, 상태 ANALYZING 이고 후보 서류 한 줄이 READING 이며 상태가 바뀐 지 5분이 안 된 입찰 건',
@@ -460,21 +529,12 @@ dict(id='IT-10-046', flow='고객 서류 읽기', kind='예외', title='고객 �
             '3. 4단계에서 state 가 ANALYZING 그대로이고 state_history 에 줄이 더해지지 않았다',
      judge=['가상', '서버', '서버'],
      req=['BID-DOC-004'], fc=['BID-DOC-004'], screen='관리자 /bid-requests/{id}', pri='High',
-     probe={2: dict(steps=[('sql', f"SELECT {uuid_of('br.id')} AS id, HEX(br.id) AS hex, br.state, JSON_LENGTH(br.state_history) AS hist "
-                    f"FROM bid_requests br {QA_BIDS} AND br.state = 'ANALYZING' AND EXISTS (SELECT 1 FROM document_readings dr "
-                    f"WHERE dr.status IN ('WAITING','READING') AND dr.status_at >= '{{since_5m}}' "
-                    f"AND dr.content_sha256 IN {candidate_shas('br.id')}) ORDER BY br.updated_at DESC LIMIT 1"),
-            ('api', ADMIN, 'POST', '/api/admin/bid-requests/{val:0:id}/transition',
-             {'toState': 'GENERATING', 'notes': 'IT-10-046 서버 판정'}),
-            ('sql', f"SELECT state, JSON_LENGTH(state_history) AS hist FROM bid_requests WHERE id = {THIS_BID}")],
+     probe={2: dict(steps=[('key', '10.b046_server2_bid'),
+                           ('api', ADMIN, 'POST', TRANSITION, {'toState': 'GENERATING', 'notes': 'IT-10-046 서버 판정'})],
                     check="r[1]['status'] == 409 and r[1]['body'].get('error') == 'DOCUMENT_READING_IN_PROGRESS'"),
-            3: dict(steps=[('sql', f"SELECT {uuid_of('br.id')} AS id, HEX(br.id) AS hex, br.state, JSON_LENGTH(br.state_history) AS hist "
-                    f"FROM bid_requests br {QA_BIDS} AND br.state = 'ANALYZING' AND EXISTS (SELECT 1 FROM document_readings dr "
-                    f"WHERE dr.status IN ('WAITING','READING') AND dr.status_at >= '{{since_5m}}' "
-                    f"AND dr.content_sha256 IN {candidate_shas('br.id')}) ORDER BY br.updated_at DESC LIMIT 1"),
-            ('api', ADMIN, 'POST', '/api/admin/bid-requests/{val:0:id}/transition',
-             {'toState': 'GENERATING', 'notes': 'IT-10-046 서버 판정'}),
-            ('sql', f"SELECT state, JSON_LENGTH(state_history) AS hist FROM bid_requests WHERE id = {THIS_BID}")],
+            3: dict(steps=[('key', '10.b046_server3_bid'),
+                           ('api', ADMIN, 'POST', TRANSITION, {'toState': 'GENERATING', 'notes': 'IT-10-046 서버 판정'}),
+                           ('sql', f"SELECT state, JSON_LENGTH(state_history) AS hist FROM bid_requests WHERE id = {THIS_BID}")],
                     check="r[2][0]['state'] == 'ANALYZING' and r[2][0]['hist'] == r[0][0]['hist']")}),
 
 dict(id='IT-10-047', flow='고객 서류 읽기', kind='예외', title='읽기가 30분 넘게 끝나지 않은 서류는 읽지 못함이 되어 전환을 막지 않는다',
@@ -483,7 +543,11 @@ dict(id='IT-10-047', flow='고객 서류 읽기', kind='예외', title='읽기�
      expect='1. 1단계에서 그 줄의 상태가 "읽지 못함" 이고 사유 "읽기 시간 초과" 가 보인다\n'
             '2. 2단계 전환이 거부되지 않고 state 가 GENERATING 이 된다',
      judge=['가상', '서버'],
-     req=['BID-DOC-004'], fc=['BID-DOC-004'], screen='관리자 /bid-requests/{id}', pri='Medium'),
+     req=['BID-DOC-004'], fc=['BID-DOC-004'], screen='관리자 /bid-requests/{id}', pri='Medium',
+     probe={2: dict(steps=[('key', '10.b047_server_bid'),
+                           ('api', ADMIN, 'POST', TRANSITION, {'toState': 'GENERATING', 'notes': 'IT-10-047 서버 판정'}),
+                           ('sql', f"SELECT state FROM bid_requests WHERE id = {THIS_BID}")],
+                    check="r[1]['status'] == 200 and r[2][0]['state'] == 'GENERATING'")}),
 
 dict(id='IT-10-048', flow='고객 서류 읽기', kind='정상', title='읽지 못한 서류를 다시 읽는다',
      pre='관리자 계정, 상태 ANALYZING 이고 후보 서류가 읽지 못함 1줄(글자 층이 있는 PDF)과 읽음 1줄인 입찰 건, Aimbase 고객 서류 읽기 워크플로우가 도는 상태',
@@ -492,11 +556,7 @@ dict(id='IT-10-048', flow='고객 서류 읽기', kind='정상', title='읽지 �
             '2. 읽음이던 줄의 read_at 이 1단계와 같다',
      judge=['가상', '서버'],
      req=['BID-DOC-004'], fc=['BID-DOC-004'], screen='관리자 /bid-requests/{id}', pri='Medium',
-     probe={2: dict(steps=[('sql', f"SELECT {uuid_of('br.id')} AS id, HEX(br.id) AS hex FROM bid_requests br {QA_BIDS} "
-                                   f"AND br.state = 'ANALYZING' "
-                                   f"AND EXISTS (SELECT 1 FROM document_readings dr WHERE dr.status = 'FAILED' AND dr.content_sha256 IN {candidate_shas('br.id')}) "
-                                   f"AND EXISTS (SELECT 1 FROM document_readings dr WHERE dr.status = 'DONE' AND dr.content_sha256 IN {candidate_shas('br.id')}) "
-                                   "ORDER BY br.updated_at DESC LIMIT 1"),
+     probe={2: dict(steps=[('key', '10.b048_server_bid'),
                            ('sql', f"SELECT HEX(dr.id) AS hex, dr.read_at FROM document_readings dr WHERE dr.status = 'DONE' "
                                    f"AND dr.content_sha256 IN {candidate_shas(THIS_BID)} ORDER BY dr.id"),
                            ('api', ADMIN, 'POST', READINGS + '/run', {'readingIds': None}),
@@ -513,16 +573,12 @@ dict(id='IT-10-049', flow='고객 서류 읽기', kind='예외', title='분석 �
             '3. 2단계 뒤 그 줄의 status 가 FAILED 그대로다',
      judge=['가상', '서버', '서버'],
      req=['BID-DOC-004'], fc=['BID-DOC-004'], screen='관리자 /bid-requests/{id}', pri='Medium',
-     probe={2: dict(steps=[('sql', f"SELECT {uuid_of('br.id')} AS id, HEX(br.id) AS hex FROM bid_requests br {QA_BIDS} AND br.state = 'GENERATING' "
-                    f"AND EXISTS (SELECT 1 FROM document_readings dr WHERE dr.status = 'FAILED' AND dr.content_sha256 IN {candidate_shas('br.id')}) "
-                    "ORDER BY br.updated_at DESC LIMIT 1"),
+     probe={2: dict(steps=[('key', '10.b049_bid'),
             ('sql', reading_rows(THIS_BID)),
             ('api', ADMIN, 'POST', READINGS + '/run', {'readingIds': None}),
             ('sql', reading_rows(THIS_BID))],
                     check="r[2]['status'] == 409 and r[2]['body'].get('error') == 'NOT_ANALYZING'"),
-            3: dict(steps=[('sql', f"SELECT {uuid_of('br.id')} AS id, HEX(br.id) AS hex FROM bid_requests br {QA_BIDS} AND br.state = 'GENERATING' "
-                    f"AND EXISTS (SELECT 1 FROM document_readings dr WHERE dr.status = 'FAILED' AND dr.content_sha256 IN {candidate_shas('br.id')}) "
-                    "ORDER BY br.updated_at DESC LIMIT 1"),
+            3: dict(steps=[('key', '10.b049_bid'),
             ('sql', reading_rows(THIS_BID)),
             ('api', ADMIN, 'POST', READINGS + '/run', {'readingIds': None}),
             ('sql', reading_rows(THIS_BID))],
@@ -538,7 +594,18 @@ dict(id='IT-10-050', flow='절별 근거 서류', kind='정상', title='제안�
             '4. proposal_section 절 1 의 source_reading_ids 가 [A] 이다\n'
             '5. 3단계 우측 절 상세의 근거 서류에 A 의 파일 이름 꼬리표가 A 의 사실 수와 함께 보인다',
      judge=['서버', '서버', '서버', '서버', '가상'],
-     req=['BID-DOC-005'], fc=['BID-DOC-005'], screen='관리자 /documents/{id}/sections', pri='High'),
+     req=['BID-DOC-005'], fc=['BID-DOC-005'], screen='관리자 /documents/{id}/sections', pri='High',
+     probe={1: dict(steps=[('key', '10.b050_doc'), mcp('get_proposal_design_input', {'documentId': '{val:0:id}'})],
+                    check=f"len({mcp_json(1)}['clientDocuments']) == 3 and "
+                          f"{{(d['readingId'], d['status']) for d in {mcp_json(1)}['clientDocuments']}} == "
+                          "{(r[0][0]['a'], 'DONE'), (r[0][0]['b'], 'DONE'), (r[0][0]['c'], 'FAILED')}"),
+            2: dict(steps=[('key', '10.b050_doc'), mcp('get_proposal_design_input', {'documentId': '{val:0:id}'})],
+                    check=f"any(f['requirementTitle'] == r[0][0]['req'] for d in {mcp_json(1)}['clientDocuments'] "
+                          "if d['readingId'] == r[0][0]['a'] for f in d['fulfills'])"),
+            3: dict(steps=[('key', '10.b050_doc'), save_structure(['a'])],
+                    check=f"not r[1]['body']['result'].get('isError') and {mcp_json(1)}['unusedReadingIds'] == [r[0][0]['b']]"),
+            4: dict(steps=[('key', '10.b050_doc'), save_structure(['a']), ('sql', SECTION_SOURCES)],
+                    check="len(r[2]) == 1 and loads(r[2][0]['source_reading_ids']) == [r[0][0]['a']]")}),
 
 dict(id='IT-10-051', flow='절별 근거 서류', kind='예외', title='읽음이 아니거나 다른 입찰 건의 서류를 근거로 든 제안서 설계는 저장되지 않는다',
      pre='관리자 계정과 MCP 열쇠, IT-10-050 을 마친 제안서 문서, 다른 입찰 건의 읽음 서류 D',
@@ -548,7 +615,13 @@ dict(id='IT-10-051', flow='절별 근거 서류', kind='예외', title='읽음�
             '2. 3단계 응답이 거부이고 unknownReadingIds 가 [D] 이다\n'
             '3. 4단계 장과 절이 1단계와 같다',
      judge=['서버', '서버', '서버'],
-     req=['BID-DOC-005'], fc=['BID-DOC-005'], screen='', pri='High'),
+     req=['BID-DOC-005'], fc=['BID-DOC-005'], screen='', pri='High',
+     probe={1: dict(steps=[('key', '10.b051_doc'), save_structure(['a', 'c'])],
+                    check=mcp_rejected(1, 'c')),
+            2: dict(steps=[('key', '10.b051_doc'), save_structure(['d'])],
+                    check=mcp_rejected(1, 'd')),
+            3: dict(steps=[('key', '10.b051_doc'), ('sql', STRUCTURE), save_structure(['a', 'c']), save_structure(['d']), ('sql', STRUCTURE)],
+                    check="len(r[1]) > 0 and r[4] == r[1]")}),
 
 dict(id='IT-10-052', flow='절별 근거 서류', kind='정상', title='절 작성과 절 검증 입력에 근거 서류의 사실이 들어 있다',
      pre='관리자 계정과 MCP 열쇠, IT-10-050 으로 절 1 의 근거 서류가 [A] 인 제안서 문서',
@@ -557,7 +630,17 @@ dict(id='IT-10-052', flow='절별 근거 서류', kind='정상', title='절 작�
             '2. 1단계 facts 줄마다 category, key, value, page, anchor, confidence, readMode 칸이 있다\n'
             '3. 2단계 sourceDocuments 가 1단계 sourceDocuments 와 같다',
      judge=['서버', '서버', '서버'],
-     req=['BID-DOC-005'], fc=['BID-DOC-005'], screen='', pri='High'),
+     req=['BID-DOC-005'], fc=['BID-DOC-005'], screen='', pri='High',
+     probe={1: dict(steps=[('key', '10.b052_section'), SAVE_E_FACTS, mcp('get_section_context', {'sectionId': '{val:0:id}'}),
+                           ('sql', "SELECT fact_count FROM document_readings WHERE id = UNHEX('{val:0:e_hex}')")],
+                    check=f"len({mcp_json(2)}['sourceDocuments']) == 1 and {mcp_json(2)}['sourceDocuments'][0]['readingId'] == r[0][0]['e'] "
+                          f"and int(r[3][0]['fact_count']) > 0 and len({mcp_json(2)}['sourceDocuments'][0]['facts']) == int(r[3][0]['fact_count'])"),
+            2: dict(steps=[('key', '10.b052_section'), SAVE_E_FACTS, mcp('get_section_context', {'sectionId': '{val:0:id}'})],
+                    check=f"len({mcp_json(2)}['sourceDocuments']) > 0 and "
+                          f"all(d['facts'] and all({FACT_FIELDS} <= set(f) for f in d['facts']) for d in {mcp_json(2)}['sourceDocuments'])"),
+            3: dict(steps=[('key', '10.b052_section'), SAVE_E_FACTS, mcp('get_section_context', {'sectionId': '{val:0:id}'}),
+                           mcp('get_section_verify_input', {'sectionId': '{val:0:id}'})],
+                    check=f"len({mcp_json(2)}['sourceDocuments']) > 0 and {mcp_json(3)}['sourceDocuments'] == {mcp_json(2)}['sourceDocuments']")}),
 
 dict(id='IT-10-053', flow='절별 근거 서류', kind='정상', title='제안서 본문의 회사 사실은 근거 서류에서 오고 근거가 없으면 자리표시가 들어간다',
      pre='관리자 계정, 고객 서류 읽기가 끝난 ANALYZING 입찰 건(실적 증명서는 읽음, 인력 서류는 내지 않음, 공고 평가 항목에 수행 실적과 인력이 있음), Aimbase 제안서 워크플로우가 도는 상태',
@@ -579,19 +662,15 @@ dict(id='IT-10-054', flow='고객 서류 읽기', kind='예외', title='관리�
             '3. 3단계 응답이 401 이고 본문이 비어 있다',
      judge=['서버', '서버', '서버'],
      req=['BID-DOC-004'], fc=['BID-DOC-004'], screen='', pri='High',
-     probe={1: dict(steps=[('sql', f"SELECT {uuid_of('br.id')} AS id, HEX(br.id) AS hex FROM bid_requests br {QA_BIDS} AND br.state = 'ANALYZING' "
-                    f"AND EXISTS (SELECT 1 FROM document_readings dr WHERE dr.status = 'DONE' AND dr.content_sha256 IN {candidate_shas('br.id')}) "
-                    "ORDER BY br.updated_at DESC LIMIT 1"),
+     probe={1: dict(steps=[('key', '10.b041_done_bid'),
                            ('api', USER, 'GET', '/api/admin/bid-requests/{val:0:id}/document-readings')],
                     check="r[1]['status'] == 403"),
-            2: dict(steps=[('sql', f"SELECT {uuid_of('br.id')} AS id, HEX(br.id) AS hex FROM bid_requests br {QA_BIDS} AND br.state = 'ANALYZING' "
-                    f"AND EXISTS (SELECT 1 FROM document_readings dr WHERE dr.status = 'DONE' AND dr.content_sha256 IN {candidate_shas('br.id')}) "
-                    "ORDER BY br.updated_at DESC LIMIT 1"),
+            2: dict(steps=[('key', '10.b041_done_bid'),
                            ('sql', reading_rows(THIS_BID)),
                            ('api', USER, 'POST', '/api/admin/bid-requests/{val:0:id}/document-readings/run', {'readingIds': None}),
                            ('sql', reading_rows(THIS_BID))],
                     check="r[2]['status'] == 403 and r[3] == r[1]"),
-            3: dict(steps=[('sql', f"SELECT {uuid_of('id')} AS id FROM document_readings WHERE status = 'DONE' ORDER BY updated_at DESC LIMIT 1"),
+            3: dict(steps=[('key', '10.b054_reading'),
                            ('api', 'guest', 'GET', '/api/mcp/document-readings/{val:0:id}/download')],
                     check="r[1]['status'] == 401 and not r[1]['body']")}),
 
