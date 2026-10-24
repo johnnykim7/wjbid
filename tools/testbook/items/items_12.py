@@ -288,10 +288,9 @@ dict(id='IT-12-031', flow='상태 전이', kind='정상', title='입찰 요청 �
      expect='1. 목록 줄의 상태가 ANALYZING 으로 바뀐다\n'
             '2. 입찰 상세 관리 상태 패널의 현재 상태가 ANALYZING 이다\n'
             '3. state_history 에 DOCS_RECEIVED 에서 ANALYZING 으로의 줄이 더해진다\n'
-            '4. ANALYZING 진입 때 AI 작업이 돌지 않아 10분 뒤에도 state 가 ANALYZING 그대로다',
+            '4. ANALYZING 진입 때 고객 서류 읽기만 돌고 상태는 바꾸지 않아 10분 뒤에도 state 가 ANALYZING 그대로다',
      judge=['가상', '가상', '서버', '서버'],
-     req=['BID-FSM-001'], fc=['BID-FSM-001'], screen='관리자 /bid-requests', pri='High',
-     issue='T1-6 BidRequestStateChanged 는 ANALYZING 진입 때 AI 워크플로우를 부른다고 적고 T1-5 CR-141 은 ANALYZING 진입 때 AI 작업이 없다고 적는다'),
+     req=['BID-FSM-001'], fc=['BID-FSM-001'], screen='관리자 /bid-requests', pri='High'),
 
 dict(id='IT-12-032', flow='상태 전이', kind='정상', title='필수 요구 항목을 모두 채운 입찰 건을 DOCS_RECEIVED 로 전이한다',
      pre='관리자 계정, 상태 DOCS_PENDING 이고 공고의 필수 고객 올림 요구 항목을 모두 올린 입찰 요청',
@@ -310,7 +309,7 @@ dict(id='IT-12-033', flow='상태 전이', kind='정상', title='요구 항목�
      req=['BID-FSM-001'], fc=['BID-FSM-001'], screen='관리자 /bid-requests/{id}', pri='High'),
 
 dict(id='IT-12-034', flow='상태 전이', kind='정상', title='ANALYZING 을 GENERATING 으로 전이하면 AI 문서 생성이 시작된다',
-     pre='관리자 계정, 상태 ANALYZING 이고 공고 사전 분석이 COMPLETED 인 입찰 요청, Aimbase 에 닿는 배포 환경',
+     pre='관리자 계정, 상태 ANALYZING 이고 공고 사전 분석이 COMPLETED 이며 고객 서류 읽기가 끝나 읽는 중인 서류가 없는 입찰 요청, Aimbase 에 닿는 배포 환경',
      steps='1. 그 입찰 요청의 입찰 상세 관리를 연다\n2. 다음 상태 GENERATING 으로 전이를 실행한다\n3. AI 문서 생성이 끝날 때까지 기다린다',
      expect='1. 상태 패널의 현재 상태가 GENERATING 으로 바뀐다\n'
             '2. state 가 GENERATING 이고 state_history 에 ANALYZING 에서 GENERATING 으로의 줄이 더해진다\n'

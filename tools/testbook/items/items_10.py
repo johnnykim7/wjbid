@@ -3,7 +3,7 @@
 ITEMS = [
 
 dict(id='IT-10-001', flow='제안서 자동 작성', kind='정상', title='공고 유형에 맞는 성공 제안서가 있는 입찰 건의 제안서를 AI 가 작성한다',
-     pre='관리자 계정, 사전 분석 COMPLETED 이고 industry_type 이 있으며 그 유형에 성공 제안서 1건 이상이 있는 공고의 입찰 건(ANALYZING, 고객 서류 접수 완료), Aimbase 문서 생성 워크플로우가 도는 상태',
+     pre='관리자 계정, 사전 분석 COMPLETED 이고 industry_type 이 있으며 그 유형에 성공 제안서 1건 이상이 있는 공고의 입찰 건(ANALYZING, 고객 서류 접수 완료, 고객 서류 읽기가 끝나 읽음 서류가 있음), Aimbase 문서 생성 워크플로우가 도는 상태',
      steps='1. 관리자 화면 메뉴 [입찰 요청 관리] 에서 그 입찰 건 상세를 연다\n2. [상태 전환] 에서 GENERATING 을 골라 전환한다\n3. 생성이 끝날 때까지 기다린 뒤 화면을 새로고침한다\n4. 생성 문서의 [편집] 으로 본문을 연다',
      expect='1. 입찰 건 상태가 GENERATING 을 거쳐 REVIEW 가 되고 상태 이력에 GENERATING, REVIEW 두 줄이 더해진다\n'
             '2. 그 입찰 건에 입찰 문서(bid_documents) 행이 상태 DRAFT 로 생기고 버전 1 의 content_json 에 TipTap JSON 본문이 들어 있다\n'
@@ -354,5 +354,142 @@ dict(id='IT-10-040', flow='템플릿 수정', kind='예외', title='관리자가
             '2. 비활성화 요청이 403 으로 거부되고 그 템플릿 active 가 true 그대로이다',
      judge=['서버', '서버'],
      req=['BID-TPL-003'], fc=['BID-TPL-003'], screen='', pri='Medium'),
+
+dict(id='IT-10-041', flow='고객 서류 읽기', kind='정상', title='분석 단계로 전환하면 공고별 서류와 서류함 서류를 읽어 회사 사실을 남긴다',
+     pre='관리자 계정, 상태 DOCS_RECEIVED 입찰 건 1건(공고별 서류로 글자 층이 있는 실적 증명서 PDF 1개를 올림), 그 회원 공통 서류함에 만료일 없는 사업자등록증 PDF 1개와 만료일이 어제인 보험증권 PDF 1개, Aimbase 고객 서류 읽기 워크플로우가 도는 상태',
+     steps='1. 관리자 화면 [입찰 요청 관리] 에서 그 입찰 건의 입찰 상세 관리를 연다\n2. 다음 상태 ANALYZING 으로 전환한다\n'
+           '3. 고객 서류 읽기 영역을 본다\n4. 읽기가 끝날 때까지 기다린다\n5. 실적 증명서 줄을 누른다',
+     expect='1. 3단계에서 고객 서류 읽기 영역에 실적 증명서(출처 공고별 서류)와 사업자등록증(출처 공통 서류함) 두 줄이 읽는 중으로 보인다\n'
+            '2. 3단계에서 만료일이 지난 보험증권 줄은 영역에 없다\n'
+            '3. 4단계 뒤 두 줄의 상태가 읽음이고 사실 수가 1 이상이다\n'
+            '4. document_readings 에 두 파일의 content_sha256 줄이 status DONE 으로 있고 fact_count 가 화면의 사실 수와 같다\n'
+            '5. 5단계에서 펼친 사실 목록에 실적 증명서에 적힌 사업명, 발주처, 계약 금액이 원문 값 그대로 쪽 번호와 함께 보인다',
+     judge=['가상', '가상', '가상', '서버', '합동'],
+     req=['BID-DOC-004'], fc=['BID-DOC-004'], screen='관리자 /bid-requests/{id}', pri='High'),
+
+dict(id='IT-10-042', flow='고객 서류 읽기', kind='정상', title='같은 내용의 서류는 한 번만 읽고 다른 입찰 건에서도 그 결과를 쓴다',
+     pre='관리자 계정, IT-10-041 을 마친 회원의 두 번째 입찰 건(DOCS_RECEIVED, 서류함의 사업자등록증을 그 건의 요구 항목에 넣어 공고별 서류로 복사됨), Aimbase 고객 서류 읽기 워크플로우가 도는 상태',
+     steps='1. document_readings 의 줄 수를 적어 둔다\n2. 그 입찰 건의 입찰 상세 관리에서 다음 상태 ANALYZING 으로 전환한다\n'
+           '3. 고객 서류 읽기 영역을 본다\n4. document_readings 의 줄 수를 다시 센다',
+     expect='1. 3단계 영역에 사업자등록증 줄이 하나만 있고 출처가 공고별 서류다\n'
+            '2. 3단계에서 그 줄의 상태가 읽는 중을 거치지 않고 바로 읽음이며 사실 수가 IT-10-041 의 사업자등록증 줄과 같다\n'
+            '3. 4단계 줄 수가 1단계와 같다',
+     judge=['가상', '가상', '서버'],
+     req=['BID-DOC-004'], fc=['BID-DOC-004'], screen='관리자 /bid-requests/{id}', pri='High'),
+
+dict(id='IT-10-043', flow='고객 서류 읽기', kind='정상', title='글자 층이 없는 스캔 서류는 글자 인식으로 읽는다',
+     pre='관리자 계정, 상태 DOCS_RECEIVED 입찰 건 1건(공고별 서류로 글자 층이 없는 스캔 PDF 면허증 1개를 올림), Aimbase 고객 서류 읽기 워크플로우가 도는 상태',
+     steps='1. 그 입찰 건의 입찰 상세 관리에서 다음 상태 ANALYZING 으로 전환한다\n2. 읽기가 끝날 때까지 기다린다\n3. 면허증 줄을 누른다',
+     expect='1. 면허증 줄의 상태가 "읽음(글자 인식)" 이다\n'
+            '2. 3단계 사실 목록에 면허증의 면허 종류와 면허 번호가 스캔 원본에 적힌 값 그대로 보인다\n'
+            '3. document_readings 그 줄의 vision_used 가 true 이고 facts_json 에 readMode VISION 인 사실이 있다',
+     judge=['가상', '합동', '서버'],
+     req=['BID-DOC-004'], fc=['BID-DOC-004'], screen='관리자 /bid-requests/{id}', pri='High'),
+
+dict(id='IT-10-044', flow='고객 서류 읽기', kind='정상', title='그림, 엑셀, 워드, 한글 파일 서류도 읽는다',
+     pre='관리자 계정, 상태 DOCS_RECEIVED 입찰 건 1건(공고별 서류로 인력 현황 JPG 1개, 장비 목록 XLSX 1개, 회사 소개 DOCX 1개, 회사 소개 HWP 1개를 올림), Aimbase 고객 서류 읽기 워크플로우가 도는 상태',
+     steps='1. 그 입찰 건의 입찰 상세 관리에서 다음 상태 ANALYZING 으로 전환한다\n2. 읽기가 끝날 때까지 기다린다\n3. 네 줄을 하나씩 눌러 사실 목록을 본다',
+     expect='1. JPG 줄의 사실 목록에 그림 속 인력 현황의 직책과 인원이 원본 값 그대로 있다\n'
+            '2. XLSX 줄의 사실 목록에 장비 목록 표의 장비 종류와 수량이 원본 값 그대로 있다\n'
+            '3. DOCX 줄의 사실 목록에 회사 소개의 상호와 설립일이 원본 값 그대로 있다\n'
+            '4. HWP 줄의 사실 목록에 회사 소개의 상호와 설립일이 원본 값 그대로 있다',
+     judge=['합동', '합동', '합동', '합동'],
+     req=['BID-DOC-004'], fc=['BID-DOC-004'], screen='관리자 /bid-requests/{id}', pri='High'),
+
+dict(id='IT-10-045', flow='고객 서류 읽기', kind='예외', title='읽을 수 없는 형식은 읽지 않고 표시하며 문서 작성 중 전환을 막지 않는다',
+     pre='관리자 계정, 상태 DOCS_RECEIVED 입찰 건 1건(공고별 서류로 옛 워드 DOC 1개와 글자 층이 있는 PDF 1개를 올림), Aimbase 고객 서류 읽기 워크플로우가 도는 상태',
+     steps='1. 그 입찰 건의 입찰 상세 관리에서 다음 상태 ANALYZING 으로 전환한다\n2. PDF 줄이 읽음이 될 때까지 기다린다\n3. 다음 상태 GENERATING 으로 전환한다',
+     expect='1. 2단계에서 DOC 줄의 상태가 "읽을 수 없는 형식" 이다\n'
+            '2. document_readings 의 DOC 줄이 status UNSUPPORTED, read_as NONE 이다\n'
+            '3. 3단계 전환이 거부되지 않고 state 가 GENERATING 이 된다',
+     judge=['가상', '서버', '서버'],
+     req=['BID-DOC-004'], fc=['BID-DOC-004'], screen='관리자 /bid-requests/{id}', pri='Medium'),
+
+dict(id='IT-10-046', flow='고객 서류 읽기', kind='예외', title='고객 서류를 읽는 중이면 문서 작성 중으로 전환되지 않는다',
+     pre='관리자 계정, 상태 ANALYZING 이고 후보 서류 한 줄이 READING 이며 상태가 바뀐 지 5분이 안 된 입찰 건',
+     steps='1. 그 입찰 건의 입찰 상세 관리를 연다\n2. 상태 패널의 다음 상태 GENERATING 을 본다\n'
+           '3. 관리자 토큰으로 POST /admin/bid-requests/{id}/transition 에 GENERATING 을 실어 부른다\n4. 그 입찰 건의 state 와 state_history 를 조회한다',
+     expect='1. 2단계에서 GENERATING 전환이 눌리지 않고 "고객 서류를 읽는 중입니다" 가 보인다\n'
+            '2. 3단계 응답이 409 이고 코드가 DOCUMENT_READING_IN_PROGRESS 이다\n'
+            '3. 4단계에서 state 가 ANALYZING 그대로이고 state_history 에 줄이 더해지지 않았다',
+     judge=['가상', '서버', '서버'],
+     req=['BID-DOC-004'], fc=['BID-DOC-004'], screen='관리자 /bid-requests/{id}', pri='High'),
+
+dict(id='IT-10-047', flow='고객 서류 읽기', kind='예외', title='읽기가 30분 넘게 끝나지 않은 서류는 읽지 못함이 되어 전환을 막지 않는다',
+     pre='관리자 계정, 상태 ANALYZING 이고 후보 서류 한 줄이 READING 이며 status_at 이 31분 전인 입찰 건',
+     steps='1. 그 입찰 건의 입찰 상세 관리를 연다\n2. 다음 상태 GENERATING 으로 전환한다',
+     expect='1. 1단계에서 그 줄의 상태가 "읽지 못함" 이고 사유 "읽기 시간 초과" 가 보인다\n'
+            '2. 2단계 전환이 거부되지 않고 state 가 GENERATING 이 된다',
+     judge=['가상', '서버'],
+     req=['BID-DOC-004'], fc=['BID-DOC-004'], screen='관리자 /bid-requests/{id}', pri='Medium'),
+
+dict(id='IT-10-048', flow='고객 서류 읽기', kind='정상', title='읽지 못한 서류를 다시 읽는다',
+     pre='관리자 계정, 상태 ANALYZING 이고 후보 서류가 읽지 못함 1줄(글자 층이 있는 PDF)과 읽음 1줄인 입찰 건, Aimbase 고객 서류 읽기 워크플로우가 도는 상태',
+     steps='1. 읽음 줄의 document_readings read_at 을 적어 둔다\n2. 그 입찰 건의 입찰 상세 관리 고객 서류 읽기 영역에서 [다시 읽기] 를 누른다\n3. 읽기가 끝날 때까지 기다린다',
+     expect='1. 읽지 못함이던 줄이 읽는 중을 거쳐 읽음이 되고 사실 수가 1 이상이다\n'
+            '2. 읽음이던 줄의 read_at 이 1단계와 같다',
+     judge=['가상', '서버'],
+     req=['BID-DOC-004'], fc=['BID-DOC-004'], screen='관리자 /bid-requests/{id}', pri='Medium'),
+
+dict(id='IT-10-049', flow='고객 서류 읽기', kind='예외', title='분석 단계가 아닌 입찰 건은 다시 읽기를 할 수 없다',
+     pre='관리자 계정, 상태 GENERATING 이고 후보 서류에 읽지 못함 1줄이 있는 입찰 건',
+     steps='1. 그 입찰 건의 입찰 상세 관리를 연다\n2. 관리자 토큰으로 POST /admin/bid-requests/{id}/document-readings/run 을 부른다',
+     expect='1. 1단계 고객 서류 읽기 영역에 [다시 읽기] 단추가 없다\n'
+            '2. 2단계 응답이 409 이고 코드가 NOT_ANALYZING 이다\n'
+            '3. 2단계 뒤 그 줄의 status 가 FAILED 그대로다',
+     judge=['가상', '서버', '서버'],
+     req=['BID-DOC-004'], fc=['BID-DOC-004'], screen='관리자 /bid-requests/{id}', pri='Medium'),
+
+dict(id='IT-10-050', flow='절별 근거 서류', kind='정상', title='제안서 설계가 읽은 고객 서류를 절마다 근거 서류로 받는다',
+     pre='관리자 계정과 MCP 열쇠, 고객 서류 읽기가 끝난 입찰 건의 제안서 문서(읽음 서류 A 는 요구 항목 1개에 충족 매핑된 실적 증명서, 읽음 서류 B, 읽지 못함 서류 C)',
+     steps='1. MCP get_proposal_design_input 을 그 문서 id 로 부른다\n2. MCP save_proposal_structure 를 절 1 의 sourceReadingIds [A] 로 부른다\n'
+           '3. 관리자 화면 /documents/{documentId}/sections 에서 절 1 을 고른다',
+     expect='1. 1단계 clientDocuments 에 A, B, C 세 줄이 status DONE, DONE, FAILED 로 있다\n'
+            '2. 1단계 A 줄의 fulfills 에 A 가 충족하는 요구 항목 이름이 있다\n'
+            '3. 2단계 저장이 되고 응답의 unusedReadingIds 가 [B] 이다\n'
+            '4. proposal_section 절 1 의 source_reading_ids 가 [A] 이다\n'
+            '5. 3단계 우측 절 상세의 근거 서류에 A 의 파일 이름 꼬리표가 A 의 사실 수와 함께 보인다',
+     judge=['서버', '서버', '서버', '서버', '가상'],
+     req=['BID-DOC-005'], fc=['BID-DOC-005'], screen='관리자 /documents/{id}/sections', pri='High'),
+
+dict(id='IT-10-051', flow='절별 근거 서류', kind='예외', title='읽음이 아니거나 다른 입찰 건의 서류를 근거로 든 제안서 설계는 저장되지 않는다',
+     pre='관리자 계정과 MCP 열쇠, IT-10-050 을 마친 제안서 문서, 다른 입찰 건의 읽음 서류 D',
+     steps='1. 그 문서의 장과 절을 적어 둔다\n2. MCP save_proposal_structure 를 절 1 의 sourceReadingIds [A, C] 로 부른다\n'
+           '3. MCP save_proposal_structure 를 절 1 의 sourceReadingIds [D] 로 부른다\n4. 그 문서의 장과 절을 다시 조회한다',
+     expect='1. 2단계 응답이 거부이고 unknownReadingIds 가 [C] 이다\n'
+            '2. 3단계 응답이 거부이고 unknownReadingIds 가 [D] 이다\n'
+            '3. 4단계 장과 절이 1단계와 같다',
+     judge=['서버', '서버', '서버'],
+     req=['BID-DOC-005'], fc=['BID-DOC-005'], screen='', pri='High'),
+
+dict(id='IT-10-052', flow='절별 근거 서류', kind='정상', title='절 작성과 절 검증 입력에 근거 서류의 사실이 들어 있다',
+     pre='관리자 계정과 MCP 열쇠, IT-10-050 으로 절 1 의 근거 서류가 [A] 인 제안서 문서',
+     steps='1. MCP get_section_context 를 절 1 id 로 부른다\n2. MCP get_section_verify_input 을 절 1 id 로 부른다',
+     expect='1. 1단계 sourceDocuments 에 A 한 줄이 있고 facts 수가 document_readings A 줄의 fact_count 와 같다\n'
+            '2. 1단계 facts 줄마다 category, key, value, page, anchor, confidence, readMode 칸이 있다\n'
+            '3. 2단계 sourceDocuments 가 1단계 sourceDocuments 와 같다',
+     judge=['서버', '서버', '서버'],
+     req=['BID-DOC-005'], fc=['BID-DOC-005'], screen='', pri='High'),
+
+dict(id='IT-10-053', flow='절별 근거 서류', kind='정상', title='제안서 본문의 회사 사실은 근거 서류에서 오고 근거가 없으면 자리표시가 들어간다',
+     pre='관리자 계정, 고객 서류 읽기가 끝난 ANALYZING 입찰 건(실적 증명서는 읽음, 인력 서류는 내지 않음, 공고 평가 항목에 수행 실적과 인력이 있음), Aimbase 제안서 워크플로우가 도는 상태',
+     steps='1. 그 입찰 건의 입찰 상세 관리에서 다음 상태 GENERATING 으로 전환한다\n2. 생성이 끝날 때까지 기다린다\n'
+           '3. 그 제안서의 /documents/{documentId}/sections 에서 수행 실적 절과 인력 절을 차례로 고른다',
+     expect='1. 수행 실적 절의 근거 서류에 실적 증명서가 걸려 있다\n'
+            '2. 수행 실적 절 본문의 사업명, 발주처, 계약 금액이 실적 증명서 사실 목록의 값과 같다\n'
+            '3. 인력 절 본문에 지어낸 인원이나 자격 대신 "[Client data required:" 로 시작하는 자리표시가 있다\n'
+            '4. 인력 절 검증 결과의 지어낸 말 목록에 자리표시가 들어 있지 않다',
+     judge=['가상', '합동', '합동', '합동'],
+     req=['BID-DOC-005', 'BID-DOC-001'], fc=['BID-DOC-005', 'BID-DOC-001'], screen='관리자 /documents/{id}/sections', pri='High'),
+
+dict(id='IT-10-054', flow='고객 서류 읽기', kind='예외', title='관리자가 아니면 고객 서류 읽기 결과를 보거나 다시 읽힐 수 없고 서명 없는 서류 내려받기는 막힌다',
+     pre='회원 계정 로그인 토큰, 읽음 줄이 있는 ANALYZING 입찰 건',
+     steps='1. 회원 토큰으로 GET /admin/bid-requests/{id}/document-readings 를 부른다\n2. 회원 토큰으로 POST /admin/bid-requests/{id}/document-readings/run 을 부른다\n'
+           '3. X-API-Key 머리글과 sig 없이 GET /mcp/document-readings/{readingId}/download 를 부른다',
+     expect='1. 1단계 응답이 403 이다\n'
+            '2. 2단계 응답이 403 이고 document_readings 줄들의 status 가 부르기 전과 같다\n'
+            '3. 3단계 응답이 401 이고 본문이 비어 있다',
+     judge=['서버', '서버', '서버'],
+     req=['BID-DOC-004'], fc=['BID-DOC-004'], screen='', pri='High'),
 
 ]

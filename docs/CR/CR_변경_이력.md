@@ -1332,7 +1332,7 @@
 - **영향 모듈**: BE BidFSMService, AIWorkflowService, DocumentReadingService(신규), LLMPlatformClient, ProposalMcpTool, save_client_document_facts(신규), McpAccessGuard, 내려받기 컨트롤러(신규), 관리자 컨트롤러, 서류 올리기와 서류함 복사(해시), V58 / 관리자 콘솔 BidRequestDetailPage, ProposalTreePage, api / Aimbase 워크플로우 정의 client-document-read(신규), proposal-design, proposal-write-section, proposal-verify-fidelity
 - **영향 설계서**: T1-1 1.25(BID-DOC-001, 004, 005), T1-2 1.9(E 모듈 수), T1-3 1.15(BIZ-085~089), T1-5 1.6(ANALYZING 진입 작업, GENERATING 전이 가드), T1-7 1.6(작업 CR-169-1, BID-DOC-004, 005), T1-10 1.5(새 이름 10개, 사용자 승인 10/24 21:18), T3-1 1.17(document_readings, 칸 셋, V58), T3-2 1.22(관리자 API 셋, 절 상세, MCP 도구 다섯, 내려받기, 워크플로우 입력), T3-3 1.23, T3-4 1.17, T3-5 1.20(TC-DOC-210~237), execution-spec 1.15. 영향 없음 확인: T1-4(새 정책값 없음, 30분은 기존 폴링 상한 5초 x 360), T1-6(BidRequestStateChanged 소비 주체에 ANALYZING 진입 AI 작업이 이미 있다), T2-1(iText 8, poi-ooxml 5.2.5 이미 있음). 상세 `CR/CR-169_고객_서류_읽기와_절별_근거_서류.md`
 - **규모**: 중 (묶음 CR-169~175 는 대, 사용자 승인 10/24 21:00)
-- **상태**: 설계 커밋 9fb8d7b, 용어 승인 10/24 21:18
+- **상태**: 설계 커밋 9fb8d7b, 용어 승인 10/24 21:18, 시험항목 IT-10-041~054 신규와 IT-10-001, IT-12-031, IT-12-034 수정
 
 ### CR-170: 캡처플랜, 공고 분석 나머지, 입찰 여부 (2026-10-24 채번)
 
