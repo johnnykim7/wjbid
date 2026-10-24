@@ -1,6 +1,6 @@
 # SAM.gov Bidding Agency Platform API 설계
 
-> 설계 버전: 1.21 | 최종 수정: 2026-10-20 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-144, CR-146, CR-147, CR-152, CR-153, CR-155, CR-157, CR-159, CR-160, CR-162, CR-168
+> 설계 버전: 1.22 | 최종 수정: 2026-10-24 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-144, CR-146, CR-147, CR-152, CR-153, CR-155, CR-157, CR-159, CR-160, CR-162, CR-168, CR-169
 
 > 단계: 3. Detail Design | 실행스펙 섹션 3에 포함
 >
@@ -550,6 +550,29 @@ CR-137 전에 있던 `POST /opportunities/{id}/qualification-check`(AI 자격 �
 | POST | /admin/bid-requests/{id}/transition | 상태 전이 실행 (관리자) | 🔒 ADMIN | BID-FSM-001 |
 | POST | /admin/bid-requests/{id}/assign | 담당자 배정 | 🔒 ADMIN | BID-ADMIN-003 |
 | GET | /admin/bid-requests/assigned-to-me | 내 담당 입찰 목록 | 🔒 ADMIN | BID-ADMIN-003 |
+| GET | /admin/bid-requests/{id}/document-readings | 고객 서류 읽기 후보 목록 (CR-169) | 🔒 ADMIN | BID-DOC-004 |
+| GET | /admin/document-readings/{readingId} | 고객 서류 사실 목록 (CR-169) | 🔒 ADMIN | BID-DOC-004 |
+| POST | /admin/bid-requests/{id}/document-readings/run | 고객 서류 다시 읽기 (CR-169) | 🔒 ADMIN | BID-DOC-004 |
+
+**POST /admin/bid-requests/{id}/transition (CR-169)**: 입찰 건이 ANALYZING 이 되면 고객 서류 읽기를 비동기로 시작한다. ANALYZING 에서 GENERATING 으로 갈 때 후보 가운데 읽는 중(30분 안)인 서류가 있으면 409 `DOCUMENT_READING_IN_PROGRESS`(BIZ-087).
+
+**GET /admin/bid-requests/{id}/document-readings 응답 (CR-169)**: `{readingStarted, inProgress, items[]}`. readingStarted 는 그 건이 분석 단계를 지났는지, inProgress 는 읽는 중인 후보가 있는지다. items 줄 하나:
+
+| 칸 | 설명 |
+|----|------|
+| readingId | 읽기 줄 id. 아직 읽기를 걸지 않은 후보는 null |
+| fileName | 서류 파일 이름. 같은 내용이 여럿이면 공고별 서류의 이름을 먼저 쓴다 |
+| origin | `BID_DOCUMENT`(공고별 서류), `VAULT`(공통 서류함) |
+| documentId | client_documents 또는 member_documents 의 id |
+| category | 서류 분류. 공고별 서류는 documentCategory, 서류함 서류는 DocumentCategory |
+| fulfills | `[{requirementTitle, reqId}]` 이 서류로 충족 매핑된 요구 항목. 서류함 서류는 같은 해시의 공고별 서류가 충족하는 것 |
+| status | ReadingStatus. 아직 읽기를 걸지 않은 후보는 null |
+| readAs | ReadAs |
+| factCount, visionUsed, failureReason, readAt | document_readings 의 칸 |
+
+**GET /admin/document-readings/{readingId} 응답 (CR-169)**: `{readingId, fileName, status, readAs, visionUsed, failureReason, readAt, facts[{category, key, value, page, anchor, confidence, readMode}]}`. 없으면 404.
+
+**POST /admin/bid-requests/{id}/document-readings/run (CR-169)**: 요청 `{readingIds?: [], force: false}`. readingIds 가 비면 읽음이 아닌 후보 전부를, 있으면 그것만(그 건의 후보가 아니면 400) 다시 읽는다. force 면 읽음도 다시 읽는다. 읽는 중인 서류는 건너뛴다. 입찰 건이 ANALYZING 이 아니면 409 `NOT_ANALYZING`. 응답은 목록 조회와 같다.
 
 ---
 
@@ -586,7 +609,7 @@ CR-137 전에 있던 `POST /opportunities/{id}/qualification-check`(AI 자격 �
 | 메서드 | 경로 | 설명 | 인증 | 기능 ID |
 |--------|------|------|------|---------|
 | GET | /chapters | 장과 절 트리. CR-159: 절마다 requirementRefs(대응 REQ ID) | 🔒 ADMIN | BID-DOC-001 |
-| GET | /sections/{sectionId} | 절 본문 블록과 메타 | 🔒 ADMIN | BID-DOC-001 |
+| GET | /sections/{sectionId} | 절 본문 블록과 메타. CR-169: sourceDocuments[{readingId, fileName, status, factCount}](근거 서류)를 더 준다. 지금 상태가 읽음이 아니게 된 서류도 상태와 함께 준다 | 🔒 ADMIN | BID-DOC-001, BID-DOC-005 |
 | POST | /sections/{sectionId}/regenerate | 그 절만 다시 작성 | 🔒 ADMIN | BID-DOC-001 |
 | POST | /sections/{sectionId}/lock | 절 잠금(다시 작성 막음) | 🔒 ADMIN | BID-DOC-001 |
 | POST | /sections/{sectionId}/unlock | 절 잠금 해제 | 🔒 ADMIN | BID-DOC-001 |
@@ -779,6 +802,7 @@ CR-137 전에 있던 `POST /opportunities/{id}/qualification-check`(AI 자격 �
 | POST | /mcp/message?sessionId={id} | SSE 세션 메시지 수신 | **CR-002 신규**. SSE 응답 반환 |
 | GET | /mcp/opportunity-attachments/{id}/download | 공고 첨부 원본 내려받기 | CR-019. Aimbase download_file 용 |
 | GET | /mcp/rfp-files/{id}/download | 성공 제안서 원본 내려받기 | CR-013. Aimbase parse_document 용 |
+| GET | /mcp/document-readings/{readingId}/download | 고객 서류를 읽는 꼴로 내려받기 | CR-169. Aimbase download_file 용. 같은 해시의 서류 가운데 하나의 파일을 읽는 꼴로 준다: PDF 와 TXT, CSV, MD, HWP, HWPX 는 원본, 그림은 한 쪽 PDF(`application/pdf`), DOCX, XLSX, PPTX 는 글자만 뽑은 UTF-8 텍스트(`text/plain`). read_as `NONE` 이거나 파일이 없으면 404 |
 
 > SSE 전송: Aimbase가 `GET /mcp/sse`로 연결 → `endpoint` 이벤트로 메시지 URL 수신 → `POST /mcp/message`로 JSON-RPC 메시지 전송 → SSE `message` 이벤트로 응답 수신
 
@@ -787,12 +811,12 @@ CR-137 전에 있던 `POST /opportunities/{id}/qualification-check`(AI 자격 �
 | 경로 | 받는 조건 | 막을 때 |
 |------|----------|--------|
 | POST /mcp, GET /mcp/sse, POST /mcp/message | `X-API-Key` 머리글이 서버 열쇠와 같다 | 401, 본문 없음. 도구를 부르지 않는다 |
-| GET /mcp/opportunity-attachments/{id}/download, GET /mcp/rfp-files/{id}/download | 위 머리글, 또는 주소의 `exp`, `sig` 가 그 경로의 서명과 맞고 기한 안이다 | 401, 본문 없음 |
+| GET /mcp/opportunity-attachments/{id}/download, GET /mcp/rfp-files/{id}/download, GET /mcp/document-readings/{readingId}/download(CR-169) | 위 머리글, 또는 주소의 `exp`, `sig` 가 그 경로의 서명과 맞고 기한 안이다 | 401, 본문 없음 |
 
 - 서버 열쇠는 환경변수 `MCP_API_KEY`(설정 `app.mcp.api-key`)다. 비어 있으면 /mcp 요청을 모두 401 로 막고(열어 두지 않는다) 기동할 때 경고를 남긴다.
 - 서명 주소는 이 플랫폼이 만든다. `{SELF_BASE_URL}/mcp/opportunity-attachments/{id}/download?exp={만료 시각, 초}&sig={서명}` 꼴이다. 서명은 서버 열쇠로 만든 HMAC-SHA256(경로와 만료 시각)을 base64url 로 적은 것이다.
 - 기한은 설정 `app.mcp.download-url-ttl`(환경변수 `MCP_DOWNLOAD_URL_TTL`, 처음 값 1시간)이다. 이 플랫폼이 Aimbase 실행을 기다리는 한도(30분)보다 길게 둔다.
-- 서명 주소를 주는 곳은 공고 분석 워크플로우 입력의 `attachmentFiles[].downloadUrl` 과 `get_reference_samples` 의 `files[].downloadUrl` 이다.
+- 서명 주소를 주는 곳은 공고 분석 워크플로우 입력의 `attachmentFiles[].downloadUrl` 과 `get_reference_samples` 의 `files[].downloadUrl` 이다. CR-169: 고객 서류 읽기 워크플로우 입력의 `files[].downloadUrl` 을 더한다.
 - Aimbase 등록 bidding-agency-mcp 의 config 에 `headers: {"X-API-Key": 열쇠}` 를 싣는다. Aimbase 가 등록 머리글을 SSE 연결, 메시지 보내기, Streamable 요청에 모두 싣는다(Aimbase 쪽 CR).
 - 401 은 보안 설정의 인증 실패처럼 상태만 준다. 막을 때 방법, 경로, 보낸 곳만 남기고 열쇠와 서명 값은 남기지 않는다.
 
@@ -820,11 +844,12 @@ CR-137 전에 있던 `POST /opportunities/{id}/qualification-check`(AI 자격 �
 | get_past_submissions | 과거 제출 이력 조회 (CR-003) | memberId, limit | BID-MCP-002 |
 | get_reference_samples | 공고유형 매칭 성공 제안서 원본 파일 메타+다운로드URL 조회 (CR-013-R) | industryType | BID-RFP-003 |
 | save_pattern_guide | 공고유형별 패턴 가이드 저장 — Aimbase 콜백 (CR-013-R) | industryType, guide{골격/체크리스트/금기} | BID-RFP-003 |
-| get_proposal_design_input | 제안서 설계 입력 (CR-028). 공고 본문, 공고문 요약, 요구서류, factorTree. CR-159: complianceMatrix(reqId, level, text, verb, fulfillmentParty, factorId, factorTitle) 를 더 준다 | documentId | BID-DOC-001 |
-| save_proposal_structure | 제안서 장과 절 트리 저장 (CR-028). CR-159: 절의 requirementRefs 는 매트릭스의 REQ ID 만 받고, 없는 ID 가 있으면 전체 거부하며 그 ID 들을 준다. 응답에 unassignedReqIds(어느 절에도 없는 대상 REQ ID)를 더한다. 매트릭스 줄이 없는 공고는 검사하지 않는다(BIZ-076) | documentId, chapters[{factorLabel, factorTitle, sourceSection, sections[{subfactorLabel, title, scope, requirementRefs, minWords}]}] | BID-DOC-001 |
-| get_section_context | 절 작성 입력 (CR-028). 절 범위, requirementRefs, 참조 샘플. CR-159: requirements[{reqId, text, translation, verb, level, factorId, factorTitle}] 를 더 준다 | sectionId | BID-DOC-001 |
+| get_proposal_design_input | 제안서 설계 입력 (CR-028). 공고 본문, 공고문 요약, 요구서류, factorTree. CR-159: complianceMatrix(reqId, level, text, verb, fulfillmentParty, factorId, factorTitle) 를 더 준다. CR-169: clientDocuments[{readingId, fileName, origin, category, fulfills[{requirementTitle, reqId}], status, factCount, facts[{category, key, value}]}] 를 더 준다. 읽음이 아닌 후보도 상태와 함께 주고, facts 의 value 는 300자까지 | documentId | BID-DOC-001, BID-DOC-005 |
+| save_proposal_structure | 제안서 장과 절 트리 저장 (CR-028). CR-159: 절의 requirementRefs 는 매트릭스의 REQ ID 만 받고, 없는 ID 가 있으면 전체 거부하며 그 ID 들을 준다. 응답에 unassignedReqIds(어느 절에도 없는 대상 REQ ID)를 더한다. 매트릭스 줄이 없는 공고는 검사하지 않는다(BIZ-076). CR-169: 절의 sourceReadingIds 는 그 건 후보 가운데 읽음인 readingId 만 받고, 아닌 id 가 있으면 전체 거부하며 unknownReadingIds 로 준다. 응답에 unusedReadingIds(어느 절에도 걸리지 않은 읽음 서류)를 더한다(BIZ-088) | documentId, chapters[{factorLabel, factorTitle, sourceSection, sections[{subfactorLabel, title, scope, requirementRefs, minWords, sourceReadingIds}]}] | BID-DOC-001, BID-DOC-005 |
+| get_section_context | 절 작성 입력 (CR-028). 절 범위, requirementRefs, 참조 샘플. CR-159: requirements[{reqId, text, translation, verb, level, factorId, factorTitle}] 를 더 준다. CR-169: sourceDocuments[{readingId, fileName, category, facts[{category, key, value, page, anchor, confidence, readMode}]}] 를 더 준다. 읽음인 근거 서류만 준다 | sectionId | BID-DOC-001, BID-DOC-005 |
 | save_section_blocks | 절 블록 저장 (CR-028). CR-159 변경 없음 | sectionId, blocks | BID-DOC-001 |
-| get_section_verify_input | 절 검증 입력 (CR-031). CR-159: requirements(get_section_context 와 같은 꼴)를 더 준다 | sectionId | BID-DOC-001 |
+| get_section_verify_input | 절 검증 입력 (CR-031). CR-159: requirements(get_section_context 와 같은 꼴)를 더 준다. CR-169: sourceDocuments(get_section_context 와 같은 꼴)를 더 준다(BIZ-089) | sectionId | BID-DOC-001, BID-DOC-005 |
+| save_client_document_facts | 고객 서류 읽기 결과 저장 (CR-169). results 줄의 sourceFile 을 targets 의 targetPath 와 맞춰 readingId 별로 사실을 저장하고 읽음으로 바꾼다. 사실이 0개여도 읽음이다. targets 에 없는 경로와 그 건 후보가 아닌 readingId 는 버리고 응답의 ignored 로 준다. 저장한 수와 버린 수를 돌려준다 | bidRequestId, targets[{readingId, targetPath}], results(extract_facts 의 structured_data 배열) | BID-DOC-004 |
 | get_notice_verify_input | 공고문 검증 입력 (CR-031). CR-159 변경 없음 | noticeId | BID-OPP-006 |
 | save_verification_result | 검증 결과 저장 (CR-031). CR-159: 제안서 절이면 requirementChecks[{reqId, answered, evidenceQuote, reason}] 를 더 받아 충족 매핑을 채운다(BIZ-077) | targetType, targetId, verdict, attempt, hallucinations, missingFromSource, wordCount, requirementChecks | BID-COMP-001 |
 
@@ -855,7 +880,10 @@ app.aimbase:
     document-generation: bid-document-generation
     opportunity-analysis: ${AIMBASE_WF_OPP_ANALYSIS:...}
     slot-pattern-extraction: ${AIMBASE_WF_SLOT_PATTERN:placeholder-slot-pattern-workflow-id}  # CR-013
+    client-document-read: ${AIMBASE_WF_CLIENT_DOCUMENT_READ:client-document-read}  # CR-169
 ```
+
+**고객 서류 읽기 워크플로우 입력 (CR-169)**: `{bidRequestId, files[{readingId, fileName, downloadUrl, workspacePath}], hwpFiles[{readingId, workspacePath, convertedPath}], targets[{readingId, targetPath}]}`. workspacePath 는 `docs/{readingId}.{확장자}`(그림은 `.pdf`, DOCX, XLSX, PPTX 는 `.txt`), HWP 의 targetPath 는 convertedPath(`docs/{readingId}.md`), 나머지는 workspacePath 다. 읽을 수 없는 형식은 넣지 않는다. 실행이 끝나면 서버가 targets 가운데 아직 읽는 중인 줄을 읽지 못함으로 바꾼다.
 
 ---
 

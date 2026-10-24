@@ -1,6 +1,6 @@
 # 실행 지시서: SAM.gov Bidding Agency Platform
 
-> 설계 버전: 1.14 | 최종 수정: 2026-10-15 | 관련 CR: CR-003, CR-132, CR-133, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-146, CR-147, CR-153, CR-155, CR-157, CR-159, CR-160, CR-162
+> 설계 버전: 1.15 | 최종 수정: 2026-10-24 | 관련 CR: CR-003, CR-132, CR-133, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-146, CR-147, CR-153, CR-155, CR-157, CR-159, CR-160, CR-162, CR-169
 
 > **프로젝트:** bidding-agency-platform (미군 조달 입찰 AI 대행 서비스)
 > **프로젝트 유형:** 풀스택 (BE: Java 17 + Spring Boot 3.2 / FE: React 19 × 2)
@@ -306,7 +306,7 @@ SAM.gov에 올라오는 미군(USFK) 조달 입찰 공고를 자동 수집하고
 ### Sprint 6: 문서 생성 + 템플릿
 
 **전제:** Sprint 5 완료
-**기능:** 5개 (BID-TPL-001~002, BID-DOC-001~003)
+**기능:** 7개 (BID-TPL-001~002, BID-DOC-001~005). BID-DOC-004~005 는 CR-169
 
 #### BE 참조
 
@@ -331,6 +331,10 @@ SAM.gov에 올라오는 미군(USFK) 조달 입찰 공고를 자동 수집하고
 - ③ = 신규 공고 industry_type(BIZ-018) 매칭 → successGuide(PatternGuide.guideJson) + referenceSamples[](성공 제안서 원본 메타+다운로드 URL, Aimbase가 parse_document로 발췌) + referenceUsagePolicy(사실 복붙 금지, BIZ-019)
 - 조회해서 전달하면 끝. industry_type=NULL(미분류)이면 빈 처리. 조건 분기 없음
 - 사전 분석이 COMPLETED 상태여야 문서 생성 가능
+- **(CR-169)** ②는 CR-169 전까지 설계, 절 작성, 절 검증에 들어가지 않았다. 입찰 건이 ANALYZING 이 되면 후보 서류(그 건의 client_documents, 그 회원의 만료 전 member_documents)를 내용 해시로 묶어 Aimbase 워크플로우 client-document-read 로 읽고 document_readings 에 사실을 남긴다(BIZ-085, 086). 같은 해시는 다시 읽지 않는다
+- **(CR-169)** 읽는 꼴은 서버가 정해 서명 주소 `/mcp/document-readings/{readingId}/download` 로 준다. 그림은 iText 로 한 쪽 PDF, DOCX, XLSX, PPTX 는 Apache POI 로 글자만, HWP 는 스킬 `scripts/convert_hwp.py` 를 Aimbase skill_run 으로. 그 밖은 UNSUPPORTED
+- **(CR-169)** 읽는 중이면 GENERATING 전환 409(BIZ-087). 설계가 절마다 sourceReadingIds 를 고르고 서버는 읽음 후보만 받는다(BIZ-088). 절 작성과 절 검증은 sourceDocuments 를 받고 회사 사실은 거기서만, 없으면 `[Client data required: ...]`(BIZ-089)
+- **(CR-169)** Aimbase 소스는 고치지 않는다. 워크플로우 정의(`docs/workflows/client-document-read.steps.json` 신설, proposal-design, proposal-write-section, proposal-verify-fidelity 지시문)만 올린다. MCP 도구가 바뀌므로 배포 뒤 Aimbase 연결을 다시 맺는다
 
 **핵심 검증:** 템플릿 등록 → **사전 분석 캐시 확인** → Aimbase Workflow 실행 (3파이프라인 입력) → 문서 생성 → DB 저장 → 관리자 이메일
 
@@ -555,7 +559,8 @@ sequenceDiagram
 | 고객 화면 사진 자리(홈, 로그인, 회원가입, SNS 가입, 서비스 안내, 준비 안내) (CR-153) | `GET /site-photos`, `GET /site-photos/{id}/image` | 로그인 없이. 앱 시작 때 한 번 받고 브라우저에 남겨 둔다. 사진이 없거나 못 받으면 사진 없이(BIZ-067) |
 | 관리자 고객 화면 사진 (CR-153) | `GET/POST /admin/site-photos`, `PATCH/DELETE /admin/site-photos/{id}` | 올린 사진은 가로 1600, 400KB 안팎 JPEG 로 다시 저장(BIZ-068, POL-039) |
 | Admin 공고문 관리 상세의 컴플라이언스 매트릭스 (CR-159) | `GET /admin/notices/{id}/compliance-matrix` | 읽기만. 매트릭스 줄은 공고 분석이 내고 서버가 REQ ID 를 맞춰 준다(BIZ-073~075). 워크플로우는 Aimbase 범용 스킬 묶음 뒤 |
-| Admin 제안서 Section 관리 (CR-030, CR-159) | `GET /admin/bid-documents/{documentId}/chapters`, `/sections/{sectionId}[/verification]`, `POST .../regenerate, /lock, /unlock, /reverify`, `GET .../coverage` | 커버리지 검증은 볼 때 계산, 경고만 하고 막지 않는다(BIZ-078) |
+| Admin 제안서 Section 관리 (CR-030, CR-159) | `GET /admin/bid-documents/{documentId}/chapters`, `/sections/{sectionId}[/verification]`, `POST .../regenerate, /lock, /unlock, /reverify`, `GET .../coverage` | 커버리지 검증은 볼 때 계산, 경고만 하고 막지 않는다(BIZ-078). CR-169: 절 상세에 근거 서류 |
+| Admin 입찰 상세 관리의 고객 서류 읽기 (CR-169) | `GET /admin/bid-requests/{id}/document-readings`, `GET /admin/document-readings/{readingId}`, `POST /admin/bid-requests/{id}/document-readings/run` | 읽는 중이면 10초마다 다시 부르고 문서 작성 중 전환을 막는다(BIZ-087) |
 
 ### 8-4. 리뷰 체크리스트
 
