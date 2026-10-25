@@ -1,6 +1,6 @@
 # 실행 지시서: SAM.gov Bidding Agency Platform
 
-> 설계 버전: 1.19 | 최종 수정: 2026-10-26 | 관련 CR: CR-003, CR-132, CR-133, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-146, CR-147, CR-153, CR-155, CR-157, CR-159, CR-160, CR-162, CR-169, CR-170, CR-178, CR-180
+> 설계 버전: 1.20 | 최종 수정: 2026-10-26 | 관련 CR: CR-003, CR-132, CR-133, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-146, CR-147, CR-153, CR-155, CR-157, CR-159, CR-160, CR-162, CR-169, CR-170, CR-178, CR-180, CR-182
 
 > **프로젝트:** bidding-agency-platform (미군 조달 입찰 AI 대행 서비스)
 > **프로젝트 유형:** 풀스택 (BE: Java 17 + Spring Boot 3.2 / FE: React 19 × 2)
@@ -85,7 +85,7 @@ SAM.gov에 올라오는 미군(USFK) 조달 입찰 공고를 자동 수집하고
 |------|------|------|
 | 프레임워크 | React 19 + TypeScript 5 | Vite 7 빌드 |
 | 상태 관리 | Context API | AuthContext |
-| UI 라이브러리 | Radix UI + Lucide Icons | |
+| UI 라이브러리 | ds-ui(`@therecommerce-develop/ds-ui`) + Radix UI + Lucide Icons | 관리자 콘솔은 전 화면 ds-ui 부품, 아이콘 lucide-react, 글꼴 Pretendard (CR-182) |
 | 스타일 | TailwindCSS 4.1 | |
 | HTTP | Axios | |
 | 에디터 | TipTap | 문서 편집 |
