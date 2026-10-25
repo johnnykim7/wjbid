@@ -80,7 +80,7 @@ dict(id='IT-10-001', flow='제안서 자동 작성', kind='정상', title='공�
      pre='관리자 계정, 사전 분석 COMPLETED 이고 industry_type 이 있으며 그 유형에 성공 제안서 1건 이상이 있는 공고의 입찰 건(ANALYZING, 고객 서류 접수 완료, 고객 서류 읽기가 끝나 읽음 서류가 있음), Aimbase 문서 생성 워크플로우가 도는 상태',
      steps='1. 관리자 화면 메뉴 [입찰 요청 관리] 에서 그 입찰 건 상세를 연다\n2. [상태 전환] 에서 GENERATING 을 골라 전환한다\n3. 생성이 끝날 때까지 기다린 뒤 화면을 새로고침한다\n4. 생성 문서의 [편집] 으로 본문을 연다',
      expect='1. 입찰 건 상태가 GENERATING 을 거쳐 REVIEW 가 되고 상태 이력에 GENERATING, REVIEW 두 줄이 더해진다\n'
-            '2. 그 입찰 건에 입찰 문서(bid_documents) 행이 상태 DRAFT 로 생기고 버전 1 의 content_json 에 TipTap JSON 본문이 들어 있다\n'
+            '2. 그 입찰 건에 입찰 문서(bid_documents) 행이 상태 DRAFT 로 생기고 현재 버전의 content_json 이 본문이 든 TipTap JSON 이다. 버전 1 은 설계 단계가 만든 빈 문서다\n'
             '3. 입찰 상세 관리 생성 문서 목록에 그 문서가 문서 유형과 상태 초안으로 보인다\n'
             '4. 제안서의 회사명, 실적, 인력, 장비가 고객이 낸 서류의 내용이고 성공 제안서 원본의 회사명이나 실적이 섞이지 않는다\n'
             '5. 제안서 구성과 서술 방식이 그 공고 유형의 성공 제안서 가이드를 따른다\n'
@@ -97,11 +97,12 @@ dict(id='IT-10-001', flow='제안서 자동 작성', kind='정상', title='공�
                     check="r[1]['status'] == 200 and r[3][0]['state'] == 'REVIEW' and int(r[3][0]['hist']) == int(r[0][0]['hist']) + 2 "
                           "and r[3][0]['prev_state'] == 'GENERATING' and r[3][0]['to_state'] == 'REVIEW'"),
             2: dict(steps=[('key', '10.b001_bid'),
-                           ('sql', f"SELECT bd.status, JSON_UNQUOTE(JSON_EXTRACT(v.content_json, '$.type')) AS t FROM bid_documents bd "
-                                   f"LEFT JOIN bid_document_versions v ON v.document_id = bd.id AND v.version_no = 1 "
+                           ('sql', f"SELECT bd.status, JSON_UNQUOTE(JSON_EXTRACT(v.content_json, '$.type')) AS t, "
+                                   f"JSON_LENGTH(v.content_json, '$.content') AS n FROM bid_documents bd "
+                                   f"LEFT JOIN bid_document_versions v ON v.document_id = bd.id AND v.version_no = bd.current_version_no "
                                    f"WHERE bd.bid_request_id = {THIS_BID}")],
                     need="r[0][0]['state'] != 'ANALYZING'",
-                    check="len(r[1]) > 0 and all(x['status'] == 'DRAFT' and x['t'] == 'doc' for x in r[1])")},
+                    check="len(r[1]) > 0 and all(x['status'] == 'DRAFT' and x['t'] == 'doc' and int(x['n'] or 0) > 0 for x in r[1])")},
      issue='T1-1 은 "고객이 필요 문서를 제출하면" 자동 작성이라 하고 T1-5 는 CR-141 뒤 ANALYZING 다음 상태로 관리자가 전환한다고 해 생성이 시작되는 때가 어긋난다. Aimbase 가 만드는 최종 Word, PDF 를 어디서 받는지 T3-2, T3-3 에 없다'),
 
 dict(id='IT-10-002', flow='제안서 자동 작성', kind='정상', title='미분류 공고의 입찰 건은 성공 제안서 자산 없이 제안서를 작성한다',

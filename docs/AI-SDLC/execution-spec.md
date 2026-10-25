@@ -1,6 +1,6 @@
 # 실행 지시서: SAM.gov Bidding Agency Platform
 
-> 설계 버전: 1.15 | 최종 수정: 2026-10-24 | 관련 CR: CR-003, CR-132, CR-133, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-146, CR-147, CR-153, CR-155, CR-157, CR-159, CR-160, CR-162, CR-169
+> 설계 버전: 1.16 | 최종 수정: 2026-10-25 | 관련 CR: CR-003, CR-132, CR-133, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-146, CR-147, CR-153, CR-155, CR-157, CR-159, CR-160, CR-162, CR-169
 
 > **프로젝트:** bidding-agency-platform (미군 조달 입찰 AI 대행 서비스)
 > **프로젝트 유형:** 풀스택 (BE: Java 17 + Spring Boot 3.2 / FE: React 19 × 2)
@@ -335,6 +335,7 @@ SAM.gov에 올라오는 미군(USFK) 조달 입찰 공고를 자동 수집하고
 - **(CR-169)** 읽는 꼴은 서버가 정해 서명 주소 `/mcp/document-readings/{readingId}/download` 로 준다. 그림은 iText 로 한 쪽 PDF, DOCX, XLSX, PPTX 는 Apache POI 로 글자만, HWP 는 스킬 `scripts/convert_hwp.py` 를 Aimbase skill_run 으로. 그 밖은 UNSUPPORTED
 - **(CR-169)** 읽는 중이면 GENERATING 전환 409(BIZ-087). 설계가 절마다 sourceReadingIds 를 고르고 서버는 읽음 후보만 받는다(BIZ-088). 절 작성과 절 검증은 sourceDocuments 를 받고 회사 사실은 거기서만, 없으면 `[Client data required: ...]`(BIZ-089)
 - **(CR-169)** Aimbase 소스는 고치지 않는다. 워크플로우 정의(`docs/workflows/client-document-read.steps.json` 신설, proposal-design, proposal-write-section, proposal-verify-fidelity 지시문)만 올린다. MCP 도구가 바뀌므로 배포 뒤 Aimbase 연결을 다시 맺는다
+- **(CR-169)** 문서 묶기는 서버(ProposalAssembleService)가 한다. 장, 절, 블록 순서로 TipTap 문서를 만들어 새 버전으로 저장하고(편집자는 작성을 시킨 관리자), 모든 문서 종류를 마친 뒤 하나라도 묶였으면 REVIEW 로 넘긴다. Aimbase proposal-assemble 은 부르지 않는다(10/25 상용 4차 시험 결함, 사용자 10:27 "1")
 
 **핵심 검증:** 템플릿 등록 → **사전 분석 캐시 확인** → Aimbase Workflow 실행 (3파이프라인 입력) → 문서 생성 → DB 저장 → 관리자 이메일
 
