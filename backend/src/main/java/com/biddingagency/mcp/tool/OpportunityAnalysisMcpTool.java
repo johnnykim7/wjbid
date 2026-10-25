@@ -106,7 +106,7 @@ public class OpportunityAnalysisMcpTool {
                     "factorTree", Map.of("type", "object", "description",
                         "평가 항목 구조 (CR-159). {method('LPTA'|'BEST_VALUE_TRADEOFF'), coverLetterRequired(boolean), " +
                         "factors:[{factorId, title, relativeImportance, documentType('TECHNICAL_PROPOSAL'|'PAST_PERFORMANCE'|'PRICING_SUMMARY'), subfactors:[{subfactorId, title}]}]}. " +
-                        "CR-179: documentType 은 Section L 이 그 평가 항목을 담으라고 한 문서(볼륨)이고 볼륨 구분이 없으면 TECHNICAL_PROPOSAL, " +
+                        "CR-180: documentType 은 Section L 이 그 평가 항목을 담으라고 한 문서(볼륨)이고 볼륨 구분이 없으면 TECHNICAL_PROPOSAL, " +
                         "coverLetterRequired 는 Section L 이 cover letter 나 transmittal letter 를 요구할 때만 true"),
                     "llmPromptPreset", Map.of("type", "object", "description", "LLM 프롬프트 프리셋 (내부용)"),
                     "contentJson", Map.of("type", "object", "description", "TipTap JSON 본문 — NOTICE_VIEW 템플릿 골격을 채워서 반환 (PDF 풍부도). 노드 타입: noticeHeader/metaGrid/kvTable/dataTable/groupedList/calloutList 등 커스텀 + heading/paragraph/bulletList 표준")

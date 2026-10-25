@@ -73,7 +73,7 @@ public class AIWorkflowService {
     // CR-170: 입찰 분석
     private final BidAnalysisService bidAnalysisService;
 
-    // CR-179: 공고가 요구하는 문서 구성
+    // CR-180: 공고가 요구하는 문서 구성
     private final DocumentCompositionService documentCompositionService;
 
     // ─────────────────────────────────────────────────────────────────────────

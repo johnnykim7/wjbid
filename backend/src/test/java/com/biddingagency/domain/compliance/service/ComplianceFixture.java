@@ -26,7 +26,7 @@ public final class ComplianceFixture {
 
     public static final String QC = "The offeror shall describe its quality control plan.";
     public static final String PP = "The offeror shall provide three past performance references.";
-    /** CR-179 문서 구성이 있는 평가 항목 구조: F1 기술 제안서, F2 과거 수행 실적, F3 가격 요약, 커버레터 요구 없음 */
+    /** CR-180 문서 구성이 있는 평가 항목 구조: F1 기술 제안서, F2 과거 수행 실적, F3 가격 요약, 커버레터 요구 없음 */
     public static final String COMPOSED_TREE = "{\"method\":\"LPTA\",\"coverLetterRequired\":false,\"factors\":["
             + "{\"factorId\":\"F1\",\"title\":\"FACTOR A. TECHNICAL\",\"documentType\":\"TECHNICAL_PROPOSAL\"},"
             + "{\"factorId\":\"F2\",\"title\":\"FACTOR B. PAST PERFORMANCE\",\"documentType\":\"PAST_PERFORMANCE\"},"

@@ -54,7 +54,7 @@ import static org.mockito.Mockito.never;
 /**
  * TC-COMP-013 ~ TC-COMP-020: 제안서 도구가 컴플라이언스 매트릭스를 쓴다 (CR-159, BIZ-076, BIZ-077)
  * TC-DOC-288, 289, TC-COMP-028, 029: 평가받지 않는 문서는 평가 항목과 대응 REQ ID 를 받지 않는다 (CR-178, BIZ-095)
- * TC-DOC-298 ~ 301, TC-COMP-032, 033: 문서마다 자기 평가 항목과 그 항목의 줄만 받는다 (CR-179, BIZ-096)
+ * TC-DOC-298 ~ 301, TC-COMP-032, 033: 문서마다 자기 평가 항목과 그 항목의 줄만 받는다 (CR-180, BIZ-096)
  */
 @ExtendWith(MockitoExtension.class)
 class ProposalMcpToolTest {

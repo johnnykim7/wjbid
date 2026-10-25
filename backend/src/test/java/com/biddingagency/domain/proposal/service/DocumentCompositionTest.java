@@ -15,7 +15,7 @@ import static com.biddingagency.domain.document.entity.DocumentType.TECHNICAL_PR
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * TC-DOC-292 ~ TC-DOC-296: 공고가 요구하는 문서 구성 (CR-179, BIZ-096)
+ * TC-DOC-292 ~ TC-DOC-296: 공고가 요구하는 문서 구성 (CR-180, BIZ-096)
  */
 class DocumentCompositionTest {
 

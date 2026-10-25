@@ -25,7 +25,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
 /**
- * TC-OPP-021: 공고 분석이 남긴 평가 항목별 문서 종류와 커버레터 요구 여부를 그대로 저장한다 (CR-179, BIZ-096)
+ * TC-OPP-021: 공고 분석이 남긴 평가 항목별 문서 종류와 커버레터 요구 여부를 그대로 저장한다 (CR-180, BIZ-096)
  */
 @ExtendWith(MockitoExtension.class)
 class OpportunityAnalysisMcpToolTest {

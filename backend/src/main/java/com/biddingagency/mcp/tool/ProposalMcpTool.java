@@ -72,7 +72,7 @@ public class ProposalMcpTool {
                     "section 마다 답할 reqId 를 requirementRefs 로 정하세요. level=SHALL 이면서 fulfillmentParty=PLATFORM_GENERATED 인 줄은 빠짐없이 어느 section 엔가 걸어야 합니다. " +
                     "CR-169: clientDocuments(고객 서류 [{readingId, fileName, origin, category, fulfills, status, factCount, facts[{category, key, value}]}])를 보고 " +
                     "section 마다 쓸 근거 서류의 readingId 를 sourceReadingIds 로 정하세요. status=DONE 인 서류만 쓸 수 있습니다. " +
-                    "CR-179: factorTree, complianceMatrix, priceItems 는 이 문서가 담을 평가 항목의 것만 옵니다. " +
+                    "CR-180: factorTree, complianceMatrix, priceItems 는 이 문서가 담을 평가 항목의 것만 옵니다. " +
                     "factorTree.factors 에 없는 평가 항목은 다른 문서가 담으므로 공고 본문에서 찾아 chapter 로 더하지 마세요.",
             "inputSchema", Map.of(
                 "type", "object",
@@ -88,7 +88,7 @@ public class ProposalMcpTool {
                     "공고가 박은 라벨·순서를 그대로 보존하세요(창작 금지). LOCKED section 이 하나라도 있으면 거부됩니다. " +
                     "CR-159: 공고에 컴플라이언스 매트릭스가 있으면 requirementRefs 는 그 reqId 만 받고, 없는 ID 가 하나라도 있으면 전체를 거부하며 그 ID 를 알려 줍니다. " +
                     "저장되면 unassignedReqIds(어느 section 에도 걸리지 않은 SHALL 이면서 PLATFORM_GENERATED 인 reqId)를 돌려줍니다. " +
-                    "CR-179: 매트릭스에 있어도 이 문서의 complianceMatrix 에 없는 reqId(다른 문서의 평가 항목 줄)가 있으면 전체를 거부합니다. " +
+                    "CR-180: 매트릭스에 있어도 이 문서의 complianceMatrix 에 없는 reqId(다른 문서의 평가 항목 줄)가 있으면 전체를 거부합니다. " +
                     "CR-169: sourceReadingIds 는 get_proposal_design_input 의 clientDocuments 가운데 status=DONE 인 readingId 만 받고, 아닌 id 가 있으면 전체를 거부하며 unknownReadingIds 로 알려 줍니다. " +
                     "저장되면 unusedReadingIds(어느 section 에도 걸리지 않은 읽음 서류)를 돌려줍니다.",
             "inputSchema", Map.of(

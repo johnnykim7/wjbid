@@ -39,7 +39,7 @@ import static org.mockito.Mockito.lenient;
 /**
  * TC-COMP-021 ~ TC-COMP-025: 커버리지 검증 (CR-159, BIZ-078)
  * TC-COMP-030, 031: 평가받지 않는 문서는 커버리지 검증 대상이 아니다 (CR-178, BIZ-095)
- * TC-COMP-034, 035: 커버리지 대상은 그 문서가 받는 줄이다 (CR-179, BIZ-096)
+ * TC-COMP-034, 035: 커버리지 대상은 그 문서가 받는 줄이다 (CR-180, BIZ-096)
  */
 @ExtendWith(MockitoExtension.class)
 class ComplianceCoverageTest {
