@@ -107,15 +107,15 @@ public class AIWorkflowService {
             log.error("[CR-169] 고객 서류 읽기 실패: bidRequestId={}, 서류={}건", bidRequestId, reading.size(), e);
             documentReadingService.closeUnfinished(reading, e.getMessage() != null ? e.getMessage() : NO_RESULT_REASON);
         }
-        startPendingBidAnalyses();
+        startPendingBidAnalyses(reading);
     }
 
     /**
-     * 읽기 회차가 끝난 뒤(결과 마감 뒤) 분석 단계이고 회차가 없는 건마다 입찰 분석을 시작한다(CR-170, BIZ-090).
+     * 읽기 회차가 끝난 뒤(결과 마감 뒤) 그 회차가 읽은 내용을 쓰는 분석 단계 건 가운데 회차가 없는 건마다 입찰 분석을 시작한다(CR-170, BIZ-090).
      * 같은 내용을 다른 건의 회차가 읽은 경우도 이것으로 잡힌다. 건마다 따로 저장해 한 건의 실패가 다른 건을 막지 않는다.
      */
-    private void startPendingBidAnalyses() {
-        for (UUID id : bidAnalysisService.pendingBidRequestIds()) {
+    private void startPendingBidAnalyses(List<UUID> readingIds) {
+        for (UUID id : bidAnalysisService.pendingBidRequestIds(readingIds)) {
             try {
                 bidAnalysisService.startIfReady(id);
             } catch (Exception e) {

@@ -32,9 +32,11 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -168,12 +170,20 @@ public class BidAnalysisService {
         return true;
     }
 
-    /** 읽기 회차가 끝날 때 볼 건: 분석 단계이고 입찰 분석 회차가 없는 건. 같은 내용을 다른 건이 읽은 경우도 잡힌다 */
-    @Transactional(readOnly = true)
-    public List<UUID> pendingBidRequestIds() {
+    /**
+     * 읽기 회차가 끝날 때 볼 건: 그 회차가 읽은 내용을 후보 서류로 가진 건 가운데 분석 단계이고 입찰 분석 회차가 없는 건.
+     * 같은 내용을 다른 건이 읽은 경우도 잡히고, 그 내용을 쓰지 않는 건(배포 전부터 분석 단계에 있던 건 등)은 보지 않는다
+     */
+    @Transactional
+    public List<UUID> pendingBidRequestIds(Collection<UUID> readingIds) {
+        Set<String> contents = documentReadingService.contentsOf(readingIds);
+        if (contents.isEmpty()) {
+            return List.of();
+        }
         return bidRequestRepository.findByStateIn(List.of(BidRequestState.ANALYZING)).stream()
                 .map(BidRequest::getId)
                 .filter(id -> !analysisRepository.existsByBidRequestId(id))
+                .filter(id -> documentReadingService.usesAnyContent(id, contents))
                 .toList();
     }
 
