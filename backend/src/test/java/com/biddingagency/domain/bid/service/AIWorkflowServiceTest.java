@@ -194,7 +194,7 @@ class AIWorkflowServiceTest {
         verify(bidFSMService, never()).transition(any(), any(), any(), any(), any());
     }
 
-    // TC-DOC-247: 읽기 회차가 결과를 마감한 뒤 분석 단계이고 회차가 없는 건마다 입찰 분석 시작을 본다 (CR-170, BIZ-090)
+    // TC-DOC-247: 읽기 회차가 결과를 마감한 뒤 그 회차가 읽은 내용을 쓰는 분석 단계 건마다 입찰 분석 시작을 본다 (CR-170, BIZ-090)
     @Test
     @DisplayName("TC-DOC-247 읽기회차끝_마감뒤_입찰분석시작확인")
     void 읽기회차끝_입찰분석시작확인() {
@@ -203,7 +203,7 @@ class AIWorkflowServiceTest {
         UUID otherBid = UUID.randomUUID();
         given(documentReadingService.beginReading(bidRequestId, List.of(readingId)))
                 .willReturn(Map.of("targets", List.of(Map.of("readingId", readingId.toString()))));
-        given(bidAnalysisService.pendingBidRequestIds()).willReturn(List.of(bidRequestId, otherBid));
+        given(bidAnalysisService.pendingBidRequestIds(List.of(readingId))).willReturn(List.of(bidRequestId, otherBid));
 
         aiWorkflowService.readClientDocumentsAsync(bidRequestId, List.of(readingId));
 

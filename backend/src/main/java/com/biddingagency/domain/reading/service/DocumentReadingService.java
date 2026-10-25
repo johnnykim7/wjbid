@@ -196,6 +196,22 @@ public class DocumentReadingService {
         return collect(bidRequest(bidRequestId)).stream().anyMatch(Candidate::inFlight);
     }
 
+    /** 읽기 줄들의 내용. 읽기 회차가 끝난 뒤 그 내용을 쓰는 건만 입찰 분석을 살핀다(CR-170, BIZ-090) */
+    @Transactional(readOnly = true)
+    public Set<String> contentsOf(Collection<UUID> readingIds) {
+        Set<String> contents = new LinkedHashSet<>();
+        for (DocumentReading row : readingRepository.findAllById(readingIds)) {
+            if (row.getContentSha256() != null) contents.add(row.getContentSha256());
+        }
+        return contents;
+    }
+
+    /** 그 건의 후보 서류에 이 내용이 하나라도 있는지 */
+    @Transactional
+    public boolean usesAnyContent(UUID bidRequestId, Set<String> contents) {
+        return collect(bidRequest(bidRequestId)).stream().anyMatch(c -> c.sha256 != null && contents.contains(c.sha256));
+    }
+
     /**
      * 분석 단계 진입 때 읽을 서류를 줄 세운다(BIZ-085). 처음 보는 내용과 읽지 못한 내용만 읽고,
      * 읽음과 다른 건에서 읽는 중인 내용은 그대로 둔다. 전이와 같은 트랜잭션에서 대기 중으로 잡아

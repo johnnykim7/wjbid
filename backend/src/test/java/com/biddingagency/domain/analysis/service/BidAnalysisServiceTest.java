@@ -39,6 +39,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static com.biddingagency.domain.analysis.service.BidAnalysisFixtures.capturePlan;
@@ -163,14 +164,32 @@ class BidAnalysisServiceTest {
 
     @Test
     @DisplayName("TC-DOC-248 읽기회차끝_다른건이같은해시읽음_그건도시작")
-    void 회차없는분석단계건_모두대상() {
+    void 같은내용쓰는회차없는분석단계건_대상() {
         BidRequest other = bidIn(BidRequestState.ANALYZING);
         BidRequest analysed = bidIn(BidRequestState.ANALYZING);
         stored(BidAnalysis.running(analysed.getId(), adminId, now()));
         given(bidRequestRepository.findByStateIn(List.of(BidRequestState.ANALYZING)))
                 .willReturn(List.of(bid, other, analysed));
+        List<UUID> read = List.of(UUID.randomUUID());
+        given(documentReadingService.contentsOf(read)).willReturn(Set.of("sha-a"));
+        given(documentReadingService.usesAnyContent(bid.getId(), Set.of("sha-a"))).willReturn(true);
+        given(documentReadingService.usesAnyContent(other.getId(), Set.of("sha-a"))).willReturn(true);
 
-        assertThat(service.pendingBidRequestIds()).containsExactly(bid.getId(), other.getId());
+        assertThat(service.pendingBidRequestIds(read)).containsExactly(bid.getId(), other.getId());
+    }
+
+    @Test
+    @DisplayName("TC-DOC-291 읽기회차끝_읽은내용안쓰는건_시작안함")
+    void 읽은내용안쓰는건_대상아님() {
+        BidRequest unrelated = bidIn(BidRequestState.ANALYZING);
+        given(bidRequestRepository.findByStateIn(List.of(BidRequestState.ANALYZING)))
+                .willReturn(List.of(bid, unrelated));
+        List<UUID> read = List.of(UUID.randomUUID());
+        given(documentReadingService.contentsOf(read)).willReturn(Set.of("sha-a"));
+        given(documentReadingService.usesAnyContent(bid.getId(), Set.of("sha-a"))).willReturn(true);
+        given(documentReadingService.usesAnyContent(unrelated.getId(), Set.of("sha-a"))).willReturn(false);
+
+        assertThat(service.pendingBidRequestIds(read)).containsExactly(bid.getId());
     }
 
     @Test
