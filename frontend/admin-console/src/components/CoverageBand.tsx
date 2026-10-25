@@ -3,6 +3,7 @@ import { Badge, Button } from '@therecommerce-develop/ds-ui'
 
 export interface Coverage {
   matrixReady: boolean
+  evaluatedDocument: boolean
   targetCount: number
   fulfilledCount: number
   missing: { reqId: string; text: string | null; unmapped: boolean }[]
@@ -38,6 +39,14 @@ export default function CoverageBand({ coverage, failed, onRetry, onSelectSectio
     )
   }
   if (!coverage) return null
+  // CR-178 커버레터 같은 평가받지 않는 문서는 요구사항을 걸지 않는다(BIZ-095)
+  if (!coverage.evaluatedDocument) {
+    return (
+      <div className="mb-4 p-3 border rounded-lg bg-white text-sm text-gray-500">
+        평가받는 문서가 아니라 커버리지 검증을 하지 않습니다.
+      </div>
+    )
+  }
   if (!coverage.matrixReady) {
     return (
       <div className="mb-4 p-3 border rounded-lg bg-white text-sm text-gray-500">

@@ -156,7 +156,9 @@ export default function ProposalTreePage() {
     return sectionId
   }
   const refsOf = (sectionId: string) =>
-    coverage?.matrixReady ? coverage.sections.find((s) => s.sectionId === sectionId)?.refs ?? [] : null
+    coverage?.matrixReady && coverage.evaluatedDocument
+      ? coverage.sections.find((s) => s.sectionId === sectionId)?.refs ?? []
+      : null
   const unknownIn = (sectionId: string) =>
     new Set((coverage?.unknownIds ?? []).filter((u) => u.sectionId === sectionId).map((u) => u.reqId))
 
