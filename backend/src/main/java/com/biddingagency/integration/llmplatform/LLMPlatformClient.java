@@ -57,9 +57,6 @@ public class LLMPlatformClient {
     @Value("${app.aimbase.workflows.proposal-write-section:proposal-write-section}")
     private String proposalWriteSectionWorkflowId;
 
-    @Value("${app.aimbase.workflows.proposal-assemble:proposal-assemble}")
-    private String proposalAssembleWorkflowId;
-
     // CR-031: 충실성 검증 (Haiku)
     @Value("${app.aimbase.workflows.proposal-verify-fidelity:proposal-verify-fidelity}")
     private String proposalVerifyFidelityWorkflowId;
@@ -221,10 +218,10 @@ public class LLMPlatformClient {
 
     // ─────────────────────────────────────────────────────────────────────────
     // CR-028: 제안서 파이프라인 3단계
-    // 모두 MCP 콜백으로 결과를 저장한다 (BE 는 실행/폴링만):
-    //   design        → save_proposal_structure (chapter/section 트리)
-    //   write-section → save_section_blocks      (해당 section block)
-    //   assemble      → save_document_version    (통합 contentJson, 기존 도구 재사용)
+    // design, write-section 은 MCP 콜백으로 결과를 저장한다 (BE 는 실행/폴링만):
+    //   design        : save_proposal_structure (chapter/section 트리)
+    //   write-section : save_section_blocks      (해당 section block)
+    // assemble 은 서버가 한다 (CR-169, ProposalAssembleService)
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
@@ -245,16 +242,6 @@ public class LLMPlatformClient {
     public WorkflowRunResponse runWriteSection(Map<String, Object> input) {
         log.info("Aimbase: 제안서 write-section 시작 sectionId={}", input.get("sectionId"));
         return runWorkflowAndWait(proposalWriteSectionWorkflowId, input);
-    }
-
-    /**
-     * 3단계 assemble — proposal-assemble 워크플로우 실행.
-     * 입력: documentId, bidRequestId, documentType. WF 는 트리 전체를 합쳐 문체 통일.
-     * Aimbase 가 MCP save_document_version 으로 통합 contentJson 을 저장.
-     */
-    public WorkflowRunResponse runProposalAssemble(Map<String, Object> input) {
-        log.info("Aimbase: 제안서 assemble 시작 documentId={}", input.get("documentId"));
-        return runWorkflowAndWait(proposalAssembleWorkflowId, input);
     }
 
     /**
@@ -292,7 +279,6 @@ public class LLMPlatformClient {
 
     public String resolveDesignModel()       { return resolveWorkflowModel(proposalDesignWorkflowId); }
     public String resolveWriteSectionModel() { return resolveWorkflowModel(proposalWriteSectionWorkflowId); }
-    public String resolveAssembleModel()     { return resolveWorkflowModel(proposalAssembleWorkflowId); }
     public String resolveVerifyModel()       { return resolveWorkflowModel(proposalVerifyFidelityWorkflowId); }
 
     /**

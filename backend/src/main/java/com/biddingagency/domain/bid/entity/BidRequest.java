@@ -122,11 +122,16 @@ public class BidRequest extends BaseEntity {
      * AI 는 도구이고 책임자는 작성을 시킨 관리자라는 합의(2026-05-31)라, 회원이 아닌 시스템 편집자를 쓰지 않는다.
      */
     public UUID lastGeneratingTriggerUserId() {
+        return lastGeneratingTransition().getUserId();
+    }
+
+    /** 가장 최근에 GENERATING 으로 넘긴 전이. 작성이 끝나 REVIEW 로 넘길 때도 이 사람을 전환한 사람으로 남긴다. */
+    public StateTransition lastGeneratingTransition() {
         if (stateHistory != null) {
             for (int i = stateHistory.size() - 1; i >= 0; i--) {
                 StateTransition t = stateHistory.get(i);
                 if (t.getToState() == BidRequestState.GENERATING && t.getUserId() != null) {
-                    return t.getUserId();
+                    return t;
                 }
             }
         }
