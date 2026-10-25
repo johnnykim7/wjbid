@@ -543,4 +543,16 @@ class NotificationEventListenerTest {
                 emails.capture(), any(), any(), any(), eq(opportunityId), eq("Opportunity"), any());
         assertThat(emails.getAllValues()).containsExactly("paid@test.com");
     }
+
+    // TC-DOC-282: 분석 단계에서 종료해도 고객 알림은 없다 (CR-170, BIZ-094)
+    @Test
+    @DisplayName("TC-DOC-282 분석에서종료_고객알림없음")
+    void onBidRequestStateChanged_분석에서종료_알림없음() {
+        BidRequestStateChangedEvent event = new BidRequestStateChangedEvent(
+                UUID.randomUUID(), BidRequestState.ANALYZING, BidRequestState.CLOSED, UUID.randomUUID());
+
+        listener.onBidRequestStateChanged(event);
+
+        then(notificationService).shouldHaveNoInteractions();
+    }
 }

@@ -37,6 +37,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -59,6 +61,8 @@ class AIWorkflowServiceTest {
     @Mock private ProposalService proposalService;
     @Mock private ProposalAssembleService proposalAssembleService;
     @Mock private BidFSMService bidFSMService;
+    @Mock private com.biddingagency.domain.reading.service.DocumentReadingService documentReadingService;
+    @Mock private com.biddingagency.domain.analysis.service.BidAnalysisService bidAnalysisService;
 
     @InjectMocks
     private AIWorkflowService aiWorkflowService;
@@ -188,5 +192,37 @@ class AIWorkflowServiceTest {
         aiWorkflowService.generateDocumentsAsync(br);
 
         verify(bidFSMService, never()).transition(any(), any(), any(), any(), any());
+    }
+
+    // TC-DOC-247: 읽기 회차가 결과를 마감한 뒤 분석 단계이고 회차가 없는 건마다 입찰 분석 시작을 본다 (CR-170, BIZ-090)
+    @Test
+    @DisplayName("TC-DOC-247 읽기회차끝_마감뒤_입찰분석시작확인")
+    void 읽기회차끝_입찰분석시작확인() {
+        UUID bidRequestId = UUID.randomUUID();
+        UUID readingId = UUID.randomUUID();
+        UUID otherBid = UUID.randomUUID();
+        given(documentReadingService.beginReading(bidRequestId, List.of(readingId)))
+                .willReturn(Map.of("targets", List.of(Map.of("readingId", readingId.toString()))));
+        given(bidAnalysisService.pendingBidRequestIds()).willReturn(List.of(bidRequestId, otherBid));
+
+        aiWorkflowService.readClientDocumentsAsync(bidRequestId, List.of(readingId));
+
+        org.mockito.InOrder order = inOrder(documentReadingService, bidAnalysisService);
+        order.verify(documentReadingService).closeUnfinished(eq(List.of(readingId)), any());
+        order.verify(bidAnalysisService).startIfReady(bidRequestId);
+        order.verify(bidAnalysisService).startIfReady(otherBid);
+    }
+
+    // TC-DOC-255: 워크플로우가 실패해도 회차를 마감한다 (CR-170, BID-DOC-006)
+    @Test
+    @DisplayName("TC-DOC-255 입찰분석워크플로우실패_회차마감")
+    void 입찰분석워크플로우실패_회차마감() {
+        UUID bidRequestId = UUID.randomUUID();
+        UUID analysisId = UUID.randomUUID();
+        given(llmPlatformClient.runBidAnalysis(any(), any())).willThrow(new RuntimeException("Aimbase 연결 실패"));
+
+        aiWorkflowService.runBidAnalysisAsync(bidRequestId, analysisId);
+
+        then(bidAnalysisService).should().closeUnfinished(analysisId);
     }
 }

@@ -125,6 +125,24 @@ public class BidRequest extends BaseEntity {
         return lastGeneratingTransition().getUserId();
     }
 
+    /** 상태 이력에 그 상태로 들어간 전이가 있는지 */
+    public boolean hasEntered(BidRequestState target) {
+        return stateHistory != null && stateHistory.stream().anyMatch(t -> t.getToState() == target);
+    }
+
+    /** 가장 최근에 그 상태로 들어간 전이의 사람. 없으면 null */
+    public UUID lastEnteredBy(BidRequestState target) {
+        if (stateHistory != null) {
+            for (int i = stateHistory.size() - 1; i >= 0; i--) {
+                StateTransition t = stateHistory.get(i);
+                if (t.getToState() == target) {
+                    return t.getUserId();
+                }
+            }
+        }
+        return null;
+    }
+
     /** 가장 최근에 GENERATING 으로 넘긴 전이. 작성이 끝나 REVIEW 로 넘길 때도 이 사람을 전환한 사람으로 남긴다. */
     public StateTransition lastGeneratingTransition() {
         if (stateHistory != null) {

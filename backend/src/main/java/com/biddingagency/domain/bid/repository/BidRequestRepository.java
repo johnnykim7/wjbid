@@ -4,7 +4,9 @@ import com.biddingagency.domain.bid.entity.BidRequest;
 import com.biddingagency.domain.bid.entity.BidRequestState;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -98,4 +100,9 @@ public interface BidRequestRepository extends JpaRepository<BidRequest, UUID> {
             "JOIN FETCH br.opportunity " +
             "WHERE br.id = :id")
     Optional<BidRequest> findByIdWithDetails(@Param("id") UUID id);
+
+    /** CR-170: 입찰 분석 회차를 만들 때 같은 건에 회차가 둘 생기지 않게 잠근다(읽기 회차 끝과 다시 분석이 겹칠 때) */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT br FROM BidRequest br WHERE br.id = :id")
+    Optional<BidRequest> findByIdForUpdate(@Param("id") UUID id);
 }

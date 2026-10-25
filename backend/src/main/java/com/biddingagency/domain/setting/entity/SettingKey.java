@@ -64,6 +64,10 @@ public final class SettingKey {
     public static final String PIEE_TIMEOUT_SECONDS = "PIEE_TIMEOUT_SECONDS";
     /** PIEE 받기 전에 그 공고의 SAM 첨부를 기다리는 상한(분). 비었거나 1 보다 작으면 10 (POL-040, CR-160) */
     public static final String PIEE_SAM_WAIT_MINUTES = "PIEE_SAM_WAIT_MINUTES";
+    /** Pwin 팩터 가중치(팩터:가중치, 쉼표로 나눔). 일곱 팩터가 다 있지 않거나 합이 100 이 아니면 초기값 (POL-041, CR-170) */
+    public static final String BID_PWIN_WEIGHTS = "BID_PWIN_WEIGHTS";
+    /** Pwin 판정 문턱(Strong Go, 조건부 Go, Weak 순). 내림차순이 아니면 초기값 70,50,30 (POL-041, CR-170) */
+    public static final String BID_PWIN_THRESHOLDS = "BID_PWIN_THRESHOLDS";
 
     private SettingKey() {
     }

@@ -525,4 +525,24 @@ class DocumentReadingServiceTest {
 
         assertThat(service.overview(bid.getId()).items()).extracting("readingId").containsExactly((Object) null);
     }
+
+    // TC-DOC-284: 분석 단계를 거쳐 종료한 건은 읽기 영역을 분석 시작된 건으로 보인다 (CR-170, BID-DOC-004)
+    @Test
+    @DisplayName("TC-DOC-284 분석에서종료한건_읽기영역분석시작됨")
+    void 분석에서종료한건_분석시작됨() {
+        BidRequest closed = bidIn(BidRequestState.CLOSED);
+        closed.getStateHistory().add(com.biddingagency.domain.bid.entity.StateTransition.builder()
+                .fromState(BidRequestState.DOCS_RECEIVED).toState(BidRequestState.ANALYZING).build());
+
+        assertThat(service.overview(closed.getId()).readingStarted()).isTrue();
+    }
+
+    // TC-DOC-284 반례: 분석 단계를 거치지 않고 종료한 건은 분석 전이다
+    @Test
+    @DisplayName("TC-DOC-284 분석전에종료한건_분석시작안됨")
+    void 분석전에종료한건_분석시작안됨() {
+        BidRequest closed = bidIn(BidRequestState.CLOSED);
+
+        assertThat(service.overview(closed.getId()).readingStarted()).isFalse();
+    }
 }

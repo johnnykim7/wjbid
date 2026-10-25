@@ -25,6 +25,7 @@ public class McpDispatcher {
     private final PatternGuideMcpTool patternGuideMcpTool;
     private final ProposalMcpTool proposalMcpTool;
     private final DocumentReadingMcpTool documentReadingMcpTool;
+    private final BidAnalysisMcpTool bidAnalysisMcpTool;
 
     /** 전체 도구 정의 목록 */
     private static final List<Map<String, Object>> ALL_TOOLS = Stream.of(
@@ -35,7 +36,8 @@ public class McpDispatcher {
         OpportunityAnalysisMcpTool.TOOL_DEFINITIONS,
         PatternGuideMcpTool.TOOL_DEFINITIONS,
         ProposalMcpTool.TOOL_DEFINITIONS,
-        DocumentReadingMcpTool.TOOL_DEFINITIONS
+        DocumentReadingMcpTool.TOOL_DEFINITIONS,
+        BidAnalysisMcpTool.TOOL_DEFINITIONS
     ).flatMap(Collection::stream).toList();
 
     /**
@@ -129,6 +131,10 @@ public class McpDispatcher {
             case "get_notice_verify_input"     -> proposalMcpTool.getNoticeVerifyInput(args);
             case "save_verification_result"    -> proposalMcpTool.saveVerificationResult(args);
             case "save_client_document_facts"  -> documentReadingMcpTool.saveClientDocumentFacts(args);
+            // CR-170: 입찰 분석
+            case "get_bid_analysis_input"      -> bidAnalysisMcpTool.getBidAnalysisInput(args);
+            case "search_award_history"        -> bidAnalysisMcpTool.searchAwardHistory(args);
+            case "save_bid_analysis"           -> bidAnalysisMcpTool.saveBidAnalysis(args);
             default -> throw new IllegalArgumentException("알 수 없는 도구: " + toolName);
         };
     }

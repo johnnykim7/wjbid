@@ -2,6 +2,7 @@ package com.biddingagency.domain.bid.service;
 
 import com.biddingagency.domain.bid.CustomerTransitionNotAllowedException;
 import com.biddingagency.domain.bid.BidRequestNotFoundException;
+import com.biddingagency.domain.analysis.service.BidAnalysisService;
 import com.biddingagency.domain.bid.entity.BidRequest;
 import com.biddingagency.domain.bid.entity.BidRequestState;
 import com.biddingagency.domain.bid.repository.BidRequestRepository;
@@ -40,19 +41,22 @@ public class BidFSMService {
     private final ComplianceService complianceService;
     private final BidDocumentService bidDocumentService;
     private final DocumentReadingService documentReadingService;
+    private final BidAnalysisService bidAnalysisService;
 
     public BidFSMService(BidRequestRepository bidRequestRepository,
                          @Lazy AIWorkflowService aiWorkflowService,
                          ApplicationEventPublisher eventPublisher,
                          ComplianceService complianceService,
                          BidDocumentService bidDocumentService,
-                         DocumentReadingService documentReadingService) {
+                         DocumentReadingService documentReadingService,
+                         BidAnalysisService bidAnalysisService) {
         this.bidRequestRepository = bidRequestRepository;
         this.aiWorkflowService = aiWorkflowService;
         this.eventPublisher = eventPublisher;
         this.complianceService = complianceService;
         this.bidDocumentService = bidDocumentService;
         this.documentReadingService = documentReadingService;
+        this.bidAnalysisService = bidAnalysisService;
     }
 
     // Valid state transitions map
@@ -84,8 +88,10 @@ public class BidFSMService {
                 BidRequestState.CLOSED
         ));
 
+        // CR-170: Bid/No-Bid 결정이 No-Go 면 관리자가 분석 단계에서 종료한다
         VALID_TRANSITIONS.put(BidRequestState.ANALYZING, List.of(
-                BidRequestState.GENERATING
+                BidRequestState.GENERATING,
+                BidRequestState.CLOSED
         ));
 
         VALID_TRANSITIONS.put(BidRequestState.GENERATING, List.of(
@@ -166,8 +172,10 @@ public class BidFSMService {
         }
 
         // BIZ-087 (CR-169): 고객 서류를 읽는 중이면 문서 작성 중으로 넘어가지 않는다
+        // BIZ-092 (CR-170): 읽는 중이 아니면 지금 입찰 분석의 관리자 결정이 Go 나 조건부 Go 여야 한다. 읽는 중 가드를 먼저 본다
         if (currentState == BidRequestState.ANALYZING && toState == BidRequestState.GENERATING) {
             documentReadingService.requireNoReadingInProgress(bidRequestId);
+            bidAnalysisService.requireGoDecision(bidRequestId);
         }
 
         // Execute transition
@@ -245,13 +253,16 @@ public class BidFSMService {
      * 상태 전환 후 LLM 워크플로우 비동기 실행
      * - DOCUMENT_DRAFTING 진입: 문서 자동 생성
      * - ANALYZING 진입: 고객 서류 읽기 (CR-169). 요구 항목은 공고 분석 저장 때 채운다 (CR-141, BIZ-045)
+     *   읽을 대상이 없고 읽는 중인 후보도 없으면 입찰 분석을 바로 시작한다. 아니면 읽기 회차가 끝날 때 시작한다 (CR-170, BIZ-090)
      */
     private void triggerAIWorkflow(BidRequest bidRequest, BidRequestState toState) {
         switch (toState) {
             case GENERATING ->
                 aiWorkflowService.generateDocumentsAsync(bidRequest);
-            case ANALYZING ->
+            case ANALYZING -> {
                 documentReadingService.queueForAnalysis(bidRequest.getId());
+                bidAnalysisService.startIfReady(bidRequest.getId());
+            }
             default -> { /* 다른 상태는 AI 작업 없음 */ }
         }
     }

@@ -1,5 +1,6 @@
 package com.biddingagency.mcp;
 
+import com.biddingagency.mcp.tool.BidAnalysisMcpTool;
 import com.biddingagency.mcp.tool.DocumentMcpTool;
 import com.biddingagency.mcp.tool.DocumentReadingMcpTool;
 import com.biddingagency.mcp.tool.DocumentTemplateMcpTool;
@@ -43,6 +44,8 @@ class McpServerControllerTest {
     private ProposalMcpTool proposalMcpTool;
     @Mock
     private DocumentReadingMcpTool documentReadingMcpTool;
+    @Mock
+    private BidAnalysisMcpTool bidAnalysisMcpTool;
 
     private McpServerController mcpServerController;
 
@@ -51,7 +54,7 @@ class McpServerControllerTest {
         McpDispatcher dispatcher = new McpDispatcher(
             opportunityMcpTool, documentMcpTool,
             documentTemplateMcpTool, stateMcpTool, opportunityAnalysisMcpTool,
-            patternGuideMcpTool, proposalMcpTool, documentReadingMcpTool);
+            patternGuideMcpTool, proposalMcpTool, documentReadingMcpTool, bidAnalysisMcpTool);
         mcpServerController = new McpServerController(dispatcher);
     }
 
@@ -111,7 +114,9 @@ class McpServerControllerTest {
                 "get_proposal_design_input", "save_proposal_structure",
                 "get_section_context", "save_section_blocks",
                 // CR-031 충실성 검증
-                "get_section_verify_input", "get_notice_verify_input", "save_verification_result");
+                "get_section_verify_input", "get_notice_verify_input", "save_verification_result",
+                // CR-170 입찰 분석
+                "get_bid_analysis_input", "search_award_history", "save_bid_analysis");
         // CR-141: 요구 항목은 공고 분석에서 채우므로 저장 도구를 걷어냈다
         assertThat(toolNames).doesNotContain("save_requirements");
     }
