@@ -39,7 +39,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.lenient;
 
-/** TC-DOC-268, 269: get_bid_analysis_input (CR-170, BID-DOC-006) */
+/** TC-DOC-268, 269, 292: get_bid_analysis_input (CR-170, CR-179, BID-DOC-006) */
 @ExtendWith(MockitoExtension.class)
 class BidAnalysisInputServiceTest {
 
@@ -119,5 +119,21 @@ class BidAnalysisInputServiceTest {
         assertThat((Map<String, Object>) input.get("capturePlan")).containsKey("issues");
         assertThat((Map<String, Object>) ((Map<String, Object>) input.get("pwinPolicy")).get("weights"))
                 .containsEntry("SOLUTION_FIT", 20);
+    }
+
+    @Test
+    @DisplayName("TC-DOC-292 입력뒤단계_앞단계확인필요만")
+    void 뒤단계_앞단계확인필요만() throws Exception {
+        given(analysisService.policy()).willReturn(PwinPolicy.defaults());
+        analysis.saveQuestions(objectMapper.writeValueAsString(List.of(
+                m("target", "CUSTOMER", "question", "면허가 있습니까?", "reason", "자격", "part", "REPORT"),
+                m("target", "ADMIN", "question", "마감이 연장되었습니까?", "reason", "일정", "part", "CAPTURE_PLAN"),
+                m("target", "CUSTOMER", "question", "원가 자료를 주세요", "reason", "수익성", "part", "DECISION"))));
+
+        Map<String, Object> input = service.input(bid.getId(), analysis.getId(), Step.DECISION);
+
+        assertThat(input.get("priorQuestions")).isEqualTo(List.of(
+                m("target", "CUSTOMER", "question", "면허가 있습니까?"),
+                m("target", "ADMIN", "question", "마감이 연장되었습니까?")));
     }
 }
