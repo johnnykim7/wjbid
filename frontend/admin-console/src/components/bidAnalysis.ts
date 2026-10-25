@@ -1,5 +1,7 @@
 // CR-170 입찰 분석 응답 타입과 표시 이름 (BE BidAnalysisDto 대응)
 
+import { createContext } from 'react'
+
 export type BidAnalysisStatus = 'RUNNING' | 'DONE' | 'FAILED' | 'DECISION_ONLY'
 export type BidVerdict = 'STRONG_GO' | 'CONDITIONAL_GO' | 'WEAK' | 'NO_GO'
 export type BidDecision = 'GO' | 'CONDITIONAL_GO' | 'NO_GO'
@@ -124,6 +126,15 @@ export const AWARD_SOURCE_LABEL: Record<string, string> = {
   SAM_AWARD_NOTICE: '낙찰 공고',
 }
 
+// 발주 이력 계약 구분. 미 연방 계약은 FederalAwardType 이름, 낙찰 공고는 SAM 공고 종류가 그대로 온다
+export const CONTRACT_TYPE_LABEL: Record<string, string> = {
+  BPA_CALL: 'BPA 호출',
+  PURCHASE_ORDER: '구매 주문',
+  DELIVERY_ORDER: '납품 지시',
+  DEFINITIVE_CONTRACT: '확정 계약',
+  'Award Notice': '낙찰 공고',
+}
+
 export const ELIGIBILITY_LABEL: Record<string, string> = {
   MET: '충족',
   NOT_MET: '미충족',
@@ -198,8 +209,56 @@ export const QUESTION_TARGET_LABEL: Record<string, string> = {
   ADMIN: '관리자가 볼 것',
 }
 
+const QUESTION_PART_LABEL: Record<string, string> = {
+  REPORT: '리포트',
+  CAPTURE_PLAN: '캡처플랜',
+  DECISION: '결정',
+}
+
+// 확인 필요의 field 는 산출물 칸 경로(eligibility[0].status 등)라 맨 앞 칸 이름만 주제로 바꿔 보인다
+const QUESTION_TOPIC_LABEL: Record<string, Record<string, string>> = {
+  REPORT: {
+    overview: '과업 개요', agency: '발주처', orderHistory: '발주 이력', requirements: '요구 테마와 평가 항목',
+    eligibility: '자격', competitors: '경쟁사', fairness: '진입 공정성', hiddenIssues: '수면 아래 이슈',
+    insights: '핵심 시사점',
+  },
+  CAPTURE_PLAN: { business: '사업', issues: '이슈', competitors: '경쟁사', company: '자사', other: '기타' },
+  DECISION: {
+    scorecard: '스코어카드', sensitivity: '민감도', qualification: '자격 해결', profitability: '수익성',
+    risks: '리스크', conditions: '조건', advice: '결정 조언',
+  },
+}
+
+// 산출물 칸이 아니라 입력 자료를 가리키는 field(어느 단계에서나 올 수 있다)
+const QUESTION_INPUT_TOPIC_LABEL: Record<string, string> = { opportunity: '공고', company: '자사' }
+
+export function questionTopic(q: BidQuestion): string {
+  const head = (q.field ?? '').split(/[.[]/)[0]
+  const part = q.part ?? ''
+  const topic = QUESTION_TOPIC_LABEL[part]?.[head] ?? QUESTION_INPUT_TOPIC_LABEL[head]
+  return [QUESTION_PART_LABEL[part], topic].filter(Boolean).join(' · ')
+}
+
 export function companyLabel(name: string): string {
   return name === OUR_COMPANY ? '자사' : name
+}
+
+/** 공고 컴플라이언스 매트릭스 줄에서 REQ ID 별 요구 문장(한글이 있으면 한글) */
+export function requirementTexts(matrix: unknown): Record<string, string> {
+  const out: Record<string, string> = {}
+  for (const raw of arr(obj(matrix).lines)) {
+    const line = obj(raw)
+    const text = str(line.translation) || str(line.text)
+    if (str(line.reqId) && text) out[str(line.reqId)] = text
+  }
+  return out
+}
+
+/** 달러 금액을 $1,234 꼴로. 숫자가 아니면 받은 그대로 */
+export function formatUsd(v: unknown): string {
+  const s = str(v)
+  const n = Number(s)
+  return s === '' || Number.isNaN(n) ? s : `$${n.toLocaleString('en-US', { maximumFractionDigits: 0 })}`
 }
 
 /** 본문의 칸을 꺼낼 때 쓰는 좁히기. 꼴이 다르면 비운다 */
@@ -223,4 +282,24 @@ export function formatDateTime(local: string | null | undefined): string {
   if (!local) return ''
   const d = new Date(local)
   return Number.isNaN(d.getTime()) ? local : d.toLocaleString('ko-KR')
+}
+
+/** 인쇄용 문서 안에서는 접히는 내용을 펼친 채 그린다 (CR-181) */
+export const PrintMode = createContext(false)
+
+/** 종합 분석 리포트 과업 개요의 사업명. 근거 값이면 그 값 */
+export function projectNameOf(report: unknown): string {
+  const name = obj(obj(report).overview).projectName
+  const e = obj(name)
+  return str('value' in e ? e.value : name).trim()
+}
+
+const FILE_NAME_FORBIDDEN = /[\\/:*?"<>|]/g
+const FILE_NAME_PROJECT_MAX = 60
+
+/** 인쇄 창이 PDF 파일 이름 기본값으로 쓰는 문서 제목. 입찰분석_사업명_회차시작일 */
+export function printFileName(projectName: string, startedAt: string | null): string {
+  const name = projectName.replace(FILE_NAME_FORBIDDEN, '_').slice(0, FILE_NAME_PROJECT_MAX)
+  const day = (startedAt ?? '').slice(0, 10).replaceAll('-', '')
+  return ['입찰분석', name, day].filter(Boolean).join('_')
 }

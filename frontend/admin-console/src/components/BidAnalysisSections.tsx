@@ -1,6 +1,8 @@
+import { Fragment, useContext, useState } from 'react'
 import type { ReactNode } from 'react'
 import {
   Badge,
+  Button,
   Table,
   TableBody,
   TableCell,
@@ -13,6 +15,7 @@ import {
   COMPETITIVENESS_AXES,
   COMPETITIVENESS_LABEL,
   CONFIDENCE_LABEL,
+  CONTRACT_TYPE_LABEL,
   ELIGIBILITY_LABEL,
   FACTORS,
   FAIRNESS_INDICATORS,
@@ -20,19 +23,54 @@ import {
   INDICATOR_VALUE_LABEL,
   LIKELIHOOD_LABEL,
   ORDER_VERDICT_LABEL,
+  OUR_COMPANY,
+  PrintMode,
   RISK_AREA_LABEL,
   arr,
   companyLabel,
+  formatUsd,
   obj,
   str,
 } from './bidAnalysis'
 import type { CompanyScore, Json, RankedIssue, ThemeGap } from './bidAnalysis'
 
-const CONFIDENCE_VARIANT: Record<string, 'success' | 'warning' | 'secondary'> = {
+type Tone = 'success' | 'warning' | 'destructive' | 'info' | 'neutral'
+
+// 관리자 테마의 secondary 는 강조 파랑이라 미상, 낮음 같은 중립 값은 회색 알약을 직접 칠한다(CoverageBand 와 같은 방식)
+const NEUTRAL_PILL = 'bg-gray-100 text-gray-700'
+
+function Tag({ tone, children }: { tone: Tone; children: ReactNode }) {
+  return tone === 'neutral'
+    ? <Badge variant="secondary" size="sm" className={NEUTRAL_PILL}>{children}</Badge>
+    : <Badge variant={tone} size="sm">{children}</Badge>
+}
+
+const CONFIDENCE_TONE: Record<string, Tone> = {
   CONFIRMED: 'success',
   ESTIMATED: 'warning',
-  UNKNOWN: 'secondary',
+  UNKNOWN: 'neutral',
 }
+
+const ELIGIBILITY_TONE: Record<string, Tone> = {
+  MET: 'success',
+  NOT_MET: 'destructive',
+  CONDITIONAL: 'warning',
+  UNKNOWN: 'neutral',
+}
+
+const LIKELIHOOD_TONE: Record<string, Tone> = {
+  HIGH: 'destructive',
+  MEDIUM: 'warning',
+  LOW: 'neutral',
+}
+
+// 순번, 해당, 상태, 점수처럼 짧은 칸까지 줄을 바꾸면 글자가 세로로 쌓이므로 이 길이 이하인 칸은 줄을 바꾸지 않는다
+const SHORT_CELL = 8
+
+// REQ ID 가 많은 칸은 처음에 이만큼만 보이고 나머지는 펼쳐 본다
+const REQ_SHOWN = 2
+
+const NUMERIC_COL = 'text-right tabular-nums whitespace-nowrap'
 
 function label(map: Record<string, string>, v: unknown): string {
   const s = str(v)
@@ -75,9 +113,7 @@ export function Evidence({ value }: { value: unknown }) {
     <span className="inline-flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
       <span className="text-gray-800">{shown || '-'}</span>
       {confidence && (
-        <Badge variant={CONFIDENCE_VARIANT[confidence] ?? 'secondary'} size="sm">
-          {CONFIDENCE_LABEL[confidence] ?? confidence}
-        </Badge>
+        <Tag tone={CONFIDENCE_TONE[confidence] ?? 'neutral'}>{CONFIDENCE_LABEL[confidence] ?? confidence}</Tag>
       )}
       {str(e.source) && <span className="text-xs text-gray-500">출처 {str(e.source)}</span>}
     </span>
@@ -101,25 +137,42 @@ function Caption({ text }: { text?: string }) {
   return text ? <p className="text-xs font-medium text-gray-500">{text}</p> : null
 }
 
-function SimpleTable({ title, head, rows }: { title?: string; head: string[]; rows: ReactNode[][] }) {
+function shortColumns(rows: ReactNode[][]): Set<number> {
+  const out = new Set<number>()
+  const cols = Math.max(0, ...rows.map((r) => r.length))
+  for (let j = 0; j < cols; j++) {
+    if (rows.every((r) => typeof r[j] === 'string' && (r[j] as string).length <= SHORT_CELL)) out.add(j)
+  }
+  return out
+}
+
+/** colClass 는 칸 번호별로 머리와 몸 칸에 함께 붙일 class */
+function SimpleTable({ title, head, rows, colClass = {} }: {
+  title?: string
+  head: string[]
+  rows: ReactNode[][]
+  colClass?: Record<number, string>
+}) {
   if (rows.length === 0) {
     return title
       ? <p className="text-sm text-gray-400"><span className="text-xs font-medium text-gray-500 mr-2">{title}</span>없음</p>
       : <Empty />
   }
+  const short = shortColumns(rows)
+  const classOf = (j: number) => [short.has(j) ? 'whitespace-nowrap' : '', colClass[j] ?? ''].filter(Boolean).join(' ')
   return (
     <div className="space-y-1">
     <Caption text={title} />
     <Table className="text-sm">
       <TableHeader>
         <TableRow>
-          {head.map((h) => <TableHead key={h}>{h}</TableHead>)}
+          {head.map((h, j) => <TableHead key={h} className={classOf(j)}>{h}</TableHead>)}
         </TableRow>
       </TableHeader>
       <TableBody>
         {rows.map((cells, i) => (
           <TableRow key={i} className="align-top">
-            {cells.map((c, j) => <TableCell key={j}>{c}</TableCell>)}
+            {cells.map((c, j) => <TableCell key={j} className={classOf(j)}>{c}</TableCell>)}
           </TableRow>
         ))}
       </TableBody>
@@ -132,9 +185,82 @@ function joined(v: unknown): string {
   return arr(v).map(str).filter(Boolean).join(', ') || '-'
 }
 
+function Muted({ text }: { text: string }) {
+  return <span className="text-xs leading-relaxed text-gray-500">{text}</span>
+}
+
+/** 위에 본 값, 아래 회색 덧붙임 */
+function Stacked({ main, sub }: { main: string; sub?: string }) {
+  return (
+    <div>
+      <div className="text-gray-900">{main || '-'}</div>
+      {sub && <div className="mt-0.5 text-xs text-gray-500">{sub}</div>}
+    </div>
+  )
+}
+
+/** 계약 구분 아래 출처. 낙찰 공고는 구분과 출처가 같은 말이라 한 번만 */
+function ContractKind({ type, source }: { type: string; source: string }) {
+  return <Stacked main={type} sub={source === type ? undefined : source} />
+}
+
+/** "시작~끝" 기간을 두 줄로 */
+function Period({ value }: { value: unknown }) {
+  const [from, to] = str(value).split('~').map((s) => s.trim())
+  return <span className="whitespace-nowrap">{from}{to !== undefined && <><br />~ {to}</>}</span>
+}
+
+/** REQ ID 와 그 요구 문장. 문장을 모르면 ID 만 보인다 */
+function ReqList({ ids, texts }: { ids: unknown; texts: Record<string, string> }) {
+  const [open, setOpen] = useState(false)
+  const printing = useContext(PrintMode)
+  const list = arr(ids).map(str).filter(Boolean)
+  if (list.length === 0) return <span className="text-gray-400">-</span>
+  const shown = open || printing ? list : list.slice(0, REQ_SHOWN)
+  return (
+    <div className="space-y-1">
+      <ul className="space-y-1">
+        {shown.map((id) => (
+          <li key={id} className="flex gap-2 leading-normal">
+            <span className="flex-none pt-px text-xs tabular-nums text-gray-500">{id}</span>
+            {texts[id] && <span className="text-gray-800">{texts[id]}</span>}
+          </li>
+        ))}
+      </ul>
+      {list.length > REQ_SHOWN && !printing && (
+        <Button variant="dim" size="sm" className="h-auto px-0 text-blue-600 hover:text-blue-700" onClick={() => setOpen(!open)}>
+          {open ? '접기' : `${list.length - REQ_SHOWN}건 더 보기`}
+        </Button>
+      )}
+    </div>
+  )
+}
+
+function Card({ title, badges, rows }: { title: string; badges?: ReactNode; rows: [string, ReactNode][] }) {
+  const shown = rows.filter(([, v]) => v !== null && v !== undefined && v !== '')
+  return (
+    <div className="space-y-2.5 rounded-lg border border-gray-200 px-4 py-3.5 break-inside-avoid">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm font-semibold text-gray-900">{title || '-'}</span>
+        {badges}
+      </div>
+      {shown.length > 0 && (
+        <dl className="grid grid-cols-[7rem_1fr] gap-x-4 gap-y-2 text-sm leading-relaxed">
+          {shown.map(([k, v]) => (
+            <div key={k} className="contents">
+              <dt className="text-gray-500">{k}</dt>
+              <dd className="min-w-0 text-gray-800">{v}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </div>
+  )
+}
+
 // ─── 종합 분석 리포트 ────────────────────────────────────────────────
 
-export function ReportView({ report }: { report: Json }) {
+export function ReportView({ report, reqTexts }: { report: Json; reqTexts: Record<string, string> }) {
   const overview = obj(report.overview)
   const submission = obj(overview.submission)
   const agency = obj(report.agency)
@@ -201,11 +327,18 @@ export function ReportView({ report }: { report: Json }) {
       <Section title="발주 이력">
         <p className="text-sm text-gray-700">판정 <b>{label(ORDER_VERDICT_LABEL, history.verdict) || '-'}</b></p>
         <SimpleTable
-          head={['기간', '제목', '낙찰사', '금액(USD)', '계약 구분', '계약번호', '공고번호', '출처', '비고']}
+          head={['기간', '계약', '낙찰사', '금액(USD)', '구분', '비고']}
+          colClass={{ 1: 'min-w-56', 3: NUMERIC_COL, 4: 'whitespace-nowrap', 5: 'min-w-48' }}
           rows={arr(history.rows).map((raw) => {
             const r = obj(raw)
-            return [str(r.period), str(r.title), str(r.awardee), str(r.amountUsd), str(r.contractType),
-              str(r.piid), str(r.solicitationNumber), label(AWARD_SOURCE_LABEL, r.source), str(r.note)]
+            return [
+              <Period value={r.period} />,
+              <Stacked main={str(r.title)} sub={[str(r.piid), str(r.solicitationNumber)].filter(Boolean).join(' · ')} />,
+              str(r.awardee),
+              formatUsd(r.amountUsd),
+              <ContractKind type={label(CONTRACT_TYPE_LABEL, r.contractType)} source={label(AWARD_SOURCE_LABEL, r.source)} />,
+              <Muted text={str(r.note)} />,
+            ]
           })}
         />
         <Fields rows={[
@@ -217,18 +350,27 @@ export function ReportView({ report }: { report: Json }) {
       <Section title="요구 테마와 평가 항목">
         <SimpleTable
           title="요구 테마"
-          head={['테마', '요구 항목']}
+          head={['테마', '건수', '요구 항목']}
+          colClass={{ 0: 'min-w-24' }}
           rows={arr(requirements.themes).map((raw) => {
             const t = obj(raw)
-            return [str(t.theme), joined(t.reqIds)]
+            return [str(t.theme), `${arr(t.reqIds).length}건`, <ReqList ids={t.reqIds} texts={reqTexts} />]
           })}
         />
         <SimpleTable
           title="평가 항목"
-          head={['평가 항목', '비중', '평가 방식', '요구 항목']}
+          head={['평가 항목', '요구 항목']}
+          colClass={{ 0: 'w-1/3' }}
           rows={arr(requirements.evaluation).map((raw) => {
             const e = obj(raw)
-            return [str(e.factor), str(e.importance), str(e.method), joined(e.reqIds)]
+            return [
+              <div className="space-y-1">
+                <div className="font-medium text-gray-900">{str(e.factor) || '-'}</div>
+                {str(e.importance) && <div className="text-xs text-gray-500">비중 {str(e.importance)}</div>}
+                {str(e.method) && <div className="text-xs text-gray-500">평가 방식 {str(e.method)}</div>}
+              </div>,
+              <ReqList ids={e.reqIds} texts={reqTexts} />,
+            ]
           })}
         />
       </Section>
@@ -236,45 +378,62 @@ export function ReportView({ report }: { report: Json }) {
       <Section title="질의 후보">
         <SimpleTable
           head={['요구 항목', '질의', '이유']}
+          colClass={{ 0: 'min-w-64', 1: 'min-w-60' }}
           rows={arr(requirements.questionCandidates).map((raw) => {
             const q = obj(raw)
-            return [str(q.reqId), str(q.question), str(q.reason)]
+            return [<ReqList ids={str(q.reqId) ? [q.reqId] : []} texts={reqTexts} />, str(q.question), <Muted text={str(q.reason)} />]
           })}
         />
       </Section>
 
       <Section title="자격">
-        <SimpleTable
-          head={['자격 항목', '공고 요구', '상태', '근거', '해결 방안']}
-          rows={arr(report.eligibility).map((raw) => {
-            const e = obj(raw)
-            const status = str(e.status)
-            return [
-              str(e.item),
-              str(e.requirement),
-              <span className={status === 'NOT_MET' ? 'text-red-700 font-medium' : status === 'CONDITIONAL' ? 'text-amber-700' : ''}>
-                {label(ELIGIBILITY_LABEL, status)}
-              </span>,
-              <Evidence value={e.evidence} />,
-              str(e.remedy),
-            ]
-          })}
-        />
+        {arr(report.eligibility).length === 0 ? <Empty /> : arr(report.eligibility).map((raw, i) => {
+          const e = obj(raw)
+          const status = str(e.status)
+          return (
+            <Card key={i} title={str(e.item)}
+              badges={status && <Tag tone={ELIGIBILITY_TONE[status] ?? 'neutral'}>{label(ELIGIBILITY_LABEL, status)}</Tag>}
+              rows={[
+                ['공고 요구', str(e.requirement)],
+                ['근거', e.evidence === null || e.evidence === undefined ? null : <Evidence value={e.evidence} />],
+                ['해결 방안', str(e.remedy)],
+              ]} />
+          )
+        })}
       </Section>
 
       <Section title="경쟁사">
-        <SimpleTable
-          head={['업체', 'UEI', '기존 수행사', '관련 실적', '발주처와의 관계', '예상 전략', '참여 가능성', '근거']}
-          rows={arr(competitors.companies).map((raw) => {
-            const c = obj(raw)
-            const awards = arr(c.relevantAwards).map((a) => {
-              const w = obj(a)
-              return [str(w.piid), str(w.amountUsd) && `${str(w.amountUsd)} USD`, str(w.period)].filter(Boolean).join(' ')
-            })
-            return [str(c.name), str(c.uei), c.isIncumbent === true ? '예' : '아니오', awards.join(', ') || '-',
-              str(c.relationship), str(c.expectedStrategy), label(LIKELIHOOD_LABEL, c.likelihood), str(c.basis)]
-          })}
-        />
+        {arr(competitors.companies).length === 0 ? <Empty /> : arr(competitors.companies).map((raw, i) => {
+          const c = obj(raw)
+          const awards = arr(c.relevantAwards).map(obj)
+          const likelihood = str(c.likelihood)
+          return (
+            <Card key={i} title={str(c.name)}
+              badges={<>
+                {str(c.uei) && <span className="text-xs text-gray-400">UEI {str(c.uei)}</span>}
+                {c.isIncumbent === true && <Tag tone="info">기존 수행사</Tag>}
+                {likelihood && (
+                  <Tag tone={LIKELIHOOD_TONE[likelihood] ?? 'neutral'}>참여 가능성 {label(LIKELIHOOD_LABEL, likelihood)}</Tag>
+                )}
+              </>}
+              rows={[
+                ['관련 실적', awards.length === 0 ? null : (
+                  <ul className="space-y-0.5 tabular-nums">
+                    {awards.map((w, j) => (
+                      <li key={j} className="flex flex-wrap gap-x-3">
+                        <span className="min-w-32">{str(w.piid)}</span>
+                        <span className="min-w-24 text-right">{formatUsd(w.amountUsd)}</span>
+                        <span className="text-gray-500">{str(w.period)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )],
+                ['발주처와의 관계', str(c.relationship)],
+                ['예상 전략', str(c.expectedStrategy)],
+                ['근거', str(c.basis) && <Muted text={str(c.basis)} />],
+              ]} />
+          )
+        })}
         {bccThemes.length > 0 && (
           <SimpleTable
             title="BCC 테마별 점수(1~5)"
@@ -445,6 +604,91 @@ function Gaps({ title, rows }: { title: string; rows: ThemeGap[] | null }) {
   )
 }
 
+// 점수 1~5 중 강점(4 이상)과 약점(2 이하)을 색으로 가른다
+function scoreTone(score: unknown): string {
+  const n = Number(str(score))
+  if (str(score) === '' || Number.isNaN(n)) return 'text-gray-400'
+  return n >= 4 ? 'text-green-700' : n <= 2 ? 'text-red-700' : 'text-gray-700'
+}
+
+/** 팩터 줄에는 점수만 두고, 줄을 누르면 업체별 근거를 그 아래에 펼친다 */
+function Scorecard({ scorecard, percentOf }: { scorecard: Json[]; percentOf: Map<string, number | null> }) {
+  const [open, setOpen] = useState<Set<string>>(new Set())
+  const printing = useContext(PrintMode)
+  const toggle = (key: string) => setOpen((prev) => {
+    const next = new Set(prev)
+    if (next.has(key)) next.delete(key)
+    else next.add(key)
+    return next
+  })
+  const ours = (row: Json) => (str(row.company) === OUR_COMPANY ? 'bg-blue-50' : '')
+  const scoreCell = 'text-center tabular-nums text-[15px] font-semibold'
+
+  return (
+    <div className="space-y-1">
+      <p className="text-xs text-gray-500">{printing ? '점수는 1~5.' : '점수는 1~5, 줄을 누르면 업체별 근거가 펼쳐집니다.'}</p>
+      <Table className="text-sm">
+        <TableHeader>
+          <TableRow>
+            <TableHead className="whitespace-nowrap">팩터</TableHead>
+            {scorecard.map((row, i) => (
+              <TableHead key={i} className={`min-w-18 max-w-32 text-center ${ours(row)}`}>{companyLabel(str(row.company))}</TableHead>
+            ))}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {FACTORS.map(({ key, label: factor }) => {
+            const isOpen = printing || open.has(key)
+            return (
+              <Fragment key={key}>
+                <TableRow className="cursor-pointer" tabIndex={0} aria-expanded={isOpen}
+                  onClick={() => toggle(key)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      toggle(key)
+                    }
+                  }}>
+                  <TableCell className="whitespace-nowrap">
+                    {!printing && <span className="inline-block w-3.5 text-gray-400">{isOpen ? '-' : '+'}</span>}{factor}
+                  </TableCell>
+                  {scorecard.map((row, i) => {
+                    const score = obj(obj(row.scores)[key]).score
+                    return <TableCell key={i} className={`${scoreCell} ${scoreTone(score)} ${ours(row)}`}>{str(score) || '-'}</TableCell>
+                  })}
+                </TableRow>
+                {isOpen && (
+                  <TableRow className="bg-gray-50 hover:bg-gray-50">
+                    <TableCell colSpan={scorecard.length + 1} className="pb-3.5 pl-8">
+                      <ul className="space-y-1.5 text-[13px] leading-relaxed">
+                        {scorecard.map((row, i) => {
+                          const f = obj(obj(row.scores)[key])
+                          return (
+                            <li key={i} className="grid grid-cols-[12rem_1fr] gap-3">
+                              <span className="font-medium text-gray-900">{companyLabel(str(row.company))} {str(f.score) || '-'}점</span>
+                              <span className="text-gray-600">{str(f.basis) || '-'}</span>
+                            </li>
+                          )
+                        })}
+                      </ul>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </Fragment>
+            )
+          })}
+          <TableRow>
+            <TableCell className="whitespace-nowrap font-semibold">가중 점수(%)</TableCell>
+            {scorecard.map((row, i) => (
+              <TableCell key={i} className={`${scoreCell} ${ours(row)}`}>{percentOf.get(str(row.company)) ?? '-'}</TableCell>
+            ))}
+          </TableRow>
+        </TableBody>
+      </Table>
+    </div>
+  )
+}
+
 export function DecisionView({ decision, scores, strengths, weaknesses }: {
   decision: Json
   scores: CompanyScore[] | null
@@ -460,39 +704,7 @@ export function DecisionView({ decision, scores, strengths, weaknesses }: {
   return (
     <div className="space-y-6">
       <Section title="스코어카드">
-        {scorecard.length === 0 ? <Empty /> : (
-          <Table className="text-sm">
-            <TableHeader>
-              <TableRow>
-                <TableHead>팩터</TableHead>
-                {scorecard.map((row, i) => <TableHead key={i}>{companyLabel(str(row.company))}</TableHead>)}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {FACTORS.map(({ key, label: factor }) => (
-                <TableRow key={key} className="align-top">
-                  <TableCell className="whitespace-nowrap">{factor}</TableCell>
-                  {scorecard.map((row, i) => {
-                    const f = obj(obj(row.scores)[key])
-                    return (
-                      <TableCell key={i}>
-                        <b>{str(f.score) || '-'}</b>
-                        {str(f.basis) && <p className="text-xs text-gray-500">{str(f.basis)}</p>}
-                      </TableCell>
-                    )
-                  })}
-                </TableRow>
-              ))}
-              <TableRow>
-                <TableCell className="font-medium">가중 점수(%)</TableCell>
-                {scorecard.map((row, i) => {
-                  const percent = percentOf.get(str(row.company))
-                  return <TableCell key={i} className="font-medium">{percent ?? '-'}</TableCell>
-                })}
-              </TableRow>
-            </TableBody>
-          </Table>
-        )}
+        {scorecard.length === 0 ? <Empty /> : <Scorecard scorecard={scorecard} percentOf={percentOf} />}
       </Section>
 
       <Section title="민감도">
@@ -512,6 +724,7 @@ export function DecisionView({ decision, scores, strengths, weaknesses }: {
       <Section title="자격 해결">
         <SimpleTable
           head={['자격 항목', '해결 방안', '해결 가능']}
+          colClass={{ 2: 'whitespace-nowrap' }}
           rows={arr(decision.qualification).map((raw) => {
             const q = obj(raw)
             return [
@@ -532,9 +745,10 @@ export function DecisionView({ decision, scores, strengths, weaknesses }: {
         <SimpleTable
           title="가격 시나리오"
           head={['기준 금액 대비', '가격(USD)', '이익률']}
+          colClass={{ 0: 'whitespace-nowrap', 1: NUMERIC_COL }}
           rows={arr(profitability.scenarios).map((raw) => {
             const s = obj(raw)
-            return [`${str(s.percent)}%`, str(s.priceUsd), str(s.margin) || '미상']
+            return [`${str(s.percent)}%`, formatUsd(s.priceUsd), str(s.margin) || '미상']
           })}
         />
       </Section>

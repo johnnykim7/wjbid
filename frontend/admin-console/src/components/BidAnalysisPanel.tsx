@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import {
   Badge,
   Button,
@@ -14,18 +16,23 @@ import {
   Textarea,
   toast,
 } from '@therecommerce-develop/ds-ui'
-import { getBidAnalysis, rerunBidAnalysis, saveBidDecision } from '../api/client'
+import { getBidAnalysis, getNoticeComplianceMatrix, rerunBidAnalysis, saveBidDecision } from '../api/client'
 import { CapturePlanView, DecisionView, ReportView } from './BidAnalysisSections'
 import {
   DECISION_LABEL,
   DECISION_NOTE_LABEL,
   DECISION_NOTE_MAX,
   DECISION_NOTE_MISSING,
+  PrintMode,
   QUESTION_TARGET_LABEL,
   STATUS_LABEL,
   VERDICT_LABEL,
   allowsGeneration,
   formatDateTime,
+  printFileName,
+  projectNameOf,
+  questionTopic,
+  requirementTexts,
 } from './bidAnalysis'
 import type { BidAnalysis, BidAnalysisOverview, BidDecision, BidQuestion, Json } from './bidAnalysis'
 
@@ -45,33 +52,60 @@ function errorOf(err: unknown) {
   return (err as ApiError)?.response
 }
 
-function Questions({ questions }: { questions: BidQuestion[] }) {
-  if (questions.length === 0) return null
+const QUESTION_TARGETS = ['CUSTOMER', 'ADMIN'] as const
+
+function questionsFor(questions: BidQuestion[], target: string) {
+  return questions.filter((q) => (q.target ?? 'ADMIN') === target)
+}
+
+function QuestionList({ list }: { list: BidQuestion[] }) {
+  if (list.length === 0) return <p className="py-3 text-sm text-gray-400">없음</p>
   return (
-    <div className="space-y-2">
-      <h3 className="text-sm font-semibold text-gray-900">확인 필요</h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {(['CUSTOMER', 'ADMIN'] as const).map((target) => {
-          const list = questions.filter((q) => (q.target ?? 'ADMIN') === target)
-          return (
-            <div key={target} className="space-y-1">
-              <p className="text-xs font-medium text-gray-500">{QUESTION_TARGET_LABEL[target]} {list.length}건</p>
-              {list.length === 0 ? <p className="text-sm text-gray-400">없음</p> : (
-                <ul className="space-y-1.5 text-sm">
-                  {list.map((q, i) => (
-                    <li key={i}>
-                      <p className="text-gray-800">{q.question}</p>
-                      {(q.reason || q.field) && (
-                        <p className="text-xs text-gray-500">{[q.reason, q.field].filter(Boolean).join(' / ')}</p>
-                      )}
-                    </li>
-                  ))}
-                </ul>
+    <ol className="divide-y divide-gray-100">
+      {list.map((q, i) => {
+        const topic = questionTopic(q)
+        return (
+          <li key={i} className="flex gap-3 py-3.5">
+            <span className="mt-0.5 flex size-5.5 flex-none items-center justify-center rounded-full bg-indigo-50 text-xs font-semibold text-indigo-700">
+              {i + 1}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium leading-relaxed text-gray-900">{q.question}</p>
+              {(topic || q.reason) && (
+                <div className="mt-1 flex items-baseline gap-2">
+                  {topic && <span className="flex-none rounded bg-gray-100 px-1.5 text-[11px] leading-[18px] text-gray-600">{topic}</span>}
+                  {q.reason && <span className="text-xs leading-normal text-gray-500">{q.reason}</span>}
+                </div>
               )}
             </div>
-          )
-        })}
-      </div>
+          </li>
+        )
+      })}
+    </ol>
+  )
+}
+
+function Questions({ questions }: { questions: BidQuestion[] }) {
+  const [target, setTarget] = useState<string>('CUSTOMER')
+  if (questions.length === 0) return null
+  const of = (t: string) => questionsFor(questions, t)
+  return (
+    <div className="space-y-2">
+      <h3 className="text-sm font-semibold text-gray-900">
+        확인 필요 <span className="ml-1 font-normal text-gray-500">{questions.length}건</span>
+      </h3>
+      <Tabs value={target} onValueChange={setTarget}>
+        <TabsList variant="line">
+          {QUESTION_TARGETS.map((t) => (
+            <TabsTrigger key={t} value={t}>{QUESTION_TARGET_LABEL[t]} {of(t).length}</TabsTrigger>
+          ))}
+        </TabsList>
+        {QUESTION_TARGETS.map((t) => (
+          <TabsContent key={t} value={t}>
+            <QuestionList list={of(t)} />
+          </TabsContent>
+        ))}
+      </Tabs>
     </div>
   )
 }
@@ -80,14 +114,97 @@ function NotSaved() {
   return <p className="text-sm text-gray-400">아직 저장되지 않았습니다.</p>
 }
 
+function Summary({ analysis }: { analysis: BidAnalysis }) {
+  return (
+    <div className="space-y-1.5 text-sm">
+      {analysis.status === 'FAILED' && analysis.failureReason && (
+        <p className="text-red-700">{analysis.failureReason}</p>
+      )}
+      {analysis.pwinPercent !== null && (
+        <p className="text-gray-800">
+          Pwin <b>{analysis.pwinPercent}%</b>
+          {analysis.aiVerdict && <> · 판정 <b>{VERDICT_LABEL[analysis.aiVerdict]}</b></>}
+        </p>
+      )}
+      {analysis.verdictReason && <p className="text-gray-600">{analysis.verdictReason}</p>}
+      {analysis.adminDecision && (
+        <p className="text-gray-800">
+          관리자 결정 <b>{DECISION_LABEL[analysis.adminDecision]}</b>
+          <span className="text-gray-500"> · {analysis.decidedBy?.name ?? '-'} · {formatDateTime(analysis.decidedAt)}</span>
+        </p>
+      )}
+      {analysis.adminDecision && analysis.adminNote && (
+        <p className="text-gray-600 whitespace-pre-line">{[DECISION_NOTE_LABEL[analysis.adminDecision], analysis.adminNote].filter(Boolean).join(' ')}</p>
+      )}
+    </div>
+  )
+}
+
+function PrintPart({ no, title, children }: { no: number; title: string; children: ReactNode }) {
+  return (
+    <section className="print-part space-y-4 pt-6">
+      <h2 className="text-base font-bold text-gray-900">{no}. {title}</h2>
+      {children}
+    </section>
+  )
+}
+
+/** CR-181 세 탭과 확인 필요를 이어 붙인 인쇄용 문서. 인쇄 때는 body 아래 이것만 찍힌다(index.css) */
+function PrintDocument({ analysis, reqTexts }: { analysis: BidAnalysis; reqTexts: Record<string, string> }) {
+  const projectName = projectNameOf(analysis.report)
+  const questions = analysis.questions ?? []
+  return createPortal(
+    <div className="bid-analysis-print">
+      <PrintMode.Provider value>
+        <header className="space-y-2 border-b border-gray-200 pb-4">
+          <h1 className="text-lg font-bold text-gray-900">입찰 분석</h1>
+          {projectName && <p className="text-base font-semibold text-gray-900">{projectName}</p>}
+          <p className="text-sm text-gray-600">
+            {STATUS_LABEL[analysis.status]} · {formatDateTime(analysis.startedAt)}
+            {analysis.finishedAt && ` ~ ${formatDateTime(analysis.finishedAt)}`}
+          </p>
+          <Summary analysis={analysis} />
+        </header>
+        <PrintPart no={1} title="종합 분석 리포트">
+          {analysis.report ? <ReportView report={analysis.report as Json} reqTexts={reqTexts} /> : <NotSaved />}
+        </PrintPart>
+        <PrintPart no={2} title="캡처플랜">
+          {analysis.capturePlan
+            ? <CapturePlanView plan={analysis.capturePlan as Json} issueRanking={analysis.issueRanking} />
+            : <NotSaved />}
+        </PrintPart>
+        <PrintPart no={3} title="Bid/No-Bid 결정">
+          {analysis.decision
+            ? <DecisionView decision={analysis.decision as Json} scores={analysis.scores}
+                strengths={analysis.strengths} weaknesses={analysis.weaknesses} />
+            : <NotSaved />}
+        </PrintPart>
+        {questions.length > 0 && (
+          <PrintPart no={4} title={`확인 필요 ${questions.length}건`}>
+            {QUESTION_TARGETS.map((t) => (
+              <div key={t} className="space-y-1">
+                <h3 className="text-sm font-semibold text-gray-900">{QUESTION_TARGET_LABEL[t]} {questionsFor(questions, t).length}</h3>
+                <QuestionList list={questionsFor(questions, t)} />
+              </div>
+            ))}
+          </PrintPart>
+        )}
+      </PrintMode.Provider>
+    </div>,
+    document.body,
+  )
+}
+
 /**
  * CR-170 입찰 상세 관리의 입찰 분석 영역.
  * 분석 중이거나 서류를 읽는 중이면 10초마다 다시 부르고, 관리자 결정이 문서 작성 중 전환을 허용하는지 상태 패널에 알린다.
  * 불러오지 못하면 알 수 없음(null)으로 알려 전환을 막지 않는다. 서버가 409 로 막는다.
  */
-export default function BidAnalysisPanel({ bidRequestId, bidState, reloadKey, onDecisionChange }: {
+export default function BidAnalysisPanel({ bidRequestId, bidState, noticeId, reloadKey, onDecisionChange }: {
   bidRequestId: string
   bidState: string
+  /** REQ ID 옆에 요구 문장을 붙일 공고. 없으면 REQ ID 만 보인다 */
+  noticeId?: string
   reloadKey?: number
   onDecisionChange?: (allowsGeneration: boolean | null) => void
 }) {
@@ -101,6 +218,8 @@ export default function BidAnalysisPanel({ bidRequestId, bidState, reloadKey, on
   const [saving, setSaving] = useState(false)
   const [confirmRerun, setConfirmRerun] = useState(false)
   const [rerunning, setRerunning] = useState(false)
+  // 누를 때마다 새 객체라 인쇄 창이 afterprint 없이 닫혀 남아 있어도 다시 누르면 다시 연다
+  const [printJob, setPrintJob] = useState<{ title: string } | null>(null)
   const notify = useRef(onDecisionChange)
   notify.current = onDecisionChange
   const formKey = useRef<string | null>(null)
@@ -147,6 +266,18 @@ export default function BidAnalysisPanel({ bidRequestId, bidState, reloadKey, on
     const timer = window.setInterval(() => load(true), POLL_INTERVAL_MS)
     return () => window.clearInterval(timer)
   }, [running, readingInProgress, awaitingAnalysis, load])
+
+  // 요구 문장은 공고마다 정해져 있어 10초마다 다시 부를 때 함께 부르지 않는다
+  const [reqTexts, setReqTexts] = useState<Record<string, string>>({})
+  const matrixOf = useRef<string | null>(null)
+  const hasAnalysis = analysis !== null
+  useEffect(() => {
+    if (!noticeId || !hasAnalysis || matrixOf.current === noticeId) return
+    matrixOf.current = noticeId
+    getNoticeComplianceMatrix(noticeId)
+      .then(({ data }) => setReqTexts(requirementTexts(data)))
+      .catch(() => setReqTexts({}))
+  }, [noticeId, hasAnalysis])
 
   const handleNotAllowed = (err: unknown, fallback: string) => {
     const res = errorOf(err)
@@ -201,6 +332,20 @@ export default function BidAnalysisPanel({ bidRequestId, bidState, reloadKey, on
     }
   }
 
+  // 인쇄 창의 PDF 파일 이름 기본값이 문서 제목이라 창이 열려 있는 동안만 바꾼다
+  useEffect(() => {
+    if (printJob === null) return
+    const screenTitle = document.title
+    document.title = printJob.title
+    const done = () => setPrintJob(null)
+    window.addEventListener('afterprint', done)
+    window.print()
+    return () => {
+      window.removeEventListener('afterprint', done)
+      document.title = screenTitle
+    }
+  }, [printJob])
+
   const canRerun = analyzing && !running && !readingInProgress
   const canDecide = analyzing && !running
   const showTabs = analysis !== null && analysis.status !== 'DECISION_ONLY'
@@ -212,11 +357,21 @@ export default function BidAnalysisPanel({ bidRequestId, bidState, reloadKey, on
           <i className="fa-solid fa-scale-balanced text-secondary" /> 입찰 분석
         </h2>
         {analysis && <Badge variant={STATUS_VARIANT[analysis.status]} size="sm">{STATUS_LABEL[analysis.status]}</Badge>}
-        {analyzing && !loading && !failed && (
-          <Button variant="outline" size="sm" className="ml-auto" disabled={!canRerun || rerunning}
-            onClick={() => setConfirmRerun(true)}>
-            다시 분석
-          </Button>
+        {!loading && !failed && (
+          <div className="ml-auto flex items-center gap-2">
+            {showTabs && analysis && (
+              <Button variant="outline" size="sm"
+                onClick={() => setPrintJob({ title: printFileName(projectNameOf(analysis.report), analysis.startedAt) })}>
+                <i className="fa-solid fa-file-pdf mr-1" /> PDF 다운로드
+              </Button>
+            )}
+            {analyzing && (
+              <Button variant="outline" size="sm" disabled={!canRerun || rerunning}
+                onClick={() => setConfirmRerun(true)}>
+                다시 분석
+              </Button>
+            )}
+          </div>
         )}
       </div>
 
@@ -234,27 +389,7 @@ export default function BidAnalysisPanel({ bidRequestId, bidState, reloadKey, on
               {readingInProgress ? '고객 서류를 다 읽으면 입찰 분석을 시작합니다' : '입찰 분석이 없습니다'}
             </p>
           ) : (
-            <div className="space-y-1.5 text-sm">
-              {analysis.status === 'FAILED' && analysis.failureReason && (
-                <p className="text-red-700">{analysis.failureReason}</p>
-              )}
-              {analysis.pwinPercent !== null && (
-                <p className="text-gray-800">
-                  Pwin <b>{analysis.pwinPercent}%</b>
-                  {analysis.aiVerdict && <> · 판정 <b>{VERDICT_LABEL[analysis.aiVerdict]}</b></>}
-                </p>
-              )}
-              {analysis.verdictReason && <p className="text-gray-600">{analysis.verdictReason}</p>}
-              {analysis.adminDecision && (
-                <p className="text-gray-800">
-                  관리자 결정 <b>{DECISION_LABEL[analysis.adminDecision]}</b>
-                  <span className="text-gray-500"> · {analysis.decidedBy?.name ?? '-'} · {formatDateTime(analysis.decidedAt)}</span>
-                </p>
-              )}
-              {analysis.adminDecision && analysis.adminNote && (
-                <p className="text-gray-600 whitespace-pre-line">{[DECISION_NOTE_LABEL[analysis.adminDecision], analysis.adminNote].filter(Boolean).join(' ')}</p>
-              )}
-            </div>
+            <Summary analysis={analysis} />
           )}
 
           {showTabs && analysis && (
@@ -265,7 +400,7 @@ export default function BidAnalysisPanel({ bidRequestId, bidState, reloadKey, on
                 <TabsTrigger value="decision">Bid/No-Bid 결정</TabsTrigger>
               </TabsList>
               <TabsContent value="report" className="pt-4">
-                {analysis.report ? <ReportView report={analysis.report as Json} /> : <NotSaved />}
+                {analysis.report ? <ReportView report={analysis.report as Json} reqTexts={reqTexts} /> : <NotSaved />}
               </TabsContent>
               <TabsContent value="capture" className="pt-4">
                 {analysis.capturePlan
@@ -313,6 +448,8 @@ export default function BidAnalysisPanel({ bidRequestId, bidState, reloadKey, on
           )}
         </>
       )}
+
+      {printJob && showTabs && analysis && <PrintDocument analysis={analysis} reqTexts={reqTexts} />}
 
       <ConfirmDialog
         open={confirmRerun}
