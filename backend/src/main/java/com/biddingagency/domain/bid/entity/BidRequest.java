@@ -118,6 +118,22 @@ public class BidRequest extends BaseEntity {
     }
 
     /**
+     * AI 가 쓴 문서 버전의 편집자. 가장 최근에 GENERATING 으로 넘긴 사람이다.
+     * AI 는 도구이고 책임자는 작성을 시킨 관리자라는 합의(2026-05-31)라, 회원이 아닌 시스템 편집자를 쓰지 않는다.
+     */
+    public UUID lastGeneratingTriggerUserId() {
+        if (stateHistory != null) {
+            for (int i = stateHistory.size() - 1; i >= 0; i--) {
+                StateTransition t = stateHistory.get(i);
+                if (t.getToState() == BidRequestState.GENERATING && t.getUserId() != null) {
+                    return t.getUserId();
+                }
+            }
+        }
+        throw new IllegalStateException("GENERATING 으로 넘긴 기록이 없다. bidRequestId=" + getId());
+    }
+
+    /**
      * Assign to user
      */
     public void assignTo(UUID userId) {

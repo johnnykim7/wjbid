@@ -1,8 +1,6 @@
 package com.biddingagency.mcp.tool;
 
 import com.biddingagency.domain.bid.entity.BidRequest;
-import com.biddingagency.domain.bid.entity.BidRequestState;
-import com.biddingagency.domain.bid.entity.StateTransition;
 import com.biddingagency.domain.bid.service.BidRequestService;
 import com.biddingagency.domain.document.entity.BidDocument;
 import com.biddingagency.domain.document.entity.BidDocumentVersion;
@@ -109,7 +107,7 @@ public class DocumentMcpTool {
         // edited_by 결정: GENERATING 전이를 트리거한 관리자(=책임자). state_history에서 역순 조회.
         // AI는 도구일 뿐, 책임자는 항상 관리자. (사용자 합의 2026-05-31)
         BidRequest bidRequest = bidRequestService.findByIdWithDetails(bidRequestId);
-        UUID editorId = findLastGeneratingTriggerUserId(bidRequest);
+        UUID editorId = bidRequest.lastGeneratingTriggerUserId();
 
         DocumentType documentType;
         try {
@@ -147,26 +145,6 @@ public class DocumentMcpTool {
     }
 
     // ─── 유틸 ─────────────────────────────────────────────────────────────
-
-    /**
-     * state_history를 역순 순회하여 가장 최근 → GENERATING 전이를 일으킨 userId 반환.
-     * AI 문서 작성의 책임자 = 트리거한 관리자라는 정책의 구현.
-     */
-    private UUID findLastGeneratingTriggerUserId(BidRequest bidRequest) {
-        List<StateTransition> history = bidRequest.getStateHistory();
-        if (history == null || history.isEmpty()) {
-            throw new IllegalStateException(
-                "save_document_version 호출됐으나 state_history 비어있음. bidRequestId=" + bidRequest.getId());
-        }
-        for (int i = history.size() - 1; i >= 0; i--) {
-            StateTransition t = history.get(i);
-            if (t.getToState() == BidRequestState.GENERATING && t.getUserId() != null) {
-                return t.getUserId();
-            }
-        }
-        throw new IllegalStateException(
-            "save_document_version 호출됐으나 GENERATING 트리거 기록 없음. bidRequestId=" + bidRequest.getId());
-    }
 
     @SuppressWarnings("unchecked")
     private Map<String, Object> castMap(Object obj) {

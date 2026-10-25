@@ -1,7 +1,12 @@
 package com.biddingagency.domain.bid.service;
 
 import com.biddingagency.domain.bid.entity.BidRequest;
+import com.biddingagency.domain.bid.entity.BidRequestState;
 import com.biddingagency.domain.bid.repository.ClientDocumentRepository;
+import com.biddingagency.domain.document.entity.BidDocument;
+import com.biddingagency.domain.document.entity.DocumentType;
+import com.biddingagency.domain.document.service.BidDocumentService;
+import com.biddingagency.domain.document.service.DocumentVersionService;
 import com.biddingagency.domain.notice.repository.NoticeRepository;
 import com.biddingagency.domain.opportunity.entity.Opportunity;
 import com.biddingagency.domain.opportunity.entity.OpportunityVisibility;
@@ -25,8 +30,11 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verify;
 
 /**
  * AIWorkflowService.build3PipelineContext 테스트 (CR-014).
@@ -41,6 +49,8 @@ class AIWorkflowServiceTest {
     @Mock private ClientDocumentRepository clientDocumentRepository;
     @Mock private PatternGuideRepository patternGuideRepository;
     @Mock private ReferenceSampleService referenceSampleService;
+    @Mock private BidDocumentService bidDocumentService;
+    @Mock private DocumentVersionService documentVersionService;
 
     @InjectMocks
     private AIWorkflowService aiWorkflowService;
@@ -111,5 +121,23 @@ class AIWorkflowServiceTest {
         Map<String, Object> sg = (Map<String, Object>) context.get("successGuide");
         assertThat(sg).containsKey("checklist");
         assertThat((List<?>) context.get("referenceSamples")).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("제안서작성시작_빈문서생성_GENERATING으로넘긴관리자가편집자")
+    void 제안서작성시작_빈문서_편집자는작성시킨관리자() {
+        BidRequest br = bidRequest(opportunity(IndustryType.GROUND_MAINTENANCE));
+        UUID admin = UUID.randomUUID();
+        br.transitionTo(BidRequestState.GENERATING, admin, "admin@example.com", null);
+        BidDocument doc = BidDocument.builder().build();
+        ReflectionTestUtils.setField(doc, "id", UUID.randomUUID());
+        given(bidDocumentService.findByBidRequestAndType(br.getId(), DocumentType.TECHNICAL_PROPOSAL))
+                .willThrow(new IllegalArgumentException("없음"));
+        given(documentVersionService.createDocument(eq(br.getId()), eq(DocumentType.TECHNICAL_PROPOSAL), any(), eq(admin)))
+                .willReturn(doc);
+
+        ReflectionTestUtils.invokeMethod(aiWorkflowService, "ensureDocument", br, DocumentType.TECHNICAL_PROPOSAL);
+
+        verify(documentVersionService).createDocument(eq(br.getId()), eq(DocumentType.TECHNICAL_PROPOSAL), any(), eq(admin));
     }
 }

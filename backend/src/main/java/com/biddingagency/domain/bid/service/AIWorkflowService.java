@@ -105,8 +105,6 @@ public class AIWorkflowService {
     // 문서 생성 (DOCUMENT_DRAFTING 진입 시)
     // ─────────────────────────────────────────────────────────────────────────
 
-    /** MCP 콜백과 동일한 시스템 편집자 UUID. */
-    private static final UUID SYSTEM_EDITOR = new UUID(0L, 0L);
 
     /**
      * CR-028: 제안서 파이프라인 3단계 (design → write-section → assemble).
@@ -141,7 +139,7 @@ public class AIWorkflowService {
         Opportunity opp = bidRequest.getOpportunity();
 
         // 0. 빈 BidDocument 확보 (design 입력 documentId)
-        UUID documentId = ensureDocument(bidRequestId, documentType);
+        UUID documentId = ensureDocument(bidRequest, documentType);
 
         // 1. design — chapter/section 트리 생성 (Aimbase 가 save_proposal_structure 콜백)
         Map<String, Object> designInput = new HashMap<>();
@@ -299,14 +297,15 @@ public class AIWorkflowService {
         }
     }
 
-    /** 빈 BidDocument 확보 — 이미 있으면 재사용, 없으면 빈 본문으로 생성. */
-    private UUID ensureDocument(UUID bidRequestId, DocumentType documentType) {
+    /** 빈 BidDocument 확보 — 이미 있으면 재사용, 없으면 빈 본문으로 생성. 편집자는 MCP 본문 저장과 같은 책임자다. */
+    private UUID ensureDocument(BidRequest bidRequest, DocumentType documentType) {
+        UUID bidRequestId = bidRequest.getId();
         try {
             BidDocument existing = bidDocumentService.findByBidRequestAndType(bidRequestId, documentType);
             return existing.getId();
         } catch (Exception e) {
             BidDocument created = documentVersionService.createDocument(
-                    bidRequestId, documentType, Map.of(), SYSTEM_EDITOR);
+                    bidRequestId, documentType, Map.of(), bidRequest.lastGeneratingTriggerUserId());
             log.info("[AI] design 용 빈 문서 생성: documentId={}, type={}", created.getId(), documentType);
             return created.getId();
         }
