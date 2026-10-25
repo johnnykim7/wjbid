@@ -1,6 +1,6 @@
 # SAM.gov Bidding Agency Platform API 설계
 
-> 설계 버전: 1.23 | 최종 수정: 2026-10-25 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-144, CR-146, CR-147, CR-152, CR-153, CR-155, CR-157, CR-159, CR-160, CR-162, CR-168, CR-169, CR-170
+> 설계 버전: 1.24 | 최종 수정: 2026-10-25 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-144, CR-146, CR-147, CR-152, CR-153, CR-155, CR-157, CR-159, CR-160, CR-162, CR-168, CR-169, CR-170, CR-178
 
 > 단계: 3. Detail Design | 실행스펙 섹션 3에 포함
 >
@@ -642,6 +642,7 @@ CR-137 전에 있던 `POST /opportunities/{id}/qualification-check`(AI 자격 �
 | 칸 | 설명 |
 |----|------|
 | matrixReady | 그 공고에 매트릭스 줄이 있으면 true. false 면 아래 칸은 비고 화면은 "매트릭스 없음" 을 보인다 |
+| evaluatedDocument | 평가받는 문서면 true (CR-178, BIZ-095). false 면 matrixReady 와 상관없이 아래 칸은 비고(수는 0) 화면은 "평가 대상 아님" 을 보인다 |
 | targetCount | 대상(Shall, 플랫폼 생성) 줄 수 |
 | fulfilledCount | 대상 가운데 이 문서의 절로 충족된 줄 수 |
 | missing | 누락 REQ. 줄마다 reqId, text, unmapped(매핑 안 된 REQ 이면 true) |
@@ -864,8 +865,8 @@ CR-137 전에 있던 `POST /opportunities/{id}/qualification-check`(AI 자격 �
 | get_past_submissions | 과거 제출 이력 조회 (CR-003) | memberId, limit | BID-MCP-002 |
 | get_reference_samples | 공고유형 매칭 성공 제안서 원본 파일 메타+다운로드URL 조회 (CR-013-R) | industryType | BID-RFP-003 |
 | save_pattern_guide | 공고유형별 패턴 가이드 저장 — Aimbase 콜백 (CR-013-R) | industryType, guide{골격/체크리스트/금기} | BID-RFP-003 |
-| get_proposal_design_input | 제안서 설계 입력 (CR-028). 공고 본문, 공고문 요약, 요구서류, factorTree. CR-159: complianceMatrix(reqId, level, text, verb, fulfillmentParty, factorId, factorTitle) 를 더 준다. CR-169: clientDocuments[{readingId, fileName, origin, category, fulfills[{requirementTitle, reqId}], status, factCount, facts[{category, key, value}]}] 를 더 준다. 읽음이 아닌 후보도 상태와 함께 주고, facts 의 value 는 300자까지 | documentId | BID-DOC-001, BID-DOC-005 |
-| save_proposal_structure | 제안서 장과 절 트리 저장 (CR-028). CR-159: 절의 requirementRefs 는 매트릭스의 REQ ID 만 받고, 없는 ID 가 있으면 전체 거부하며 그 ID 들을 준다. 응답에 unassignedReqIds(어느 절에도 없는 대상 REQ ID)를 더한다. 매트릭스 줄이 없는 공고는 검사하지 않는다(BIZ-076). CR-169: 절의 sourceReadingIds 는 그 건 후보 가운데 읽음인 readingId 만 받고, 아닌 id 가 있으면 전체 거부하며 unknownReadingIds 로 준다. 응답에 unusedReadingIds(어느 절에도 걸리지 않은 읽음 서류)를 더한다(BIZ-088) | documentId, chapters[{factorLabel, factorTitle, sourceSection, sections[{subfactorLabel, title, scope, requirementRefs, minWords, sourceReadingIds}]}] | BID-DOC-001, BID-DOC-005 |
+| get_proposal_design_input | 제안서 설계 입력 (CR-028). 공고 본문, 공고문 요약, 요구서류, factorTree. CR-159: complianceMatrix(reqId, level, text, verb, fulfillmentParty, factorId, factorTitle) 를 더 준다. CR-169: clientDocuments[{readingId, fileName, origin, category, fulfills[{requirementTitle, reqId}], status, factCount, facts[{category, key, value}]}] 를 더 준다. 읽음이 아닌 후보도 상태와 함께 주고, facts 의 value 는 300자까지. CR-178: evaluatedDocument(평가받는 문서면 true)를 더 주고, false 면 factorTree, priceItems 는 null, complianceMatrix 는 빈 배열이다(BIZ-095) | documentId | BID-DOC-001, BID-DOC-005 |
+| save_proposal_structure | 제안서 장과 절 트리 저장 (CR-028). CR-159: 절의 requirementRefs 는 매트릭스의 REQ ID 만 받고, 없는 ID 가 있으면 전체 거부하며 그 ID 들을 준다. 응답에 unassignedReqIds(어느 절에도 없는 대상 REQ ID)를 더한다. 매트릭스 줄이 없는 공고는 검사하지 않는다(BIZ-076). CR-169: 절의 sourceReadingIds 는 그 건 후보 가운데 읽음인 readingId 만 받고, 아닌 id 가 있으면 전체 거부하며 unknownReadingIds 로 준다. 응답에 unusedReadingIds(어느 절에도 걸리지 않은 읽음 서류)를 더한다(BIZ-088). CR-178: 평가받지 않는 문서의 절에 requirementRefs 가 하나라도 있으면 전체 거부한다. 그 문서의 unassignedReqIds 는 빈 배열이다(BIZ-095) | documentId, chapters[{factorLabel, factorTitle, sourceSection, sections[{subfactorLabel, title, scope, requirementRefs, minWords, sourceReadingIds}]}] | BID-DOC-001, BID-DOC-005 |
 | get_section_context | 절 작성 입력 (CR-028). 절 범위, requirementRefs, 참조 샘플. CR-159: requirements[{reqId, text, translation, verb, level, factorId, factorTitle}] 를 더 준다. CR-169: sourceDocuments[{readingId, fileName, category, facts[{category, key, value, page, anchor, confidence, readMode}]}] 를 더 준다. 읽음인 근거 서류만 준다 | sectionId | BID-DOC-001, BID-DOC-005 |
 | save_section_blocks | 절 블록 저장 (CR-028). CR-159 변경 없음 | sectionId, blocks | BID-DOC-001 |
 | get_section_verify_input | 절 검증 입력 (CR-031). CR-159: requirements(get_section_context 와 같은 꼴)를 더 준다. CR-169: sourceDocuments(get_section_context 와 같은 꼴)를 더 준다(BIZ-089) | sectionId | BID-DOC-001, BID-DOC-005 |
