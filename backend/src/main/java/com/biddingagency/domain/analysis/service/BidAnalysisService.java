@@ -52,7 +52,7 @@ public class BidAnalysisService {
 
     public static final String TIMEOUT_REASON = "분석 시간 초과";
     public static final String NO_DECISION_REASON = "Bid/No-Bid 결정이 저장되지 않음";
-    private static final String QUESTION_PART = "part";
+    static final String QUESTION_PART = "part";
     private static final TypeReference<List<Map<String, Object>>> QUESTION_LIST = new TypeReference<>() {
     };
 

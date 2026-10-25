@@ -89,6 +89,7 @@ public class BidAnalysisInputService {
                 result.put("company", company(bidRequest.getMember()));
                 result.put("clientDocuments", documentReadingService.designInputDocuments(bidRequestId));
                 result.put("report", parse(analysis.getReportJson()));
+                result.put("priorQuestions", priorQuestions(analysis, step));
             }
             case DECISION -> {
                 result.put("report", reportForDecision(parse(analysis.getReportJson())));
@@ -100,6 +101,7 @@ public class BidAnalysisInputService {
                 pwin.put("weights", policy.weights());
                 pwin.put("thresholds", policy.thresholds());
                 result.put("pwinPolicy", pwin);
+                result.put("priorQuestions", priorQuestions(analysis, step));
             }
         }
         return result;
@@ -254,6 +256,21 @@ public class BidAnalysisInputService {
 
     private static Map<String, Object> nullSafe(Map<String, Object> m) {
         return m != null ? m : Map.of();
+    }
+
+    /** 앞 단계가 올린 확인 필요. 단계마다 따로 올려 같은 질문이 겹치므로 뒤 단계가 보고 새 것만 올린다 */
+    private List<Map<String, Object>> priorQuestions(BidAnalysis analysis, Step step) {
+        List<Map<String, Object>> out = new ArrayList<>();
+        if (!(parse(analysis.getQuestionsJson()) instanceof List<?> saved)) return out;
+        for (Object o : saved) {
+            if (o instanceof Map<?, ?> q && !step.name().equals(q.get(BidAnalysisService.QUESTION_PART))) {
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("target", q.get("target"));
+                m.put("question", q.get("question"));
+                out.add(m);
+            }
+        }
+        return out;
     }
 
     private Object parse(String json) {
