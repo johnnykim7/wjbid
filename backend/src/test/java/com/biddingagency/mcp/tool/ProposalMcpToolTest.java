@@ -20,6 +20,7 @@ import com.biddingagency.domain.opportunity.entity.OpportunityRequirementItem;
 import com.biddingagency.domain.opportunity.entity.OpportunityVisibility;
 import com.biddingagency.domain.opportunity.repository.OpportunityRequirementItemRepository;
 import com.biddingagency.domain.proposal.entity.ProposalSection;
+import com.biddingagency.domain.proposal.service.DocumentCompositionService;
 import com.biddingagency.domain.proposal.service.ProposalService;
 import com.biddingagency.domain.proposal.service.VerificationLogService;
 import com.biddingagency.domain.reading.service.DocumentReadingService;
@@ -35,6 +36,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Clock;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -52,6 +54,7 @@ import static org.mockito.Mockito.never;
 /**
  * TC-COMP-013 ~ TC-COMP-020: 제안서 도구가 컴플라이언스 매트릭스를 쓴다 (CR-159, BIZ-076, BIZ-077)
  * TC-DOC-288, 289, TC-COMP-028, 029: 평가받지 않는 문서는 평가 항목과 대응 REQ ID 를 받지 않는다 (CR-178, BIZ-095)
+ * TC-DOC-298 ~ 301, TC-COMP-032, 033: 문서마다 자기 평가 항목과 그 항목의 줄만 받는다 (CR-179, BIZ-096)
  */
 @ExtendWith(MockitoExtension.class)
 class ProposalMcpToolTest {
@@ -76,10 +79,13 @@ class ProposalMcpToolTest {
 
     @BeforeEach
     void setUp() {
+        DocumentCompositionService compositionService = new DocumentCompositionService(noticeRepository, "COVER_LETTER,TECHNICAL_PROPOSAL");
         ComplianceService complianceService = new ComplianceService(bidRequestRepository, requirementRepository,
-                fulfillmentMapRepository, documentRepository, noticeRepository, proposalService, Clock.systemDefaultZone());
+                fulfillmentMapRepository, documentRepository, noticeRepository, proposalService, compositionService,
+                Clock.systemDefaultZone());
         tool = new ProposalMcpTool(bidRequestService, bidDocumentService, noticeRepository, proposalService,
-                referenceSampleService, verificationLogService, complianceService, documentReadingService, objectMapper);
+                referenceSampleService, verificationLogService, complianceService, compositionService, documentReadingService,
+                objectMapper);
         req1 = f.shallPlatform("REQ-001", ComplianceFixture.QC);
         req2 = f.shallPlatform("REQ-002", ComplianceFixture.PP);
         lenient().when(documentRepository.findById(f.document.getId())).thenReturn(Optional.of(f.document));
@@ -342,6 +348,115 @@ class ProposalMcpToolTest {
         Map<String, Object> args = Map.of("documentId", cover.getId().toString(), "chapters", List.of(Map.of(
                 "factorLabel", "1", "factorTitle", "Cover Letter",
                 "sections", List.of(Map.of("title", "Cover Letter", "requirementRefs", List.of())))));
+
+        JsonNode result = objectMapper.readTree(tool.saveProposalStructure(args));
+
+        assertThat(result.get("unassignedReqIds").size()).isZero();
+    }
+
+    private BidDocument documentOf(DocumentType type) {
+        BidDocument document = f.document(type);
+        lenient().when(documentRepository.findById(document.getId())).thenReturn(Optional.of(document));
+        lenient().when(bidDocumentService.findById(document.getId())).thenReturn(document);
+        return document;
+    }
+
+    /** F1 줄 10, F2 줄 3, 평가 항목 없는 줄 2 */
+    private void givenComposedNotice(String factorTreeJson) {
+        List<OpportunityRequirementItem> lines = new ArrayList<>();
+        for (int i = 1; i <= 15; i++) {
+            lines.add(f.shallPlatformOf(String.format("REQ-%03d", i), i <= 10 ? "F1" : i <= 13 ? "F2" : null));
+        }
+        lenient().when(requirementRepository.findByOpportunityIdAndReqIdIsNotNullOrderBySortOrderAsc(f.opportunityId()))
+                .thenReturn(lines);
+        lenient().when(bidRequestService.findByIdWithDetails(f.bidRequest.getId())).thenReturn(f.bidRequest);
+        lenient().when(noticeRepository.findFirstByOpportunityIdAndVisibilityOrderByAnalyzedAtDesc(f.opportunityId(),
+                OpportunityVisibility.VISIBLE)).thenReturn(Optional.of(f.notice(factorTreeJson)));
+    }
+
+    private JsonNode composedInput(BidDocument document) throws Exception {
+        return objectMapper.readTree(tool.getProposalDesignInput(Map.of("documentId", document.getId().toString())));
+    }
+
+    private static List<String> texts(JsonNode array, String field) {
+        List<String> values = new ArrayList<>();
+        array.forEach(node -> values.add(node.get(field).isNull() ? null : node.get(field).asText()));
+        return values;
+    }
+
+    @Test
+    @DisplayName("TC-DOC-298 과거실적_설계입력_자기평가항목과줄만")
+    void 과거실적_설계입력_자기평가항목과줄만() throws Exception {
+        givenComposedNotice(ComplianceFixture.COMPOSED_TREE);
+
+        JsonNode input = composedInput(documentOf(DocumentType.PAST_PERFORMANCE));
+
+        assertThat(List.<Object>of(texts(input.get("factorTree").get("factors"), "factorId"),
+                texts(input.get("complianceMatrix"), "reqId")))
+                .containsExactly(List.of("F2"), List.of("REQ-011", "REQ-012", "REQ-013"));
+    }
+
+    @Test
+    @DisplayName("TC-DOC-299 기술제안서_설계입력_평가항목없는줄까지받음")
+    void 기술제안서_설계입력_평가항목없는줄까지받음() throws Exception {
+        givenComposedNotice(ComplianceFixture.COMPOSED_TREE);
+
+        JsonNode input = composedInput(f.document);
+
+        assertThat(List.<Object>of(texts(input.get("factorTree").get("factors"), "factorId"), input.get("complianceMatrix").size()))
+                .containsExactly(List.of("F1"), 12);
+    }
+
+    @Test
+    @DisplayName("TC-DOC-300 가격항목_가격요약있으면_가격요약만")
+    void 가격항목_가격요약있으면_가격요약만() throws Exception {
+        givenComposedNotice(ComplianceFixture.COMPOSED_TREE);
+
+        JsonNode pricing = composedInput(documentOf(DocumentType.PRICING_SUMMARY));
+        JsonNode technical = composedInput(f.document);
+
+        assertThat(List.of(pricing.get("priceItems").isNull(), technical.get("priceItems").isNull())).containsExactly(false, true);
+    }
+
+    @Test
+    @DisplayName("TC-DOC-301 가격항목_가격요약없으면_첫평가문서")
+    void 가격항목_가격요약없으면_첫평가문서() throws Exception {
+        givenComposedNotice("{\"coverLetterRequired\":false,\"factors\":[{\"factorId\":\"F1\",\"documentType\":\"TECHNICAL_PROPOSAL\"}]}");
+
+        JsonNode technical = composedInput(f.document);
+
+        assertThat(technical.get("priceItems").isNull()).isFalse();
+    }
+
+    @Test
+    @DisplayName("TC-COMP-032 과거실적_설계저장_남의줄REQ있으면_전체거부")
+    void 과거실적_설계저장_남의줄REQ있으면_전체거부() {
+        givenComposedNotice(ComplianceFixture.COMPOSED_TREE);
+        BidDocument pastPerformance = documentOf(DocumentType.PAST_PERFORMANCE);
+        Map<String, Object> args = Map.of("documentId", pastPerformance.getId().toString(), "chapters", List.of(Map.of(
+                "factorLabel", "B", "factorTitle", "FACTOR B. PAST PERFORMANCE",
+                "sections", List.of(Map.of("title", "Past Performance", "requirementRefs", List.of("REQ-011", "REQ-001"))))));
+
+        assertThatThrownBy(() -> tool.saveProposalStructure(args))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("REQ-001")
+                .hasMessageNotContaining("REQ-011");
+        then(proposalService).should(never()).saveStructure(any(), any());
+    }
+
+    @Test
+    @DisplayName("TC-COMP-033 과거실적_미배정_자기줄로만셈")
+    void 과거실적_미배정_자기줄로만셈() throws Exception {
+        givenComposedNotice(ComplianceFixture.COMPOSED_TREE);
+        BidDocument pastPerformance = documentOf(DocumentType.PAST_PERFORMANCE);
+        List<String> own = List.of("REQ-011", "REQ-012", "REQ-013");
+        ProposalSection section = f.section("Past Performance", own);
+        given(proposalService.saveStructure(any(), any())).willReturn(List.of(f.chapter));
+        given(proposalService.getSections(f.chapter.getId())).willReturn(List.of(section));
+        given(proposalService.getAllSections(pastPerformance.getId())).willReturn(List.of(section));
+        Map<String, Object> args = Map.of("documentId", pastPerformance.getId().toString(), "chapters", List.of(Map.of(
+                "factorLabel", "B", "factorTitle", "FACTOR B. PAST PERFORMANCE",
+                "sections", List.of(Map.of("title", "Past Performance", "requirementRefs", own)))));
 
         JsonNode result = objectMapper.readTree(tool.saveProposalStructure(args));
 

@@ -4,16 +4,18 @@ import com.biddingagency.domain.bid.entity.BidRequest;
 import com.biddingagency.domain.bid.service.BidRequestService;
 import com.biddingagency.domain.compliance.service.ComplianceService;
 import com.biddingagency.domain.document.entity.BidDocument;
+import com.biddingagency.domain.document.entity.DocumentType;
 import com.biddingagency.domain.document.service.BidDocumentService;
 import com.biddingagency.domain.notice.entity.Notice;
 import com.biddingagency.domain.notice.repository.NoticeRepository;
 import com.biddingagency.domain.opportunity.entity.Opportunity;
-import com.biddingagency.domain.opportunity.entity.OpportunityVisibility;
 import com.biddingagency.domain.proposal.entity.ProposalBlock;
 import com.biddingagency.domain.proposal.entity.ProposalChapter;
 import com.biddingagency.domain.proposal.entity.ProposalSection;
 import com.biddingagency.domain.proposal.entity.VerificationTargetType;
 import com.biddingagency.domain.proposal.entity.Verdict;
+import com.biddingagency.domain.proposal.service.DocumentComposition;
+import com.biddingagency.domain.proposal.service.DocumentCompositionService;
 import com.biddingagency.domain.proposal.service.ProposalService;
 import com.biddingagency.domain.proposal.service.ProposalService.BlockInput;
 import com.biddingagency.domain.proposal.service.ProposalService.ChapterInput;
@@ -54,6 +56,7 @@ public class ProposalMcpTool {
     private final ReferenceSampleService referenceSampleService;
     private final VerificationLogService verificationLogService;
     private final ComplianceService complianceService;
+    private final DocumentCompositionService documentCompositionService;
     private final DocumentReadingService documentReadingService;
     private final ObjectMapper objectMapper;
 
@@ -68,7 +71,9 @@ public class ProposalMcpTool {
                     "CR-159: complianceMatrix(컴플라이언스 매트릭스 줄 [{reqId, level, text, verb, fulfillmentParty, factorId, factorTitle}])가 있으면 " +
                     "section 마다 답할 reqId 를 requirementRefs 로 정하세요. level=SHALL 이면서 fulfillmentParty=PLATFORM_GENERATED 인 줄은 빠짐없이 어느 section 엔가 걸어야 합니다. " +
                     "CR-169: clientDocuments(고객 서류 [{readingId, fileName, origin, category, fulfills, status, factCount, facts[{category, key, value}]}])를 보고 " +
-                    "section 마다 쓸 근거 서류의 readingId 를 sourceReadingIds 로 정하세요. status=DONE 인 서류만 쓸 수 있습니다.",
+                    "section 마다 쓸 근거 서류의 readingId 를 sourceReadingIds 로 정하세요. status=DONE 인 서류만 쓸 수 있습니다. " +
+                    "CR-179: factorTree, complianceMatrix, priceItems 는 이 문서가 담을 평가 항목의 것만 옵니다. " +
+                    "factorTree.factors 에 없는 평가 항목은 다른 문서가 담으므로 공고 본문에서 찾아 chapter 로 더하지 마세요.",
             "inputSchema", Map.of(
                 "type", "object",
                 "properties", Map.of(
@@ -83,6 +88,7 @@ public class ProposalMcpTool {
                     "공고가 박은 라벨·순서를 그대로 보존하세요(창작 금지). LOCKED section 이 하나라도 있으면 거부됩니다. " +
                     "CR-159: 공고에 컴플라이언스 매트릭스가 있으면 requirementRefs 는 그 reqId 만 받고, 없는 ID 가 하나라도 있으면 전체를 거부하며 그 ID 를 알려 줍니다. " +
                     "저장되면 unassignedReqIds(어느 section 에도 걸리지 않은 SHALL 이면서 PLATFORM_GENERATED 인 reqId)를 돌려줍니다. " +
+                    "CR-179: 매트릭스에 있어도 이 문서의 complianceMatrix 에 없는 reqId(다른 문서의 평가 항목 줄)가 있으면 전체를 거부합니다. " +
                     "CR-169: sourceReadingIds 는 get_proposal_design_input 의 clientDocuments 가운데 status=DONE 인 readingId 만 받고, 아닌 id 가 있으면 전체를 거부하며 unknownReadingIds 로 알려 줍니다. " +
                     "저장되면 unusedReadingIds(어느 section 에도 걸리지 않은 읽음 서류)를 돌려줍니다.",
             "inputSchema", Map.of(
@@ -228,22 +234,24 @@ public class ProposalMcpTool {
         result.put("opportunityText", buildOpportunityText(opp));
 
         // 노출 중인 공고문(Notice) 최신 1건 — 한글화 요약·요구서류·본문·factorTree
-        Notice notice = noticeRepository
-                .findFirstByOpportunityIdAndVisibilityOrderByAnalyzedAtDesc(opp.getId(), OpportunityVisibility.VISIBLE)
-                .filter(Notice::isGenerationCompleted)
-                .orElse(null);
+        Notice notice = documentCompositionService.designNotice(opp.getId()).orElse(null);
+        // BIZ-096: 문서마다 자기 평가 항목과 그 항목의 매트릭스 줄, 가격 항목만 받는다
+        DocumentComposition composition = documentCompositionService.compose(notice);
+        DocumentType documentType = doc.getDocumentType();
         if (notice != null) {
             result.put("noticeSummary", nullSafe(notice.getSummaryJson()));
             result.put("requiredDocuments", nullSafe(notice.getRequiredDocumentsJson()));
             result.put("documentFormats", nullSafe(notice.getDocumentFormatsJson()));
             result.put("noticeContent", nullSafe(notice.getContentJson()));
-            result.put("factorTree", evaluated ? notice.getFactorTreeJson() : null);   // 평가받는 문서에서 null 이면 WF 가 본문 발췌
-            result.put("priceItems", evaluated ? notice.getPriceItemsJson() : null);
+            result.put("factorTree", evaluated ? composition.factorTreeFor(documentType, notice.getFactorTreeJson()) : null);   // 평가받는 문서에서 null 이면 WF 가 본문 발췌
+            result.put("priceItems", evaluated && composition.priceOwner() == documentType ? notice.getPriceItemsJson() : null);
         } else {
             result.put("factorTree", null);
             result.put("priceItems", null);
         }
-        result.put("complianceMatrix", evaluated ? complianceService.designInputLines(opp.getId()) : List.of());
+        result.put("complianceMatrix", evaluated ? complianceService.designInputLines(opp.getId()).stream()
+                .filter(line -> composition.owns(documentType, (String) line.get("factorId")))
+                .toList() : List.of());
         result.put("clientDocuments", documentReadingService.designInputDocuments(bidRequest.getId()));
         return toJson(result);
     }

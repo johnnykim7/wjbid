@@ -5,6 +5,8 @@ import com.biddingagency.domain.bid.entity.BidRequest;
 import com.biddingagency.domain.compliance.entity.FulfillmentParty;
 import com.biddingagency.domain.document.entity.BidDocument;
 import com.biddingagency.domain.document.entity.DocumentType;
+import com.biddingagency.domain.notice.entity.Notice;
+import com.biddingagency.domain.notice.entity.NoticeGenerationStatus;
 import com.biddingagency.domain.opportunity.entity.Opportunity;
 import com.biddingagency.domain.opportunity.entity.OpportunityRequirementItem;
 import com.biddingagency.domain.opportunity.entity.RequirementCategory;
@@ -24,6 +26,14 @@ public final class ComplianceFixture {
 
     public static final String QC = "The offeror shall describe its quality control plan.";
     public static final String PP = "The offeror shall provide three past performance references.";
+    /** CR-179 문서 구성이 있는 평가 항목 구조: F1 기술 제안서, F2 과거 수행 실적, F3 가격 요약, 커버레터 요구 없음 */
+    public static final String COMPOSED_TREE = "{\"method\":\"LPTA\",\"coverLetterRequired\":false,\"factors\":["
+            + "{\"factorId\":\"F1\",\"title\":\"FACTOR A. TECHNICAL\",\"documentType\":\"TECHNICAL_PROPOSAL\"},"
+            + "{\"factorId\":\"F2\",\"title\":\"FACTOR B. PAST PERFORMANCE\",\"documentType\":\"PAST_PERFORMANCE\"},"
+            + "{\"factorId\":\"F3\",\"title\":\"FACTOR C. PRICE\",\"documentType\":\"PRICING_SUMMARY\"}]}";
+    /** 문서 구성이 없는 옛 평가 항목 구조 */
+    public static final String OLD_TREE = "{\"method\":\"LPTA\",\"factors\":["
+            + "{\"factorId\":\"F1\",\"title\":\"FACTOR A. TECHNICAL\"},{\"factorId\":\"F2\",\"title\":\"FACTOR B. PAST PERFORMANCE\"}]}";
 
     public final Opportunity opportunity = TestHelper.withId(Opportunity.builder().build());
     public final BidRequest bidRequest = TestHelper.withId(BidRequest.builder().opportunity(opportunity).build());
@@ -51,6 +61,22 @@ public final class ComplianceFixture {
 
     public OpportunityRequirementItem shallPlatform(String reqId, String text) {
         return line(reqId, RequirementLevel.SHALL, FulfillmentParty.PLATFORM_GENERATED, text);
+    }
+
+    /** 평가 항목 factorId 에 걸린 Shall 플랫폼 생성 줄. factorId 가 null 이면 평가 항목이 없는 줄 */
+    public OpportunityRequirementItem shallPlatformOf(String reqId, String factorId) {
+        OpportunityRequirementItem item = shallPlatform(reqId, "The offeror shall address " + reqId + ".");
+        item.getRequirementJson().put(RequirementSyncService.KEY_FACTOR_ID, factorId);
+        return item;
+    }
+
+    public BidDocument document(DocumentType type) {
+        return TestHelper.withId(BidDocument.builder().bidRequest(bidRequest).documentType(type).build());
+    }
+
+    public Notice notice(String factorTreeJson) {
+        return Notice.builder().opportunity(opportunity).generationStatus(NoticeGenerationStatus.COMPLETED)
+                .factorTreeJsonRaw(factorTreeJson).priceItemsJsonRaw("{\"items\":[{\"clin\":\"0001\"}]}").build();
     }
 
     public ProposalSection section(String title, List<String> refs) {
