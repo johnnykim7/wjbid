@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import {
   Badge,
   Button,
@@ -21,11 +23,14 @@ import {
   DECISION_NOTE_LABEL,
   DECISION_NOTE_MAX,
   DECISION_NOTE_MISSING,
+  PrintMode,
   QUESTION_TARGET_LABEL,
   STATUS_LABEL,
   VERDICT_LABEL,
   allowsGeneration,
   formatDateTime,
+  printFileName,
+  projectNameOf,
   questionTopic,
   requirementTexts,
 } from './bidAnalysis'
@@ -48,6 +53,10 @@ function errorOf(err: unknown) {
 }
 
 const QUESTION_TARGETS = ['CUSTOMER', 'ADMIN'] as const
+
+function questionsFor(questions: BidQuestion[], target: string) {
+  return questions.filter((q) => (q.target ?? 'ADMIN') === target)
+}
 
 function QuestionList({ list }: { list: BidQuestion[] }) {
   if (list.length === 0) return <p className="py-3 text-sm text-gray-400">없음</p>
@@ -79,7 +88,7 @@ function QuestionList({ list }: { list: BidQuestion[] }) {
 function Questions({ questions }: { questions: BidQuestion[] }) {
   const [target, setTarget] = useState<string>('CUSTOMER')
   if (questions.length === 0) return null
-  const of = (t: string) => questions.filter((q) => (q.target ?? 'ADMIN') === t)
+  const of = (t: string) => questionsFor(questions, t)
   return (
     <div className="space-y-2">
       <h3 className="text-sm font-semibold text-gray-900">
@@ -105,6 +114,87 @@ function NotSaved() {
   return <p className="text-sm text-gray-400">아직 저장되지 않았습니다.</p>
 }
 
+function Summary({ analysis }: { analysis: BidAnalysis }) {
+  return (
+    <div className="space-y-1.5 text-sm">
+      {analysis.status === 'FAILED' && analysis.failureReason && (
+        <p className="text-red-700">{analysis.failureReason}</p>
+      )}
+      {analysis.pwinPercent !== null && (
+        <p className="text-gray-800">
+          Pwin <b>{analysis.pwinPercent}%</b>
+          {analysis.aiVerdict && <> · 판정 <b>{VERDICT_LABEL[analysis.aiVerdict]}</b></>}
+        </p>
+      )}
+      {analysis.verdictReason && <p className="text-gray-600">{analysis.verdictReason}</p>}
+      {analysis.adminDecision && (
+        <p className="text-gray-800">
+          관리자 결정 <b>{DECISION_LABEL[analysis.adminDecision]}</b>
+          <span className="text-gray-500"> · {analysis.decidedBy?.name ?? '-'} · {formatDateTime(analysis.decidedAt)}</span>
+        </p>
+      )}
+      {analysis.adminDecision && analysis.adminNote && (
+        <p className="text-gray-600 whitespace-pre-line">{[DECISION_NOTE_LABEL[analysis.adminDecision], analysis.adminNote].filter(Boolean).join(' ')}</p>
+      )}
+    </div>
+  )
+}
+
+function PrintPart({ no, title, children }: { no: number; title: string; children: ReactNode }) {
+  return (
+    <section className="print-part space-y-4 pt-6">
+      <h2 className="text-base font-bold text-gray-900">{no}. {title}</h2>
+      {children}
+    </section>
+  )
+}
+
+/** CR-181 세 탭과 확인 필요를 이어 붙인 인쇄용 문서. 인쇄 때는 body 아래 이것만 찍힌다(index.css) */
+function PrintDocument({ analysis, reqTexts }: { analysis: BidAnalysis; reqTexts: Record<string, string> }) {
+  const projectName = projectNameOf(analysis.report)
+  const questions = analysis.questions ?? []
+  return createPortal(
+    <div className="bid-analysis-print">
+      <PrintMode.Provider value>
+        <header className="space-y-2 border-b border-gray-200 pb-4">
+          <h1 className="text-lg font-bold text-gray-900">입찰 분석</h1>
+          {projectName && <p className="text-base font-semibold text-gray-900">{projectName}</p>}
+          <p className="text-sm text-gray-600">
+            {STATUS_LABEL[analysis.status]} · {formatDateTime(analysis.startedAt)}
+            {analysis.finishedAt && ` ~ ${formatDateTime(analysis.finishedAt)}`}
+          </p>
+          <Summary analysis={analysis} />
+        </header>
+        <PrintPart no={1} title="종합 분석 리포트">
+          {analysis.report ? <ReportView report={analysis.report as Json} reqTexts={reqTexts} /> : <NotSaved />}
+        </PrintPart>
+        <PrintPart no={2} title="캡처플랜">
+          {analysis.capturePlan
+            ? <CapturePlanView plan={analysis.capturePlan as Json} issueRanking={analysis.issueRanking} />
+            : <NotSaved />}
+        </PrintPart>
+        <PrintPart no={3} title="Bid/No-Bid 결정">
+          {analysis.decision
+            ? <DecisionView decision={analysis.decision as Json} scores={analysis.scores}
+                strengths={analysis.strengths} weaknesses={analysis.weaknesses} />
+            : <NotSaved />}
+        </PrintPart>
+        {questions.length > 0 && (
+          <PrintPart no={4} title={`확인 필요 ${questions.length}건`}>
+            {QUESTION_TARGETS.map((t) => (
+              <div key={t} className="space-y-1">
+                <h3 className="text-sm font-semibold text-gray-900">{QUESTION_TARGET_LABEL[t]} {questionsFor(questions, t).length}</h3>
+                <QuestionList list={questionsFor(questions, t)} />
+              </div>
+            ))}
+          </PrintPart>
+        )}
+      </PrintMode.Provider>
+    </div>,
+    document.body,
+  )
+}
+
 /**
  * CR-170 입찰 상세 관리의 입찰 분석 영역.
  * 분석 중이거나 서류를 읽는 중이면 10초마다 다시 부르고, 관리자 결정이 문서 작성 중 전환을 허용하는지 상태 패널에 알린다.
@@ -128,6 +218,8 @@ export default function BidAnalysisPanel({ bidRequestId, bidState, noticeId, rel
   const [saving, setSaving] = useState(false)
   const [confirmRerun, setConfirmRerun] = useState(false)
   const [rerunning, setRerunning] = useState(false)
+  // 누를 때마다 새 객체라 인쇄 창이 afterprint 없이 닫혀 남아 있어도 다시 누르면 다시 연다
+  const [printJob, setPrintJob] = useState<{ title: string } | null>(null)
   const notify = useRef(onDecisionChange)
   notify.current = onDecisionChange
   const formKey = useRef<string | null>(null)
@@ -240,6 +332,20 @@ export default function BidAnalysisPanel({ bidRequestId, bidState, noticeId, rel
     }
   }
 
+  // 인쇄 창의 PDF 파일 이름 기본값이 문서 제목이라 창이 열려 있는 동안만 바꾼다
+  useEffect(() => {
+    if (printJob === null) return
+    const screenTitle = document.title
+    document.title = printJob.title
+    const done = () => setPrintJob(null)
+    window.addEventListener('afterprint', done)
+    window.print()
+    return () => {
+      window.removeEventListener('afterprint', done)
+      document.title = screenTitle
+    }
+  }, [printJob])
+
   const canRerun = analyzing && !running && !readingInProgress
   const canDecide = analyzing && !running
   const showTabs = analysis !== null && analysis.status !== 'DECISION_ONLY'
@@ -251,11 +357,21 @@ export default function BidAnalysisPanel({ bidRequestId, bidState, noticeId, rel
           <i className="fa-solid fa-scale-balanced text-secondary" /> 입찰 분석
         </h2>
         {analysis && <Badge variant={STATUS_VARIANT[analysis.status]} size="sm">{STATUS_LABEL[analysis.status]}</Badge>}
-        {analyzing && !loading && !failed && (
-          <Button variant="outline" size="sm" className="ml-auto" disabled={!canRerun || rerunning}
-            onClick={() => setConfirmRerun(true)}>
-            다시 분석
-          </Button>
+        {!loading && !failed && (
+          <div className="ml-auto flex items-center gap-2">
+            {showTabs && analysis && (
+              <Button variant="outline" size="sm"
+                onClick={() => setPrintJob({ title: printFileName(projectNameOf(analysis.report), analysis.startedAt) })}>
+                <i className="fa-solid fa-file-pdf mr-1" /> PDF 다운로드
+              </Button>
+            )}
+            {analyzing && (
+              <Button variant="outline" size="sm" disabled={!canRerun || rerunning}
+                onClick={() => setConfirmRerun(true)}>
+                다시 분석
+              </Button>
+            )}
+          </div>
         )}
       </div>
 
@@ -273,27 +389,7 @@ export default function BidAnalysisPanel({ bidRequestId, bidState, noticeId, rel
               {readingInProgress ? '고객 서류를 다 읽으면 입찰 분석을 시작합니다' : '입찰 분석이 없습니다'}
             </p>
           ) : (
-            <div className="space-y-1.5 text-sm">
-              {analysis.status === 'FAILED' && analysis.failureReason && (
-                <p className="text-red-700">{analysis.failureReason}</p>
-              )}
-              {analysis.pwinPercent !== null && (
-                <p className="text-gray-800">
-                  Pwin <b>{analysis.pwinPercent}%</b>
-                  {analysis.aiVerdict && <> · 판정 <b>{VERDICT_LABEL[analysis.aiVerdict]}</b></>}
-                </p>
-              )}
-              {analysis.verdictReason && <p className="text-gray-600">{analysis.verdictReason}</p>}
-              {analysis.adminDecision && (
-                <p className="text-gray-800">
-                  관리자 결정 <b>{DECISION_LABEL[analysis.adminDecision]}</b>
-                  <span className="text-gray-500"> · {analysis.decidedBy?.name ?? '-'} · {formatDateTime(analysis.decidedAt)}</span>
-                </p>
-              )}
-              {analysis.adminDecision && analysis.adminNote && (
-                <p className="text-gray-600 whitespace-pre-line">{[DECISION_NOTE_LABEL[analysis.adminDecision], analysis.adminNote].filter(Boolean).join(' ')}</p>
-              )}
-            </div>
+            <Summary analysis={analysis} />
           )}
 
           {showTabs && analysis && (
@@ -352,6 +448,8 @@ export default function BidAnalysisPanel({ bidRequestId, bidState, noticeId, rel
           )}
         </>
       )}
+
+      {printJob && showTabs && analysis && <PrintDocument analysis={analysis} reqTexts={reqTexts} />}
 
       <ConfirmDialog
         open={confirmRerun}
