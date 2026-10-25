@@ -20,7 +20,7 @@ import static com.biddingagency.domain.analysis.service.BidAnalysisFixtures.m;
 import static com.biddingagency.domain.analysis.service.BidAnalysisFixtures.report;
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** TC-DOC-260~264, 266: Bid/No-Bid 결정 저장 때 서버 계산 (CR-170, BIZ-091, POL-041) */
+/** TC-DOC-260~264, 266: Bid/No-Bid 결정 저장 때 서버 계산 (CR-170, BIZ-091, POL-041). IT-10-060, IT-10-061 의 단위 판정을 겸한다 */
 class BidAnalysisScoringTest {
 
     private static final PwinPolicy DEFAULTS = PwinPolicy.defaults();
@@ -45,13 +45,14 @@ class BidAnalysisScoringTest {
     }
 
     @Test
-    @DisplayName("TC-DOC-262 결정저장_해결할수없는자격_NoGo")
+    @DisplayName("IT-10-060 7 TC-DOC-262 결정저장_해결할수없는자격_NoGo")
     void 해결할수없는자격_NoGo() {
         Map<String, Object> decision = decision(4);
         decision.put("qualification", l(m("item", "시설 보안 허가", "resolvable", false)));
 
         BidAnalysisScoring.Result r = BidAnalysisScoring.compute(decision, report(), capturePlan(), DEFAULTS);
 
+        assertThat(r.pwinPercent()).isGreaterThanOrEqualTo(new BigDecimal("70"));
         assertThat(r.verdict()).isEqualTo(BidVerdict.NO_GO);
         assertThat(r.verdictReason()).contains("시설 보안 허가");
     }
@@ -75,7 +76,7 @@ class BidAnalysisScoringTest {
     }
 
     @Test
-    @DisplayName("TC-DOC-266 정책값합틀림_초기값으로계산")
+    @DisplayName("IT-10-061 3 TC-DOC-266 정책값합틀림_초기값으로계산")
     void 정책값합틀림_초기값() {
         Logger logger = (Logger) LoggerFactory.getLogger(PwinPolicy.class);
         ListAppender<ILoggingEvent> appender = new ListAppender<>();
@@ -84,6 +85,25 @@ class BidAnalysisScoringTest {
         try {
             PwinPolicy policy = PwinPolicy.of(
                     "CUSTOMER_RELATION:15,SOLUTION_FIT:10,COMPETITION:15,PRICE:15,PAST_PERFORMANCE:15,PERSONNEL:10,ENVIRONMENT:10",
+                    "70,50,30");
+
+            assertThat(policy.weights()).isEqualTo(DEFAULTS.weights());
+            assertThat(appender.list).filteredOn(e -> e.getFormattedMessage().contains("BID_PWIN_WEIGHTS")).hasSize(1);
+        } finally {
+            logger.detachAppender(appender);
+        }
+    }
+
+    @Test
+    @DisplayName("IT-10-061 3 정책값팩터빠짐_초기값으로계산")
+    void 정책값팩터빠짐_초기값() {
+        Logger logger = (Logger) LoggerFactory.getLogger(PwinPolicy.class);
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+        try {
+            PwinPolicy policy = PwinPolicy.of(
+                    "CUSTOMER_RELATION:15,SOLUTION_FIT:30,COMPETITION:15,PRICE:15,PAST_PERFORMANCE:15,PERSONNEL:10",
                     "70,50,30");
 
             assertThat(policy.weights()).isEqualTo(DEFAULTS.weights());

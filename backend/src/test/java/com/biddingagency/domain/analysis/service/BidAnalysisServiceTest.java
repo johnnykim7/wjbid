@@ -241,7 +241,7 @@ class BidAnalysisServiceTest {
     }
 
     @Test
-    @DisplayName("TC-DOC-255 워크플로우끝_결정없음_분석실패")
+    @DisplayName("IT-10-066 1 TC-DOC-255 워크플로우끝_결정없음_분석실패")
     void 워크플로우끝_결정없음_분석실패() {
         BidAnalysis a = running(now());
         service.save(bid.getId(), a.getId(), Part.REPORT, report(), List.of());
@@ -307,7 +307,7 @@ class BidAnalysisServiceTest {
     }
 
     @Test
-    @DisplayName("TC-DOC-287 정책값변경_다음계산부터_앞회차그대로")
+    @DisplayName("IT-10-061 1,2 TC-DOC-287 정책값변경_다음계산부터_앞회차그대로")
     void 정책값변경_앞회차그대로() {
         Map<String, Object> ours = BidAnalysisFixtures.factors(3);
         ours.put("CUSTOMER_RELATION", BidAnalysisFixtures.m("score", 5, "basis", "근거"));

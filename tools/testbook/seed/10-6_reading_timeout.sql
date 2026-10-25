@@ -2,6 +2,7 @@
 -- 대상 IT-10-047
 -- 분석 단계에서 하루 전부터 읽는 중으로 멈춘 서류가 있는 입찰 건 두 개. 1번은 화면 시험, 2번은 서버 판정 몫이다
 -- 초과 기준은 워크플로우 대기 한도(설정 간격과 횟수)라 서버마다, 설정을 바꿀 때마다 달라진다. 어느 한도보다도 오래된 하루 전으로 둔다
+-- 문서 작성 중으로 넘기려면 지금 분석의 관리자 결정이 Go 여야 해서(CR-170, BIZ-092) 결정만 있는 회차를 둔다
 -- @key 10.b047_virtual_bid SELECT '[[uuid:03:1]]' AS id, HEX(id) AS hex FROM bid_requests WHERE id = [[id:03:1]] AND state = 'ANALYZING'
 -- @key 10.b047_server_bid SELECT '[[uuid:03:2]]' AS id, HEX(id) AS hex FROM bid_requests WHERE id = [[id:03:2]] AND state = 'ANALYZING'
 INSERT INTO members (id, email, company_name, role, created_at, updated_at)
@@ -18,3 +19,7 @@ VALUES ([[id:04:1]], [[id:01:1]], [[id:03:1]], '실적증명서.pdf', 'seed/10-6
 INSERT INTO document_readings (id, content_sha256, file_name, content_type, read_as, status, status_at, facts_json, fact_count, vision_used, failure_reason, read_at, created_at, updated_at)
 VALUES ([[id:06:1]], '[[sha:1]]', '실적증명서.pdf', 'application/pdf', 'PDF', 'READING', [[now]] - INTERVAL 1 DAY, NULL, 0, 0, NULL, NULL, [[now]], [[now]]),
        ([[id:06:2]], '[[sha:2]]', '실적증명서.pdf', 'application/pdf', 'PDF', 'READING', [[now]] - INTERVAL 1 DAY, NULL, 0, 0, NULL, NULL, [[now]], [[now]]);
+INSERT INTO bid_analyses (id, bid_request_id, status, started_at, admin_decision, decided_by, decided_at, created_at, updated_at)
+SELECT [[id:0c:1]], br.id, 'DECISION_ONLY', [[now]], 'GO', (SELECT a.id FROM members a WHERE a.email = 'smoke-admin@example.com'), [[now]], [[now]], [[now]] FROM bid_requests br WHERE br.id = [[id:03:1]];
+INSERT INTO bid_analyses (id, bid_request_id, status, started_at, admin_decision, decided_by, decided_at, created_at, updated_at)
+SELECT [[id:0c:2]], br.id, 'DECISION_ONLY', [[now]], 'GO', (SELECT a.id FROM members a WHERE a.email = 'smoke-admin@example.com'), [[now]], [[now]], [[now]] FROM bid_requests br WHERE br.id = [[id:03:2]];

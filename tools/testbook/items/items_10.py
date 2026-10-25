@@ -74,6 +74,201 @@ STRUCTURE = ("SELECT HEX(pc.id) AS chapter, pc.factor_label, HEX(ps.id) AS secti
              f"FROM proposal_chapter pc JOIN proposal_section ps ON ps.chapter_id = pc.id WHERE pc.document_id = {THIS_BID} "
              "ORDER BY pc.order_no, ps.order_no")
 
+# CR-170 입찰 분석. 시딩의 분석 완료 회차도 이 본문을 서버에 저장해 얻은 값이다(seed/10-12 머리말)
+ANALYSIS = '/api/admin/bid-requests/{val:0:id}/bid-analysis'
+DECISION = ANALYSIS + '/decision'
+RERUN = ANALYSIS + '/run'
+COMPETITOR = 'Beta Facility Services'
+NO_WEB = '웹 자료 미사용'
+
+
+def ev(value, confidence='CONFIRMED', source='공고 본문'):
+    return {'value': value, 'confidence': confidence, 'source': source}
+
+
+def factor_scores(**scores):
+    return {f: {'score': s, 'basis': f'{f} 근거'} for f, s in scores.items()}
+
+
+REPORT_BODY = {
+    'overview': {
+        'projectName': ev('Camp Humphreys 배관 유지보수'),
+        'agency': ev('411th CSB'),
+        'budget': ev('USD 1,200,000', 'ESTIMATED', '같은 기관 과거 계약 금액'),
+        'period': ev('12개월'),
+        'contractType': ev('FFP'),
+        'background': '노후 배관 누수가 잦아 연간 유지보수 계약으로 발주',
+        'wbs': [{'task': '정기 점검', 'basis': 'PWS 3.1'}, {'task': '긴급 수리', 'basis': 'PWS 3.2'}],
+        'submission': {'pageLimit': ev('20쪽'), 'format': ev('PDF'), 'method': ev('PIEE'),
+                       'deadline': ev('2026-11-20'), 'presentation': ev('없음')},
+        'schedule': [{'step': '질의 마감', 'date': '2026-11-05', 'source': '공고 본문'},
+                     {'step': '제출 마감', 'date': '2026-11-20', 'source': '공고 본문'}]},
+    'agency': {
+        'overview': ev('주한미군 계약 지원 부대'),
+        'trends': ev('', 'UNKNOWN', NO_WEB),
+        'motive': ev('누수 민원 증가', 'ESTIMATED', '공고 배경'),
+        'decisionInfo': {'office': ev('411th CSB Camp Humphreys'), 'evaluationMethod': ev('LPTA')}},
+    'orderHistory': {
+        'rows': [{'source': 'FEDERAL_CONTRACT', 'piid': 'W91QVN-24-C-0012', 'title': 'Plumbing maintenance',
+                  'awardee': COMPETITOR, 'amountUsd': '980000', 'period': '2024-01-01 ~ 2024-12-31', 'contractType': 'FFP'}],
+        'verdict': 'RECURRING',
+        'incumbent': ev(COMPETITOR, 'CONFIRMED', '미 연방 계약 W91QVN-24-C-0012'),
+        'incumbentAdvantage': ev('중간', 'ESTIMATED', '발주 이력 1건')},
+    'requirements': {
+        'themes': [{'theme': '긴급 수리 대응', 'basis': 'PWS 3.2'}, {'theme': '현장 인력', 'basis': 'PWS 4.1'}],
+        'evaluation': [{'factor': '기술', 'importance': '높음', 'method': 'LPTA', 'reqIds': ['REQ-001']}],
+        'questionCandidates': [{'question': '야간 출동 범위', 'reason': 'PWS 에 시간대가 없음', 'reqId': 'REQ-002'}]},
+    'eligibility': [
+        {'item': 'SAM 등록', 'requirement': '유효한 SAM 등록', 'status': 'MET',
+         'evidence': ev('등록됨', 'CONFIRMED', '고객 회사 칸'), 'remedy': ''},
+        {'item': '기계설비공사업 면허', 'requirement': '현지 면허', 'status': 'CONDITIONAL',
+         'evidence': ev('보유한다고 답함', 'ESTIMATED', '참가 자격 답(고객이 스스로 답한 것)'), 'remedy': '면허증 사본 받기'}],
+    'competitors': {
+        'companies': [{'name': COMPETITOR, 'uei': 'SEEDUEI00001', 'likelihood': 'HIGH', 'isIncumbent': True,
+                       'relevantAwards': [{'piid': 'W91QVN-24-C-0012', 'title': 'Plumbing maintenance', 'amountUsd': '980000'}],
+                       'expectedStrategy': '현 계약 가격 유지', 'relationship': '현 수행사', 'basis': '발주 이력'}],
+        'bcc': {'themes': ['긴급 수리 대응', '현장 인력', '가격'],
+                'scores': {'OUR_COMPANY': {'긴급 수리 대응': 5, '현장 인력': 2, '가격': 3},
+                           COMPETITOR: {'긴급 수리 대응': 3, '현장 인력': 4, '가격': 3}}}},
+    'fairness': {'indicators': [{'no': n, 'value': 'NO', 'basis': '공고 본문'} for n in range(1, 11)], 'judgement': 'GOOD'},
+    'hiddenIssues': [{'issue': '현 수행사 인력 승계', 'basis': '같은 기관 과거 공고'}],
+    'insights': ['긴급 수리 대응을 앞세우고 현장 인력 약점은 협력사로 메운다']}
+
+REPORT_QUESTIONS = [
+    {'target': 'CUSTOMER', 'question': '현장 상주 가능 인원은 몇 명입니까', 'reason': '고객 서류에 인력 현황이 없음', 'field': 'competitors.bcc'},
+    {'target': 'ADMIN', 'question': '발주처 최근 동향을 확인하세요', 'reason': NO_WEB, 'field': 'agency.trends'}]
+
+# 상위 열쇠 둘이 서로 다른 이슈 묶음에 들어가 순위가 점수 합으로 갈린다. 일정 5x4 + 2x2 = 24, 품질 3x3 = 9
+CAPTURE_BODY = {
+    'business': {'basic': {'사업명': ev('Camp Humphreys 배관 유지보수')}, 'team': {'담당': ev('미정', 'UNKNOWN', '고객 서류 없음')},
+                 'agencyInfo': {'기관': ev('411th CSB')}, 'project': {'기간': ev('12개월')}},
+    'issues': {
+        'stakeholderIssues': [
+            {'id': 'S1', 'stakeholder': '계약관', 'issue': '일정 준수', 'influence': 5, 'importance': 4},
+            {'id': 'S2', 'stakeholder': '현장 감독', 'issue': '야간 출입', 'influence': 2, 'importance': 2},
+            {'id': 'S3', 'stakeholder': '사용 부대', 'issue': '수리 품질', 'influence': 3, 'importance': 3}],
+        'groupedIssues': [{'issue': '품질', 'memberIssues': ['S3']}, {'issue': '일정', 'memberIssues': ['S1', 'S2']}]},
+    'competitors': [{'name': COMPETITOR,
+                     'competitiveness': {'overall': {'level': 'EQUAL', 'basis': '현 수행사'}, 'sales': {'level': 'ADVANTAGE', 'basis': '관계'},
+                                         'technical': {'level': 'EQUAL', 'basis': '실적'}, 'price': {'level': 'EQUAL', 'basis': '가격 유지'}},
+                     'solutions': [{'issue': '일정', 'solution': '현 인력 유지', 'differentiation': '없음'}]}],
+    'company': {'competitiveness': {'overall': {'level': 'EQUAL', 'basis': '실적 대등'}, 'sales': {'level': 'DISADVANTAGE', 'basis': '첫 참여'},
+                                    'technical': {'level': 'ADVANTAGE', 'basis': '긴급 수리 실적'}, 'price': {'level': 'EQUAL', 'basis': '시장가'}},
+                'solutions': [{'issue': '일정', 'solution': '24시간 출동조', 'differentiation': '응답 2시간 보장'}]},
+    'other': {'risks': ev('인력 승계 협의', 'ESTIMATED', '같은 기관 과거 공고'), 'politics': ev('', 'UNKNOWN', NO_WEB),
+              'timing': ev('회계연도 초', 'CONFIRMED', '공고 게시일')}}
+
+# 자사 72.0(Strong Go), 경쟁사 66.0. 초기 가중치 CUSTOMER_RELATION 15, SOLUTION_FIT 20, COMPETITION 15, PRICE 15,
+# PAST_PERFORMANCE 15, PERSONNEL 10, ENVIRONMENT 10 으로 계산한 값이다
+DECISION_BODY = {
+    'scorecard': [
+        {'company': 'OUR_COMPANY', 'scores': factor_scores(CUSTOMER_RELATION=3, SOLUTION_FIT=4, COMPETITION=3, PRICE=4,
+                                                           PAST_PERFORMANCE=4, PERSONNEL=3, ENVIRONMENT=4)},
+        {'company': COMPETITOR, 'scores': factor_scores(CUSTOMER_RELATION=4, SOLUTION_FIT=3, COMPETITION=3, PRICE=3,
+                                                         PAST_PERFORMANCE=4, PERSONNEL=3, ENVIRONMENT=3)}],
+    'sensitivity': {'factor': 'PRICE', 'reason': 'LPTA 라 가격 한 단계가 판정을 바꾼다'},
+    'qualification': [{'item': '기계설비공사업 면허', 'resolvable': True, 'remedy': '면허증 사본 받기'}],
+    'profitability': {'priceBasis': {'기준': ev('과거 계약 USD 980,000')},
+                      'scenarios': [{'label': '공격', 'priceUsd': '950000', 'margin': '8%', 'basis': '현 계약보다 3% 낮게'},
+                                    {'label': '기준', 'priceUsd': '1000000', 'margin': '12%', 'basis': '시장가'}],
+                      'costNote': '인건비가 원가의 70%'},
+    'risks': [{'area': 'FINANCIAL', 'risk': '가격 경쟁', 'probability': 'H', 'impact': 'H', 'note': 'LPTA'},
+              {'area': 'TECHNICAL', 'risk': '야간 출입 승인', 'probability': 'M', 'impact': 'L', 'note': '보안 절차'}],
+    'conditions': ['참여 인력 이력서를 고객에게 받는다'],
+    'advice': '가격을 기준안으로 두고 긴급 수리 대응을 앞세워 참여한다'}
+
+# eligibility 첫 줄 근거의 확신도만 뺀 본문. 서버가 그 경로를 짚어 거부해야 한다
+BAD_REPORT_BODY = {**REPORT_BODY, 'eligibility': [
+    {**REPORT_BODY['eligibility'][0], 'evidence': {'value': '등록됨', 'source': '고객 회사 칸'}}] + REPORT_BODY['eligibility'][1:]}
+
+
+def save_analysis(part, body, analysis_col='analysis', questions=None):
+    args = {'bidRequestId': '{val:0:id}', 'analysisId': f'{{val:0:{analysis_col}}}', 'part': part, 'body': body}
+    if questions is not None:
+        args['questions'] = questions
+    return mcp('save_bid_analysis', args)
+
+
+def analysis_rows(bid=THIS_BID):
+    return (f"SELECT HEX(id) AS hex, status, admin_decision, admin_note, HEX(decided_by) AS decided_by, decided_at, "
+            f"HEX(started_by) AS started_by, started_at, finished_at, failure_reason, workflow_run_id, "
+            f"report_json IS NOT NULL AS has_report, capture_plan_json IS NOT NULL AS has_plan, decision_json IS NOT NULL AS has_decision, "
+            f"MD5(report_json) AS report_md5, pwin_percent FROM bid_analyses WHERE bid_request_id = {bid} ORDER BY started_at, created_at")
+
+
+ADMIN_ID = "SELECT HEX(id) AS hex FROM members WHERE email = 'smoke-admin@example.com'"
+
+
+def bid_api(col, tail=''):
+    """키 줄의 다른 열에 든 입찰 건(같은 장면의 두 번째 건) 관리자 주소"""
+    return f'/api/admin/bid-requests/{{val:0:{col}}}' + tail
+
+
+def bid_of(col):
+    return f"UNHEX('{{val:0:{col}}}')"
+
+
+def evidences(expr):
+    """근거 값(value 와 source 가 함께 있거나 confidence 가 달린 칸)을 어느 깊이에서든 모은다.
+    판정식에는 isinstance 가 없어 꼴을 __class__ 로 가른다"""
+    d, l = '{}.__class__', '[].__class__'
+    return (f"(lambda w: w(w, {expr}))(lambda w, n: "
+            f"([n] if n.__class__ == {d} and ('confidence' in n or ('value' in n and 'source' in n)) else []) + "
+            f"sum([w(w, v) for v in (n.values() if n.__class__ == {d} else n if n.__class__ == {l} else [])], []))")
+
+
+def ran(i):
+    """새 회차를 워크플로우가 받았는지. 받지 못한 서버(Aimbase 가 닿지 않는 로컬)는 분석 중 판정을 할 재료가 없다"""
+    return f"(r[{i}][-1]['status'] == 'RUNNING' or r[{i}][-1]['workflow_run_id'])"
+
+
+def wait(sec):
+    """뒤에서 도는 일(읽기 회차 끝의 분석 시작, 알림 발송)이 남길 흔적을 기다린다. 끝 식이 거짓이라 한도만큼 쉰다"""
+    return ('poll', ADMIN, ANALYSIS, 'False', sec, 5)
+
+
+def last_entered_gap(bid=THIS_BID):
+    """지금 분석 시작 시각과 마지막 상태 이력 시각의 차(마이크로초). 이력 시각은 [년, 월, 일, 시, 분, 초, 나노초] 배열이다"""
+    ts = lambda k: f"JSON_EXTRACT(br.state_history, '$[last].timestamp[{k}]')"
+    at = (f"STR_TO_DATE(CONCAT({ts(0)}, '-', {ts(1)}, '-', {ts(2)}, ' ', {ts(3)}, ':', {ts(4)}, ':', {ts(5)}), "
+          f"'%Y-%c-%e %k:%i:%s')")
+    return (f"SELECT ba.status, ba.workflow_run_id, TIMESTAMPDIFF(MICROSECOND, {at}, ba.started_at) AS gap_us "
+            f"FROM bid_analyses ba JOIN bid_requests br ON br.id = ba.bid_request_id WHERE br.id = {bid} ORDER BY ba.started_at")
+
+
+def notification_count(email_col):
+    return (f"SELECT COUNT(*) AS n FROM notification_logs WHERE reference_id = {THIS_BID} "
+            f"OR recipient_email = '{{val:0:{email_col}}}'")
+
+
+LATEST = ("SELECT status, workflow_run_id, report_json, capture_plan_json, decision_json FROM bid_analyses "
+          f"WHERE bid_request_id = {THIS_BID} ORDER BY started_at DESC LIMIT 1")
+OUTPUTS = "('report_json', 'capture_plan_json', 'decision_json')"
+NOT_RUNNING = "x['status'] != 200 or x['body']['analysis'] is None or x['body']['analysis']['status'] != 'RUNNING'"
+PWIN_WEIGHTS = {'CUSTOMER_RELATION': 15, 'SOLUTION_FIT': 20, 'COMPETITION': 15, 'PRICE': 15,
+                'PAST_PERFORMANCE': 15, 'PERSONNEL': 10, 'ENVIRONMENT': 10}
+CLOSE_STEP = (f"SELECT state, closed_at, JSON_LENGTH(state_history) AS hist, "
+              f"JSON_UNQUOTE(JSON_EXTRACT(state_history, '$[last].fromState')) AS from_state, "
+              f"JSON_UNQUOTE(JSON_EXTRACT(state_history, '$[last].toState')) AS to_state FROM bid_requests WHERE id = {THIS_BID}")
+
+
+def saved_all():
+    return [save_analysis('REPORT', REPORT_BODY, questions=REPORT_QUESTIONS), save_analysis('CAPTURE_PLAN', CAPTURE_BODY),
+            save_analysis('DECISION', DECISION_BODY), ('api', ADMIN, 'GET', ANALYSIS)]
+
+
+A4 = "r[4]['body']['analysis']"
+SAVED = f"r[4]['status'] == 200 and {A4} is not None and {A4}['status'] == 'DONE' and {A4}['analysisId'] == r[0][0]['analysis']"
+
+
+def mcp_error(i):
+    return f"r[{i}]['body']['result'].get('isError')"
+
+
+def refused(i, code, reason=None):
+    s = f"r[{i}]['status'] == 409 and r[{i}]['body'].get('error') == '{code}'"
+    return s + (f" and r[{i}]['body'].get('reason') == '{reason}'" if reason else '')
+
 ITEMS = [
 
 dict(id='IT-10-001', flow='제안서 자동 작성', kind='정상', title='공고 유형에 맞는 성공 제안서가 있는 입찰 건의 제안서를 AI 가 작성한다',
@@ -518,9 +713,12 @@ dict(id='IT-10-045', flow='고객 서류 읽기', kind='예외', title='읽을 �
                     check="r[1]['status'] == 200 and len(r[2]) == 1 and r[2][0]['status'] == 'UNSUPPORTED' and r[2][0]['read_as'] == 'NONE'"),
             3: dict(steps=[('key', '10.b045_server3_bid'),
                            ('api', ADMIN, 'POST', TRANSITION, {'toState': 'ANALYZING', 'notes': 'IT-10-045 서버 판정'}),
+                           ('poll', ADMIN, ANALYSIS, "x['status'] == 200 and x['body']['analysis'] is not None "
+                                                     "and x['body']['analysis']['status'] != 'RUNNING' and not x['body']['readingInProgress']", 1800, 20),
+                           ('api', ADMIN, 'POST', DECISION, {'decision': 'GO', 'note': None}),
                            ('api', ADMIN, 'POST', TRANSITION, {'toState': 'GENERATING', 'notes': 'IT-10-045 서버 판정'}),
                            ('sql', f"SELECT state FROM bid_requests WHERE id = {THIS_BID}")],
-                    check="r[1]['status'] == 200 and r[2]['status'] == 200 and r[3][0]['state'] == 'GENERATING'")}),
+                    check="r[1]['status'] == 200 and r[3]['status'] == 200 and r[4]['status'] == 200 and r[5][0]['state'] == 'GENERATING'")}),
 
 dict(id='IT-10-046', flow='고객 서류 읽기', kind='예외', title='고객 서류를 읽는 중이면 문서 작성 중으로 전환되지 않는다',
      pre='관리자 계정, 상태 ANALYZING 이고 후보 서류 한 줄이 READING 이며 상태가 바뀐 지 5분이 안 된 입찰 건(입찰 분석 회차가 없어 관리자 결정도 없음)',
@@ -691,7 +889,20 @@ dict(id='IT-10-055', flow='입찰 분석', kind='정상', title='고객 서류�
             '7. Bid/No-Bid 결정 탭의 스코어카드에 자사와 경쟁사마다 일곱 팩터(고객 관계, 솔루션 적합도, 경쟁 환경, 가격 경쟁력, 과거 실적, 참여 인력, 환경 요인)의 점수와 근거, 가중 점수가 있다\n'
             '8. 종합 분석 리포트의 자사 실적(사업명, 발주처)이 실적 증명서의 값이고 다른 회사의 실적이 섞이지 않는다',
      judge=['가상', '서버', '서버', '가상', '합동', '합동', '합동', '합동'],
-     req=['BID-DOC-006'], fc=['BID-DOC-006'], screen='관리자 /bid-requests/{id}', pri='High'),
+     req=['BID-DOC-006'], fc=['BID-DOC-006'], screen='관리자 /bid-requests/{id}', pri='High',
+     probe={2: dict(steps=[('key', '10.b055_server_bid'),
+                           ('api', ADMIN, 'POST', TRANSITION, {'toState': 'ANALYZING', 'notes': 'IT-10-055 서버 판정'}),
+                           ('poll', ADMIN, ANALYSIS, "x['status'] != 200 or x['body']['analysis'] is not None", 1800, 20),
+                           ('sql', reading_rows(THIS_BID)),
+                           ('sql', analysis_rows())],
+                    need="r[1]['status'] == 200 and len(r[3]) > 0 and all(x['status'] == 'DONE' for x in r[3])",
+                    check="len(r[4]) == 1 and r[4][0]['status'] == 'RUNNING' and r[4][0]['started_at'] >= max(x['read_at'] for x in r[3])"),
+            3: dict(steps=[('key', '10.b055_server_bid'),
+                           ('poll', ADMIN, ANALYSIS, NOT_RUNNING, 3600, 30),
+                           ('sql', analysis_rows())],
+                    need="len(r[2]) > 0 and r[2][-1]['workflow_run_id']",
+                    check="r[2][-1]['status'] == 'DONE' and int(r[2][-1]['has_report']) == 1 and int(r[2][-1]['has_plan']) == 1 "
+                          "and int(r[2][-1]['has_decision']) == 1 and r[2][-1]['finished_at'] is not None")}),
 
 dict(id='IT-10-056', flow='입찰 분석', kind='정상', title='읽을 서류가 없는 입찰 건은 분석 단계로 전환하자마자 입찰 분석이 시작된다',
      pre='관리자 계정, 공고에 필수 서류 칸이 없어 공고별 서류도 만료되지 않은 서류함 서류도 없이 DOCS_RECEIVED 가 된 입찰 건, Aimbase 입찰 분석 워크플로우가 도는 상태',
@@ -700,7 +911,12 @@ dict(id='IT-10-056', flow='입찰 분석', kind='정상', title='읽을 서류�
             '2. 2단계 직후 bid_analyses 에 그 입찰 건의 status RUNNING 줄이 1줄 있고 started_at 이 전환 시각이다\n'
             '3. 3단계에서 입찰 분석 영역 머리가 분석 중이고 [다시 분석] 과 관리자 결정 [저장] 이 꺼져 있다',
      judge=['가상', '서버', '가상'],
-     req=['BID-DOC-006'], fc=['BID-DOC-006'], screen='관리자 /bid-requests/{id}', pri='High'),
+     req=['BID-DOC-006'], fc=['BID-DOC-006'], screen='관리자 /bid-requests/{id}', pri='High',
+     probe={2: dict(steps=[('key', '10.b056_server_bid'),
+                           ('api', ADMIN, 'POST', TRANSITION, {'toState': 'ANALYZING', 'notes': 'IT-10-056 서버 판정'}),
+                           ('sql', last_entered_gap())],
+                    need=f"len(r[2]) != 1 or {ran(2)}",
+                    check="r[1]['status'] == 200 and len(r[2]) == 1 and r[2][0]['status'] == 'RUNNING' and abs(int(r[2][0]['gap_us'])) < 5000000")}),
 
 dict(id='IT-10-057', flow='입찰 분석', kind='정상', title='다른 입찰 건이 같은 내용의 서류를 읽어 끝나도 그 건의 입찰 분석이 시작된다',
      pre='관리자 계정, 같은 회원의 상태 ANALYZING 입찰 건 A 와 DOCS_RECEIVED 입찰 건 B(둘 다 같은 내용의 실적 증명서 PDF 를 공고별 서류로 올림), A 의 그 서류를 읽는 중',
@@ -709,7 +925,23 @@ dict(id='IT-10-057', flow='입찰 분석', kind='정상', title='다른 입찰 �
             '2. 2단계 뒤 A 와 B 에 bid_analyses status RUNNING 줄이 각 1줄 생긴다\n'
             '3. 3단계에서 두 건의 입찰 분석 영역 머리가 분석 중이다',
      judge=['서버', '서버', '가상'],
-     req=['BID-DOC-006'], fc=['BID-DOC-006'], screen='관리자 /bid-requests/{id}', pri='High'),
+     req=['BID-DOC-006'], fc=['BID-DOC-006'], screen='관리자 /bid-requests/{id}', pri='High',
+     probe={1: dict(steps=[('key', '10.b057_server'),
+                           ('api', ADMIN, 'POST', TRANSITION, {'toState': 'ANALYZING', 'notes': 'IT-10-057 서버 판정 A'}),
+                           ('api', ADMIN, 'POST', bid_api('b', '/transition'), {'toState': 'ANALYZING', 'notes': 'IT-10-057 서버 판정 B'}),
+                           ('sql', "SELECT status FROM document_readings WHERE content_sha256 = '{val:0:sha}'"),
+                           ('sql', analysis_rows(bid_of('b_hex')))],
+                    need="r[1]['status'] == 200 and len(r[3]) == 1 and r[3][0]['status'] == 'READING'",
+                    check="r[2]['status'] == 200 and len(r[4]) == 0"),
+            2: dict(steps=[('key', '10.b057_server'),
+                           ('sql', f"SELECT state FROM bid_requests WHERE id = {THIS_BID}"),
+                           ('poll', ADMIN, ANALYSIS, "x['status'] != 200 or x['body']['analysis'] is not None", 1800, 20),
+                           ('poll', ADMIN, bid_api('b', '/bid-analysis'), "x['status'] != 200 or x['body']['analysis'] is not None", 120, 10),
+                           ('sql', "SELECT status FROM document_readings WHERE content_sha256 = '{val:0:sha}'"),
+                           ('sql', analysis_rows()),
+                           ('sql', analysis_rows(bid_of('b_hex')))],
+                    need="r[1][0]['state'] == 'ANALYZING' and len(r[4]) == 1 and r[4][0]['status'] == 'DONE'",
+                    check="len(r[5]) == 1 and r[5][0]['status'] == 'RUNNING' and len(r[6]) == 1 and r[6][0]['status'] == 'RUNNING'")}),
 
 dict(id='IT-10-058', flow='입찰 분석', kind='정상', title='입찰 분석 회차가 이미 있는 건은 서류를 다시 읽어도 입찰 분석이 자동으로 다시 돌지 않는다',
      pre='관리자 계정, 상태 ANALYZING 이고 입찰 분석이 분석 완료이며 후보 서류에 읽지 못함 1줄이 있는 입찰 건',
@@ -717,7 +949,14 @@ dict(id='IT-10-058', flow='입찰 분석', kind='정상', title='입찰 분석 �
      expect='1. 2단계 뒤 bid_analyses 의 그 입찰 건 줄 수가 1단계 전과 같다\n'
             '2. 3단계에서 머리가 분석 완료 그대로이고 [다시 분석] 이 살아 있다',
      judge=['서버', '가상'],
-     req=['BID-DOC-006'], fc=['BID-DOC-006'], screen='관리자 /bid-requests/{id}', pri='High'),
+     req=['BID-DOC-006'], fc=['BID-DOC-006'], screen='관리자 /bid-requests/{id}', pri='High',
+     probe={1: dict(steps=[('key', '10.b058_server_bid'),
+                           ('sql', analysis_rows()),
+                           ('api', ADMIN, 'POST', READINGS + '/run', {'readingIds': None}),
+                           ('poll', ADMIN, READINGS, "x['status'] == 200 and not x['body']['inProgress']", 1800, 20),
+                           wait(60),
+                           ('sql', analysis_rows())],
+                    check="r[2]['status'] == 200 and len(r[5]) == len(r[1])")}),
 
 dict(id='IT-10-059', flow='입찰 분석', kind='정상', title='조사한 값마다 확신도와 출처가 붙고 웹 자료가 필요한 칸은 미상으로 확인 필요에 오른다',
      pre='관리자 계정, 입찰 분석이 분석 완료인 ANALYZING 입찰 건',
@@ -730,7 +969,16 @@ dict(id='IT-10-059', flow='입찰 분석', kind='정상', title='조사한 값�
             '6. 리포트의 고객 회사 사실은 출처가 고객 회사 칸, 고객 서류 사실, 참가 자격 답 가운데 하나이고 참가 자격 답에서 온 값의 출처에 고객이 스스로 답한 것이라는 말이 있다',
      judge=['가상', '서버', '서버', '합동', '가상', '합동'],
      req=['BID-DOC-006'], fc=['BID-DOC-006'], screen='관리자 /bid-requests/{id}', pri='High',
-     issue='참가 자격 답에서 온 값을 고객이 스스로 답한 것으로 표시하는 문구가 설계서(T3-4)에 없다'),
+     issue='참가 자격 답에서 온 값을 고객이 스스로 답한 것으로 표시하는 문구가 설계서(T3-4)에 없다',
+     probe={2: dict(steps=[('key', '10.b055_server_bid'), ('sql', LATEST)],
+                    need="len(r[1]) == 1 and r[1][0]['status'] == 'DONE' and r[1][0]['workflow_run_id']",
+                    check="(lambda E: len(E) > 0 and all(e.get('confidence') in ('CONFIRMED', 'ESTIMATED', 'UNKNOWN') "
+                          "and str(e.get('source') or '').strip() != '' for e in E))"
+                          f"([e for c in {OUTPUTS} for e in {evidences('loads(r[1][0][c])')}])"),
+            3: dict(steps=[('key', '10.b055_server_bid'), ('sql', LATEST)],
+                    need="len(r[1]) == 1 and r[1][0]['status'] == 'DONE' and r[1][0]['workflow_run_id']",
+                    check=f"all(e.get('confidence') == 'UNKNOWN' for c in {OUTPUTS} for e in {evidences('loads(r[1][0][c])')} "
+                          f"if e.get('source') == {NO_WEB!r})")}),
 
 dict(id='IT-10-060', flow='입찰 분석', kind='정상', title='Pwin, 판정, 강점과 약점, 핵심이슈 순위는 서버가 점수로 계산한 값이다',
      pre='관리자 계정, 입찰 분석이 분석 완료인 ANALYZING 입찰 건, system_settings BID_PWIN_WEIGHTS 와 BID_PWIN_THRESHOLDS 가 초기값',
@@ -744,7 +992,24 @@ dict(id='IT-10-060', flow='입찰 분석', kind='정상', title='Pwin, 판정, �
             '6. 2단계 순위 표의 차례가 3단계 응답의 issueRanking 과 같다\n'
             '7. 해결할 수 없는 자격 미달이 한 줄이라도 있으면 Pwin 이 70 이상이어도 판정이 NO_GO 이고 판정 이유에 그 항목이 있다',
      judge=['서버', '서버', '서버', '서버', '가상', '가상', '단위'],
-     req=['BID-DOC-006'], fc=['BID-DOC-006'], screen='관리자 /bid-requests/{id}', pri='High'),
+     req=['BID-DOC-006'], fc=['BID-DOC-006'], screen='관리자 /bid-requests/{id}', pri='High',
+     probe={1: dict(steps=[('key', '10.b060_server_bid')] + saved_all(), need=SAVED,
+                    check=f"(lambda o: abs(float({A4}['pwinPercent']) - int(sum(o[f]['score'] * w for f, w in {PWIN_WEIGHTS!r}.items()) * 2 + 0.5) / 10) < 0.001)"
+                          f"([s['scores'] for s in {A4}['decision']['scorecard'] if s['company'] == 'OUR_COMPANY'][0])"),
+            2: dict(steps=[('key', '10.b060_server_bid')] + saved_all(),
+                    need=SAVED + f" and not any(q.get('resolvable') is False for q in {A4}['decision'].get('qualification') or [])",
+                    check=f"{A4}['aiVerdict'] == (lambda p: 'STRONG_GO' if p >= 70 else 'CONDITIONAL_GO' if p >= 50 else 'WEAK' if p >= 30 "
+                          f"else 'NO_GO')(float({A4}['pwinPercent']))"),
+            3: dict(steps=[('key', '10.b060_server_bid')] + saved_all(), need=SAVED,
+                    check=f"(lambda b: (lambda d: sorted(x['theme'] for x in {A4}['strengths']) == sorted(t for t in b['themes'] if d(t) >= 1) "
+                          f"and sorted(x['theme'] for x in {A4}['weaknesses']) == sorted(t for t in b['themes'] if d(t) <= -1))"
+                          "(lambda t: b['scores']['OUR_COMPANY'][t] - max(v[t] for k, v in b['scores'].items() if k != 'OUR_COMPANY')))"
+                          f"({A4}['report']['competitors']['bcc'])"),
+            4: dict(steps=[('key', '10.b060_server_bid')] + saved_all(), need=SAVED,
+                    check=f"(lambda c: (lambda s: [(x['issue'], x['score']) for x in {A4}['issueRanking']] == "
+                          "sorted([(g['issue'], sum(s[i] for i in g['memberIssues'])) for g in c['groupedIssues']], key=lambda y: -y[1]))"
+                          "({i['id']: i['influence'] * i['importance'] for i in c['stakeholderIssues']}))"
+                          f"({A4}['capturePlan']['issues'])")}),
 
 dict(id='IT-10-061', flow='입찰 분석', kind='정상', title='Pwin 가중치를 바꾸면 다음 계산부터 맞고 이미 계산한 회차는 그대로다',
      pre='관리자 계정, 입찰 분석이 분석 완료인 ANALYZING 입찰 건(읽는 중인 서류 없음), system_settings BID_PWIN_WEIGHTS 가 초기값',
@@ -767,7 +1032,22 @@ dict(id='IT-10-062', flow='입찰 분석', kind='정상', title='다시 분석�
             '3. 3단계 뒤 머리의 관리자 결정이 비어 있고 상태 패널의 GENERATING 전환이 막혀 있다\n'
             '4. 4단계 응답이 409 이고 코드가 BID_DECISION_REQUIRED 이며 state 가 ANALYZING 그대로다',
      judge=['가상', '서버', '가상', '서버'],
-     req=['BID-DOC-006'], fc=['BID-DOC-006', 'BID-DOC-007'], screen='관리자 /bid-requests/{id}', pri='High'),
+     req=['BID-DOC-006'], fc=['BID-DOC-006', 'BID-DOC-007'], screen='관리자 /bid-requests/{id}', pri='High',
+     probe={2: dict(steps=[('key', '10.b062_server_bid'),
+                           ('sql', analysis_rows()),
+                           ('api', ADMIN, 'POST', RERUN),
+                           ('sql', analysis_rows()),
+                           ('sql', ADMIN_ID)],
+                    need=f"len(r[3]) <= len(r[1]) or {ran(3)}",
+                    check="r[2]['status'] == 200 and len(r[3]) == len(r[1]) + 1 and r[3][-1]['status'] == 'RUNNING' "
+                          "and r[3][-1]['admin_decision'] is None and r[3][-1]['started_by'] == r[4][0]['hex']"),
+            4: dict(steps=[('key', '10.b062_server_bid'),
+                           ('poll', ADMIN, ANALYSIS, NOT_RUNNING, 1800, 20),
+                           ('sql', analysis_rows()),
+                           ('api', ADMIN, 'POST', TRANSITION, {'toState': 'GENERATING', 'notes': 'IT-10-062 서버 판정'}),
+                           ('sql', f"SELECT state FROM bid_requests WHERE id = {THIS_BID}")],
+                    need="len(r[2]) >= 2",
+                    check=refused(3, 'BID_DECISION_REQUIRED') + " and r[4][0]['state'] == 'ANALYZING'")}),
 
 dict(id='IT-10-063', flow='입찰 분석 도구', kind='정상', title='get_bid_analysis_input 은 단계마다 정해진 자료를 돌려보낸다',
      pre='서버 열쇠(MCP_API_KEY)를 아는 호출자, 입찰 분석이 분석 완료인 ANALYZING 입찰 건(그 공고번호의 정정 공고 1건, 같은 기관 공고 21건 이상, 값이 300자를 넘는 고객 서류 사실 1개 이상)',
@@ -778,7 +1058,28 @@ dict(id='IT-10-063', flow='입찰 분석 도구', kind='정상', title='get_bid_
             '3. 2단계 결과에 그 회차의 종합 분석 리포트가 있다\n'
             '4. 3단계 결과에 그 회차의 종합 분석 리포트와 캡처플랜, BID_PWIN_WEIGHTS 의 가중치가 있다',
      judge=['서버', '서버', '서버', '서버'],
-     req=['BID-DOC-006'], fc=['BID-DOC-006'], screen='', pri='High'),
+     req=['BID-DOC-006'], fc=['BID-DOC-006'], screen='', pri='High',
+     probe={1: dict(steps=[('key', '10.b063_bid'),
+                           mcp('get_bid_analysis_input', {'bidRequestId': '{val:0:id}', 'analysisId': '{val:0:analysis}', 'step': 'REPORT'})],
+                    check=f"len({mcp_json(1)}['sameSolicitationNotices']) == 1 and len({mcp_json(1)}['agencyRecentNotices']) == 20"),
+            2: dict(steps=[('key', '10.b063_bid'),
+                           mcp('get_bid_analysis_input', {'bidRequestId': '{val:0:id}', 'analysisId': '{val:0:analysis}', 'step': 'REPORT'}),
+                           ('sql', f"SELECT dr.facts_json FROM document_readings dr WHERE dr.status = 'DONE' AND dr.content_sha256 IN {candidate_shas(THIS_BID)}")],
+                    need="any(len(str(f['value'])) > 300 for x in r[2] for f in loads(x['facts_json']))",
+                    check=f"len([f for d in {mcp_json(1)}['clientDocuments'] for f in d.get('facts') or []]) > 0 and "
+                          f"all(len(str(f['value'])) <= 300 for d in {mcp_json(1)}['clientDocuments'] for f in d.get('facts') or [])"),
+            3: dict(steps=[('key', '10.b063_bid'),
+                           mcp('get_bid_analysis_input', {'bidRequestId': '{val:0:id}', 'analysisId': '{val:0:analysis}', 'step': 'CAPTURE_PLAN'}),
+                           ('sql', LATEST)],
+                    check=f"{mcp_json(1)}['report'] is not None and {mcp_json(1)}['report'] == loads(r[2][0]['report_json'])"),
+            4: dict(steps=[('key', '10.b063_bid'),
+                           mcp('get_bid_analysis_input', {'bidRequestId': '{val:0:id}', 'analysisId': '{val:0:analysis}', 'step': 'DECISION'}),
+                           ('sql', LATEST),
+                           ('sql', "SELECT setting_value FROM system_settings WHERE setting_key = 'BID_PWIN_WEIGHTS'")],
+                    check=f"{mcp_json(1)}['report'] is not None and all({mcp_json(1)}['report'][k] == loads(r[2][0]['report_json']).get(k) "
+                          f"for k in {mcp_json(1)}['report']) and {mcp_json(1)}['capturePlan'] == loads(r[2][0]['capture_plan_json']) "
+                          f"and {mcp_json(1)}['pwinPolicy']['weights'] == "
+                          "{p.split(':')[0]: int(p.split(':')[1]) for p in r[3][0]['setting_value'].split(',')}")}),
 
 dict(id='IT-10-064', flow='입찰 분석 도구', kind='정상', title='search_award_history 는 미 연방 계약과 낙찰 공고를 합쳐 출처를 달아 찾는다',
      pre='서버 열쇠(MCP_API_KEY)를 아는 호출자, federal_contracts 와 낙찰 공고에 모두 있는 NAICS 코드 하나(합쳐 51건 이상)',
@@ -788,7 +1089,15 @@ dict(id='IT-10-064', flow='입찰 분석 도구', kind='정상', title='search_a
             '3. 1단계 결과 줄에 원본 JSON 칸이 없다\n'
             '4. 2단계 결과가 50줄이다',
      judge=['서버', '서버', '서버', '서버'],
-     req=['BID-DOC-006'], fc=['BID-DOC-006'], screen='', pri='High'),
+     req=['BID-DOC-006'], fc=['BID-DOC-006'], screen='', pri='High',
+     probe={1: dict(steps=[('key', '10.b064_naics'), mcp('search_award_history', {'naicsCodes': ['{val:0:naics}']})],
+                    check=f"set(x['source'] for x in {mcp_json(1)}['rows']) == {{'FEDERAL_CONTRACT', 'SAM_AWARD_NOTICE'}}"),
+            2: dict(steps=[('key', '10.b064_naics'), mcp('search_award_history', {'naicsCodes': ['{val:0:naics}']})],
+                    check=f"len({mcp_json(1)}['rows']) == 20"),
+            3: dict(steps=[('key', '10.b064_naics'), mcp('search_award_history', {'naicsCodes': ['{val:0:naics}']})],
+                    check=f"len({mcp_json(1)}['rows']) > 0 and all('rawJson' not in x and 'raw_json' not in x for x in {mcp_json(1)}['rows'])"),
+            4: dict(steps=[('key', '10.b064_naics'), mcp('search_award_history', {'naicsCodes': ['{val:0:naics}'], 'limit': 100})],
+                    check=f"len({mcp_json(1)}['rows']) == 50")}),
 
 dict(id='IT-10-065', flow='입찰 분석', kind='예외', title='분석 중이 워크플로우 대기 한도를 넘으면 분석 실패 "분석 시간 초과" 가 된다',
      pre='관리자 계정, 상태 ANALYZING 이고 입찰 분석 회차가 RUNNING 이며 started_at 이 워크플로우 대기 한도(설정 app.aimbase.polling 간격과 횟수, 10/25 상용 60분)보다 오래 전인 입찰 건',
@@ -798,7 +1107,16 @@ dict(id='IT-10-065', flow='입찰 분석', kind='예외', title='분석 중이 �
             '2. 2단계 응답의 analysis.status 가 FAILED 이고 failureReason 이 "분석 시간 초과" 다\n'
             '3. 3단계 뒤 bid_analyses 에 그 입찰 건의 status RUNNING 줄이 하나 늘어 있다',
      judge=['가상', '서버', '서버'],
-     req=['BID-DOC-006'], fc=['BID-DOC-006'], screen='관리자 /bid-requests/{id}', pri='High'),
+     req=['BID-DOC-006'], fc=['BID-DOC-006'], screen='관리자 /bid-requests/{id}', pri='High',
+     probe={2: dict(steps=[('key', '10.b065_server2_bid'), ('api', ADMIN, 'GET', ANALYSIS)],
+                    check="r[1]['status'] == 200 and r[1]['body']['analysis']['status'] == 'FAILED' "
+                          "and r[1]['body']['analysis']['failureReason'] == '분석 시간 초과'"),
+            3: dict(steps=[('key', '10.b065_server3_bid'),
+                           ('sql', analysis_rows()),
+                           ('api', ADMIN, 'POST', RERUN),
+                           ('sql', analysis_rows())],
+                    need=f"len(r[3]) <= len(r[1]) or {ran(3)}",
+                    check="r[2]['status'] == 200 and len(r[3]) == len(r[1]) + 1 and r[3][-1]['status'] == 'RUNNING'")}),
 
 dict(id='IT-10-066', flow='입찰 분석', kind='예외', title='Bid/No-Bid 결정을 저장하지 못하고 끝난 입찰 분석은 분석 실패가 되고 앞 단계 탭은 남는다',
      pre='관리자 계정, 입찰 분석 워크플로우가 종합 분석 리포트와 캡처플랜만 저장하고 끝난 ANALYZING 입찰 건',
@@ -822,7 +1140,16 @@ dict(id='IT-10-067', flow='입찰 분석', kind='예외', title='분석 중이�
             '4. 4단계에서 [다시 분석] 이 꺼져 있다\n'
             '5. 5단계 응답이 409 BID_ANALYSIS_NOT_ALLOWED 이고 사유가 READING_IN_PROGRESS 다',
      judge=['가상', '서버', '서버', '가상', '서버'],
-     req=['BID-DOC-006'], fc=['BID-DOC-006', 'BID-DOC-007'], screen='관리자 /bid-requests/{id}', pri='High'),
+     req=['BID-DOC-006'], fc=['BID-DOC-006', 'BID-DOC-007'], screen='관리자 /bid-requests/{id}', pri='High',
+     probe={2: dict(steps=[('key', '10.b067_a_bid'), ('api', ADMIN, 'POST', RERUN)],
+                    check=refused(1, 'BID_ANALYSIS_NOT_ALLOWED', 'ANALYSIS_RUNNING')),
+            3: dict(steps=[('key', '10.b067_a_bid'),
+                           ('sql', analysis_rows()),
+                           ('api', ADMIN, 'POST', DECISION, {'decision': 'GO', 'note': None}),
+                           ('sql', analysis_rows())],
+                    check=refused(2, 'BID_ANALYSIS_NOT_ALLOWED') + " and r[3] == r[1]"),
+            5: dict(steps=[('key', '10.b067_b_bid'), ('api', ADMIN, 'POST', RERUN)],
+                    check=refused(1, 'BID_ANALYSIS_NOT_ALLOWED', 'READING_IN_PROGRESS'))}),
 
 dict(id='IT-10-068', flow='입찰 분석', kind='예외', title='분석 단계가 아닌 입찰 건은 다시 분석과 관리자 결정을 할 수 없다',
      pre='관리자 계정, 입찰 분석이 분석 완료이고 관리자 결정이 Go 인 채 GENERATING 으로 전환된 입찰 건',
@@ -833,7 +1160,13 @@ dict(id='IT-10-068', flow='입찰 분석', kind='예외', title='분석 단계�
             '2. 2단계 응답이 409 BID_ANALYSIS_NOT_ALLOWED 이고 사유가 NOT_ANALYZING 이다\n'
             '3. 3단계 응답이 409 BID_ANALYSIS_NOT_ALLOWED 이고 admin_decision 이 GO 그대로다',
      judge=['가상', '서버', '서버'],
-     req=['BID-DOC-006'], fc=['BID-DOC-006', 'BID-DOC-007'], screen='관리자 /bid-requests/{id}', pri='High'),
+     req=['BID-DOC-006'], fc=['BID-DOC-006', 'BID-DOC-007'], screen='관리자 /bid-requests/{id}', pri='High',
+     probe={2: dict(steps=[('key', '10.b068_bid'), ('api', ADMIN, 'POST', RERUN)],
+                    check=refused(1, 'BID_ANALYSIS_NOT_ALLOWED', 'NOT_ANALYZING')),
+            3: dict(steps=[('key', '10.b068_bid'),
+                           ('api', ADMIN, 'POST', DECISION, {'decision': 'NO_GO', 'note': 'IT-10-068 서버 판정'}),
+                           ('sql', analysis_rows())],
+                    check=refused(1, 'BID_ANALYSIS_NOT_ALLOWED') + " and len(r[2]) > 0 and r[2][-1]['admin_decision'] == 'GO'")}),
 
 dict(id='IT-10-069', flow='입찰 분석 도구', kind='예외', title='입찰 분석 저장과 낙찰 이력 찾기는 틀린 호출을 거부한다',
      pre='서버 열쇠(MCP_API_KEY)를 아는 호출자, 입찰 분석이 분석 완료인 입찰 건 A 의 회차, 회차가 RUNNING 이고 아무것도 저장하지 않은 입찰 건 B 의 회차',
@@ -846,7 +1179,15 @@ dict(id='IT-10-069', flow='입찰 분석 도구', kind='예외', title='입찰 �
             '3. 3단계 결과가 오류이고 틀린 곳 eligibility[0].evidence.confidence 가 담겨 있으며 B 회차의 report_json 이 비어 있다\n'
             '4. 4단계 결과가 오류다',
      judge=['서버', '서버', '서버', '서버'],
-     req=['BID-DOC-006'], fc=['BID-DOC-006'], screen='', pri='High'),
+     req=['BID-DOC-006'], fc=['BID-DOC-006'], screen='', pri='High',
+     probe={1: dict(steps=[('key', '10.b069_a'), ('sql', analysis_rows()), save_analysis('REPORT', REPORT_BODY), ('sql', analysis_rows())],
+                    check=f"{mcp_error(2)} and r[1][-1]['report_md5'] is not None and r[3][-1]['report_md5'] == r[1][-1]['report_md5']"),
+            2: dict(steps=[('key', '10.b069_b'), save_analysis('CAPTURE_PLAN', CAPTURE_BODY), ('sql', analysis_rows())],
+                    check=f"{mcp_error(1)} and int(r[2][-1]['has_plan']) == 0"),
+            3: dict(steps=[('key', '10.b069_b'), save_analysis('REPORT', BAD_REPORT_BODY), ('sql', analysis_rows())],
+                    check=f"{mcp_error(1)} and 'eligibility[0].evidence.confidence' in {mcp_out(1)} and int(r[2][-1]['has_report']) == 0"),
+            4: dict(steps=[mcp('search_award_history', {})],
+                    check=mcp_error(0))}),
 
 dict(id='IT-10-070', flow='입찰 분석', kind='예외', title='관리자가 아니면 입찰 분석을 보거나 다시 분석하거나 결정할 수 없고 고객 화면에 입찰 분석이 없다',
      pre='회원 계정 로그인 토큰, 그 회원의 입찰 분석이 분석 완료인 ANALYZING 입찰 건',
@@ -863,7 +1204,21 @@ dict(id='IT-10-070', flow='입찰 분석', kind='예외', title='관리자가 �
             '5. 5단계 응답에 Pwin, 판정, 관리자 결정 칸이 없다\n'
             '6. 6단계 입찰 상세에 입찰 분석, Pwin, 판정, Bid/No-Bid 결정이 어디에도 없다',
      judge=['서버', '서버', '서버', '서버', '서버', '가상'],
-     req=['BID-DOC-006'], fc=['BID-DOC-006', 'BID-DOC-007'], screen='고객 /bid-requests/{id}', pri='High'),
+     req=['BID-DOC-006'], fc=['BID-DOC-006', 'BID-DOC-007'], screen='고객 /bid-requests/{id}', pri='High',
+     probe={1: dict(steps=[('key', '10.b070_bid'), ('api', USER, 'GET', ANALYSIS)],
+                    check="r[1]['status'] == 403"),
+            2: dict(steps=[('key', '10.b070_bid'), ('sql', analysis_rows()), ('api', USER, 'POST', RERUN), ('sql', analysis_rows())],
+                    check="r[2]['status'] == 403 and len(r[3]) == len(r[1])"),
+            3: dict(steps=[('key', '10.b070_bid'), ('sql', analysis_rows()),
+                           ('api', USER, 'POST', DECISION, {'decision': 'GO', 'note': None}), ('sql', analysis_rows())],
+                    check="r[2]['status'] == 403 and [x['admin_decision'] for x in r[3]] == [x['admin_decision'] for x in r[1]]"),
+            4: dict(steps=[('key', '10.b070_bid'),
+                           ('api', USER, 'PATCH', '/api/bid-requests/{val:0:id}/state', {'toState': 'CLOSED', 'notes': 'IT-10-070 서버 판정'}),
+                           ('sql', f"SELECT state FROM bid_requests WHERE id = {THIS_BID}")],
+                    check="r[1]['status'] == 403 and r[1]['body'].get('error') == 'CUSTOMER_TRANSITION_NOT_ALLOWED' and r[2][0]['state'] == 'ANALYZING'"),
+            5: dict(steps=[('key', '10.b070_bid'), ('api', USER, 'GET', '/api/bid-requests/{val:0:id}')],
+                    check="r[1]['status'] == 200 and all(k not in str(r[1]['body']) for k in "
+                          "('pwin', 'Pwin', 'aiVerdict', 'verdict', 'adminDecision', 'bidAnalysis', 'decidedBy'))")}),
 
 dict(id='IT-10-071', flow='Bid/No-Bid 결정', kind='정상', title='Go 로 정하면 정한 사람과 시각이 남고 문서 작성 중으로 전환된다',
      pre='관리자 계정, 입찰 분석이 분석 완료이고 관리자 결정이 없는 ANALYZING 입찰 건(읽는 중인 서류 없음), Aimbase 제안서 워크플로우가 도는 상태',
@@ -879,7 +1234,27 @@ dict(id='IT-10-071', flow='Bid/No-Bid 결정', kind='정상', title='Go 로 정�
             '5. 5단계 뒤 입찰 분석 영역에 관리자 결정 Go 와 정한 관리자 이름이 그대로 보이고 관리자 결정 폼과 [다시 분석] 이 없다\n'
             '6. 3단계 결정 저장으로 notification_logs 에 줄이 생기지 않는다',
      judge=['합동', '합동', '서버', '서버', '가상', '서버'],
-     req=['BID-DOC-007'], fc=['BID-DOC-007'], screen='관리자 /bid-requests/{id}', pri='High'),
+     req=['BID-DOC-007'], fc=['BID-DOC-007'], screen='관리자 /bid-requests/{id}', pri='High',
+     probe={3: dict(steps=[('key', '10.b071_server_bid'),
+                           ('api', ADMIN, 'POST', DECISION, {'decision': 'GO', 'note': None}),
+                           ('sql', analysis_rows()),
+                           ('sql', ADMIN_ID)],
+                    check="r[1]['status'] == 200 and r[2][-1]['admin_decision'] == 'GO' and r[2][-1]['decided_by'] == r[3][0]['hex'] "
+                          "and r[2][-1]['decided_at'][:19] == r[1]['body']['analysis']['decidedAt'].replace('T', ' ')[:19]"),
+            4: dict(steps=[('key', '10.b071_server_bid'),
+                           ('sql', analysis_rows()),
+                           ('sql', LAST_STEP),
+                           ('api', ADMIN, 'POST', TRANSITION, {'toState': 'GENERATING', 'notes': 'IT-10-071 서버 판정'}),
+                           ('sql', LAST_STEP)],
+                    need="len(r[1]) > 0 and r[1][-1]['admin_decision'] == 'GO' and r[2][0]['state'] == 'ANALYZING'",
+                    check="r[3]['status'] == 200 and r[4][0]['state'] == 'GENERATING' and int(r[4][0]['hist']) == int(r[2][0]['hist']) + 1 "
+                          "and r[4][0]['from_state'] == 'ANALYZING' and r[4][0]['to_state'] == 'GENERATING'"),
+            6: dict(steps=[('key', '10.b071_server6_bid'),
+                           ('sql', notification_count('email')),
+                           ('api', ADMIN, 'POST', DECISION, {'decision': 'GO', 'note': None}),
+                           wait(15),
+                           ('sql', notification_count('email'))],
+                    check="r[2]['status'] == 200 and r[4][0]['n'] == r[1][0]['n']")}),
 
 dict(id='IT-10-072', flow='Bid/No-Bid 결정', kind='정상', title='조건부 Go 로 조건을 기재해 정하면 문서 작성 중으로 전환된다',
      pre='관리자 계정, 입찰 분석이 분석 완료이고 관리자 결정이 없는 ANALYZING 입찰 건(읽는 중인 서류 없음)',
@@ -889,7 +1264,18 @@ dict(id='IT-10-072', flow='Bid/No-Bid 결정', kind='정상', title='조건부 G
             '2. 지금 회차의 admin_decision 이 CONDITIONAL_GO 이고 admin_note 가 기재한 조건이다\n'
             '3. 2단계 전환이 거부되지 않고 state 가 GENERATING 이 된다',
      judge=['가상', '서버', '서버'],
-     req=['BID-DOC-007'], fc=['BID-DOC-007'], screen='관리자 /bid-requests/{id}', pri='High'),
+     req=['BID-DOC-007'], fc=['BID-DOC-007'], screen='관리자 /bid-requests/{id}', pri='High',
+     probe={2: dict(steps=[('key', '10.b072_server_bid'),
+                           ('api', ADMIN, 'POST', DECISION, {'decision': 'CONDITIONAL_GO', 'note': '참여 인력 이력서를 고객에게 받는 조건'}),
+                           ('sql', analysis_rows())],
+                    check="r[1]['status'] == 200 and r[2][-1]['admin_decision'] == 'CONDITIONAL_GO' "
+                          "and r[2][-1]['admin_note'] == '참여 인력 이력서를 고객에게 받는 조건'"),
+            3: dict(steps=[('key', '10.b072_server_bid'),
+                           ('sql', analysis_rows()),
+                           ('api', ADMIN, 'POST', TRANSITION, {'toState': 'GENERATING', 'notes': 'IT-10-072 서버 판정'}),
+                           ('sql', f"SELECT state FROM bid_requests WHERE id = {THIS_BID}")],
+                    need="len(r[1]) > 0 and r[1][-1]['admin_decision'] == 'CONDITIONAL_GO'",
+                    check="r[2]['status'] == 200 and r[3][0]['state'] == 'GENERATING'")}),
 
 dict(id='IT-10-073', flow='Bid/No-Bid 결정', kind='정상', title='No-Go 로 정하면 문서 작성 중은 막히고 종료해도 고객에게 알리지 않는다',
      pre='관리자 계정, 입찰 분석이 분석 완료인 ANALYZING 입찰 건, 그 고객의 메일 주소',
@@ -905,7 +1291,32 @@ dict(id='IT-10-073', flow='Bid/No-Bid 결정', kind='정상', title='No-Go 로 �
             '5. 4단계에서 고객 서류 읽기 영역과 입찰 분석 영역이 그대로 보이고 [다시 읽기], [다시 분석], 관리자 결정 폼이 없다\n'
             '6. 5단계 응답의 readingStarted 가 true 다',
      judge=['가상', '서버', '서버', '서버', '가상', '서버'],
-     req=['BID-DOC-007'], fc=['BID-DOC-007', 'BID-DOC-004'], screen='관리자 /bid-requests/{id}', pri='High'),
+     req=['BID-DOC-007'], fc=['BID-DOC-007', 'BID-DOC-004'], screen='관리자 /bid-requests/{id}', pri='High',
+     probe={2: dict(steps=[('key', '10.b073_server2_bid'),
+                           ('api', ADMIN, 'POST', DECISION, {'decision': 'NO_GO', 'note': '자격 미달'}),
+                           ('api', ADMIN, 'POST', TRANSITION, {'toState': 'GENERATING', 'notes': 'IT-10-073 서버 판정'})],
+                    check="r[1]['status'] == 200 and " + refused(2, 'BID_DECISION_REQUIRED')),
+            3: dict(steps=[('key', '10.b073_server3_bid'),
+                           ('sql', LAST_STEP),
+                           ('api', ADMIN, 'POST', DECISION, {'decision': 'NO_GO', 'note': '자격 미달'}),
+                           ('api', ADMIN, 'POST', TRANSITION, {'toState': 'CLOSED', 'notes': 'IT-10-073 서버 판정'}),
+                           ('sql', CLOSE_STEP)],
+                    need="r[1][0]['state'] == 'ANALYZING'",
+                    check="r[2]['status'] == 200 and r[3]['status'] == 200 and r[4][0]['state'] == 'CLOSED' and r[4][0]['closed_at'] is not None "
+                          "and int(r[4][0]['hist']) == int(r[1][0]['hist']) + 1 and r[4][0]['from_state'] == 'ANALYZING' "
+                          "and r[4][0]['to_state'] == 'CLOSED'"),
+            4: dict(steps=[('key', '10.b073_server4_bid'),
+                           ('api', ADMIN, 'POST', DECISION, {'decision': 'NO_GO', 'note': '자격 미달'}),
+                           ('sql', "SELECT COUNT(*) AS n FROM notification_logs WHERE recipient_email = '{val:0:email}'"),
+                           ('api', ADMIN, 'POST', TRANSITION, {'toState': 'CLOSED', 'notes': 'IT-10-073 서버 판정'}),
+                           wait(15),
+                           ('sql', "SELECT COUNT(*) AS n FROM notification_logs WHERE recipient_email = '{val:0:email}'")],
+                    check="r[1]['status'] == 200 and r[3]['status'] == 200 and r[5][0]['n'] == r[2][0]['n']"),
+            6: dict(steps=[('key', '10.b073_server3_bid'),
+                           ('sql', f"SELECT state FROM bid_requests WHERE id = {THIS_BID}"),
+                           ('api', ADMIN, 'GET', READINGS)],
+                    need="r[1][0]['state'] == 'CLOSED'",
+                    check="r[2]['status'] == 200 and r[2]['body']['readingStarted'] is True")}),
 
 dict(id='IT-10-074', flow='Bid/No-Bid 결정', kind='정상', title='입찰 분석이 실패했거나 회차가 없는 건도 결정을 기록할 수 있다',
      pre='관리자 계정, 입찰 분석이 분석 실패인 ANALYZING 입찰 건 A, CR-170 배포 전에 분석 단계에 들어가 입찰 분석 회차가 없고 읽는 중인 서류도 없는 ANALYZING 입찰 건 B',
@@ -917,7 +1328,17 @@ dict(id='IT-10-074', flow='Bid/No-Bid 결정', kind='정상', title='입찰 분�
             '3. 3단계 뒤 B 에 bid_analyses 줄이 1줄 생기고 status 가 DECISION_ONLY, admin_decision 이 GO 다\n'
             '4. 3단계 뒤 B 의 머리가 결정만이고 종합 분석 리포트, 캡처플랜, Bid/No-Bid 결정 탭이 없다',
      judge=['서버', '가상', '서버', '가상'],
-     req=['BID-DOC-007'], fc=['BID-DOC-007'], screen='관리자 /bid-requests/{id}', pri='High'),
+     req=['BID-DOC-007'], fc=['BID-DOC-007'], screen='관리자 /bid-requests/{id}', pri='High',
+     probe={1: dict(steps=[('key', '10.b074_a_bid'),
+                           ('api', ADMIN, 'POST', DECISION, {'decision': 'GO', 'note': None}),
+                           ('sql', analysis_rows())],
+                    check="r[1]['status'] == 200 and r[2][-1]['status'] == 'FAILED' and r[2][-1]['admin_decision'] == 'GO'"),
+            3: dict(steps=[('key', '10.b074_b_bid'),
+                           ('sql', analysis_rows()),
+                           ('api', ADMIN, 'POST', DECISION, {'decision': 'GO', 'note': None}),
+                           ('sql', analysis_rows())],
+                    need="len(r[1]) == 0",
+                    check="r[2]['status'] == 200 and len(r[3]) == 1 and r[3][0]['status'] == 'DECISION_ONLY' and r[3][0]['admin_decision'] == 'GO'")}),
 
 dict(id='IT-10-075', flow='Bid/No-Bid 결정', kind='정상', title='결정을 다시 정하면 덮어쓰고 정한 시각이 바뀐다',
      pre='관리자 계정, 관리자 결정이 Go 인 ANALYZING 입찰 건(분석 중 아님)',
@@ -927,7 +1348,18 @@ dict(id='IT-10-075', flow='Bid/No-Bid 결정', kind='정상', title='결정을 �
             '2. 2단계 응답의 adminDecision 이 NO_GO, adminNote 가 "가격 경쟁력 부족" 이고 decidedAt 이 Go 로 정한 시각보다 뒤다\n'
             '3. 1단계 뒤 bid_analyses 의 그 입찰 건 줄 수가 1단계 전과 같다',
      judge=['가상', '서버', '서버'],
-     req=['BID-DOC-007'], fc=['BID-DOC-007'], screen='관리자 /bid-requests/{id}', pri='High'),
+     req=['BID-DOC-007'], fc=['BID-DOC-007'], screen='관리자 /bid-requests/{id}', pri='High',
+     probe={2: dict(steps=[('key', '10.b075_server2_bid'),
+                           ('api', ADMIN, 'POST', DECISION, {'decision': 'NO_GO', 'note': '가격 경쟁력 부족'}),
+                           ('api', ADMIN, 'GET', ANALYSIS)],
+                    check="r[1]['status'] == 200 and r[2]['body']['analysis']['adminDecision'] == 'NO_GO' "
+                          "and r[2]['body']['analysis']['adminNote'] == '가격 경쟁력 부족' "
+                          "and r[2]['body']['analysis']['decidedAt'].replace('T', ' ') > r[0][0]['go_at']"),
+            3: dict(steps=[('key', '10.b075_server3_bid'),
+                           ('sql', analysis_rows()),
+                           ('api', ADMIN, 'POST', DECISION, {'decision': 'NO_GO', 'note': '가격 경쟁력 부족'}),
+                           ('sql', analysis_rows())],
+                    check="r[2]['status'] == 200 and len(r[3]) == len(r[1])")}),
 
 dict(id='IT-10-076', flow='Bid/No-Bid 결정', kind='예외', title='결정을 선택하지 않거나 조건부 Go 의 조건, No-Go 의 사유가 비면 결정이 저장되지 않는다',
      pre='관리자 계정, 입찰 분석이 분석 완료이고 관리자 결정이 없는 ANALYZING 입찰 건',
@@ -942,7 +1374,15 @@ dict(id='IT-10-076', flow='Bid/No-Bid 결정', kind='예외', title='결정을 �
             '4. 4단계 응답이 400 이고 코드가 DECISION_NOTE_REQUIRED 다\n'
             '5. 5단계 응답이 400 이고 코드가 DECISION_NOTE_REQUIRED 이며 admin_decision 이 빈 값 그대로다',
      judge=['가상', '가상', '가상', '서버', '서버'],
-     req=['BID-DOC-007'], fc=['BID-DOC-007'], screen='관리자 /bid-requests/{id}', pri='High'),
+     req=['BID-DOC-007'], fc=['BID-DOC-007'], screen='관리자 /bid-requests/{id}', pri='High',
+     probe={4: dict(steps=[('key', '10.b076_server_bid'),
+                           ('api', ADMIN, 'POST', DECISION, {'decision': 'CONDITIONAL_GO', 'note': ''})],
+                    check="r[1]['status'] == 400 and r[1]['body'].get('error') == 'DECISION_NOTE_REQUIRED'"),
+            5: dict(steps=[('key', '10.b076_server_bid'),
+                           ('api', ADMIN, 'POST', DECISION, {'decision': 'NO_GO', 'note': ''}),
+                           ('sql', analysis_rows())],
+                    check="r[1]['status'] == 400 and r[1]['body'].get('error') == 'DECISION_NOTE_REQUIRED' "
+                          "and len(r[2]) > 0 and r[2][-1]['admin_decision'] is None")}),
 
 dict(id='IT-10-077', flow='Bid/No-Bid 결정', kind='예외', title='관리자 결정이 없으면 문서 작성 중으로 전환되지 않는다',
      pre='관리자 계정, 입찰 분석이 분석 완료이고 관리자 결정이 없는 ANALYZING 입찰 건(읽는 중인 서류 없음)',
@@ -953,6 +1393,13 @@ dict(id='IT-10-077', flow='Bid/No-Bid 결정', kind='예외', title='관리자 �
             '2. 2단계 응답이 409 이고 코드가 BID_DECISION_REQUIRED 다\n'
             '3. 3단계에서 state 가 ANALYZING 그대로이고 state_history 줄 수가 늘지 않았다',
      judge=['가상', '서버', '서버'],
-     req=['BID-DOC-007'], fc=['BID-DOC-007'], screen='관리자 /bid-requests/{id}', pri='High'),
+     req=['BID-DOC-007'], fc=['BID-DOC-007'], screen='관리자 /bid-requests/{id}', pri='High',
+     probe={2: dict(steps=[('key', '10.b077_server_bid'),
+                           ('api', ADMIN, 'POST', TRANSITION, {'toState': 'GENERATING', 'notes': 'IT-10-077 서버 판정'})],
+                    check=refused(1, 'BID_DECISION_REQUIRED')),
+            3: dict(steps=[('key', '10.b077_server_bid'),
+                           ('api', ADMIN, 'POST', TRANSITION, {'toState': 'GENERATING', 'notes': 'IT-10-077 서버 판정'}),
+                           ('sql', LAST_STEP)],
+                    check="r[2][0]['state'] == 'ANALYZING' and int(r[2][0]['hist']) == int(r[0][0]['hist'])")}),
 
 ]

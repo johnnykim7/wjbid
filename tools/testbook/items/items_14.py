@@ -1,5 +1,17 @@
 # 영역 14 MCP/알림 시험항목. 근거는 T1-1 기능요구사항 명세서, T1-3 BIZ-012·013·061, T1-4 POL-009·011, T1-6 이벤트 계약, T3-1, T3-2 MCP 서버 절이다.
 
+
+MCP_KEY = {'X-API-Key': '$TESTBOOK_MCP_API_KEY'}
+THIS_BID = "UNHEX('{val:0:hex}')"
+
+
+def mcp(tool, args):
+    return ('api', 'guest', 'POST', '/api/mcp',
+            {'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call', 'params': {'name': tool, 'arguments': args}}, MCP_KEY)
+
+
+TO_GENERATING = mcp('transition_bid_state', {'bidRequestId': '{val:0:id}', 'targetState': 'GENERATING', 'notes': 'IT-14-043 서버 판정'})
+
 ITEMS = [
 
 dict(id='IT-14-001', flow='MCP 연결', kind='정상', title='POST /mcp 로 initialize 를 보내 서버 정보를 받는다',
@@ -365,6 +377,11 @@ dict(id='IT-14-043', flow='상태 도구', kind='예외', title='transition_bid_
      expect='1. 응답에 오류가 담긴다\n'
             '2. 그 입찰 요청 state 가 ANALYZING 그대로이고 state_history 줄 수가 늘지 않는다',
      judge=['서버', '서버'],
-     req=['BID-MCP-004'], fc=['BID-MCP-004', 'BID-DOC-007'], screen='', pri='High'),
+     req=['BID-MCP-004'], fc=['BID-MCP-004', 'BID-DOC-007'], screen='', pri='High',
+     probe={1: dict(steps=[('key', '14.b043_bid'), TO_GENERATING],
+                    check="r[1]['body']['result'].get('isError')"),
+            2: dict(steps=[('key', '14.b043_bid'), TO_GENERATING,
+                           ('sql', f"SELECT state, JSON_LENGTH(state_history) AS hist FROM bid_requests WHERE id = {THIS_BID}")],
+                    check="r[2][0]['state'] == 'ANALYZING' and int(r[2][0]['hist']) == int(r[0][0]['hist'])")}),
 
 ]

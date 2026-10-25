@@ -488,7 +488,13 @@ dict(id='IT-12-051', flow='다음 가능 상태', kind='정상', title='ANALYZIN
      expect='1. 상태 패널의 허용 다음 상태가 GENERATING, CLOSED 둘이다\n'
             '2. 다음 상태 응답이 GENERATING, CLOSED 다',
      judge=['가상', '서버'],
-     req=['BID-FSM-003'], fc=['BID-FSM-003'], screen='관리자 /bid-requests/{id}', pri='Medium'),
+     req=['BID-FSM-003'], fc=['BID-FSM-003'], screen='관리자 /bid-requests/{id}', pri='Medium',
+     probe={2: dict(steps=[('sql', "SELECT LOWER(CONCAT_WS('-', SUBSTR(HEX(id),1,8), SUBSTR(HEX(id),9,4), SUBSTR(HEX(id),13,4), "
+                                  "SUBSTR(HEX(id),17,4), SUBSTR(HEX(id),21,12))) AS id FROM bid_requests "
+                                  "WHERE state = 'ANALYZING' ORDER BY updated_at DESC LIMIT 1"),
+                           ('api', ADMIN, 'GET', '/api/bid-requests/{val:0:id}/next-states')],
+                    need="len(r[0]) == 1",
+                    check="r[1]['status'] == 200 and sorted(r[1]['body']) == ['CLOSED', 'GENERATING']")}),
 
 dict(id='IT-12-052', flow='다음 가능 상태', kind='정상', title='나머지 진행 상태의 허용 다음 상태가 설계표와 같다',
      pre='관리자 계정, 상태 DOCS_PENDING, DOCS_RECEIVED, GENERATING, CONFIRMED 입찰 요청 각 1건',

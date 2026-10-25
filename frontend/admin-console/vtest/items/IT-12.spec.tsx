@@ -30,6 +30,17 @@ async function filterTab(label: string) {
   if (tab) await click(tab)
 }
 
+/** 거른 목록을 쪽마다 넘기며 그 공고 제목의 줄을 찾는다. 그 상태 건이 한 쪽을 넘으면 첫 쪽에 없을 수 있다 */
+async function findRow(title: string): Promise<HTMLTableRowElement | undefined> {
+  for (;;) {
+    const row = listRow(title)
+    if (row) return row
+    const next = buttonNamed('다음')
+    if (!next || next.disabled) return undefined
+    await click(next)
+  }
+}
+
 test('IT-12-031 입찰 요청 관리 목록에서 DOCS_RECEIVED 를 ANALYZING 으로 전이한다', async () => {
   const ID = 'IT-12-031'
   const id = seedId('12.b031_virtual_bid')
@@ -52,7 +63,7 @@ test('IT-12-031 입찰 요청 관리 목록에서 DOCS_RECEIVED 를 ANALYZING �
   const blocked = await transitionTo('분석 중', opener)
   // 문서 접수 완료로 거른 목록에서는 전이한 줄이 빠진다. 분석 중으로 걸러 그 줄의 상태를 본다
   await filterTab('분석 중')
-  const after = listRow(title!)
+  const after = await findRow(title!)
   const state = after ? text(after.cells[3]) : '(줄 없음)'
   judge(ID, 1, !blocked && state === '분석 중' ? 'pass' : 'fail',
     '목록에서 전이한 뒤 그 입찰 건 줄의 상태가 분석 중인지', blocked || `${title} / ${state}`)
@@ -75,4 +86,23 @@ test('IT-12-034 ANALYZING 을 GENERATING 으로 전이하면 상태가 문서 �
   const after = detailState()
   judge(ID, 1, !blocked && after === '문서 작성 중' ? 'pass' : 'fail',
     '다음 상태 문서 작성 중으로 전이한 뒤 상태 표시가 문서 작성 중인지', blocked || `${before} 에서 ${after}`)
+})
+
+test('IT-12-051 ANALYZING 입찰 건의 허용 다음 상태는 GENERATING, CLOSED 둘이다', async () => {
+  const ID = 'IT-12-051'
+  // 다음 상태를 보기만 하고 전환하지 않아 시딩 건이 아닌 분석 중 입찰 건도 쓴다
+  const list = await apiGet<{ content: { id: string }[] }>('/admin/bid-requests?state=ANALYZING&page=0&size=20')
+  const id = list?.content?.[0]?.id
+  if (!id) {
+    noMaterial(ID, 1, '분석 중 입찰 건이 없다')
+    return
+  }
+  await openScreen(`/bid-requests/${id}`)
+  const open = buttonNamed('상태 전환')
+  if (open) await click(open)
+  const choices = screen.queryAllByRole('radio').map((r) => text(r.closest('label'))).filter(Boolean)
+  const cancel = buttonNamed('취소')
+  if (cancel) await click(cancel)
+  judge(ID, 1, choices.length === 2 && choices.includes('문서 작성 중') && choices.includes('종료') ? 'pass' : 'fail',
+    '상태 전환 창의 허용 다음 상태가 문서 작성 중(GENERATING), 종료(CLOSED) 둘인지', choices.join(', ') || '선택지 없음')
 })

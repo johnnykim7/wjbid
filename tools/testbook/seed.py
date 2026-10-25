@@ -12,7 +12,7 @@
 
 자리 글자는 파일 번호로 풀린다. 번호가 파일마다 달라 장면끼리 섞이지 않고, 지울 때 그 번호로만 지운다.
     [[id:TT:S]]    시딩 행 열쇠 UNHEX(...). TT 는 표 구분(01 회원 02 공고 03 입찰 건 04 공고별 서류 05 서류함 서류
-                   06 읽기 07 입찰 문서 08 장 09 절 0a 요구 항목 0b 충족 매핑), S 는 순번
+                   06 읽기 07 입찰 문서 08 장 09 절 0a 요구 항목 0b 충족 매핑 0c 입찰 분석 회차 0d 미 연방 계약), S 는 순번
     [[uuid:TT:S]]  같은 열쇠의 API 주소 꼴 글자
     [[sha:S]]      서류 내용 해시. 같은 내용을 두 서류에 주면 같은 번호를 쓴다
     [[email:이름]] 시딩 회원 메일
@@ -104,11 +104,13 @@ class SeedFile:
         """시딩 회원, 시딩 공고, 시딩 해시에 딸린 행을 자식부터 지운다. 시험 중 서버가 그 입찰 건에 만든 행(제안서 장과 절,
         문서 버전, 검증 기록)도 함께 지워야 다시 넣을 수 있다"""
         member = f"m.email LIKE 'seed.{self.stem}.%@example.com'"
-        bids = f'SELECT br.id FROM bid_requests br JOIN members m ON m.id = br.member_id WHERE {member}'
+        opps = f"SELECT o.id FROM opportunities o WHERE o.notice_id LIKE 'SEED-{self.stem}-%'"
+        # 시험 계정이 고객으로 보는 장면은 입찰 건 회원이 시딩 회원이 아니다. 시딩 공고에 건 입찰 건도 지운다
+        bids = (f'SELECT br.id FROM bid_requests br JOIN members m ON m.id = br.member_id WHERE {member} '
+                f'OR br.opportunity_id IN ({opps})')
         docs = f'SELECT bd.id FROM bid_documents bd WHERE bd.bid_request_id IN ({bids})'
         chapters = f'SELECT pc.id FROM proposal_chapter pc WHERE pc.document_id IN ({docs})'
         sections = f'SELECT ps.id FROM proposal_section ps WHERE ps.chapter_id IN ({chapters})'
-        opps = f"SELECT o.id FROM opportunities o WHERE o.notice_id LIKE 'SEED-{self.stem}-%'"
         return [
             f'DELETE FROM proposal_block WHERE section_id IN ({sections})',
             f'DELETE FROM proposal_section WHERE chapter_id IN ({chapters})',
@@ -121,13 +123,16 @@ class SeedFile:
             f'DELETE FROM bid_packages WHERE bid_request_id IN ({bids})',
             f'DELETE FROM submission_attempts WHERE bid_request_id IN ({bids})',
             f'DELETE FROM validation_runs WHERE bid_request_id IN ({bids})',
-            f'DELETE FROM client_documents WHERE member_id IN (SELECT m.id FROM members m WHERE {member})',
+            f'DELETE FROM bid_analyses WHERE bid_request_id IN ({bids})',
+            f'DELETE FROM client_documents WHERE member_id IN (SELECT m.id FROM members m WHERE {member}) OR bid_request_id IN ({bids})',
             f'DELETE FROM member_documents WHERE member_id IN (SELECT m.id FROM members m WHERE {member})',
             f'DELETE FROM bid_requests WHERE member_id IN (SELECT m.id FROM members m WHERE {member})',
+            f'DELETE FROM bid_requests WHERE opportunity_id IN ({opps})',
             f"DELETE FROM document_readings WHERE content_sha256 LIKE '5eed{self.code}%'",
             f'DELETE FROM opportunity_requirement_items WHERE opportunity_id IN ({opps})',
             f'DELETE FROM notices WHERE opportunity_id IN ({opps})',
             f"DELETE FROM opportunities WHERE notice_id LIKE 'SEED-{self.stem}-%'",
+            f"DELETE FROM federal_contracts WHERE award_key LIKE 'SEED-{self.stem}-%'",
             f'DELETE m FROM members m WHERE {member}',
         ]
 

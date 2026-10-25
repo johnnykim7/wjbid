@@ -55,5 +55,15 @@
     "admin-console": {
       "dir": "frontend/admin-console"
     }
+  },
+  "unit": {
+    "backend": {
+      "dir": "backend",
+      "run": [
+        "./gradlew",
+        "test",
+        "--rerun"
+      ]
+    }
   }
 }
