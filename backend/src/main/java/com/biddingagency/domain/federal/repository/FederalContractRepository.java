@@ -3,6 +3,7 @@ package com.biddingagency.domain.federal.repository;
 import com.biddingagency.domain.federal.entity.FederalAwardType;
 import com.biddingagency.domain.federal.entity.FederalContract;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -12,7 +13,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface FederalContractRepository extends JpaRepository<FederalContract, UUID> {
+/** 조건이 여럿이고 비어도 되는 낙찰 이력 찾기(CR-170)는 Specification 으로 묶는다 */
+public interface FederalContractRepository extends JpaRepository<FederalContract, UUID>,
+        JpaSpecificationExecutor<FederalContract> {
 
     Optional<FederalContract> findByAwardKey(String awardKey);
 

@@ -67,7 +67,7 @@ public class DocumentReadingService {
     public static final String TIMEOUT_REASON = "읽기 시간 초과";
     private static final int DESIGN_VALUE_LIMIT = 300;
     private static final Set<BidRequestState> BEFORE_ANALYSIS = EnumSet.of(
-            BidRequestState.CREATED, BidRequestState.DOCS_PENDING, BidRequestState.DOCS_RECEIVED, BidRequestState.CLOSED);
+            BidRequestState.CREATED, BidRequestState.DOCS_PENDING, BidRequestState.DOCS_RECEIVED);
     private static final Set<String> CATEGORIES = Set.of(
             "COMPANY", "LICENSE", "PAST_PERFORMANCE", "PERSONNEL", "EQUIPMENT",
             "FINANCIAL", "INSURANCE", "CERTIFICATION", "OTHER");
@@ -185,10 +185,15 @@ public class DocumentReadingService {
     /** BIZ-087: 분석에서 문서 작성 중으로 갈 때 읽는 중(기한 안)인 후보가 있으면 막는다 */
     @Transactional
     public void requireNoReadingInProgress(UUID bidRequestId) {
-        BidRequest bidRequest = bidRequest(bidRequestId);
-        if (collect(bidRequest).stream().anyMatch(Candidate::inFlight)) {
+        if (hasReadingInProgress(bidRequestId)) {
             throw DocumentReadingException.inProgress();
         }
+    }
+
+    /** 읽는 중(기한 안)인 후보가 있는지. 입찰 분석은 이것이 없을 때 시작한다(CR-170, BIZ-090) */
+    @Transactional
+    public boolean hasReadingInProgress(UUID bidRequestId) {
+        return collect(bidRequest(bidRequestId)).stream().anyMatch(Candidate::inFlight);
     }
 
     /**
@@ -597,7 +602,19 @@ public class DocumentReadingService {
                     r != null ? r.getFailureReason() : null,
                     r != null ? r.getReadAt() : null));
         }
-        return new Overview(!BEFORE_ANALYSIS.contains(bidRequest.getState()), inProgress, items);
+        return new Overview(readingStarted(bidRequest), inProgress, items);
+    }
+
+    /**
+     * 분석 단계 이후면 시작된 것이다. 종료한 건은 상태 이력에 분석 단계 진입이 있어야 한다(CR-170).
+     * 읽기 줄 유무로 보면 후보가 없는 분석 단계 건이 시작 전으로 보인다.
+     */
+    private static boolean readingStarted(BidRequest bidRequest) {
+        BidRequestState state = bidRequest.getState();
+        if (state == BidRequestState.CLOSED) {
+            return bidRequest.hasEntered(BidRequestState.ANALYZING);
+        }
+        return !BEFORE_ANALYSIS.contains(state);
     }
 
     private BidRequest bidRequest(UUID bidRequestId) {

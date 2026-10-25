@@ -10,6 +10,7 @@ import {
 import { STATE_LABELS } from '../utils/bidState'
 import { toast } from '@therecommerce-develop/ds-ui'
 import DocumentReadingPanel from '../components/DocumentReadingPanel'
+import BidAnalysisPanel from '../components/BidAnalysisPanel'
 
 const STATE_COLORS: Record<string, string> = {
   CREATED: 'bg-gray-100 text-gray-600',
@@ -29,12 +30,14 @@ const NEXT_STATES: Record<string, string[]> = {
   CREATED: ['DOCS_PENDING', 'CLOSED'],
   DOCS_PENDING: ['DOCS_RECEIVED', 'CLOSED'],
   DOCS_RECEIVED: ['ANALYZING', 'DOCS_PENDING', 'CLOSED'],
-  ANALYZING: ['GENERATING'],
+  ANALYZING: ['GENERATING', 'CLOSED'],
   GENERATING: ['REVIEW'],
   REVIEW: ['CONFIRMED', 'GENERATING'],
   CONFIRMED: ['SUBMITTED', 'REVIEW'],
   SUBMITTED: ['AWARDED', 'NOT_AWARDED'],
 }
+
+const DECISION_REQUIRED_MESSAGE = 'Bid/No-Bid 결정을 Go 나 조건부 Go 로 정해야 문서 작성으로 넘어갑니다'
 
 const DOC_STATUS_LABELS: Record<string, string> = {
   DRAFT: '초안',
@@ -103,6 +106,12 @@ export default function BidRequestDetailPage() {
   // CR-169: 고객 서류를 읽는 중이면 문서 작성 중 전환을 막는다(BIZ-087, 서버도 409 로 막는다)
   const [readingInProgress, setReadingInProgress] = useState(false)
   const [readingReloadKey, setReadingReloadKey] = useState(0)
+  const [analysisStarted, setAnalysisStarted] = useState(false)
+
+  // CR-170: 관리자 결정이 Go 나 조건부 Go 가 아니면 문서 작성 중 전환을 막는다(BIZ-092, 서버도 409 로 막는다).
+  // 입찰 분석을 불러오지 못하면 null 이고 화면에서는 막지 않는다
+  const [decisionAllowsGeneration, setDecisionAllowsGeneration] = useState<boolean | null>(null)
+  const [analysisReloadKey, setAnalysisReloadKey] = useState(0)
 
   const loadData = async () => {
     if (!id) return
@@ -132,6 +141,8 @@ export default function BidRequestDetailPage() {
   // DOCS_RECEIVED → DOCS_PENDING 은 "첨부 반려"(고객 재업로드 요청) — 사유 필수
   const isRejection = bidRequest?.state === 'DOCS_RECEIVED' && selectedState === 'DOCS_PENDING'
   const blockedByReading = bidRequest?.state === 'ANALYZING' && selectedState === 'GENERATING' && readingInProgress
+  const blockedByDecision = bidRequest?.state === 'ANALYZING' && selectedState === 'GENERATING'
+    && !readingInProgress && decisionAllowsGeneration === false
 
   const handleTransition = async () => {
     if (!id || !selectedState) return
@@ -151,6 +162,9 @@ export default function BidRequestDetailPage() {
       if (res?.status === 409 && res.data?.error === 'DOCUMENT_READING_IN_PROGRESS') {
         toast.error('고객 서류를 읽는 중입니다. 다 읽은 뒤 전환하세요')
         setReadingReloadKey((k) => k + 1)
+      } else if (res?.status === 409 && res.data?.error === 'BID_DECISION_REQUIRED') {
+        toast.error(DECISION_REQUIRED_MESSAGE)
+        setAnalysisReloadKey((k) => k + 1)
       } else {
         setError('상태 전환에 실패했습니다.')
       }
@@ -377,7 +391,17 @@ export default function BidRequestDetailPage() {
         bidState={bidRequest.state}
         reloadKey={readingReloadKey}
         onInProgressChange={setReadingInProgress}
+        onStartedChange={setAnalysisStarted}
       />
+
+      {analysisStarted && (
+        <BidAnalysisPanel
+          bidRequestId={bidRequest.id}
+          bidState={bidRequest.state}
+          reloadKey={analysisReloadKey}
+          onDecisionChange={setDecisionAllowsGeneration}
+        />
+      )}
 
       {/* Meta Info */}
       <div className="bg-white rounded-xl border border-gray-200 p-5">
@@ -442,6 +466,9 @@ export default function BidRequestDetailPage() {
               {blockedByReading && (
                 <p className="text-sm text-amber-700 bg-amber-50 px-3 py-2 rounded-lg">고객 서류를 읽는 중입니다</p>
               )}
+              {blockedByDecision && (
+                <p className="text-sm text-amber-700 bg-amber-50 px-3 py-2 rounded-lg">{DECISION_REQUIRED_MESSAGE}</p>
+              )}
               <textarea
                 value={notes}
                 onChange={e => setNotes(e.target.value)}
@@ -456,7 +483,7 @@ export default function BidRequestDetailPage() {
               <button onClick={() => setShowTransition(false)} className="px-4 py-2 text-sm text-gray-600">취소</button>
               <button
                 onClick={handleTransition}
-                disabled={!selectedState || transitioning || blockedByReading}
+                disabled={!selectedState || transitioning || blockedByReading || blockedByDecision}
                 className="px-5 py-2 bg-secondary text-white rounded-lg text-sm font-medium hover:bg-blue-600 disabled:opacity-50"
               >
                 {transitioning ? '처리 중...' : '전환'}

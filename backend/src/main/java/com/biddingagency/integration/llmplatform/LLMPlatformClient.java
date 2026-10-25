@@ -65,6 +65,10 @@ public class LLMPlatformClient {
     @Value("${app.aimbase.workflows.client-document-read:client-document-read}")
     private String clientDocumentReadWorkflowId;
 
+    // CR-170: 입찰 분석. 산출물은 Aimbase 가 MCP save_bid_analysis 로 저장한다.
+    @Value("${app.aimbase.workflows.bid-analysis:bid-analysis}")
+    private String bidAnalysisWorkflowId;
+
     // CR-022 (재구현): 공고 본문 영→한 번역. 결과는 MCP 콜백 없이 stepResults에서 직접 추출.
     @Value("${app.aimbase.workflows.opportunity-description-translation:translate-opportunity-description}")
     private String opportunityDescriptionTranslationWorkflowId;
@@ -264,6 +268,16 @@ public class LLMPlatformClient {
                                                      java.util.function.Consumer<String> onRunStarted) {
         log.info("Aimbase: 고객 서류 읽기 시작 bidRequestId={}", input.get("bidRequestId"));
         return runWorkflowAndWait(clientDocumentReadWorkflowId, input, onRunStarted);
+    }
+
+    /**
+     * CR-170 입찰 분석: bid-analysis 워크플로우 실행.
+     * 입력: bidRequestId, analysisId. onRunStarted 로 runId 를 회차에 남긴다.
+     */
+    public WorkflowRunResponse runBidAnalysis(Map<String, Object> input,
+                                              java.util.function.Consumer<String> onRunStarted) {
+        log.info("Aimbase: 입찰 분석 시작 bidRequestId={}, analysisId={}", input.get("bidRequestId"), input.get("analysisId"));
+        return runWorkflowAndWait(bidAnalysisWorkflowId, input, onRunStarted);
     }
 
     // ─────────────────────────────────────────────────────────────────────────

@@ -1,5 +1,7 @@
 package com.biddingagency.domain.bid.service;
 
+import com.biddingagency.domain.analysis.BidAnalysisException;
+import com.biddingagency.domain.analysis.service.BidAnalysisService;
 import com.biddingagency.domain.bid.entity.BidRequest;
 import com.biddingagency.domain.bid.entity.BidRequestState;
 import com.biddingagency.domain.bid.BidRequestNotFoundException;
@@ -16,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -50,6 +53,8 @@ class BidFSMServiceTest {
     private com.biddingagency.domain.document.service.BidDocumentService bidDocumentService;
     @Mock
     private DocumentReadingService documentReadingService;
+    @Mock
+    private BidAnalysisService bidAnalysisService;
 
     @InjectMocks
     private BidFSMService fsmService;
@@ -69,6 +74,7 @@ class BidFSMServiceTest {
             "CREATED, CLOSED",
             "DOCS_PENDING, CLOSED",
             "DOCS_RECEIVED, CLOSED",
+            "ANALYZING, CLOSED",
             "SUBMITTED, AWARDED",
             "SUBMITTED, NOT_AWARDED"
     })
@@ -82,7 +88,6 @@ class BidFSMServiceTest {
     @CsvSource({
             "SUBMITTED, REVIEW",
             "CLOSED, CREATED",
-            "ANALYZING, CLOSED",
             "GENERATING, CLOSED",
             "SUBMITTED, CLOSED",
             "CLOSED, DOCS_PENDING",
@@ -505,5 +510,96 @@ class BidFSMServiceTest {
         assertThatThrownBy(() -> fsmService.transition(bidRequestId, BidRequestState.GENERATING, UUID.randomUUID(), "admin", ""))
                 .isInstanceOf(DocumentReadingException.class);
         assertThat(bidRequest.getState()).isEqualTo(BidRequestState.ANALYZING);
+    }
+
+    private BidRequest bidIn(UUID bidRequestId, BidRequestState state) {
+        BidRequest bidRequest = BidRequest.builder()
+                .state(state)
+                .stateHistory(new ArrayList<>())
+                .build();
+        ReflectionTestUtils.setField(bidRequest, "id", bidRequestId);
+        given(bidRequestRepository.findByIdWithDetails(bidRequestId)).willReturn(Optional.of(bidRequest));
+        return bidRequest;
+    }
+
+    // TC-DOC-245: 분석 단계 진입 때 읽기를 줄 세운 뒤 입찰 분석 시작을 본다 (CR-170, BIZ-090)
+    @Test
+    @DisplayName("TC-DOC-245 분석진입_읽기줄세운뒤_입찰분석시작확인")
+    void 분석진입_입찰분석시작확인() {
+        UUID bidRequestId = UUID.randomUUID();
+        bidIn(bidRequestId, BidRequestState.DOCS_RECEIVED);
+        given(bidRequestRepository.save(any(BidRequest.class))).willAnswer(inv -> inv.getArgument(0));
+
+        fsmService.transition(bidRequestId, BidRequestState.ANALYZING, UUID.randomUUID(), "admin", "");
+
+        InOrder order = inOrder(documentReadingService, bidAnalysisService);
+        order.verify(documentReadingService).queueForAnalysis(bidRequestId);
+        order.verify(bidAnalysisService).startIfReady(bidRequestId);
+    }
+
+    // TC-DOC-278: 지금 분석에 결정이 없으면 문서 작성 중으로 넘어가지 않는다 (CR-170, BIZ-092)
+    @Test
+    @DisplayName("TC-DOC-278 생성전환_결정없음_거부_상태그대로")
+    void 생성전환_결정없음_거부() {
+        UUID bidRequestId = UUID.randomUUID();
+        BidRequest bidRequest = bidIn(bidRequestId, BidRequestState.ANALYZING);
+        willThrow(BidAnalysisException.decisionRequired()).given(bidAnalysisService).requireGoDecision(bidRequestId);
+
+        assertThatThrownBy(() -> fsmService.transition(bidRequestId, BidRequestState.GENERATING, UUID.randomUUID(), "admin", ""))
+                .isInstanceOf(BidAnalysisException.class);
+        assertThat(bidRequest.getState()).isEqualTo(BidRequestState.ANALYZING);
+        then(aiWorkflowService).should(never()).generateDocumentsAsync(any());
+    }
+
+    // TC-DOC-280: 조건부 Go 면 문서 작성 중으로 넘어간다 (CR-170, BIZ-092)
+    @Test
+    @DisplayName("TC-DOC-280 생성전환_조건부Go_GENERATING")
+    void 생성전환_조건부Go() {
+        UUID bidRequestId = UUID.randomUUID();
+        BidRequest bidRequest = bidIn(bidRequestId, BidRequestState.ANALYZING);
+        given(bidRequestRepository.save(any(BidRequest.class))).willAnswer(inv -> inv.getArgument(0));
+
+        fsmService.transition(bidRequestId, BidRequestState.GENERATING, UUID.randomUUID(), "admin", "");
+
+        assertThat(bidRequest.getState()).isEqualTo(BidRequestState.GENERATING);
+    }
+
+    // TC-DOC-282: 관리자가 분석 단계에서 종료한다 (CR-170, BID-DOC-007). 고객 알림이 없는 것은 NotificationEventListenerTest
+    @Test
+    @DisplayName("TC-DOC-282 분석에서종료_허용")
+    void 분석에서종료_허용() {
+        UUID bidRequestId = UUID.randomUUID();
+        BidRequest bidRequest = bidIn(bidRequestId, BidRequestState.ANALYZING);
+        given(bidRequestRepository.save(any(BidRequest.class))).willAnswer(inv -> inv.getArgument(0));
+
+        fsmService.transition(bidRequestId, BidRequestState.CLOSED, UUID.randomUUID(), "admin", "No-Go");
+
+        assertThat(bidRequest.getState()).isEqualTo(BidRequestState.CLOSED);
+        then(bidAnalysisService).should(never()).requireGoDecision(any());
+    }
+
+    // TC-DOC-283: 고객은 분석 단계 건을 종료하지 못한다 (BIZ-001)
+    @Test
+    @DisplayName("TC-DOC-283 고객_분석에서종료_거부")
+    void 고객_분석에서종료_거부() {
+        UUID bidRequestId = UUID.randomUUID();
+
+        assertThatThrownBy(() -> fsmService.customerTransition(
+                bidRequestId, BidRequestState.CLOSED, customer(), "customer", ""))
+                .isInstanceOf(com.biddingagency.domain.bid.CustomerTransitionNotAllowedException.class);
+        then(bidRequestRepository).should(never()).save(any());
+    }
+
+    // TC-DOC-286: 읽는 중이고 결정도 없으면 읽는 중 거부가 먼저다 (CR-170, BIZ-087, BIZ-092)
+    @Test
+    @DisplayName("TC-DOC-286 생성전환_읽는중이고결정없음_읽는중먼저")
+    void 읽는중이고결정없음_읽는중먼저() {
+        UUID bidRequestId = UUID.randomUUID();
+        bidIn(bidRequestId, BidRequestState.ANALYZING);
+        willThrow(DocumentReadingException.inProgress()).given(documentReadingService).requireNoReadingInProgress(bidRequestId);
+
+        assertThatThrownBy(() -> fsmService.transition(bidRequestId, BidRequestState.GENERATING, UUID.randomUUID(), "admin", ""))
+                .isInstanceOf(DocumentReadingException.class);
+        then(bidAnalysisService).should(never()).requireGoDecision(any());
     }
 }

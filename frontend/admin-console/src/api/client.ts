@@ -183,6 +183,16 @@ export const getDocumentReading = (readingId: string) =>
 export const rerunDocumentReadings = (bidRequestId: string, readingIds?: string[]) =>
   api.post(`/admin/bid-requests/${bidRequestId}/document-readings/run`, { readingIds: readingIds ?? null })
 
+// CR-170 입찰 분석과 Bid/No-Bid 결정
+export const getBidAnalysis = (bidRequestId: string) =>
+  api.get(`/admin/bid-requests/${bidRequestId}/bid-analysis`)
+
+export const rerunBidAnalysis = (bidRequestId: string) =>
+  api.post(`/admin/bid-requests/${bidRequestId}/bid-analysis/run`)
+
+export const saveBidDecision = (bidRequestId: string, decision: string, note: string | null) =>
+  api.post(`/admin/bid-requests/${bidRequestId}/bid-analysis/decision`, { decision, note })
+
 // Collection Runs
 export const getCollectionRuns = (page = 0) =>
   api.get('/admin/collection/runs', { params: { page, size: 20 } })

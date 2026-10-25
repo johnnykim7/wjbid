@@ -160,6 +160,21 @@ public interface OpportunityRepository extends JpaRepository<Opportunity, UUID> 
     @Query(MARKET_SOURCE_SELECT + " AND TRIM(o.solicitationNumber) IN :sols")
     List<MarketSource> findMarketSourcesBySolicitationNumbers(@Param("sols") Collection<String> sols);
 
+    /** CR-170: 같은 기관의 최근 공고(지운 것 제외), 게시일 늦은 순 */
+    @Query(MARKET_SOURCE_SELECT + " AND o.organizationName = :org AND o.id <> :excludeId ORDER BY o.postedDate DESC")
+    List<MarketSource> findRecentMarketSourcesByOrganization(@Param("org") String organizationName,
+                                                             @Param("excludeId") UUID excludeId,
+                                                             Pageable pageable);
+
+    /** CR-170: 공고번호가 같은 공고(지운 것 제외). 사전 조사, 사전 공고, 정정을 입찰 분석이 본다 */
+    @Query("SELECT o FROM Opportunity o WHERE o.deletedAt IS NULL AND TRIM(o.solicitationNumber) = :sol AND o.id <> :excludeId "
+            + "ORDER BY o.postedDate")
+    List<Opportunity> findSameSolicitation(@Param("sol") String solicitationNumber, @Param("excludeId") UUID excludeId);
+
+    /** CR-170: 낙찰 공고 전부(지운 것 제외). 업종과 PSC 코드는 원본 JSON 에만 있어 낙찰 이력 찾기가 걸러 쓴다 */
+    @Query("SELECT o FROM Opportunity o WHERE o.deletedAt IS NULL AND o.type = :type")
+    List<Opportunity> findByTypeNotDeleted(@Param("type") String type);
+
     /** CR-160: 받기를 기다리는 공고, 오래 기다린 것부터(BIZ-079) */
     List<Opportunity> findByPieeFetchStatusOrderByPieeFetchStatusAtAsc(PieeFetchStatus status);
 

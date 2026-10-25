@@ -33,11 +33,13 @@ function rerunnable(item: ReadingItem): boolean {
  * CR-169 입찰 상세 관리의 고객 서류 읽기 영역.
  * 읽는 중이면 10초마다 다시 부르고, 읽는 중인지를 상태 패널에 알려 문서 작성 중 전환을 막게 한다.
  */
-export default function DocumentReadingPanel({ bidRequestId, bidState, reloadKey, onInProgressChange }: {
+export default function DocumentReadingPanel({ bidRequestId, bidState, reloadKey, onInProgressChange, onStartedChange }: {
   bidRequestId: string
   bidState: string
   reloadKey?: number
   onInProgressChange?: (inProgress: boolean) => void
+  // CR-170: 분석 단계에 들어간 적이 있는지. 입찰 분석 영역이 같은 판단으로 보인다
+  onStartedChange?: (started: boolean) => void
 }) {
   const [overview, setOverview] = useState<ReadingOverview | null>(null)
   const [loading, setLoading] = useState(true)
@@ -46,10 +48,13 @@ export default function DocumentReadingPanel({ bidRequestId, bidState, reloadKey
   const [running, setRunning] = useState(false)
   const notify = useRef(onInProgressChange)
   notify.current = onInProgressChange
+  const notifyStarted = useRef(onStartedChange)
+  notifyStarted.current = onStartedChange
 
   const apply = (data: ReadingOverview) => {
     setOverview(data)
     notify.current?.(data.inProgress)
+    notifyStarted.current?.(data.readingStarted)
   }
 
   const load = useCallback(async (quiet = false) => {

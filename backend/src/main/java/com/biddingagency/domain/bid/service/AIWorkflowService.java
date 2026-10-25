@@ -1,5 +1,6 @@
 package com.biddingagency.domain.bid.service;
 
+import com.biddingagency.domain.analysis.service.BidAnalysisService;
 import com.biddingagency.domain.bid.entity.BidRequest;
 import com.biddingagency.domain.bid.entity.BidRequestState;
 import com.biddingagency.domain.bid.entity.StateTransition;
@@ -69,6 +70,8 @@ public class AIWorkflowService {
     private final VerificationLogService verificationLogService;
     // CR-169: 고객 서류 읽기
     private final DocumentReadingService documentReadingService;
+    // CR-170: 입찰 분석
+    private final BidAnalysisService bidAnalysisService;
 
     /** DOCUMENT_DRAFTING 진입 시 자동 생성할 문서 타입 목록 */
     @Value("${app.ai.auto-generate-document-types:COVER_LETTER,TECHNICAL_PROPOSAL}")
@@ -104,6 +107,42 @@ public class AIWorkflowService {
             log.error("[CR-169] 고객 서류 읽기 실패: bidRequestId={}, 서류={}건", bidRequestId, reading.size(), e);
             documentReadingService.closeUnfinished(reading, e.getMessage() != null ? e.getMessage() : NO_RESULT_REASON);
         }
+        startPendingBidAnalyses();
+    }
+
+    /**
+     * 읽기 회차가 끝난 뒤(결과 마감 뒤) 분석 단계이고 회차가 없는 건마다 입찰 분석을 시작한다(CR-170, BIZ-090).
+     * 같은 내용을 다른 건의 회차가 읽은 경우도 이것으로 잡힌다. 건마다 따로 저장해 한 건의 실패가 다른 건을 막지 않는다.
+     */
+    private void startPendingBidAnalyses() {
+        for (UUID id : bidAnalysisService.pendingBidRequestIds()) {
+            try {
+                bidAnalysisService.startIfReady(id);
+            } catch (Exception e) {
+                log.error("[CR-170] 입찰 분석 시작 실패: bidRequestId={}", id, e);
+            }
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 입찰 분석 (CR-170, 고객 서류를 다 읽은 분석 단계 건과 다시 분석)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * 회차는 요청 트랜잭션에서 이미 분석 중이고, 그 트랜잭션이 저장된 뒤 불린다.
+     * 워크플로우가 실패하거나 Bid/No-Bid 결정 없이 끝나면 회차만 분석 실패로 두고 입찰 건 상태는 건드리지 않는다.
+     */
+    @Async("llmTaskExecutor")
+    public void runBidAnalysisAsync(UUID bidRequestId, UUID analysisId) {
+        Map<String, Object> input = Map.of(
+                "bidRequestId", bidRequestId.toString(),
+                "analysisId", analysisId.toString());
+        try {
+            llmPlatformClient.runBidAnalysis(input, runId -> bidAnalysisService.recordRun(analysisId, runId));
+        } catch (Exception e) {
+            log.error("[CR-170] 입찰 분석 워크플로우 실패: bidRequestId={}, analysis={}", bidRequestId, analysisId, e);
+        }
+        bidAnalysisService.closeUnfinished(analysisId);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
