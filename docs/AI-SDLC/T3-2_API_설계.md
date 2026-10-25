@@ -1,6 +1,6 @@
 # SAM.gov Bidding Agency Platform API 설계
 
-> 설계 버전: 1.24 | 최종 수정: 2026-10-25 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-144, CR-146, CR-147, CR-152, CR-153, CR-155, CR-157, CR-159, CR-160, CR-162, CR-168, CR-169, CR-170, CR-178
+> 설계 버전: 1.25 | 최종 수정: 2026-10-25 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-144, CR-146, CR-147, CR-152, CR-153, CR-155, CR-157, CR-159, CR-160, CR-162, CR-168, CR-169, CR-170, CR-178
 
 > 단계: 3. Detail Design | 실행스펙 섹션 3에 포함
 >
@@ -889,7 +889,7 @@ CR-137 전에 있던 `POST /opportunities/{id}/qualification-check`(AI 자격 �
 | 용도 | Aimbase API | 메서드 | 비고 |
 |------|-------------|--------|------|
 | 워크플로우 실행 | `/api/v1/workflows/{id}/run` | POST | 비동기 시작 |
-| 실행 결과 폴링 | `/api/v1/workflows/{id}/runs/{runId}` | GET | 3초 간격, 최대 60회 |
+| 실행 결과 폴링 | `/api/v1/workflows/{id}/runs/{runId}` | GET | 5초 간격, 최대 360회(설정 app.aimbase.polling, 상용 720회) |
 
 **인증**: `X-API-Key: plat-20cf57fbc623424584eeda2e355cbb43`
 

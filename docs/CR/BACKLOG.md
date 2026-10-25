@@ -18,3 +18,22 @@
 **왜 남겼나**
 
 새 API 와 메일 양식, 화면이 들어가는 중규모 이상이라 T1 부터 캐스케이드가 필요해 화면 개편(CR-131)과 떼었다. 1:1 문의 화면도 아직 서버에 닿지 않아(pages/SupportPage.tsx, 제출이 알림창만 띄움) 안내처로 쓸 수 없다. 가입 회원이 늘어 이메일 문의로 감당하기 어려워지기 전에 한다.
+
+## BL-002 · 문서 작성 워크플로우가 실패해도 관리자 알림이 가지 않는다
+
+| | |
+|---|---|
+| 등록일 | 2026-10-25 |
+| 출처 | CR-170 6차 회차(로컬) 단위시험 IT-14-030 1번 미충족. 시험 코드 `backend/src/test/java/com/biddingagency/domain/bid/service/AIWorkflowFailureNoticeTest.java` |
+| 담당(예정) | bidding-agency-platform |
+| 상태 | 대기 |
+
+**무엇**
+
+관리자가 입찰 건을 문서 작성 중으로 전환한 뒤 제안서 설계 워크플로우가 실패해도 관리자 알림(AI_WORKFLOW_FAILED)이 notification_logs 에 생기지 않는다. 설계 TC-DOCGEN-003(T3-5:226, "관리자에게 실패 알림, 상태 유지")과 IT-14-030 1번이 요구한다. `NotificationType.java:19` 에 정의만 있고 보내는 코드가 없으며, git 이력에서도 이 값을 보낸 적이 없다. 상태가 REVIEW 로 바뀌지 않는 쪽(IT-14-030 2번)은 충족이다.
+
+알림 틀이 BID_ANALYSIS_DONE 에 묶여 있어(`NotificationType.java:19`), 알림 서버의 그 틀 내용이 실패 안내에 맞는지 먼저 본다. 맞지 않으면 알림 서버(bp-notification)에 실패 틀을 요청해야 한다.
+
+**왜 남겼나**
+
+CR-170(입찰 분석) 범위 밖이라 새 CR, 새 창에서 한다. 시험 코드는 @Disabled 로 올려 두었고, 고치는 CR 이 그 표시를 걷는다.

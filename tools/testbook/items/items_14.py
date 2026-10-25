@@ -251,7 +251,7 @@ dict(id='IT-14-028', flow='워크플로우 실행', kind='정상', title='GENERA
      expect='1. Aimbase 에 문서 생성 워크플로우 실행이 1건 생기고 입력에 그 입찰 요청 id 가 있다\n'
             '2. 실행 중 Aimbase 가 이 플랫폼의 MCP 도구를 불러 입찰 요청을 읽고 save_document_version 으로 문서를 저장한다\n'
             '3. 실행이 completed 가 되면 그 입찰 요청 state 가 REVIEW 로 바뀐다\n'
-            '4. 플랫폼이 실행 결과를 3초 간격으로 묻는다\n'
+            '4. 플랫폼이 실행 결과를 5초 간격(설정 app.aimbase.polling.interval-ms 기본값)으로 묻는다\n'
             '5. 플랫폼의 실행 요청과 결과 묻기 요청에 X-API-Key 머리글이 실린다',
      judge=['합동', '합동', '서버', '단위', '단위'],
      req=['BID-MCP-005'], fc=['BID-MCP-005'], screen='관리자 /bid-requests/{id}', pri='High',
