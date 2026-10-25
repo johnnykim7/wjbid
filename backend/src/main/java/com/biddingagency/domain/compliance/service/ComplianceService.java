@@ -330,9 +330,20 @@ public class ComplianceService {
     /**
      * BIZ-076: 절의 대응 REQ ID 는 매트릭스의 REQ ID 만 받는다. 없는 ID 가 하나라도 있으면 그 ID 들을 담아 거부한다.
      * 매트릭스 줄이 없는 공고는 검사하지 않는다.
+     * BIZ-095: 평가받지 않는 문서는 매트릭스와 상관없이 대응 REQ ID 를 하나도 받지 않는다.
      */
     public void requireKnownReqIds(UUID documentId, Collection<String> requirementRefs) {
-        Set<String> known = matrixByReqId(opportunityIdOfDocument(documentId)).keySet();
+        BidDocument document = documentOf(documentId);
+        if (!document.getDocumentType().isEvaluated()) {
+            List<String> refs = requirementRefs.stream().distinct().sorted().toList();
+            if (!refs.isEmpty()) {
+                throw new IllegalArgumentException("평가받지 않는 문서(" + document.getDocumentType().name()
+                        + ")에는 대응 REQ ID 를 걸 수 없습니다: " + String.join(", ", refs)
+                        + ". 절의 requirementRefs 를 비워 주세요");
+            }
+            return;
+        }
+        Set<String> known = matrixByReqId(document.getBidRequest().getOpportunity().getId()).keySet();
         if (known.isEmpty()) {
             return;
         }
@@ -343,13 +354,17 @@ public class ComplianceService {
         }
     }
 
-    /** BIZ-076: 대상 줄 가운데 이 문서의 어느 절도 대응 REQ ID 로 들지 않은 것 */
+    /** BIZ-076: 대상 줄 가운데 이 문서의 어느 절도 대응 REQ ID 로 들지 않은 것. 평가받지 않는 문서는 대상이 없다(BIZ-095) */
     public List<String> unassignedReqIds(UUID documentId) {
+        BidDocument document = documentOf(documentId);
+        if (!document.getDocumentType().isEvaluated()) {
+            return List.of();
+        }
         Set<String> mapped = new HashSet<>();
         for (ProposalSection section : proposalService.getAllSections(documentId)) {
             mapped.addAll(refsOf(section));
         }
-        return matrixLines(opportunityIdOfDocument(documentId)).stream()
+        return matrixLines(document.getBidRequest().getOpportunity().getId()).stream()
                 .filter(ComplianceService::isCoverageTarget)
                 .map(OpportunityRequirementItem::getReqId)
                 .filter(reqId -> !mapped.contains(reqId))
@@ -408,12 +423,16 @@ public class ComplianceService {
     /**
      * BIZ-078 커버리지 검증. 대상은 Shall 이면서 플랫폼 생성인 매트릭스 줄이다.
      * 누락 REQ 는 대상 가운데 이 문서의 절로 충족된 매핑이 없는 줄이고, 그중 어느 절에도 걸리지 않은 줄이 매핑 안 된 REQ 다.
+     * 평가받지 않는 문서는 검증 대상이 아니다(BIZ-095).
      */
     public CoverageResult coverage(UUID documentId) {
         BidDocument document = documentRepository.findById(documentId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "제안서 문서를 찾을 수 없습니다"));
         BidRequest bidRequest = document.getBidRequest();
         List<OpportunityRequirementItem> lines = matrixLines(bidRequest.getOpportunity().getId());
+        if (!document.getDocumentType().isEvaluated()) {
+            return CoverageResult.notEvaluated(!lines.isEmpty());
+        }
         if (lines.isEmpty()) {
             return CoverageResult.notReady();
         }
@@ -449,7 +468,7 @@ public class ComplianceService {
                 .filter(item -> !fulfilled.contains(item.getId()))
                 .map(item -> new CoverageResult.Missing(item.getReqId(), text(item), !mapped.contains(item.getReqId())))
                 .toList();
-        return new CoverageResult(true, targets.size(), targets.size() - missing.size(), missing, unknownIds, sections);
+        return new CoverageResult(true, true, targets.size(), targets.size() - missing.size(), missing, unknownIds, sections);
     }
 
     private static boolean isCoverageTarget(OpportunityRequirementItem item) {
@@ -464,9 +483,12 @@ public class ComplianceService {
     }
 
     private UUID opportunityIdOfDocument(UUID documentId) {
-        BidDocument document = documentRepository.findById(documentId)
+        return documentOf(documentId).getBidRequest().getOpportunity().getId();
+    }
+
+    private BidDocument documentOf(UUID documentId) {
+        return documentRepository.findById(documentId)
                 .orElseThrow(() -> new IllegalArgumentException("Document not found: " + documentId));
-        return document.getBidRequest().getOpportunity().getId();
     }
 
     private static List<String> refsOf(ProposalSection section) {

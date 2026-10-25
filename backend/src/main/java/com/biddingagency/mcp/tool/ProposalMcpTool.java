@@ -214,11 +214,14 @@ public class ProposalMcpTool {
         BidDocument doc = bidDocumentService.findById(documentId);
         BidRequest bidRequest = bidRequestService.findByIdWithDetails(doc.getBidRequest().getId());
         Opportunity opp = bidRequest.getOpportunity();
+        // BIZ-095: 평가받지 않는 문서는 평가 항목과 매트릭스를 받지 않아 그 문서 종류의 꼴로 짠다
+        boolean evaluated = doc.getDocumentType().isEvaluated();
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("documentId", documentId.toString());
         result.put("bidRequestId", bidRequest.getId().toString());
         result.put("documentType", doc.getDocumentType().name());
+        result.put("evaluatedDocument", evaluated);
         result.put("opportunityId", opp.getId().toString());
         result.put("opportunityTitle", opp.getTitle());
         result.put("organizationName", opp.getOrganizationName());
@@ -234,13 +237,13 @@ public class ProposalMcpTool {
             result.put("requiredDocuments", nullSafe(notice.getRequiredDocumentsJson()));
             result.put("documentFormats", nullSafe(notice.getDocumentFormatsJson()));
             result.put("noticeContent", nullSafe(notice.getContentJson()));
-            result.put("factorTree", notice.getFactorTreeJson());   // null 이면 WF 가 본문 발췌
-            result.put("priceItems", notice.getPriceItemsJson());
+            result.put("factorTree", evaluated ? notice.getFactorTreeJson() : null);   // 평가받는 문서에서 null 이면 WF 가 본문 발췌
+            result.put("priceItems", evaluated ? notice.getPriceItemsJson() : null);
         } else {
             result.put("factorTree", null);
             result.put("priceItems", null);
         }
-        result.put("complianceMatrix", complianceService.designInputLines(opp.getId()));
+        result.put("complianceMatrix", evaluated ? complianceService.designInputLines(opp.getId()) : List.of());
         result.put("clientDocuments", documentReadingService.designInputDocuments(bidRequest.getId()));
         return toJson(result);
     }

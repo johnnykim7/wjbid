@@ -9,10 +9,15 @@ import com.biddingagency.domain.compliance.entity.RequirementFulfillmentMap;
 import com.biddingagency.domain.compliance.repository.RequirementFulfillmentMapRepository;
 import com.biddingagency.domain.compliance.service.ComplianceFixture;
 import com.biddingagency.domain.compliance.service.ComplianceService;
+import com.biddingagency.domain.document.entity.BidDocument;
+import com.biddingagency.domain.document.entity.DocumentType;
 import com.biddingagency.domain.document.repository.BidDocumentRepository;
 import com.biddingagency.domain.document.service.BidDocumentService;
+import com.biddingagency.domain.notice.entity.Notice;
+import com.biddingagency.domain.notice.entity.NoticeGenerationStatus;
 import com.biddingagency.domain.notice.repository.NoticeRepository;
 import com.biddingagency.domain.opportunity.entity.OpportunityRequirementItem;
+import com.biddingagency.domain.opportunity.entity.OpportunityVisibility;
 import com.biddingagency.domain.opportunity.repository.OpportunityRequirementItemRepository;
 import com.biddingagency.domain.proposal.entity.ProposalSection;
 import com.biddingagency.domain.proposal.service.ProposalService;
@@ -46,6 +51,7 @@ import static org.mockito.Mockito.never;
 
 /**
  * TC-COMP-013 ~ TC-COMP-020: 제안서 도구가 컴플라이언스 매트릭스를 쓴다 (CR-159, BIZ-076, BIZ-077)
+ * TC-DOC-288, 289, TC-COMP-028, 029: 평가받지 않는 문서는 평가 항목과 대응 REQ ID 를 받지 않는다 (CR-178, BIZ-095)
  */
 @ExtendWith(MockitoExtension.class)
 class ProposalMcpToolTest {
@@ -264,5 +270,81 @@ class ProposalMcpToolTest {
         JsonNode verify = objectMapper.readTree(tool.getSectionVerifyInput(args)).get("sourceDocuments");
 
         assertThat(List.<Object>of(context.size(), verify)).containsExactly(1, context);
+    }
+
+    private BidDocument coverLetter() {
+        BidDocument cover = TestHelper.withId(BidDocument.builder()
+                .bidRequest(f.bidRequest).documentType(DocumentType.COVER_LETTER).build());
+        lenient().when(documentRepository.findById(cover.getId())).thenReturn(Optional.of(cover));
+        lenient().when(bidDocumentService.findById(cover.getId())).thenReturn(cover);
+        return cover;
+    }
+
+    private JsonNode designInput(BidDocument document) throws Exception {
+        Notice notice = Notice.builder().opportunity(f.opportunity)
+                .generationStatus(NoticeGenerationStatus.COMPLETED)
+                .factorTreeJsonRaw("{\"factors\":[{\"label\":\"1\",\"title\":\"Technical\"}]}")
+                .priceItemsJsonRaw("{\"items\":[]}")
+                .build();
+        given(bidRequestService.findByIdWithDetails(f.bidRequest.getId())).willReturn(f.bidRequest);
+        given(noticeRepository.findFirstByOpportunityIdAndVisibilityOrderByAnalyzedAtDesc(f.opportunityId(),
+                OpportunityVisibility.VISIBLE)).willReturn(Optional.of(notice));
+        lenient().when(requirementRepository.findByOpportunityIdAndReqIdIsNotNullOrderBySortOrderAsc(f.opportunityId()))
+                .thenReturn(List.of(req1, req2));
+        return objectMapper.readTree(tool.getProposalDesignInput(Map.of("documentId", document.getId().toString())));
+    }
+
+    @Test
+    @DisplayName("TC-DOC-288 커버레터_설계입력_평가항목과매트릭스없음")
+    void 커버레터_설계입력_평가항목과매트릭스없음() throws Exception {
+        JsonNode input = designInput(coverLetter());
+
+        assertThat(List.<Object>of(input.get("evaluatedDocument").asBoolean(), input.get("factorTree").isNull(),
+                input.get("priceItems").isNull(), input.get("complianceMatrix").size()))
+                .containsExactly(false, true, true, 0);
+    }
+
+    @Test
+    @DisplayName("TC-DOC-289 기술제안서_설계입력_평가항목과매트릭스있음")
+    void 기술제안서_설계입력_평가항목과매트릭스있음() throws Exception {
+        JsonNode input = designInput(f.document);
+
+        assertThat(List.<Object>of(input.get("evaluatedDocument").asBoolean(), input.get("factorTree").isNull(),
+                input.get("complianceMatrix").size()))
+                .containsExactly(true, false, 2);
+    }
+
+    @Test
+    @DisplayName("TC-COMP-028 커버레터_설계저장_대응REQ있으면_전체거부")
+    void 커버레터_설계저장_대응REQ있으면_전체거부() {
+        BidDocument cover = coverLetter();
+        lenient().when(requirementRepository.findByOpportunityIdAndReqIdIsNotNullOrderBySortOrderAsc(f.opportunityId()))
+                .thenReturn(List.of(req1, req2));
+        Map<String, Object> args = Map.of("documentId", cover.getId().toString(), "chapters", List.of(Map.of(
+                "factorLabel", "1", "factorTitle", "Cover Letter",
+                "sections", List.of(Map.of("title", "Cover Letter", "requirementRefs", List.of("REQ-001"))))));
+
+        assertThatThrownBy(() -> tool.saveProposalStructure(args))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("평가받지 않는 문서")
+                .hasMessageContaining("REQ-001");
+        then(proposalService).should(never()).saveStructure(any(), any());
+    }
+
+    @Test
+    @DisplayName("TC-COMP-029 커버레터_설계저장_REQ없음_저장되고미배정빈배열")
+    void 커버레터_설계저장_REQ없음_저장되고미배정빈배열() throws Exception {
+        BidDocument cover = coverLetter();
+        lenient().when(requirementRepository.findByOpportunityIdAndReqIdIsNotNullOrderBySortOrderAsc(f.opportunityId()))
+                .thenReturn(List.of(req1, req2));
+        given(proposalService.saveStructure(any(), any())).willReturn(List.of(f.chapter));
+        given(proposalService.getSections(f.chapter.getId())).willReturn(List.of(f.section("Cover Letter", List.of())));
+        Map<String, Object> args = Map.of("documentId", cover.getId().toString(), "chapters", List.of(Map.of(
+                "factorLabel", "1", "factorTitle", "Cover Letter",
+                "sections", List.of(Map.of("title", "Cover Letter", "requirementRefs", List.of())))));
+
+        JsonNode result = objectMapper.readTree(tool.saveProposalStructure(args));
+
+        assertThat(result.get("unassignedReqIds").size()).isZero();
     }
 }

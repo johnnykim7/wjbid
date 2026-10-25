@@ -35,6 +35,7 @@ import static org.mockito.Mockito.lenient;
 
 /**
  * TC-COMP-021 ~ TC-COMP-025: 커버리지 검증 (CR-159, BIZ-078)
+ * TC-COMP-030, 031: 평가받지 않는 문서는 커버리지 검증 대상이 아니다 (CR-178, BIZ-095)
  */
 @ExtendWith(MockitoExtension.class)
 class ComplianceCoverageTest {
@@ -136,5 +137,29 @@ class ComplianceCoverageTest {
         CoverageResult result = complianceService.coverage(f.document.getId());
 
         assertThat(result).isEqualTo(CoverageResult.notReady());
+    }
+
+    @Test
+    @DisplayName("TC-COMP-030 커버레터_커버리지_평가대상아님")
+    void 커버레터_커버리지_평가대상아님() {
+        BidDocument cover = TestHelper.withId(BidDocument.builder()
+                .bidRequest(f.bidRequest).documentType(DocumentType.COVER_LETTER).build());
+        given(documentRepository.findById(cover.getId())).willReturn(Optional.of(cover));
+        givenMatrix(f.shallPlatform("REQ-001", ComplianceFixture.QC));
+
+        CoverageResult result = complianceService.coverage(cover.getId());
+
+        assertThat(result).isEqualTo(CoverageResult.notEvaluated(true));
+    }
+
+    @Test
+    @DisplayName("TC-COMP-031 기술제안서_커버리지_평가받는문서참")
+    void 기술제안서_커버리지_평가받는문서참() {
+        givenMatrix(f.shallPlatform("REQ-001", ComplianceFixture.QC));
+        givenSections(f.section("Technical", List.of("REQ-001")));
+
+        CoverageResult result = complianceService.coverage(f.document.getId());
+
+        assertThat(result.evaluatedDocument()).isTrue();
     }
 }
