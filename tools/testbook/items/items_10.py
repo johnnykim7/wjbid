@@ -1403,8 +1403,8 @@ dict(id='IT-10-077', flow='Bid/No-Bid 결정', kind='예외', title='관리자 �
                     check="r[2][0]['state'] == 'ANALYZING' and int(r[2][0]['hist']) == int(r[0][0]['hist'])")}),
 
 dict(id='IT-10-078', flow='제안서 자동 작성', kind='정상', title='AI 문서 작성에서 커버레터는 1쪽 제출 편지로 쓰고 요구사항은 기술 제안서에만 걸린다',
-     pre='관리자 계정, IT-10-001 로 문서 작성이 끝나 REVIEW 가 된 입찰 건(매트릭스 대상 줄이 있는 공고, 문서 종류 커버레터와 기술 제안서)',
-     steps='1. 관리자 토큰으로 GET /admin/bid-documents/{커버레터 문서 id}/chapters 를 부른다\n'
+     pre='관리자 계정, IT-10-001 로 문서 작성이 끝나 REVIEW 가 된 입찰 건(매트릭스 대상 줄이 있고 문서 구성이 없는 옛 공고, 평가 항목 구조에 문서 종류와 커버레터 요구 여부가 없음)',
+     steps='1. 관리자 토큰으로 GET /admin/bid-documents/{커버레터 문서 id}/chapters 를 부르고, 그 입찰 건의 입찰 문서(bid_documents) 행을 조회한다\n'
            '2. 그 입찰 건의 요구사항 충족 기록(requirement_fulfillment_maps)을 조회한다\n'
            '3. 관리자 토큰으로 GET /admin/bid-documents/{기술 제안서 문서 id}/coverage 를 부른다\n'
            '4. 관리자 화면 문서 편집에서 커버레터 본문을 연다',
@@ -1412,8 +1412,9 @@ dict(id='IT-10-078', flow='제안서 자동 작성', kind='정상', title='AI �
             '2. 충족 기록 가운데 커버레터 문서의 것이 0건이다\n'
             '3. 기술 제안서 커버리지의 targetCount 가 그 공고 매트릭스의 대상(Shall, 플랫폼 생성) 줄 수와 같다\n'
             '4. 기술 제안서 커버리지의 missing 가운데 unmapped 가 true 인 줄이 0건이다\n'
-            '5. 커버레터 본문이 1쪽을 넘지 않는 제출 편지이고 평가 항목별 장이 없다',
-     judge=['서버', '서버', '서버', '서버', '합동'],
+            '5. 커버레터 본문이 1쪽을 넘지 않는 제출 편지이고 평가 항목별 장이 없다\n'
+            '6. 그 입찰 건의 입찰 문서가 커버레터와 기술 제안서 2건이다',
+     judge=['서버', '서버', '서버', '서버', '합동', '서버'],
      req=['BID-DOC-001'], fc=['BID-DOC-001'], screen='관리자 /bid-requests/{id}/documents/{docId}', pri='High'),
 
 dict(id='IT-10-079', flow='제안서 설계와 REQ', kind='정상', title='커버레터의 제안서 설계 입력에는 평가 항목과 매트릭스가 없고 기술 제안서에는 있다',
@@ -1439,5 +1440,48 @@ dict(id='IT-10-081', flow='제안서 설계와 REQ', kind='정상', title='커�
             '2. 장과 절 트리가 장 1개, 절 1개다',
      judge=['서버', '서버'],
      req=['BID-DOC-001'], fc=['BID-DOC-001'], screen='', pri='High'),
+
+dict(id='IT-10-082', flow='제안서 자동 작성', kind='정상', title='AI 문서 작성이 공고가 요구하는 문서 구성대로 문서를 만들고 문서마다 자기 평가 항목의 요구사항만 센다',
+     pre='관리자 계정, IT-10-001 로 문서 작성이 끝나 REVIEW 가 된 입찰 건(IT-09-046 으로 문서 구성이 기술 제안서, 과거 수행 실적, 가격 요약이고 커버레터 요구가 없는 공고)',
+     steps='1. 그 입찰 건의 입찰 문서(bid_documents) 행을 조회한다\n'
+           '2. 관리자 토큰으로 문서마다 GET /admin/bid-documents/{documentId}/coverage 를 부른다\n'
+           '3. 그 공고 매트릭스 줄(opportunity_requirement_items)의 평가 항목을 조회한다\n'
+           '4. 관리자 화면 메뉴 [입찰 요청 관리] 에서 그 입찰 건 상세의 생성 문서 목록을 본다',
+     expect='1. 입찰 문서가 기술 제안서, 과거 수행 실적, 가격 요약 3건이고 커버레터가 없다\n'
+            '2. 세 문서 커버리지의 targetCount 합이 그 공고 매트릭스의 대상(Shall, 플랫폼 생성) 줄 수와 같다\n'
+            '3. 과거 수행 실적 커버리지의 대상 줄(missing 과 sections 의 refs)이 모두 과거 실적 평가 항목의 줄이다\n'
+            '4. 기술 제안서 커버리지의 대상 줄에 과거 실적, 가격 평가 항목의 줄이 없다\n'
+            '5. 세 문서 모두 커버리지 missing 가운데 unmapped 가 true 인 줄이 0건이다\n'
+            '6. 생성 문서 목록에 세 문서가 각각의 문서 유형 이름으로 보이고 커버레터 줄이 없다',
+     judge=['서버', '서버', '서버', '서버', '서버', '가상'],
+     req=['BID-DOC-001', 'BID-COMP-002'], fc=['BID-DOC-001', 'BID-COMP-002'], screen='관리자 /bid-requests/{id}', pri='High'),
+
+dict(id='IT-10-083', flow='제안서 설계와 REQ', kind='정상', title='문서마다 제안서 설계 입력에 자기 평가 항목과 그 항목의 매트릭스 줄만 온다',
+     pre='관리자 계정과 MCP 열쇠, 문서 구성이 기술 제안서(F1), 과거 수행 실적(F2), 가격 요약(F3)인 공고의 입찰 건에 세 문서가 1건씩, 공고에 평가 항목이 없는 매트릭스 줄과 가격 항목이 있음',
+     steps='1. MCP get_proposal_design_input 을 기술 제안서, 과거 수행 실적, 가격 요약 문서 id 로 한 번씩 부른다',
+     expect='1. 과거 수행 실적 응답의 factorTree.factors 가 F2 하나이고 complianceMatrix 줄이 모두 F2 줄이다\n'
+            '2. 가격 요약 응답의 factorTree.factors 가 F3 하나이고 complianceMatrix 줄이 모두 F3 줄이다\n'
+            '3. 기술 제안서 응답의 factorTree.factors 가 F1 하나이고 complianceMatrix 에 F1 줄과 평가 항목이 없는 줄이 있으며 F2, F3 줄이 없다\n'
+            '4. 세 응답의 complianceMatrix 줄을 합치면 그 공고 매트릭스 줄 전부이고 겹치는 줄이 없다\n'
+            '5. priceItems 가 가격 요약 응답에만 있고 기술 제안서와 과거 수행 실적 응답은 null 이다',
+     judge=['서버', '서버', '서버', '서버', '서버'],
+     req=['BID-DOC-001'], fc=['BID-DOC-001'], screen='', pri='High'),
+
+dict(id='IT-10-084', flow='제안서 설계와 REQ', kind='예외', title='과거 수행 실적 설계에 다른 문서가 받는 REQ ID 가 있으면 전체가 저장되지 않는다',
+     pre='관리자 계정과 MCP 열쇠, IT-10-083 과 같은 공고의 과거 수행 실적 문서 1건, F1 줄 REQ ID 하나와 F2 줄 REQ ID 하나를 앎',
+     steps='1. 장과 절 트리를 조회해 적어 둔다\n2. MCP save_proposal_structure 를 그 과거 수행 실적 문서 id 와 장 1개, 절 1개(requirementRefs 에 F2 줄 REQ ID 와 F1 줄 REQ ID)로 부른다\n3. 장과 절 트리를 다시 조회한다',
+     expect='1. 저장이 거부되고 오류 문구에 F1 줄 REQ ID 가 들어 있다\n'
+            '2. 오류 문구에 F2 줄 REQ ID 가 들어 있지 않다\n'
+            '3. 3단계의 장과 절 트리가 1단계와 같다',
+     judge=['서버', '서버', '서버'],
+     req=['BID-DOC-001', 'BID-COMP-002'], fc=['BID-DOC-001', 'BID-COMP-002'], screen='', pri='High'),
+
+dict(id='IT-10-085', flow='제안서 설계와 REQ', kind='정상', title='과거 수행 실적 설계는 자기 줄만 다 걸면 어느 절에도 없는 REQ 를 돌려주지 않는다',
+     pre='관리자 계정과 MCP 열쇠, IT-10-083 과 같은 공고의 과거 수행 실적 문서 1건, F2 대상(Shall, 플랫폼 생성) 줄 REQ ID 전부를 앎',
+     steps='1. MCP save_proposal_structure 를 그 과거 수행 실적 문서 id 와 장 1개, 절 1개(requirementRefs 에 F2 대상 줄 REQ ID 전부)로 부른다\n2. 관리자 토큰으로 GET /admin/bid-documents/{documentId}/coverage 를 부른다',
+     expect='1. 저장이 받아들여지고 응답의 unassignedReqIds 가 빈 배열이다\n'
+            '2. 커버리지의 targetCount 가 F2 대상 줄 수와 같다',
+     judge=['서버', '서버'],
+     req=['BID-DOC-001', 'BID-COMP-002'], fc=['BID-DOC-001', 'BID-COMP-002'], screen='', pri='High'),
 
 ]
