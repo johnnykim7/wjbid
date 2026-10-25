@@ -1,6 +1,6 @@
 # SAM.gov Bidding Agency Platform API 설계
 
-> 설계 버전: 1.26 | 최종 수정: 2026-10-26 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-144, CR-146, CR-147, CR-152, CR-153, CR-155, CR-157, CR-159, CR-160, CR-162, CR-168, CR-169, CR-170, CR-178, CR-180
+> 설계 버전: 1.27 | 최종 수정: 2026-10-26 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-144, CR-146, CR-147, CR-152, CR-153, CR-155, CR-157, CR-159, CR-160, CR-162, CR-168, CR-169, CR-170, CR-178, CR-180, CR-182
 
 > 단계: 3. Detail Design | 실행스펙 섹션 3에 포함
 >
@@ -547,6 +547,7 @@ CR-137 전에 있던 `POST /opportunities/{id}/qualification-check`(AI 자격 �
 | GET | /admin/bid-requests | 전체 입찰 목록 (상태 필터/페이징) | 🔒 ADMIN | BID-ADMIN-003 |
 | GET | /admin/bid-requests/stats | 상태별 통계 | 🔒 ADMIN | BID-ADMIN-003 |
 | GET | /admin/bid-requests/requiring-client-action | 고객 액션 필요 건 | 🔒 ADMIN | BID-ADMIN-003 |
+| GET | /admin/bid-requests/{id} | 입찰 상세 (상태 이력 포함) | 🔒 ADMIN | BID-ADMIN-003 |
 | POST | /admin/bid-requests/{id}/transition | 상태 전이 실행 (관리자) | 🔒 ADMIN | BID-FSM-001 |
 | POST | /admin/bid-requests/{id}/assign | 담당자 배정 | 🔒 ADMIN | BID-ADMIN-003 |
 | GET | /admin/bid-requests/assigned-to-me | 내 담당 입찰 목록 | 🔒 ADMIN | BID-ADMIN-003 |
@@ -556,6 +557,8 @@ CR-137 전에 있던 `POST /opportunities/{id}/qualification-check`(AI 자격 �
 | GET | /admin/bid-requests/{id}/bid-analysis | 지금 입찰 분석 (CR-170) | 🔒 ADMIN | BID-DOC-006 |
 | POST | /admin/bid-requests/{id}/bid-analysis/run | 다시 분석 (CR-170) | 🔒 ADMIN | BID-DOC-006 |
 | POST | /admin/bid-requests/{id}/bid-analysis/decision | Bid/No-Bid 결정 기록 (CR-170) | 🔒 ADMIN | BID-DOC-007 |
+
+**GET /admin/bid-requests 응답 (CR-182)**: 입찰 건 한 건은 펼친 칸이다. `id, opportunityId, noticeId, opportunityTitle, displayTitle, solicitationNumber, agencyName, memberEmail, memberCompanyName, serviceLevel, state, stateDisplay, createdAt, updatedAt, submittedAt, history`. opportunityTitle 은 영문 원본 제목이다. 관리자 목록과 상세는 noticeId, displayTitle 이 null 이다. history 는 상세(GET /admin/bid-requests/{id})에만 있다. memberCompanyName 은 신청한 회원의 회사명(members.company_name), serviceLevel 은 그 건의 ServiceLevel 값(T3-1)이고, 없으면 null 이다. 두 칸은 CR-182 에서 더했다(BACKLOG BL-003). 같은 모양을 쓰는 고객 입찰 목록과 상세 응답에도 두 칸이 생긴다
 
 **POST /admin/bid-requests/{id}/transition (CR-169)**: 입찰 건이 ANALYZING 이 되면 고객 서류 읽기를 비동기로 시작한다. ANALYZING 에서 GENERATING 으로 갈 때 후보 가운데 읽는 중(워크플로우 대기 한도 안)인 서류가 있으면 409 `DOCUMENT_READING_IN_PROGRESS`(BIZ-087).
 
