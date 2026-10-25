@@ -138,12 +138,15 @@ export default function BidAnalysisPanel({ bidRequestId, bidState, reloadKey, on
   const analysis = overview?.analysis ?? null
   const readingInProgress = overview?.readingInProgress ?? false
   const running = analysis?.status === 'RUNNING'
+  const analyzing = bidState === 'ANALYZING'
+  // 읽기 줄이 다 읽음이 된 뒤 서버가 읽기 회차를 마무리하고 분석을 시작하기까지 틈이 있어, 분석 단계에 회차가 아직 없으면 계속 부른다
+  const awaitingAnalysis = analyzing && overview !== null && analysis === null
 
   useEffect(() => {
-    if (!running && !readingInProgress) return
+    if (!running && !readingInProgress && !awaitingAnalysis) return
     const timer = window.setInterval(() => load(true), POLL_INTERVAL_MS)
     return () => window.clearInterval(timer)
-  }, [running, readingInProgress, load])
+  }, [running, readingInProgress, awaitingAnalysis, load])
 
   const handleNotAllowed = (err: unknown, fallback: string) => {
     const res = errorOf(err)
@@ -198,7 +201,6 @@ export default function BidAnalysisPanel({ bidRequestId, bidState, reloadKey, on
     }
   }
 
-  const analyzing = bidState === 'ANALYZING'
   const canRerun = analyzing && !running && !readingInProgress
   const canDecide = analyzing && !running
   const showTabs = analysis !== null && analysis.status !== 'DECISION_ONLY'
