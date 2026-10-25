@@ -48,6 +48,7 @@ const DOC_STATUS_LABELS: Record<string, string> = {
 interface BidRequest {
   id: string
   state: string
+  noticeId?: string
   serviceLevel?: string
   closeReason?: string
   closedAt?: string
@@ -214,7 +215,7 @@ export default function BidRequestDetailPage() {
   const member = bidRequest.member
 
   return (
-    <div className="p-6 space-y-6 max-w-5xl">
+    <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -398,6 +399,7 @@ export default function BidRequestDetailPage() {
         <BidAnalysisPanel
           bidRequestId={bidRequest.id}
           bidState={bidRequest.state}
+          noticeId={bidRequest.noticeId}
           reloadKey={analysisReloadKey}
           onDecisionChange={setDecisionAllowsGeneration}
         />
