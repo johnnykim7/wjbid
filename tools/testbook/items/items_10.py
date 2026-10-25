@@ -284,7 +284,7 @@ dict(id='IT-10-001', flow='제안서 자동 작성', kind='정상', title='공�
      req=['BID-DOC-001'], fc=['BID-DOC-001'], screen='관리자 /bid-requests/{id}', pri='High',
      probe={1: dict(steps=[('key', '10.b001_bid'),
                            ('api', ADMIN, 'POST', TRANSITION, {'toState': 'GENERATING', 'notes': 'IT-10-001 서버 판정'}),
-                           ('poll', ADMIN, '/api/admin/bid-requests/{val:0:id}', "x['body']['state'] != 'GENERATING'", 5400, 30),
+                           ('poll', ADMIN, '/api/admin/bid-requests/{val:0:id}', "x['body']['state'] != 'GENERATING'", 3600, 30),
                            ('sql', f"SELECT state, JSON_LENGTH(state_history) AS hist, "
                                    f"JSON_UNQUOTE(JSON_EXTRACT(state_history, '$[last-1].toState')) AS prev_state, "
                                    f"JSON_UNQUOTE(JSON_EXTRACT(state_history, '$[last].toState')) AS to_state FROM bid_requests WHERE id = {THIS_BID}")],
@@ -326,7 +326,7 @@ dict(id='IT-10-004', flow='제안서 자동 작성', kind='예외', title='제�
      req=['BID-DOC-001'], fc=['BID-DOC-001'], screen='', pri='High'),
 
 dict(id='IT-10-005', flow='제안서 설계와 REQ', kind='정상', title='제안서 설계 저장이 절마다 매트릭스의 REQ ID 를 받고 어느 절에도 없는 REQ ID 를 돌려준다',
-     pre='관리자 계정과 MCP 열쇠, Shall 이면서 플랫폼 생성인 매트릭스 줄 REQ-001, REQ-002, REQ-003 이 있는 공고의 제안서 문서 1건',
+     pre='관리자 계정과 MCP 열쇠, Shall 이면서 플랫폼 생성인 매트릭스 줄 REQ-001, REQ-002, REQ-003 이 있는 공고의 기술 제안서 문서 1건',
      steps='1. MCP save_proposal_structure 를 그 문서 id 와 장 1개, 절 2개(절 A 는 REQ-001, 절 B 는 REQ-002)로 부른다\n2. 관리자 토큰으로 GET /admin/bid-documents/{documentId}/chapters 를 부른다\n3. 관리자 화면 /documents/{documentId}/sections 를 열어 절 A 를 고른다',
      expect='1. 저장이 받아들여지고 응답의 unassignedReqIds 에 REQ-003 만 있다\n'
             '2. 장과 절 트리 응답에서 절 A 의 requirementRefs 가 REQ-001, 절 B 의 requirementRefs 가 REQ-002 이다\n'
@@ -335,7 +335,7 @@ dict(id='IT-10-005', flow='제안서 설계와 REQ', kind='정상', title='제�
      req=['BID-DOC-001'], fc=['BID-DOC-001'], screen='관리자 /documents/{id}/sections', pri='High'),
 
 dict(id='IT-10-006', flow='제안서 설계와 REQ', kind='예외', title='매트릭스에 없는 REQ ID 를 든 제안서 설계는 전체가 저장되지 않는다',
-     pre='관리자 계정과 MCP 열쇠, 매트릭스 줄 REQ-001 부터 REQ-003 이 있는 공고의 제안서 문서 1건(IT-10-005 로 저장한 트리가 있음)',
+     pre='관리자 계정과 MCP 열쇠, 매트릭스 줄 REQ-001 부터 REQ-003 이 있는 공고의 기술 제안서 문서 1건(IT-10-005 로 저장한 트리가 있음)',
      steps='1. 장과 절 트리를 조회해 적어 둔다\n2. MCP save_proposal_structure 를 절 2개(절 A 는 REQ-001, 절 B 는 REQ-999)로 부른다\n3. 장과 절 트리를 다시 조회한다',
      expect='1. 저장이 거부되고 응답에 매트릭스에 없는 ID 로 REQ-999 가 들어 있다\n'
             '2. 3단계의 장과 절 트리가 1단계와 같다',
@@ -343,7 +343,7 @@ dict(id='IT-10-006', flow='제안서 설계와 REQ', kind='예외', title='매�
      req=['BID-DOC-001'], fc=['BID-DOC-001'], screen='', pri='High'),
 
 dict(id='IT-10-007', flow='제안서 설계와 REQ', kind='정상', title='매트릭스가 없는 공고의 제안서 설계는 REQ ID 검사 없이 저장된다',
-     pre='관리자 계정과 MCP 열쇠, 매트릭스 줄이 없는 공고의 제안서 문서 1건',
+     pre='관리자 계정과 MCP 열쇠, 매트릭스 줄이 없는 공고의 기술 제안서 문서 1건',
      steps='1. MCP save_proposal_structure 를 절 1개(requirementRefs 에 REQ-001)로 부른다\n2. 장과 절 트리를 조회한다',
      expect='1. 저장이 받아들여진다\n'
             '2. 장과 절 트리에 1단계에서 보낸 절이 들어 있다',
@@ -351,7 +351,7 @@ dict(id='IT-10-007', flow='제안서 설계와 REQ', kind='정상', title='매�
      req=['BID-DOC-001'], fc=['BID-DOC-001'], screen='', pri='High'),
 
 dict(id='IT-10-008', flow='제안서 설계와 REQ', kind='정상', title='제안서 설계, 절 작성, 절 검증 입력에 대응 REQ 의 원문, 번역, 요구 동사, 평가항목이 들어 있다',
-     pre='관리자 계정과 MCP 열쇠, IT-10-005 로 절 A(REQ-001)가 저장된 제안서 문서',
+     pre='관리자 계정과 MCP 열쇠, IT-10-005 로 절 A(REQ-001)가 저장된 기술 제안서 문서',
      steps='1. MCP get_proposal_design_input 을 그 문서 id 로 부른다\n2. MCP get_section_context 를 절 A id 로 부른다\n3. MCP get_section_verify_input 을 절 A id 로 부른다',
      expect='1. 제안서 설계 입력의 complianceMatrix 에 매트릭스 줄마다 reqId, level, text, verb, fulfillmentParty, factorId, factorTitle 이 들어 있다\n'
             '2. 절 작성 입력의 requirements 에 REQ-001 한 줄이 reqId, text, translation, verb, level, factorId, factorTitle 과 함께 들어 있다\n'
@@ -1401,5 +1401,43 @@ dict(id='IT-10-077', flow='Bid/No-Bid 결정', kind='예외', title='관리자 �
                            ('api', ADMIN, 'POST', TRANSITION, {'toState': 'GENERATING', 'notes': 'IT-10-077 서버 판정'}),
                            ('sql', LAST_STEP)],
                     check="r[2][0]['state'] == 'ANALYZING' and int(r[2][0]['hist']) == int(r[0][0]['hist'])")}),
+
+dict(id='IT-10-078', flow='제안서 자동 작성', kind='정상', title='AI 문서 작성에서 커버레터는 1쪽 제출 편지로 쓰고 요구사항은 기술 제안서에만 걸린다',
+     pre='관리자 계정, IT-10-001 로 문서 작성이 끝나 REVIEW 가 된 입찰 건(매트릭스 대상 줄이 있는 공고, 문서 종류 커버레터와 기술 제안서)',
+     steps='1. 관리자 토큰으로 GET /admin/bid-documents/{커버레터 문서 id}/chapters 를 부른다\n'
+           '2. 그 입찰 건의 요구사항 충족 기록(requirement_fulfillment_maps)을 조회한다\n'
+           '3. 관리자 토큰으로 GET /admin/bid-documents/{기술 제안서 문서 id}/coverage 를 부른다\n'
+           '4. 관리자 화면 문서 편집에서 커버레터 본문을 연다',
+     expect='1. 커버레터의 장과 절이 장 1개, 절 1개이고 그 절의 requirementRefs 가 비어 있다\n'
+            '2. 충족 기록 가운데 커버레터 문서의 것이 0건이다\n'
+            '3. 기술 제안서 커버리지의 targetCount 가 그 공고 매트릭스의 대상(Shall, 플랫폼 생성) 줄 수와 같다\n'
+            '4. 기술 제안서 커버리지의 missing 가운데 unmapped 가 true 인 줄이 0건이다\n'
+            '5. 커버레터 본문이 1쪽을 넘지 않는 제출 편지이고 평가 항목별 장이 없다',
+     judge=['서버', '서버', '서버', '서버', '합동'],
+     req=['BID-DOC-001'], fc=['BID-DOC-001'], screen='관리자 /bid-requests/{id}/documents/{docId}', pri='High'),
+
+dict(id='IT-10-079', flow='제안서 설계와 REQ', kind='정상', title='커버레터의 제안서 설계 입력에는 평가 항목과 매트릭스가 없고 기술 제안서에는 있다',
+     pre='관리자 계정과 MCP 열쇠, 평가 항목 트리와 매트릭스 줄이 있는 공고의 입찰 건에 커버레터 문서와 기술 제안서 문서가 1건씩',
+     steps='1. MCP get_proposal_design_input 을 커버레터 문서 id 로 부른다\n2. MCP get_proposal_design_input 을 기술 제안서 문서 id 로 부른다',
+     expect='1. 1단계 응답의 evaluatedDocument 가 false 이고 factorTree, priceItems 가 null, complianceMatrix 가 빈 배열이다\n'
+            '2. 2단계 응답의 evaluatedDocument 가 true 이고 complianceMatrix 줄 수가 그 공고 매트릭스 줄 수와 같다',
+     judge=['서버', '서버'],
+     req=['BID-DOC-001'], fc=['BID-DOC-001'], screen='', pri='High'),
+
+dict(id='IT-10-080', flow='제안서 설계와 REQ', kind='예외', title='커버레터 설계에 대응 REQ ID 가 있으면 전체가 저장되지 않는다',
+     pre='관리자 계정과 MCP 열쇠, 매트릭스 줄 REQ-001 부터 REQ-003 이 있는 공고의 커버레터 문서 1건',
+     steps='1. 장과 절 트리를 조회해 적어 둔다\n2. MCP save_proposal_structure 를 그 커버레터 문서 id 와 장 1개, 절 1개(requirementRefs 에 REQ-001)로 부른다\n3. 장과 절 트리를 다시 조회한다',
+     expect='1. 저장이 거부되고 오류 문구에 "평가받지 않는 문서" 와 REQ-001 이 들어 있다\n'
+            '2. 3단계의 장과 절 트리가 1단계와 같다',
+     judge=['서버', '서버'],
+     req=['BID-DOC-001'], fc=['BID-DOC-001'], screen='', pri='High'),
+
+dict(id='IT-10-081', flow='제안서 설계와 REQ', kind='정상', title='커버레터 설계는 대응 REQ ID 없이 저장되고 어느 절에도 없는 REQ 를 돌려주지 않는다',
+     pre='관리자 계정과 MCP 열쇠, 매트릭스 줄 REQ-001 부터 REQ-003 이 있는 공고의 커버레터 문서 1건',
+     steps='1. MCP save_proposal_structure 를 그 커버레터 문서 id 와 장 1개, 절 1개(requirementRefs 없음)로 부른다\n2. 장과 절 트리를 조회한다',
+     expect='1. 저장이 받아들여지고 응답의 unassignedReqIds 가 빈 배열이다\n'
+            '2. 장과 절 트리가 장 1개, 절 1개다',
+     judge=['서버', '서버'],
+     req=['BID-DOC-001'], fc=['BID-DOC-001'], screen='', pri='High'),
 
 ]
