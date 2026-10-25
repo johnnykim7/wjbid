@@ -1,0 +1,150 @@
+{
+ "run": "7차",
+ "results": {
+  "WJBID_10002": {
+   "testId": "WJBID_10002",
+   "result": "N/T",
+   "steps": [
+    "",
+    "pass",
+    ""
+   ],
+   "comment": "단위시험 판정 기대결과 1/3개",
+   "date": "2026-10-25",
+   "at": "2026-10-25 23:30:02",
+   "tester": "단위시험",
+   "evidence": {
+    "1": {
+     "q": "AIWorkflowServiceTest IT-10-002 2 미분류공고_문서작성_설계와절작성입력에성공가이드와참조샘플비어있음",
+     "r": "통과",
+     "at": "2026-10-25 23:30:02"
+    }
+   }
+  },
+  "WJBID_10060": {
+   "testId": "WJBID_10060",
+   "result": "N/T",
+   "steps": [
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "pass"
+   ],
+   "comment": "단위시험 판정 기대결과 1/7개",
+   "date": "2026-10-25",
+   "at": "2026-10-25 23:30:01",
+   "tester": "단위시험",
+   "evidence": {
+    "6": {
+     "q": "BidAnalysisScoringTest IT-10-060 7 TC-DOC-262 결정저장_해결할수없는자격_NoGo",
+     "r": "통과",
+     "at": "2026-10-25 23:30:01"
+    }
+   }
+  },
+  "WJBID_10061": {
+   "testId": "WJBID_10061",
+   "result": "OK",
+   "steps": [
+    "pass",
+    "pass",
+    "pass"
+   ],
+   "comment": "단위시험 판정 기대결과 3/3개",
+   "date": "2026-10-25",
+   "at": "2026-10-25 23:30:01",
+   "tester": "단위시험",
+   "evidence": {
+    "0": {
+     "q": "BidAnalysisServiceTest IT-10-061 1,2 TC-DOC-287 정책값변경_다음계산부터_앞회차그대로",
+     "r": "통과",
+     "at": "2026-10-25 23:30:01"
+    },
+    "1": {
+     "q": "BidAnalysisServiceTest IT-10-061 1,2 TC-DOC-287 정책값변경_다음계산부터_앞회차그대로",
+     "r": "통과",
+     "at": "2026-10-25 23:30:01"
+    },
+    "2": {
+     "q": "BidAnalysisScoringTest IT-10-061 3 TC-DOC-266 정책값합틀림_초기값으로계산 / BidAnalysisScoringTest IT-10-061 3 정책값팩터빠짐_초기값으로계산",
+     "r": "통과 / 통과",
+     "at": "2026-10-25 23:30:01"
+    }
+   }
+  },
+  "WJBID_10066": {
+   "testId": "WJBID_10066",
+   "result": "N/T",
+   "steps": [
+    "pass",
+    "",
+    ""
+   ],
+   "comment": "단위시험 판정 기대결과 1/3개",
+   "date": "2026-10-25",
+   "at": "2026-10-25 23:30:01",
+   "tester": "단위시험",
+   "evidence": {
+    "0": {
+     "q": "BidAnalysisServiceTest IT-10-066 1 TC-DOC-255 워크플로우끝_결정없음_분석실패",
+     "r": "통과",
+     "at": "2026-10-25 23:30:01"
+    }
+   }
+  },
+  "WJBID_14028": {
+   "testId": "WJBID_14028",
+   "result": "N/T",
+   "steps": [
+    "",
+    "",
+    "",
+    "pass",
+    "pass"
+   ],
+   "comment": "단위시험 판정 기대결과 2/5개",
+   "date": "2026-10-25",
+   "at": "2026-10-25 23:30:12",
+   "tester": "단위시험",
+   "evidence": {
+    "3": {
+     "q": "LLMPlatformClientPollingTest IT-14-028 4 설계워크플로우_결과를5초간격으로물음",
+     "r": "통과",
+     "at": "2026-10-25 23:30:02"
+    },
+    "4": {
+     "q": "LLMPlatformClientTest IT-14-028 5 설계워크플로우_실행요청과결과묻기_XApiKey실림",
+     "r": "통과",
+     "at": "2026-10-25 23:30:12"
+    }
+   }
+  },
+  "WJBID_14030": {
+   "testId": "WJBID_14030",
+   "result": "N/T",
+   "steps": [
+    "",
+    "pass"
+   ],
+   "comment": "단위시험 판정 기대결과 1/2개. 기대결과 1번 재료 없음",
+   "date": "2026-10-25",
+   "at": "2026-10-25 23:30:02",
+   "tester": "단위시험",
+   "evidence": {
+    "0": {
+     "q": "AIWorkflowFailureNoticeTest IT-14-030 1 설계워크플로우실패_관리자에게AI_WORKFLOW_FAILED알림",
+     "r": "건너뜀",
+     "at": "2026-10-25 23:30:02"
+    },
+    "1": {
+     "q": "AIWorkflowServiceTest IT-14-030 2 설계워크플로우실패_작성끝_REVIEW로바뀌지않음",
+     "r": "통과",
+     "at": "2026-10-25 23:30:02"
+    }
+   }
+  }
+ }
+}
