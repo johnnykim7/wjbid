@@ -37,3 +37,22 @@
 **왜 남겼나**
 
 CR-170(입찰 분석) 범위 밖이라 새 CR, 새 창에서 한다. 시험 코드는 @Disabled 로 올려 두었고, 고치는 CR 이 그 표시를 걷는다.
+
+## BL-003 · 관리자 입찰 상세에 공고 제목, 회사명, 고객 제출 문서가 비어 보인다
+
+| | |
+|---|---|
+| 등록일 | 2026-10-26 |
+| 출처 | CR-170 합동시험(상용 10/26 04:26). 관리자 [입찰 요청 관리] 에서 아무 입찰 건 상세를 열면 보인다 |
+| 담당(예정) | bidding-agency-platform |
+| 상태 | 대기 |
+
+**무엇**
+
+① 공고 정보의 제목, 기관, 공고번호와 고객 정보의 회사명, 이메일, 기타 정보의 서비스 레벨이 모두 "-" 로 나온다. 화면은 응답 안에 opportunity, member 묶음이 있다고 보고 읽는데(`BidRequestDetailPage.tsx:48-71`), 서버 `GET /admin/bid-requests/{id}` 는 opportunityTitle, agencyName, solicitationNumber, memberEmail 처럼 펼친 칸으로 준다(상용 응답 실측, 서비스 레벨 칸은 응답에 없음).
+
+② 고객이 올린 서류가 있어도 고객 제출 문서에 "고객이 업로드한 문서가 없습니다" 가 나온다. 화면은 `/api/client-documents/{입찰 건 id}` 를 부르는데(`api/client.ts:173`) 그 주소가 없어 404 이고, 서버 주소는 `/bid-requests/{bidRequestId}/client-documents` 다(`ClientDocumentController.java:22`). 같은 화면의 고객 서류 읽기 영역에는 그 서류가 보인다.
+
+**왜 남겼나**
+
+이번 변경 전부터 있던 결함이고 CR-170(입찰 분석) 범위 밖이라 새 CR, 새 창에서 한다. 관리자가 상세에서 어느 공고, 어느 고객 건인지 알아볼 수 없으므로 다음 관리자 화면 작업 전에 고친다.
