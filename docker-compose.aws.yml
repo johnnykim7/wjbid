@@ -24,6 +24,8 @@ services:
       SERVER_PORT: 8080
       DB_URL: "jdbc:mysql://host.docker.internal:3306/bidding_agency?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useUnicode=true&useSSL=false&allowPublicKeyRetrieval=true"
       DB_USERNAME: bidding
+      # 로그인 서명 키. 비면 application.yml 기본 키로 서명해 레포를 본 사람이 관리자 토큰을 만들 수 있어 없으면 기동하지 않는다
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET required in .env}
       REDIS_HOST: host.docker.internal
       REDIS_PORT: 6379
       AIMBASE_URL: http://host.docker.internal:8280
