@@ -27,16 +27,25 @@
 쓰기 DB 명령은 TESTBOOK_SEED_DB_CMD 다(SQL 을 표준입력으로 받아 머리행 있는 탭 구분 결과를 내는 명령).
 서버 판정의 TESTBOOK_DB_CMD 는 읽기만 하므로 따로 받는다. apply 는 지우고 넣으므로 다시 넣으면 처음 상태가 된다.
 넣은 뒤 키 값을 seed/ids/<대상>.json 에 쓴다. 화면 시험이 그 파일로 시딩 건을 찾는다.
+
+서류를 실제로 읽어야 하는 장면은 저장소에 파일도 놓는다. 시딩 파일에 이렇게 적는다.
+    -- @file seed/10-7/1.pdf past-performance.pdf
+앞은 서류 행 storage_url 과 같은 저장소 안 경로, 뒤는 seed/files/ 의 재료 파일이다. 놓는 명령은
+TESTBOOK_SEED_FILE_CMD 다(저장소 안 경로를 첫 인자로, 파일 내용을 표준입력으로 받아 대상 저장소에 쓰는 명령).
+명령이 없으면 놓지 않고 알리기만 한다. 그 서류는 읽기가 실패해 재료 없음이 된다. 지울 때 파일은 남긴다.
+다음 apply 가 같은 경로에 덮어쓰고, 시딩 행이 없으면 아무 서류도 그 파일을 가리키지 않는다.
 """
 import argparse
 import json
 import os
 import re
+import shlex
 import subprocess
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SEED_DIR = os.path.join(HERE, 'seed')
+FILES_DIR = os.path.join(SEED_DIR, 'files')
 IDS_DIR = os.path.join(SEED_DIR, 'ids')
 FILE_NAME = re.compile(r'^(\d{2})-(\d{1,2})_[^.]+\.sql$')
 TOKEN = re.compile(r'\[\[(id|uuid|sha|email|notice|now)(?::([0-9a-zA-Z_.-]+))?(?::(\d+))?\]\]')
@@ -52,6 +61,7 @@ class SeedFile:
         self.marker = None
         self.items = []
         self.keys = {}
+        self.files = []
         body = []
         with open(path, encoding='utf-8') as f:
             for line in f:
@@ -63,6 +73,9 @@ class SeedFile:
                 elif s.startswith('-- @key '):
                     _, _, name, sql = s.split(None, 3)
                     self.keys[name] = self.expand(sql)
+                elif s.startswith('-- @file '):
+                    _, _, dest, src = s.split()
+                    self.files.append((dest, src))
                 elif not s.startswith('--'):
                     body.append(line)
         self.insert = self.expand(''.join(body)).strip()
@@ -158,6 +171,19 @@ def db(sql):
     return [dict(zip(head, [None if v == 'NULL' else v for v in row.split('\t')])) for row in lines[1:]]
 
 
+def place_files(sf):
+    cmd = os.environ.get('TESTBOOK_SEED_FILE_CMD')
+    for dest, src in sf.files:
+        if not cmd:
+            print(f'{sf.stem} TESTBOOK_SEED_FILE_CMD 가 없어 {dest} 를 놓지 않음')
+            continue
+        with open(os.path.join(FILES_DIR, src), 'rb') as f:
+            p = subprocess.run(f'{cmd} {shlex.quote(dest)}', shell=True, input=f.read(), capture_output=True)
+        if p.returncode != 0:
+            raise SystemExit(f'파일 놓기 실패 {dest}: {p.stderr.decode(errors="replace").strip()[:500]}')
+        print(f'{sf.stem} {dest} 놓음')
+
+
 def run_tx(statements):
     db('START TRANSACTION;\n' + ';\n'.join(statements) + ';\nCOMMIT;\n')
 
@@ -217,6 +243,7 @@ def main():
     if args.cmd == 'apply':
         for sf in files:
             run_tx(sf.cleanup() + [sf.insert.rstrip().rstrip(';')])
+            place_files(sf)
             print(f'{sf.stem} {sf.marker} 넣음')
         print('키 값', write_ids(args.target, key_values(files)))
     elif args.cmd == 'revert':

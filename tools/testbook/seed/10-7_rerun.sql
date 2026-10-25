@@ -1,6 +1,8 @@
 -- @marker SEED-10-7
 -- 대상 IT-10-048
 -- 분석 단계에서 서류 하나는 읽지 못함, 하나는 읽음인 입찰 건 두 개. 1번은 화면 시험, 2번은 서버 판정 몫이다
+-- 화면 시험의 읽지 못함 서류는 저장소에 실제 PDF 를 놓아 다시 읽으면 읽음까지 간다. 서버 판정 몫은 읽음 줄만 보므로 파일을 놓지 않는다
+-- @file seed/10-7/1.pdf past-performance.pdf
 -- @key 10.b048_virtual_bid SELECT '[[uuid:03:1]]' AS id, HEX(id) AS hex FROM bid_requests WHERE id = [[id:03:1]] AND state = 'ANALYZING'
 -- @key 10.b048_server_bid SELECT '[[uuid:03:2]]' AS id, HEX(id) AS hex FROM bid_requests WHERE id = [[id:03:2]] AND state = 'ANALYZING'
 INSERT INTO members (id, email, company_name, role, created_at, updated_at)
@@ -12,7 +14,7 @@ INSERT INTO bid_requests (id, member_id, opportunity_id, state, state_history, s
 VALUES ([[id:03:1]], [[id:01:1]], [[id:02:1]], 'ANALYZING', '[]', 'FULL_PACKAGE', [[now]], [[now]]),
        ([[id:03:2]], [[id:01:1]], [[id:02:2]], 'ANALYZING', '[]', 'FULL_PACKAGE', [[now]], [[now]]);
 INSERT INTO client_documents (id, member_id, bid_request_id, file_name, storage_url, file_size, content_type, uploaded_at, content_sha256, created_at, updated_at)
-VALUES ([[id:04:1]], [[id:01:1]], [[id:03:1]], '실적증명서.pdf', 'seed/10-7/1.pdf', 1024, 'application/pdf', [[now]], '[[sha:1]]', [[now]], [[now]]),
+VALUES ([[id:04:1]], [[id:01:1]], [[id:03:1]], '실적증명서.pdf', 'seed/10-7/1.pdf', 1338, 'application/pdf', [[now]], '[[sha:1]]', [[now]], [[now]]),
        ([[id:04:2]], [[id:01:1]], [[id:03:1]], '사업자등록증.pdf', 'seed/10-7/2.pdf', 1024, 'application/pdf', [[now]], '[[sha:2]]', [[now]], [[now]]),
        ([[id:04:3]], [[id:01:1]], [[id:03:2]], '실적증명서.pdf', 'seed/10-7/3.pdf', 1024, 'application/pdf', [[now]], '[[sha:3]]', [[now]], [[now]]),
        ([[id:04:4]], [[id:01:1]], [[id:03:2]], '사업자등록증.pdf', 'seed/10-7/4.pdf', 1024, 'application/pdf', [[now]], '[[sha:4]]', [[now]], [[now]]);

@@ -1,0 +1,627 @@
+{
+ "run": "3차",
+ "results": {
+  "WJBID_10001": {
+   "testId": "WJBID_10001",
+   "result": "NG",
+   "steps": [
+    "fail",
+    "fail",
+    "",
+    "",
+    "",
+    ""
+   ],
+   "comment": "서버 판정 기대결과 2/6개. 미충족 1,2번",
+   "date": "2026-10-25",
+   "at": "2026-10-25 09:03:19",
+   "tester": "SERVER",
+   "evidence": {
+    "0": {
+     "q": "시딩 키 10.b001_bid: SELECT '5eed0003-1010-0000-0000-000000000001' AS id, HEX(id) AS hex, state, JSON_LENGTH(state_history) AS hist FROM bid_requests WHERE id = UNHEX('5EED0003101000000000000000000001')\nPOST /api/admin/bid-requests/5eed0003-1010-0000-0000-000000000001/transition (admin:smoke-admin@example.com) {\"toState\": \"GENERATING\", \"notes\": \"IT-10-001 서버 판정\"}\nGET /api/admin/bid-requests/5eed0003-1010-0000-0000-000000000001 (admin:smoke-admin@example.com) 끝 식 x['body']['state'] != 'GENERATING' 이 참이 될 때까지 1800초\nSELECT state, JSON_LENGTH(state_history) AS hist, JSON_UNQUOTE(JSON_EXTRACT(state_history, '$[last-1].toState')) AS prev_state, JSON_UNQUOTE(JSON_EXTRACT(state_history, '$[last].toState')) AS to_state FROM bid_requests WHERE id = UNHEX('5EED0003101000000000000000000001')",
+     "r": "1행 [{\"id\": \"5eed0003-1010-0000-0000-000000000001\", \"hex\": \"5EED0003101000000000000000000001\", \"state\": \"ANALYZING\", \"hist\": \"0\"}]\n200 {\"id\": \"5eed0003-1010-0000-0000-000000000001\", \"opportunityId\": \"8753846d-9735-4a98-970c-e3171a17ac11\", \"noticeId\": \"a14256be-4670-41f3-8ed9-5bc858a7c507\", \"opportunityTitle\": \"(LCS) GROUND MAINTENANCE SERVICES, USAG-DAEGU AREA WIDE, KOREA \", \"displayTitle\": \"대구 지역 전체 지상 정비(조경) 용역 (USAG-Daegu), 한국 지원 비용 분담 프로그램(LCS)\", \"solicitationNumber\": \"W90VN926QA049\", \"agencyName\": \"DEPT OF DEFENSE.DEPT OF TH\n한도 넘김 60회 1772초 200 {\"id\": \"5eed0003-1010-0000-0000-000000000001\", \"opportunityId\": \"8753846d-9735-4a98-970c-e3171a17ac11\", \"noticeId\": \"a14256be-4670-41f3-8ed9-5bc858a7c507\", \"opportunityTitle\": \"(LCS) GROUND MAINTENANCE SERVICES, USAG-DAEGU AREA WIDE, KOREA \", \"displayTitle\": \"대구 지역 전체 지상 정비(조경) 용역 (USAG-Daegu), 한국 지원 비용 분담 프로그램(LCS)\", \"solicitationNumber\": \"W90VN926QA049\", \"agencyName\": \"DEPT OF DEFENSE.DEPT OF TH\n1행 [{\"state\": \"GENERATING\", \"hist\": \"1\", \"prev_state\": null, \"to_state\": \"GENERATING\"}]\ncheck r[1]['status'] == 200 and r[3][0]['state'] == 'REVIEW' and int(r[3][0]['hist']) == int(r[0][0]['hist']) + 2 and r[3][0]['prev_state'] == 'GENERATING' and r[3][0]['to_state'] == 'REVIEW' -> False",
+     "at": "2026-10-25 08:33:44"
+    },
+    "1": {
+     "q": "시딩 키 10.b001_bid: SELECT '5eed0003-1010-0000-0000-000000000001' AS id, HEX(id) AS hex, state, JSON_LENGTH(state_history) AS hist FROM bid_requests WHERE id = UNHEX('5EED0003101000000000000000000001')\nSELECT bd.status, JSON_UNQUOTE(JSON_EXTRACT(v.content_json, '$.type')) AS t FROM bid_documents bd LEFT JOIN bid_document_versions v ON v.document_id = bd.id AND v.version_no = 1 WHERE bd.bid_request_id = UNHEX('5EED0003101000000000000000000001')",
+     "r": "1행 [{\"id\": \"5eed0003-1010-0000-0000-000000000001\", \"hex\": \"5EED0003101000000000000000000001\", \"state\": \"GENERATING\", \"hist\": \"1\"}]\n0행 []\ncheck len(r[1]) > 0 and all(x['status'] == 'DRAFT' and x['t'] == 'doc' for x in r[1]) -> False",
+     "at": "2026-10-25 08:33:44"
+    }
+   }
+  },
+  "WJBID_10041": {
+   "testId": "WJBID_10041",
+   "result": "N/T",
+   "steps": [
+    "",
+    "",
+    "",
+    "pass",
+    ""
+   ],
+   "comment": "서버 판정 기대결과 1/5개",
+   "date": "2026-10-25",
+   "at": "2026-10-25 09:03:19",
+   "tester": "SERVER",
+   "evidence": {
+    "3": {
+     "q": "시딩 키 10.b041_done_bid: SELECT '5eed0003-1002-0000-0000-000000000001' AS id, HEX(id) AS hex FROM bid_requests WHERE id = UNHEX('5EED0003100200000000000000000001') AND state = 'ANALYZING'\nGET /api/admin/bid-requests/5eed0003-1002-0000-0000-000000000001/document-readings (admin:smoke-admin@example.com)\nSELECT LOWER(CONCAT_WS('-', SUBSTR(HEX(dr.id),1,8), SUBSTR(HEX(dr.id),9,4), SUBSTR(HEX(dr.id),13,4), SUBSTR(HEX(dr.id),17,4), SUBSTR(HEX(dr.id),21,12))) AS id, dr.status, dr.fact_count FROM document_readings dr WHERE dr.content_sha256 IN (SELECT cd.content_sha256 FROM client_documents cd WHERE cd.bid_request_id = UNHEX('5EED0003100200000000000000000001') UNION SELECT md.content_sha256 FROM member_documents md JOIN bid_requests b ON b.member_id = md.member_id WHERE b.id = UNHEX('5EED0003100200000000000000000001') AND (md.expires_on IS NULL OR md.expires_on >= '2026-10-25'))",
+     "r": "1행 [{\"id\": \"5eed0003-1002-0000-0000-000000000001\", \"hex\": \"5EED0003100200000000000000000001\"}]\n200 {\"readingStarted\": true, \"inProgress\": false, \"items\": [{\"readingId\": \"5eed0006-1002-0000-0000-000000000001\", \"fileName\": \"실적증명서.pdf\", \"origin\": \"BID_DOCUMENT\", \"documentId\": \"5eed0004-1002-0000-0000-000000000001\", \"category\": null, \"fulfills\": [], \"status\": \"DONE\", \"readAs\": \"PDF\", \"factCount\": 3, \"visionUsed\": false, \"failureReason\": null, \"readAt\": \"2026-10-25T08:33:34.195587\"}, {\"readingId\": \"\n3행 [{\"id\": \"5eed0006-1002-0000-0000-000000000001\", \"status\": \"DONE\", \"fact_count\": \"3\"}, {\"id\": \"5eed0006-1002-0000-0000-000000000002\", \"status\": \"DONE\", \"fact_count\": \"2\"}, {\"id\": \"5eed0006-1002-0000-0000-000000000004\", \"status\": \"DONE\", \"fact_count\": \"2\"}]\ncheck all(any(d['id'] == i['readingId'] and d['status'] == 'DONE' and int(d['fact_count']) == i['factCount'] for d in r[2]) for i in r[1]['body']['items'] if i['status'] == 'DONE') -> True",
+     "at": "2026-10-25 08:33:44"
+    }
+   }
+  },
+  "WJBID_10042": {
+   "testId": "WJBID_10042",
+   "result": "N/T",
+   "steps": [
+    "",
+    "",
+    "pass"
+   ],
+   "comment": "서버 판정 기대결과 1/3개",
+   "date": "2026-10-25",
+   "at": "2026-10-25 09:03:19",
+   "tester": "SERVER",
+   "evidence": {
+    "2": {
+     "q": "시딩 키 10.b042_server_bid: SELECT '5eed0003-1003-0000-0000-000000000002' AS id, HEX(id) AS hex FROM bid_requests WHERE id = UNHEX('5EED0003100300000000000000000002') AND state = 'DOCS_RECEIVED'\nSELECT COUNT(*) AS n FROM document_readings WHERE content_sha256 IN (SELECT cd.content_sha256 FROM client_documents cd WHERE cd.bid_request_id = UNHEX('5EED0003100300000000000000000002') UNION SELECT md.content_sha256 FROM member_documents md JOIN bid_requests b ON b.member_id = md.member_id WHERE b.id = UNHEX('5EED0003100300000000000000000002') AND (md.expires_on IS NULL OR md.expires_on >= '2026-10-25'))\nPOST /api/admin/bid-requests/5eed0003-1003-0000-0000-000000000002/transition (admin:smoke-admin@example.com) {\"toState\": \"ANALYZING\", \"notes\": \"IT-10-042 서버 판정\"}\nSELECT COUNT(*) AS n FROM document_readings WHERE content_sha256 IN (SELECT cd.content_sha256 FROM client_documents cd WHERE cd.bid_request_id = UNHEX('5EED0003100300000000000000000002') UNION SELECT md.content_sha256 FROM member_documents md JOIN bid_requests b ON b.member_id = md.member_id WHERE b.id = UNHEX('5EED0003100300000000000000000002') AND (md.expires_on IS NULL OR md.expires_on >= '2026-10-25'))",
+     "r": "1행 [{\"id\": \"5eed0003-1003-0000-0000-000000000002\", \"hex\": \"5EED0003100300000000000000000002\"}]\n1행 [{\"n\": \"1\"}]\n200 {\"id\": \"5eed0003-1003-0000-0000-000000000002\", \"opportunityId\": \"5eed0002-1003-0000-0000-000000000002\", \"opportunityTitle\": \"Seed opportunity 10-3 B\", \"displayTitle\": \"Seed opportunity 10-3 B\", \"memberEmail\": \"seed.10-3.a@example.com\", \"state\": \"ANALYZING\", \"stateDisplay\": \"분석 중\", \"createdAt\": \"2026-10-25 08:33\", \"updatedAt\": \"2026-10-25 09:03\", \"history\": [{\"fromState\": \"DOCS_RECEIVED\", \"toState\"\n1행 [{\"n\": \"1\"}]\ncheck r[2]['status'] == 200 and int(r[3][0]['n']) == int(r[1][0]['n']) -> True",
+     "at": "2026-10-25 08:33:44"
+    }
+   }
+  },
+  "WJBID_10043": {
+   "testId": "WJBID_10043",
+   "result": "N/T",
+   "steps": [
+    "",
+    "",
+    "pass"
+   ],
+   "comment": "서버 판정 기대결과 1/3개",
+   "date": "2026-10-25",
+   "at": "2026-10-25 09:03:20",
+   "tester": "SERVER",
+   "evidence": {
+    "2": {
+     "q": "SELECT HEX(id) AS hex, file_name, (JSON_SEARCH(facts_json, 'one', 'VISION', NULL, '$[*].readMode') IS NOT NULL) AS has_vision FROM document_readings WHERE status = 'DONE' AND vision_used = 1",
+     "r": "1행 [{\"hex\": \"5EED0006100200000000000000000004\", \"file_name\": \"면허증_스캔.pdf\", \"has_vision\": \"1\"}]\ncheck all(x['has_vision'] == '1' for x in r[0]) -> True",
+     "at": "2026-10-25 08:33:44"
+    }
+   }
+  },
+  "WJBID_10045": {
+   "testId": "WJBID_10045",
+   "result": "N/T",
+   "steps": [
+    "",
+    "pass",
+    "pass"
+   ],
+   "comment": "서버 판정 기대결과 2/3개",
+   "date": "2026-10-25",
+   "at": "2026-10-25 09:03:20",
+   "tester": "SERVER",
+   "evidence": {
+    "1": {
+     "q": "시딩 키 10.b045_server2_bid: SELECT '5eed0003-1004-0000-0000-000000000002' AS id, HEX(id) AS hex, '5eed100400030000000000000000000000000000000000000000000000000000' AS doc_sha FROM bid_requests WHERE id = UNHEX('5EED0003100400000000000000000002') AND state = 'DOCS_RECEIVED'\nPOST /api/admin/bid-requests/5eed0003-1004-0000-0000-000000000002/transition (admin:smoke-admin@example.com) {\"toState\": \"ANALYZING\", \"notes\": \"IT-10-045 서버 판정\"}\nSELECT status, read_as FROM document_readings WHERE content_sha256 = '5eed100400030000000000000000000000000000000000000000000000000000'",
+     "r": "1행 [{\"id\": \"5eed0003-1004-0000-0000-000000000002\", \"hex\": \"5EED0003100400000000000000000002\", \"doc_sha\": \"5eed100400030000000000000000000000000000000000000000000000000000\"}]\n200 {\"id\": \"5eed0003-1004-0000-0000-000000000002\", \"opportunityId\": \"5eed0002-1004-0000-0000-000000000002\", \"opportunityTitle\": \"Seed opportunity 10-4 B\", \"displayTitle\": \"Seed opportunity 10-4 B\", \"memberEmail\": \"seed.10-4.a@example.com\", \"state\": \"ANALYZING\", \"stateDisplay\": \"분석 중\", \"createdAt\": \"2026-10-25 08:33\", \"updatedAt\": \"2026-10-25 09:03\", \"history\": [{\"fromState\": \"DOCS_RECEIVED\", \"toState\"\n1행 [{\"status\": \"UNSUPPORTED\", \"read_as\": \"NONE\"}]\ncheck r[1]['status'] == 200 and len(r[2]) == 1 and r[2][0]['status'] == 'UNSUPPORTED' and r[2][0]['read_as'] == 'NONE' -> True",
+     "at": "2026-10-25 08:33:44"
+    },
+    "2": {
+     "q": "시딩 키 10.b045_server3_bid: SELECT '5eed0003-1004-0000-0000-000000000003' AS id, HEX(id) AS hex FROM bid_requests WHERE id = UNHEX('5EED0003100400000000000000000003') AND state = 'DOCS_RECEIVED'\nPOST /api/admin/bid-requests/5eed0003-1004-0000-0000-000000000003/transition (admin:smoke-admin@example.com) {\"toState\": \"ANALYZING\", \"notes\": \"IT-10-045 서버 판정\"}\nPOST /api/admin/bid-requests/5eed0003-1004-0000-0000-000000000003/transition (admin:smoke-admin@example.com) {\"toState\": \"GENERATING\", \"notes\": \"IT-10-045 서버 판정\"}\nSELECT state FROM bid_requests WHERE id = UNHEX('5EED0003100400000000000000000003')",
+     "r": "1행 [{\"id\": \"5eed0003-1004-0000-0000-000000000003\", \"hex\": \"5EED0003100400000000000000000003\"}]\n200 {\"id\": \"5eed0003-1004-0000-0000-000000000003\", \"opportunityId\": \"5eed0002-1004-0000-0000-000000000003\", \"opportunityTitle\": \"Seed opportunity 10-4 C\", \"displayTitle\": \"Seed opportunity 10-4 C\", \"memberEmail\": \"seed.10-4.a@example.com\", \"state\": \"ANALYZING\", \"stateDisplay\": \"분석 중\", \"createdAt\": \"2026-10-25 08:33\", \"updatedAt\": \"2026-10-25 09:03\", \"history\": [{\"fromState\": \"DOCS_RECEIVED\", \"toState\"\n200 {\"id\": \"5eed0003-1004-0000-0000-000000000003\", \"opportunityId\": \"5eed0002-1004-0000-0000-000000000003\", \"opportunityTitle\": \"Seed opportunity 10-4 C\", \"displayTitle\": \"Seed opportunity 10-4 C\", \"memberEmail\": \"seed.10-4.a@example.com\", \"state\": \"GENERATING\", \"stateDisplay\": \"문서 작성 중\", \"createdAt\": \"2026-10-25 08:33\", \"updatedAt\": \"2026-10-25 09:03\", \"history\": [{\"fromState\": \"DOCS_RECEIVED\", \"toSt\n1행 [{\"state\": \"GENERATING\"}]\ncheck r[1]['status'] == 200 and r[2]['status'] == 200 and r[3][0]['state'] == 'GENERATING' -> True",
+     "at": "2026-10-25 08:33:44"
+    }
+   }
+  },
+  "WJBID_10046": {
+   "testId": "WJBID_10046",
+   "result": "N/T",
+   "steps": [
+    "",
+    "",
+    ""
+   ],
+   "comment": "서버 판정 기대결과 0/3개. 기대결과 2번 재료 없음 / 기대결과 3번 재료 없음",
+   "date": "2026-10-25",
+   "at": "2026-10-25 09:03:21",
+   "tester": "SERVER",
+   "evidence": {
+    "1": {
+     "q": "시딩 키 10.b046_server2_bid: SELECT '5eed0003-1005-0000-0000-000000000002' AS id, HEX(id) AS hex FROM bid_requests WHERE id = UNHEX('5EED0003100500000000000000000002') AND state = 'ANALYZING' AND EXISTS (SELECT 1 FROM document_readings WHERE id = UNHEX('5EED0006100500000000000000000002') AND status = 'READING' AND status_at >= (UTC_TIMESTAMP(6) + INTERVAL 9 HOUR) - INTERVAL 20 MINUTE)",
+     "r": "0행 []\n시딩 키 10.b046_server2_bid 가 0행이다. 시딩을 먼저 넣는다",
+     "at": "2026-10-25 08:33:44"
+    },
+    "2": {
+     "q": "시딩 키 10.b046_server3_bid: SELECT '5eed0003-1005-0000-0000-000000000003' AS id, HEX(id) AS hex, JSON_LENGTH(state_history) AS hist FROM bid_requests WHERE id = UNHEX('5EED0003100500000000000000000003') AND state = 'ANALYZING' AND EXISTS (SELECT 1 FROM document_readings WHERE id = UNHEX('5EED0006100500000000000000000003') AND status = 'READING' AND status_at >= (UTC_TIMESTAMP(6) + INTERVAL 9 HOUR) - INTERVAL 20 MINUTE)",
+     "r": "0행 []\n시딩 키 10.b046_server3_bid 가 0행이다. 시딩을 먼저 넣는다",
+     "at": "2026-10-25 08:33:44"
+    }
+   }
+  },
+  "WJBID_10047": {
+   "testId": "WJBID_10047",
+   "result": "N/T",
+   "steps": [
+    "",
+    "pass"
+   ],
+   "comment": "서버 판정 기대결과 1/2개",
+   "date": "2026-10-25",
+   "at": "2026-10-25 09:03:21",
+   "tester": "SERVER",
+   "evidence": {
+    "1": {
+     "q": "시딩 키 10.b047_server_bid: SELECT '5eed0003-1006-0000-0000-000000000002' AS id, HEX(id) AS hex FROM bid_requests WHERE id = UNHEX('5EED0003100600000000000000000002') AND state = 'ANALYZING'\nPOST /api/admin/bid-requests/5eed0003-1006-0000-0000-000000000002/transition (admin:smoke-admin@example.com) {\"toState\": \"GENERATING\", \"notes\": \"IT-10-047 서버 판정\"}\nSELECT state FROM bid_requests WHERE id = UNHEX('5EED0003100600000000000000000002')",
+     "r": "1행 [{\"id\": \"5eed0003-1006-0000-0000-000000000002\", \"hex\": \"5EED0003100600000000000000000002\"}]\n200 {\"id\": \"5eed0003-1006-0000-0000-000000000002\", \"opportunityId\": \"5eed0002-1006-0000-0000-000000000002\", \"opportunityTitle\": \"Seed opportunity 10-6 B\", \"displayTitle\": \"Seed opportunity 10-6 B\", \"memberEmail\": \"seed.10-6.a@example.com\", \"state\": \"GENERATING\", \"stateDisplay\": \"문서 작성 중\", \"createdAt\": \"2026-10-25 08:33\", \"updatedAt\": \"2026-10-25 09:03\", \"history\": [{\"fromState\": \"ANALYZING\", \"toState\"\n1행 [{\"state\": \"GENERATING\"}]\ncheck r[1]['status'] == 200 and r[2][0]['state'] == 'GENERATING' -> True",
+     "at": "2026-10-25 08:33:44"
+    }
+   }
+  },
+  "WJBID_10048": {
+   "testId": "WJBID_10048",
+   "result": "N/T",
+   "steps": [
+    "",
+    "pass"
+   ],
+   "comment": "서버 판정 기대결과 1/2개",
+   "date": "2026-10-25",
+   "at": "2026-10-25 09:03:41",
+   "tester": "SERVER",
+   "evidence": {
+    "1": {
+     "q": "시딩 키 10.b048_server_bid: SELECT '5eed0003-1007-0000-0000-000000000002' AS id, HEX(id) AS hex FROM bid_requests WHERE id = UNHEX('5EED0003100700000000000000000002') AND state = 'ANALYZING'\nSELECT HEX(dr.id) AS hex, dr.read_at FROM document_readings dr WHERE dr.status = 'DONE' AND dr.content_sha256 IN (SELECT cd.content_sha256 FROM client_documents cd WHERE cd.bid_request_id = UNHEX('5EED0003100700000000000000000002') UNION SELECT md.content_sha256 FROM member_documents md JOIN bid_requests b ON b.member_id = md.member_id WHERE b.id = UNHEX('5EED0003100700000000000000000002') AND (md.expires_on IS NULL OR md.expires_on >= '2026-10-25')) ORDER BY dr.id\nPOST /api/admin/bid-requests/5eed0003-1007-0000-0000-000000000002/document-readings/run (admin:smoke-admin@example.com) {\"readingIds\": null}\nGET /api/admin/bid-requests/5eed0003-1007-0000-0000-000000000002/document-readings (admin:smoke-admin@example.com) 끝 식 x['status'] == 200 and not x['body']['inProgress'] 이 참이 될 때까지 1800초\nSELECT HEX(dr.id) AS hex, dr.read_at FROM document_readings dr WHERE dr.content_sha256 IN (SELECT cd.content_sha256 FROM client_documents cd WHERE cd.bid_request_id = UNHEX('5EED0003100700000000000000000002') UNION SELECT md.content_sha256 FROM member_documents md JOIN bid_requests b ON b.member_id = md.member_id WHERE b.id = UNHEX('5EED0003100700000000000000000002') AND (md.expires_on IS NULL OR md.expires_on >= '2026-10-25')) ORDER BY dr.id",
+     "r": "1행 [{\"id\": \"5eed0003-1007-0000-0000-000000000002\", \"hex\": \"5EED0003100700000000000000000002\"}]\n1행 [{\"hex\": \"5EED0006100700000000000000000004\", \"read_at\": \"2026-10-25 07:33:34.844129\"}]\n200 {\"readingStarted\": true, \"inProgress\": true, \"items\": [{\"readingId\": \"5eed0006-1007-0000-0000-000000000003\", \"fileName\": \"실적증명서.pdf\", \"origin\": \"BID_DOCUMENT\", \"documentId\": \"5eed0004-1007-0000-0000-000000000003\", \"category\": null, \"fulfills\": [], \"status\": \"WAITING\", \"readAs\": \"PDF\", \"factCount\": 0, \"visionUsed\": false, \"failureReason\": null, \"readAt\": null}, {\"readingId\": \"5eed0006-1007-0000-000\n끝남 2회 20초 200 {\"readingStarted\": true, \"inProgress\": false, \"items\": [{\"readingId\": \"5eed0006-1007-0000-0000-000000000003\", \"fileName\": \"실적증명서.pdf\", \"origin\": \"BID_DOCUMENT\", \"documentId\": \"5eed0004-1007-0000-0000-000000000003\", \"category\": null, \"fulfills\": [], \"status\": \"FAILED\", \"readAs\": \"PDF\", \"factCount\": 0, \"visionUsed\": false, \"failureReason\": \"워크플로우 실행 실패: runId=5436d2fc-3032-4cfa-ab5b-7e9131f7bb91, er\n2행 [{\"hex\": \"5EED0006100700000000000000000003\", \"read_at\": null}, {\"hex\": \"5EED0006100700000000000000000004\", \"read_at\": \"2026-10-25 07:33:34.844129\"}]\ncheck r[2]['status'] == 200 and [x for x in r[4] if x['hex'] in [y['hex'] for y in r[1]]] == r[1] -> True",
+     "at": "2026-10-25 08:33:44"
+    }
+   }
+  },
+  "WJBID_10049": {
+   "testId": "WJBID_10049",
+   "result": "N/T",
+   "steps": [
+    "",
+    "pass",
+    "pass"
+   ],
+   "comment": "서버 판정 기대결과 2/3개",
+   "date": "2026-10-25",
+   "at": "2026-10-25 09:03:42",
+   "tester": "SERVER",
+   "evidence": {
+    "1": {
+     "q": "시딩 키 10.b049_bid: SELECT '5eed0003-1008-0000-0000-000000000001' AS id, HEX(id) AS hex FROM bid_requests WHERE id = UNHEX('5EED0003100800000000000000000001') AND state = 'GENERATING'\nSELECT HEX(dr.id) AS hex, dr.status, dr.read_at FROM document_readings dr WHERE dr.content_sha256 IN (SELECT cd.content_sha256 FROM client_documents cd WHERE cd.bid_request_id = UNHEX('5EED0003100800000000000000000001') UNION SELECT md.content_sha256 FROM member_documents md JOIN bid_requests b ON b.member_id = md.member_id WHERE b.id = UNHEX('5EED0003100800000000000000000001') AND (md.expires_on IS NULL OR md.expires_on >= '2026-10-25')) ORDER BY dr.id\nPOST /api/admin/bid-requests/5eed0003-1008-0000-0000-000000000001/document-readings/run (admin:smoke-admin@example.com) {\"readingIds\": null}\nSELECT HEX(dr.id) AS hex, dr.status, dr.read_at FROM document_readings dr WHERE dr.content_sha256 IN (SELECT cd.content_sha256 FROM client_documents cd WHERE cd.bid_request_id = UNHEX('5EED0003100800000000000000000001') UNION SELECT md.content_sha256 FROM member_documents md JOIN bid_requests b ON b.member_id = md.member_id WHERE b.id = UNHEX('5EED0003100800000000000000000001') AND (md.expires_on IS NULL OR md.expires_on >= '2026-10-25')) ORDER BY dr.id",
+     "r": "1행 [{\"id\": \"5eed0003-1008-0000-0000-000000000001\", \"hex\": \"5EED0003100800000000000000000001\"}]\n1행 [{\"hex\": \"5EED0006100800000000000000000001\", \"status\": \"FAILED\", \"read_at\": null}]\n409 {\"error\": \"NOT_ANALYZING\", \"message\": \"분석 단계에서만 다시 읽을 수 있습니다\"}\n1행 [{\"hex\": \"5EED0006100800000000000000000001\", \"status\": \"FAILED\", \"read_at\": null}]\ncheck r[2]['status'] == 409 and r[2]['body'].get('error') == 'NOT_ANALYZING' -> True",
+     "at": "2026-10-25 08:33:44"
+    },
+    "2": {
+     "q": "시딩 키 10.b049_bid: SELECT '5eed0003-1008-0000-0000-000000000001' AS id, HEX(id) AS hex FROM bid_requests WHERE id = UNHEX('5EED0003100800000000000000000001') AND state = 'GENERATING'\nSELECT HEX(dr.id) AS hex, dr.status, dr.read_at FROM document_readings dr WHERE dr.content_sha256 IN (SELECT cd.content_sha256 FROM client_documents cd WHERE cd.bid_request_id = UNHEX('5EED0003100800000000000000000001') UNION SELECT md.content_sha256 FROM member_documents md JOIN bid_requests b ON b.member_id = md.member_id WHERE b.id = UNHEX('5EED0003100800000000000000000001') AND (md.expires_on IS NULL OR md.expires_on >= '2026-10-25')) ORDER BY dr.id\nPOST /api/admin/bid-requests/5eed0003-1008-0000-0000-000000000001/document-readings/run (admin:smoke-admin@example.com) {\"readingIds\": null}\nSELECT HEX(dr.id) AS hex, dr.status, dr.read_at FROM document_readings dr WHERE dr.content_sha256 IN (SELECT cd.content_sha256 FROM client_documents cd WHERE cd.bid_request_id = UNHEX('5EED0003100800000000000000000001') UNION SELECT md.content_sha256 FROM member_documents md JOIN bid_requests b ON b.member_id = md.member_id WHERE b.id = UNHEX('5EED0003100800000000000000000001') AND (md.expires_on IS NULL OR md.expires_on >= '2026-10-25')) ORDER BY dr.id",
+     "r": "1행 [{\"id\": \"5eed0003-1008-0000-0000-000000000001\", \"hex\": \"5EED0003100800000000000000000001\"}]\n1행 [{\"hex\": \"5EED0006100800000000000000000001\", \"status\": \"FAILED\", \"read_at\": null}]\n409 {\"error\": \"NOT_ANALYZING\", \"message\": \"분석 단계에서만 다시 읽을 수 있습니다\"}\n1행 [{\"hex\": \"5EED0006100800000000000000000001\", \"status\": \"FAILED\", \"read_at\": null}]\ncheck r[3] == r[1] and all(x['status'] == 'FAILED' for x in r[3] if x['hex'] in [y['hex'] for y in r[1] if y['status'] == 'FAILED']) -> True",
+     "at": "2026-10-25 08:33:44"
+    }
+   }
+  },
+  "WJBID_10050": {
+   "testId": "WJBID_10050",
+   "result": "N/T",
+   "steps": [
+    "pass",
+    "pass",
+    "pass",
+    "pass",
+    ""
+   ],
+   "comment": "서버 판정 기대결과 4/5개",
+   "date": "2026-10-25",
+   "at": "2026-10-25 09:03:43",
+   "tester": "SERVER",
+   "evidence": {
+    "0": {
+     "q": "시딩 키 10.b050_doc: SELECT '5eed0007-1009-0000-0000-000000000001' AS id, '5eed0006-1009-0000-0000-000000000001' AS a, '5eed0006-1009-0000-0000-000000000002' AS b, '5eed0006-1009-0000-0000-000000000003' AS c, HEX(UNHEX('5EED0007100900000000000000000001')) AS hex, (SELECT title FROM opportunity_requirement_items WHERE id = UNHEX('5EED000A100900000000000000000001')) AS req FROM bid_documents WHERE id = UNHEX('5EED0007100900000000000000000001')\nPOST /api/mcp (guest) {\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"tools/call\", \"params\": {\"name\": \"get_proposal_design_input\", \"arguments\": {\"documentId\": \"5eed0007-1009-0000-0000-000000000001\"}}} 헤더 {\"X-API-Key\": \"$TESTBOOK_MCP_API_KEY\"}",
+     "r": "1행 [{\"id\": \"5eed0007-1009-0000-0000-000000000001\", \"a\": \"5eed0006-1009-0000-0000-000000000001\", \"b\": \"5eed0006-1009-0000-0000-000000000002\", \"c\": \"5eed0006-1009-0000-0000-000000000003\", \"hex\": \"5EED0007100900000000000000000001\", \"req\": \"수행 실적 증명서\"}]\n200 {\"jsonrpc\": \"2.0\", \"id\": 1, \"result\": {\"content\": [{\"type\": \"text\", \"text\": \"{\\n  \\\"documentId\\\" : \\\"5eed0007-1009-0000-0000-000000000001\\\",\\n  \\\"bidRequestId\\\" : \\\"5eed0003-1009-0000-0000-000000000001\\\",\\n  \\\"documentType\\\" : \\\"TECHNICAL_PROPOSAL\\\",\\n  \\\"opportunityId\\\" : \\\"5eed0002-1009-0000-0000-000000000001\\\",\\n  \\\"opportunityTitle\\\" : \\\"Seed opportunity 10-9\\\",\\n  \\\"organizationName\\\" : null,\ncheck len(loads(r[1]['body']['result']['content'][0]['text'])['clientDocuments']) == 3 and {(d['readingId'], d['status']) for d in loads(r[1]['body']['result']['content'][0]['text'])['clientDocuments']} == {(r[0][0]['a'], 'DONE'), (r[0][0]['b'], 'DONE'), (r[0][0]['c'], 'FAILED')} -> True",
+     "at": "2026-10-25 08:33:44"
+    },
+    "1": {
+     "q": "시딩 키 10.b050_doc: SELECT '5eed0007-1009-0000-0000-000000000001' AS id, '5eed0006-1009-0000-0000-000000000001' AS a, '5eed0006-1009-0000-0000-000000000002' AS b, '5eed0006-1009-0000-0000-000000000003' AS c, HEX(UNHEX('5EED0007100900000000000000000001')) AS hex, (SELECT title FROM opportunity_requirement_items WHERE id = UNHEX('5EED000A100900000000000000000001')) AS req FROM bid_documents WHERE id = UNHEX('5EED0007100900000000000000000001')\nPOST /api/mcp (guest) {\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"tools/call\", \"params\": {\"name\": \"get_proposal_design_input\", \"arguments\": {\"documentId\": \"5eed0007-1009-0000-0000-000000000001\"}}} 헤더 {\"X-API-Key\": \"$TESTBOOK_MCP_API_KEY\"}",
+     "r": "1행 [{\"id\": \"5eed0007-1009-0000-0000-000000000001\", \"a\": \"5eed0006-1009-0000-0000-000000000001\", \"b\": \"5eed0006-1009-0000-0000-000000000002\", \"c\": \"5eed0006-1009-0000-0000-000000000003\", \"hex\": \"5EED0007100900000000000000000001\", \"req\": \"수행 실적 증명서\"}]\n200 {\"jsonrpc\": \"2.0\", \"id\": 1, \"result\": {\"content\": [{\"type\": \"text\", \"text\": \"{\\n  \\\"documentId\\\" : \\\"5eed0007-1009-0000-0000-000000000001\\\",\\n  \\\"bidRequestId\\\" : \\\"5eed0003-1009-0000-0000-000000000001\\\",\\n  \\\"documentType\\\" : \\\"TECHNICAL_PROPOSAL\\\",\\n  \\\"opportunityId\\\" : \\\"5eed0002-1009-0000-0000-000000000001\\\",\\n  \\\"opportunityTitle\\\" : \\\"Seed opportunity 10-9\\\",\\n  \\\"organizationName\\\" : null,\ncheck any(f['requirementTitle'] == r[0][0]['req'] for d in loads(r[1]['body']['result']['content'][0]['text'])['clientDocuments'] if d['readingId'] == r[0][0]['a'] for f in d['fulfills']) -> True",
+     "at": "2026-10-25 08:33:44"
+    },
+    "2": {
+     "q": "시딩 키 10.b050_doc: SELECT '5eed0007-1009-0000-0000-000000000001' AS id, '5eed0006-1009-0000-0000-000000000001' AS a, '5eed0006-1009-0000-0000-000000000002' AS b, '5eed0006-1009-0000-0000-000000000003' AS c, HEX(UNHEX('5EED0007100900000000000000000001')) AS hex, (SELECT title FROM opportunity_requirement_items WHERE id = UNHEX('5EED000A100900000000000000000001')) AS req FROM bid_documents WHERE id = UNHEX('5EED0007100900000000000000000001')\nPOST /api/mcp (guest) {\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"tools/call\", \"params\": {\"name\": \"save_proposal_structure\", \"arguments\": {\"documentId\": \"5eed0007-1009-0000-0000-000000000001\", \"chapters\": [{\"factorLabel\": \"1\", \"factorTitle\": \"Past Performance\", \"sections\": [{\"subfactorLabel\": \"1.1\", \"title\": \"Relevant Contracts\", \"scope\": \"Recent relevant contracts\", \"requirementRefs\": [], \"sourceReadingIds\": [\"5eed0006-1009-0000-0000-000000000001\"], \"minWords\": 200}]}]}}} 헤더 {\"X-API-Key\": \"$TESTBOOK_MCP_API_KEY\"}",
+     "r": "1행 [{\"id\": \"5eed0007-1009-0000-0000-000000000001\", \"a\": \"5eed0006-1009-0000-0000-000000000001\", \"b\": \"5eed0006-1009-0000-0000-000000000002\", \"c\": \"5eed0006-1009-0000-0000-000000000003\", \"hex\": \"5EED0007100900000000000000000001\", \"req\": \"수행 실적 증명서\"}]\n200 {\"jsonrpc\": \"2.0\", \"id\": 1, \"result\": {\"content\": [{\"type\": \"text\", \"text\": \"{\\n  \\\"sectionCount\\\" : 1,\\n  \\\"unassignedReqIds\\\" : [ ],\\n  \\\"unusedReadingIds\\\" : [ \\\"5eed0006-1009-0000-0000-000000000002\\\" ],\\n  \\\"documentId\\\" : \\\"5eed0007-1009-0000-0000-000000000001\\\",\\n  \\\"status\\\" : \\\"SAVED\\\",\\n  \\\"sections\\\" : [ {\\n    \\\"sectionId\\\" : \\\"3b030756-0e9d-40d7-9441-60402f576a10\\\",\\n    \\\"chapterId\\\" \ncheck not r[1]['body']['result'].get('isError') and loads(r[1]['body']['result']['content'][0]['text'])['unusedReadingIds'] == [r[0][0]['b']] -> True",
+     "at": "2026-10-25 08:33:44"
+    },
+    "3": {
+     "q": "시딩 키 10.b050_doc: SELECT '5eed0007-1009-0000-0000-000000000001' AS id, '5eed0006-1009-0000-0000-000000000001' AS a, '5eed0006-1009-0000-0000-000000000002' AS b, '5eed0006-1009-0000-0000-000000000003' AS c, HEX(UNHEX('5EED0007100900000000000000000001')) AS hex, (SELECT title FROM opportunity_requirement_items WHERE id = UNHEX('5EED000A100900000000000000000001')) AS req FROM bid_documents WHERE id = UNHEX('5EED0007100900000000000000000001')\nPOST /api/mcp (guest) {\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"tools/call\", \"params\": {\"name\": \"save_proposal_structure\", \"arguments\": {\"documentId\": \"5eed0007-1009-0000-0000-000000000001\", \"chapters\": [{\"factorLabel\": \"1\", \"factorTitle\": \"Past Performance\", \"sections\": [{\"subfactorLabel\": \"1.1\", \"title\": \"Relevant Contracts\", \"scope\": \"Recent relevant contracts\", \"requirementRefs\": [], \"sourceReadingIds\": [\"5eed0006-1009-0000-0000-000000000001\"], \"minWords\": 200}]}]}}} 헤더 {\"X-API-Key\": \"$TESTBOOK_MCP_API_KEY\"}\nSELECT ps.source_reading_ids FROM proposal_section ps JOIN proposal_chapter pc ON pc.id = ps.chapter_id WHERE pc.document_id = UNHEX('5EED0007100900000000000000000001')",
+     "r": "1행 [{\"id\": \"5eed0007-1009-0000-0000-000000000001\", \"a\": \"5eed0006-1009-0000-0000-000000000001\", \"b\": \"5eed0006-1009-0000-0000-000000000002\", \"c\": \"5eed0006-1009-0000-0000-000000000003\", \"hex\": \"5EED0007100900000000000000000001\", \"req\": \"수행 실적 증명서\"}]\n200 {\"jsonrpc\": \"2.0\", \"id\": 1, \"result\": {\"content\": [{\"type\": \"text\", \"text\": \"{\\n  \\\"sectionCount\\\" : 1,\\n  \\\"unassignedReqIds\\\" : [ ],\\n  \\\"unusedReadingIds\\\" : [ \\\"5eed0006-1009-0000-0000-000000000002\\\" ],\\n  \\\"documentId\\\" : \\\"5eed0007-1009-0000-0000-000000000001\\\",\\n  \\\"status\\\" : \\\"SAVED\\\",\\n  \\\"sections\\\" : [ {\\n    \\\"sectionId\\\" : \\\"fd8a0b81-ce47-414c-aa41-5a7349a69118\\\",\\n    \\\"chapterId\\\" \n1행 [{\"source_reading_ids\": \"[\\\"5eed0006-1009-0000-0000-000000000001\\\"]\"}]\ncheck len(r[2]) == 1 and loads(r[2][0]['source_reading_ids']) == [r[0][0]['a']] -> True",
+     "at": "2026-10-25 08:33:44"
+    }
+   }
+  },
+  "WJBID_10051": {
+   "testId": "WJBID_10051",
+   "result": "OK",
+   "steps": [
+    "pass",
+    "pass",
+    "pass"
+   ],
+   "comment": "서버 판정 기대결과 3/3개",
+   "date": "2026-10-25",
+   "at": "2026-10-25 09:03:44",
+   "tester": "SERVER",
+   "evidence": {
+    "0": {
+     "q": "시딩 키 10.b051_doc: SELECT '5eed0007-1009-0000-0000-000000000002' AS id, '5eed0006-1009-0000-0000-000000000001' AS a, '5eed0006-1009-0000-0000-000000000003' AS c, '5eed0006-1009-0000-0000-000000000004' AS d, HEX(UNHEX('5EED0007100900000000000000000002')) AS hex FROM bid_documents WHERE id = UNHEX('5EED0007100900000000000000000002') AND EXISTS (SELECT 1 FROM proposal_section WHERE id = UNHEX('5EED0009100900000000000000000002'))\nPOST /api/mcp (guest) {\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"tools/call\", \"params\": {\"name\": \"save_proposal_structure\", \"arguments\": {\"documentId\": \"5eed0007-1009-0000-0000-000000000002\", \"chapters\": [{\"factorLabel\": \"1\", \"factorTitle\": \"Past Performance\", \"sections\": [{\"subfactorLabel\": \"1.1\", \"title\": \"Relevant Contracts\", \"scope\": \"Recent relevant contracts\", \"requirementRefs\": [], \"sourceReadingIds\": [\"5eed0006-1009-0000-0000-000000000001\", \"5eed0006-1009-0000-0000-000000000003\"], \"minWords\": 200}]}]}}} 헤더 {\"X-API-Key\": \"$TESTBOOK_MCP_API_KEY\"}",
+     "r": "1행 [{\"id\": \"5eed0007-1009-0000-0000-000000000002\", \"a\": \"5eed0006-1009-0000-0000-000000000001\", \"c\": \"5eed0006-1009-0000-0000-000000000003\", \"d\": \"5eed0006-1009-0000-0000-000000000004\", \"hex\": \"5EED0007100900000000000000000002\"}]\n200 {\"jsonrpc\": \"2.0\", \"id\": 1, \"result\": {\"isError\": true, \"content\": [{\"type\": \"text\", \"text\": \"오류: unknownReadingIds: [5eed0006-1009-0000-0000-000000000003]. 근거 서류는 get_proposal_design_input 의 clientDocuments 가운데 status DONE 인 readingId 만 쓸 수 있습니다\"}]}}\ncheck r[1]['body']['result'].get('isError') and ('unknownReadingIds: [' + r[0][0]['c'] + ']') in r[1]['body']['result']['content'][0]['text'] -> True",
+     "at": "2026-10-25 08:33:44"
+    },
+    "1": {
+     "q": "시딩 키 10.b051_doc: SELECT '5eed0007-1009-0000-0000-000000000002' AS id, '5eed0006-1009-0000-0000-000000000001' AS a, '5eed0006-1009-0000-0000-000000000003' AS c, '5eed0006-1009-0000-0000-000000000004' AS d, HEX(UNHEX('5EED0007100900000000000000000002')) AS hex FROM bid_documents WHERE id = UNHEX('5EED0007100900000000000000000002') AND EXISTS (SELECT 1 FROM proposal_section WHERE id = UNHEX('5EED0009100900000000000000000002'))\nPOST /api/mcp (guest) {\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"tools/call\", \"params\": {\"name\": \"save_proposal_structure\", \"arguments\": {\"documentId\": \"5eed0007-1009-0000-0000-000000000002\", \"chapters\": [{\"factorLabel\": \"1\", \"factorTitle\": \"Past Performance\", \"sections\": [{\"subfactorLabel\": \"1.1\", \"title\": \"Relevant Contracts\", \"scope\": \"Recent relevant contracts\", \"requirementRefs\": [], \"sourceReadingIds\": [\"5eed0006-1009-0000-0000-000000000004\"], \"minWords\": 200}]}]}}} 헤더 {\"X-API-Key\": \"$TESTBOOK_MCP_API_KEY\"}",
+     "r": "1행 [{\"id\": \"5eed0007-1009-0000-0000-000000000002\", \"a\": \"5eed0006-1009-0000-0000-000000000001\", \"c\": \"5eed0006-1009-0000-0000-000000000003\", \"d\": \"5eed0006-1009-0000-0000-000000000004\", \"hex\": \"5EED0007100900000000000000000002\"}]\n200 {\"jsonrpc\": \"2.0\", \"id\": 1, \"result\": {\"isError\": true, \"content\": [{\"type\": \"text\", \"text\": \"오류: unknownReadingIds: [5eed0006-1009-0000-0000-000000000004]. 근거 서류는 get_proposal_design_input 의 clientDocuments 가운데 status DONE 인 readingId 만 쓸 수 있습니다\"}]}}\ncheck r[1]['body']['result'].get('isError') and ('unknownReadingIds: [' + r[0][0]['d'] + ']') in r[1]['body']['result']['content'][0]['text'] -> True",
+     "at": "2026-10-25 08:33:44"
+    },
+    "2": {
+     "q": "시딩 키 10.b051_doc: SELECT '5eed0007-1009-0000-0000-000000000002' AS id, '5eed0006-1009-0000-0000-000000000001' AS a, '5eed0006-1009-0000-0000-000000000003' AS c, '5eed0006-1009-0000-0000-000000000004' AS d, HEX(UNHEX('5EED0007100900000000000000000002')) AS hex FROM bid_documents WHERE id = UNHEX('5EED0007100900000000000000000002') AND EXISTS (SELECT 1 FROM proposal_section WHERE id = UNHEX('5EED0009100900000000000000000002'))\nSELECT HEX(pc.id) AS chapter, pc.factor_label, HEX(ps.id) AS section, ps.subfactor_label, ps.title, ps.source_reading_ids FROM proposal_chapter pc JOIN proposal_section ps ON ps.chapter_id = pc.id WHERE pc.document_id = UNHEX('5EED0007100900000000000000000002') ORDER BY pc.order_no, ps.order_no\nPOST /api/mcp (guest) {\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"tools/call\", \"params\": {\"name\": \"save_proposal_structure\", \"arguments\": {\"documentId\": \"5eed0007-1009-0000-0000-000000000002\", \"chapters\": [{\"factorLabel\": \"1\", \"factorTitle\": \"Past Performance\", \"sections\": [{\"subfactorLabel\": \"1.1\", \"title\": \"Relevant Contracts\", \"scope\": \"Recent relevant contracts\", \"requirementRefs\": [], \"sourceReadingIds\": [\"5eed0006-1009-0000-0000-000000000001\", \"5eed0006-1009-0000-0000-000000000003\"], \"minWords\": 200}]}]}}} 헤더 {\"X-API-Key\": \"$TESTBOOK_MCP_API_KEY\"}\nPOST /api/mcp (guest) {\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"tools/call\", \"params\": {\"name\": \"save_proposal_structure\", \"arguments\": {\"documentId\": \"5eed0007-1009-0000-0000-000000000002\", \"chapters\": [{\"factorLabel\": \"1\", \"factorTitle\": \"Past Performance\", \"sections\": [{\"subfactorLabel\": \"1.1\", \"title\": \"Relevant Contracts\", \"scope\": \"Recent relevant contracts\", \"requirementRefs\": [], \"sourceReadingIds\": [\"5eed0006-1009-0000-0000-000000000004\"], \"minWords\": 200}]}]}}} 헤더 {\"X-API-Key\": \"$TESTBOOK_MCP_API_KEY\"}\nSELECT HEX(pc.id) AS chapter, pc.factor_label, HEX(ps.id) AS section, ps.subfactor_label, ps.title, ps.source_reading_ids FROM proposal_chapter pc JOIN proposal_section ps ON ps.chapter_id = pc.id WHERE pc.document_id = UNHEX('5EED0007100900000000000000000002') ORDER BY pc.order_no, ps.order_no",
+     "r": "1행 [{\"id\": \"5eed0007-1009-0000-0000-000000000002\", \"a\": \"5eed0006-1009-0000-0000-000000000001\", \"c\": \"5eed0006-1009-0000-0000-000000000003\", \"d\": \"5eed0006-1009-0000-0000-000000000004\", \"hex\": \"5EED0007100900000000000000000002\"}]\n1행 [{\"chapter\": \"5EED0008100900000000000000000002\", \"factor_label\": \"1\", \"section\": \"5EED0009100900000000000000000002\", \"subfactor_label\": \"1.1\", \"title\": \"Relevant Contracts\", \"source_reading_ids\": \"[\\\"5eed0006-1009-0000-0000-000000000001\\\"]\"}]\n200 {\"jsonrpc\": \"2.0\", \"id\": 1, \"result\": {\"isError\": true, \"content\": [{\"type\": \"text\", \"text\": \"오류: unknownReadingIds: [5eed0006-1009-0000-0000-000000000003]. 근거 서류는 get_proposal_design_input 의 clientDocuments 가운데 status DONE 인 readingId 만 쓸 수 있습니다\"}]}}\n200 {\"jsonrpc\": \"2.0\", \"id\": 1, \"result\": {\"isError\": true, \"content\": [{\"type\": \"text\", \"text\": \"오류: unknownReadingIds: [5eed0006-1009-0000-0000-000000000004]. 근거 서류는 get_proposal_design_input 의 clientDocuments 가운데 status DONE 인 readingId 만 쓸 수 있습니다\"}]}}\n1행 [{\"chapter\": \"5EED0008100900000000000000000002\", \"factor_label\": \"1\", \"section\": \"5EED0009100900000000000000000002\", \"subfactor_label\": \"1.1\", \"title\": \"Relevant Contracts\", \"source_reading_ids\": \"[\\\"5eed0006-1009-0000-0000-000000000001\\\"]\"}]\ncheck len(r[1]) > 0 and r[4] == r[1] -> True",
+     "at": "2026-10-25 08:33:44"
+    }
+   }
+  },
+  "WJBID_10052": {
+   "testId": "WJBID_10052",
+   "result": "OK",
+   "steps": [
+    "pass",
+    "pass",
+    "pass"
+   ],
+   "comment": "서버 판정 기대결과 3/3개",
+   "date": "2026-10-25",
+   "at": "2026-10-25 09:03:45",
+   "tester": "SERVER",
+   "evidence": {
+    "0": {
+     "q": "시딩 키 10.b052_section: SELECT '5eed0009-1009-0000-0000-000000000003' AS id, '5eed0003-1009-0000-0000-000000000003' AS bid, '5eed0006-1009-0000-0000-000000000005' AS e, HEX(UNHEX('5EED0006100900000000000000000005')) AS e_hex FROM proposal_section WHERE id = UNHEX('5EED0009100900000000000000000003')\nPOST /api/mcp (guest) {\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"tools/call\", \"params\": {\"name\": \"save_client_document_facts\", \"arguments\": {\"bidRequestId\": \"5eed0003-1009-0000-0000-000000000003\", \"targets\": [{\"readingId\": \"5eed0006-1009-0000-0000-000000000005\", \"targetPath\": \"docs/equipment.pdf\"}], \"results\": [{\"index\": 0, \"facts\": [{\"category\": \"equipment\", \"key\": \"장비\", \"value\": \"굴삭기 2대\"}, {\"category\": \"EQUIPMENT\", \"key\": \"수량\", \"value\": \"2\", \"page\": 3, \"readMode\": \"vision\"}]}]}}} 헤더 {\"X-API-Key\": \"$TESTBOOK_MCP_API_KEY\"}\nPOST /api/mcp (guest) {\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"tools/call\", \"params\": {\"name\": \"get_section_context\", \"arguments\": {\"sectionId\": \"5eed0009-1009-0000-0000-000000000003\"}}} 헤더 {\"X-API-Key\": \"$TESTBOOK_MCP_API_KEY\"}\nSELECT fact_count FROM document_readings WHERE id = UNHEX('5EED0006100900000000000000000005')",
+     "r": "1행 [{\"id\": \"5eed0009-1009-0000-0000-000000000003\", \"bid\": \"5eed0003-1009-0000-0000-000000000003\", \"e\": \"5eed0006-1009-0000-0000-000000000005\", \"e_hex\": \"5EED0006100900000000000000000005\"}]\n200 {\"jsonrpc\": \"2.0\", \"id\": 1, \"result\": {\"content\": [{\"type\": \"text\", \"text\": \"{\\n  \\\"saved\\\" : 1,\\n  \\\"ignored\\\" : 0\\n}\"}]}}\n200 {\"jsonrpc\": \"2.0\", \"id\": 1, \"result\": {\"content\": [{\"type\": \"text\", \"text\": \"{\\n  \\\"sectionId\\\" : \\\"5eed0009-1009-0000-0000-000000000003\\\",\\n  \\\"subfactorLabel\\\" : \\\"1.1\\\",\\n  \\\"title\\\" : \\\"Equipment List\\\",\\n  \\\"scope\\\" : \\\"Equipment on hand\\\",\\n  \\\"minWords\\\" : 200,\\n  \\\"requirementRefs\\\" : [ ],\\n  \\\"status\\\" : \\\"PENDING\\\",\\n  \\\"factorLabel\\\" : \\\"1\\\",\\n  \\\"factorTitle\\\" : \\\"Equipment\\\",\\n  \\\"req\n1행 [{\"fact_count\": \"2\"}]\ncheck len(loads(r[2]['body']['result']['content'][0]['text'])['sourceDocuments']) == 1 and loads(r[2]['body']['result']['content'][0]['text'])['sourceDocuments'][0]['readingId'] == r[0][0]['e'] and int(r[3][0]['fact_count']) > 0 and len(loads(r[2]['body']['result']['content'][0]['text'])['sourceDocuments'][0]['facts']) == int(r[3][0]['fact_count']) -> True",
+     "at": "2026-10-25 08:33:44"
+    },
+    "1": {
+     "q": "시딩 키 10.b052_section: SELECT '5eed0009-1009-0000-0000-000000000003' AS id, '5eed0003-1009-0000-0000-000000000003' AS bid, '5eed0006-1009-0000-0000-000000000005' AS e, HEX(UNHEX('5EED0006100900000000000000000005')) AS e_hex FROM proposal_section WHERE id = UNHEX('5EED0009100900000000000000000003')\nPOST /api/mcp (guest) {\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"tools/call\", \"params\": {\"name\": \"save_client_document_facts\", \"arguments\": {\"bidRequestId\": \"5eed0003-1009-0000-0000-000000000003\", \"targets\": [{\"readingId\": \"5eed0006-1009-0000-0000-000000000005\", \"targetPath\": \"docs/equipment.pdf\"}], \"results\": [{\"index\": 0, \"facts\": [{\"category\": \"equipment\", \"key\": \"장비\", \"value\": \"굴삭기 2대\"}, {\"category\": \"EQUIPMENT\", \"key\": \"수량\", \"value\": \"2\", \"page\": 3, \"readMode\": \"vision\"}]}]}}} 헤더 {\"X-API-Key\": \"$TESTBOOK_MCP_API_KEY\"}\nPOST /api/mcp (guest) {\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"tools/call\", \"params\": {\"name\": \"get_section_context\", \"arguments\": {\"sectionId\": \"5eed0009-1009-0000-0000-000000000003\"}}} 헤더 {\"X-API-Key\": \"$TESTBOOK_MCP_API_KEY\"}",
+     "r": "1행 [{\"id\": \"5eed0009-1009-0000-0000-000000000003\", \"bid\": \"5eed0003-1009-0000-0000-000000000003\", \"e\": \"5eed0006-1009-0000-0000-000000000005\", \"e_hex\": \"5EED0006100900000000000000000005\"}]\n200 {\"jsonrpc\": \"2.0\", \"id\": 1, \"result\": {\"content\": [{\"type\": \"text\", \"text\": \"{\\n  \\\"saved\\\" : 1,\\n  \\\"ignored\\\" : 0\\n}\"}]}}\n200 {\"jsonrpc\": \"2.0\", \"id\": 1, \"result\": {\"content\": [{\"type\": \"text\", \"text\": \"{\\n  \\\"sectionId\\\" : \\\"5eed0009-1009-0000-0000-000000000003\\\",\\n  \\\"subfactorLabel\\\" : \\\"1.1\\\",\\n  \\\"title\\\" : \\\"Equipment List\\\",\\n  \\\"scope\\\" : \\\"Equipment on hand\\\",\\n  \\\"minWords\\\" : 200,\\n  \\\"requirementRefs\\\" : [ ],\\n  \\\"status\\\" : \\\"PENDING\\\",\\n  \\\"factorLabel\\\" : \\\"1\\\",\\n  \\\"factorTitle\\\" : \\\"Equipment\\\",\\n  \\\"req\ncheck len(loads(r[2]['body']['result']['content'][0]['text'])['sourceDocuments']) > 0 and all(d['facts'] and all({'category', 'key', 'value', 'page', 'anchor', 'confidence', 'readMode'} <= set(f) for f in d['facts']) for d in loads(r[2]['body']['result']['content'][0]['text'])['sourceDocuments']) -> True",
+     "at": "2026-10-25 08:33:44"
+    },
+    "2": {
+     "q": "시딩 키 10.b052_section: SELECT '5eed0009-1009-0000-0000-000000000003' AS id, '5eed0003-1009-0000-0000-000000000003' AS bid, '5eed0006-1009-0000-0000-000000000005' AS e, HEX(UNHEX('5EED0006100900000000000000000005')) AS e_hex FROM proposal_section WHERE id = UNHEX('5EED0009100900000000000000000003')\nPOST /api/mcp (guest) {\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"tools/call\", \"params\": {\"name\": \"save_client_document_facts\", \"arguments\": {\"bidRequestId\": \"5eed0003-1009-0000-0000-000000000003\", \"targets\": [{\"readingId\": \"5eed0006-1009-0000-0000-000000000005\", \"targetPath\": \"docs/equipment.pdf\"}], \"results\": [{\"index\": 0, \"facts\": [{\"category\": \"equipment\", \"key\": \"장비\", \"value\": \"굴삭기 2대\"}, {\"category\": \"EQUIPMENT\", \"key\": \"수량\", \"value\": \"2\", \"page\": 3, \"readMode\": \"vision\"}]}]}}} 헤더 {\"X-API-Key\": \"$TESTBOOK_MCP_API_KEY\"}\nPOST /api/mcp (guest) {\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"tools/call\", \"params\": {\"name\": \"get_section_context\", \"arguments\": {\"sectionId\": \"5eed0009-1009-0000-0000-000000000003\"}}} 헤더 {\"X-API-Key\": \"$TESTBOOK_MCP_API_KEY\"}\nPOST /api/mcp (guest) {\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"tools/call\", \"params\": {\"name\": \"get_section_verify_input\", \"arguments\": {\"sectionId\": \"5eed0009-1009-0000-0000-000000000003\"}}} 헤더 {\"X-API-Key\": \"$TESTBOOK_MCP_API_KEY\"}",
+     "r": "1행 [{\"id\": \"5eed0009-1009-0000-0000-000000000003\", \"bid\": \"5eed0003-1009-0000-0000-000000000003\", \"e\": \"5eed0006-1009-0000-0000-000000000005\", \"e_hex\": \"5EED0006100900000000000000000005\"}]\n200 {\"jsonrpc\": \"2.0\", \"id\": 1, \"result\": {\"content\": [{\"type\": \"text\", \"text\": \"{\\n  \\\"saved\\\" : 1,\\n  \\\"ignored\\\" : 0\\n}\"}]}}\n200 {\"jsonrpc\": \"2.0\", \"id\": 1, \"result\": {\"content\": [{\"type\": \"text\", \"text\": \"{\\n  \\\"sectionId\\\" : \\\"5eed0009-1009-0000-0000-000000000003\\\",\\n  \\\"subfactorLabel\\\" : \\\"1.1\\\",\\n  \\\"title\\\" : \\\"Equipment List\\\",\\n  \\\"scope\\\" : \\\"Equipment on hand\\\",\\n  \\\"minWords\\\" : 200,\\n  \\\"requirementRefs\\\" : [ ],\\n  \\\"status\\\" : \\\"PENDING\\\",\\n  \\\"factorLabel\\\" : \\\"1\\\",\\n  \\\"factorTitle\\\" : \\\"Equipment\\\",\\n  \\\"req\n200 {\"jsonrpc\": \"2.0\", \"id\": 1, \"result\": {\"content\": [{\"type\": \"text\", \"text\": \"{\\n  \\\"sectionId\\\" : \\\"5eed0009-1009-0000-0000-000000000003\\\",\\n  \\\"title\\\" : \\\"Equipment List\\\",\\n  \\\"scope\\\" : \\\"Equipment on hand\\\",\\n  \\\"minWords\\\" : 200,\\n  \\\"requirementRefs\\\" : [ ],\\n  \\\"requirements\\\" : [ ],\\n  \\\"generatedBody\\\" : \\\"\\\",\\n  \\\"blockCount\\\" : 0,\\n  \\\"opportunityText\\\" : \\\"공고 제목: Seed opportunity 10-9\ncheck len(loads(r[2]['body']['result']['content'][0]['text'])['sourceDocuments']) > 0 and loads(r[3]['body']['result']['content'][0]['text'])['sourceDocuments'] == loads(r[2]['body']['result']['content'][0]['text'])['sourceDocuments'] -> True",
+     "at": "2026-10-25 08:33:44"
+    }
+   }
+  },
+  "WJBID_10054": {
+   "testId": "WJBID_10054",
+   "result": "OK",
+   "steps": [
+    "pass",
+    "pass",
+    "pass"
+   ],
+   "comment": "서버 판정 기대결과 3/3개",
+   "date": "2026-10-25",
+   "at": "2026-10-25 09:03:46",
+   "tester": "SERVER",
+   "evidence": {
+    "0": {
+     "q": "시딩 키 10.b041_done_bid: SELECT '5eed0003-1002-0000-0000-000000000001' AS id, HEX(id) AS hex FROM bid_requests WHERE id = UNHEX('5EED0003100200000000000000000001') AND state = 'ANALYZING'\nGET /api/admin/bid-requests/5eed0003-1002-0000-0000-000000000001/document-readings (user:qa-cr143@example.com)",
+     "r": "1행 [{\"id\": \"5eed0003-1002-0000-0000-000000000001\", \"hex\": \"5EED0003100200000000000000000001\"}]\n403 {\"timestamp\": \"2026-10-25T00:03:46.064+00:00\", \"status\": 403, \"error\": \"Forbidden\", \"message\": \"Forbidden\", \"path\": \"/api/admin/bid-requests/5eed0003-1002-0000-0000-000000000001/document-readings\"}\ncheck r[1]['status'] == 403 -> True",
+     "at": "2026-10-25 08:33:44"
+    },
+    "1": {
+     "q": "시딩 키 10.b041_done_bid: SELECT '5eed0003-1002-0000-0000-000000000001' AS id, HEX(id) AS hex FROM bid_requests WHERE id = UNHEX('5EED0003100200000000000000000001') AND state = 'ANALYZING'\nSELECT HEX(dr.id) AS hex, dr.status, dr.read_at FROM document_readings dr WHERE dr.content_sha256 IN (SELECT cd.content_sha256 FROM client_documents cd WHERE cd.bid_request_id = UNHEX('5EED0003100200000000000000000001') UNION SELECT md.content_sha256 FROM member_documents md JOIN bid_requests b ON b.member_id = md.member_id WHERE b.id = UNHEX('5EED0003100200000000000000000001') AND (md.expires_on IS NULL OR md.expires_on >= '2026-10-25')) ORDER BY dr.id\nPOST /api/admin/bid-requests/5eed0003-1002-0000-0000-000000000001/document-readings/run (user:qa-cr143@example.com) {\"readingIds\": null}\nSELECT HEX(dr.id) AS hex, dr.status, dr.read_at FROM document_readings dr WHERE dr.content_sha256 IN (SELECT cd.content_sha256 FROM client_documents cd WHERE cd.bid_request_id = UNHEX('5EED0003100200000000000000000001') UNION SELECT md.content_sha256 FROM member_documents md JOIN bid_requests b ON b.member_id = md.member_id WHERE b.id = UNHEX('5EED0003100200000000000000000001') AND (md.expires_on IS NULL OR md.expires_on >= '2026-10-25')) ORDER BY dr.id",
+     "r": "1행 [{\"id\": \"5eed0003-1002-0000-0000-000000000001\", \"hex\": \"5EED0003100200000000000000000001\"}]\n3행 [{\"hex\": \"5EED0006100200000000000000000001\", \"status\": \"DONE\", \"read_at\": \"2026-10-25 08:33:34.195587\"}, {\"hex\": \"5EED0006100200000000000000000002\", \"status\": \"DONE\", \"read_at\": \"2026-10-25 08:33:34.195587\"}, {\"hex\": \"5EED0006100200000000000000000004\", \"status\": \"DONE\", \"read_at\": \"2026-10-25 08:33:34.195587\"}]\n403 {\"timestamp\": \"2026-10-25T00:03:46.340+00:00\", \"status\": 403, \"error\": \"Forbidden\", \"message\": \"Forbidden\", \"path\": \"/api/admin/bid-requests/5eed0003-1002-0000-0000-000000000001/document-readings/run\"}\n3행 [{\"hex\": \"5EED0006100200000000000000000001\", \"status\": \"DONE\", \"read_at\": \"2026-10-25 08:33:34.195587\"}, {\"hex\": \"5EED0006100200000000000000000002\", \"status\": \"DONE\", \"read_at\": \"2026-10-25 08:33:34.195587\"}, {\"hex\": \"5EED0006100200000000000000000004\", \"status\": \"DONE\", \"read_at\": \"2026-10-25 08:33:34.195587\"}]\ncheck r[2]['status'] == 403 and r[3] == r[1] -> True",
+     "at": "2026-10-25 08:33:44"
+    },
+    "2": {
+     "q": "시딩 키 10.b054_reading: SELECT '5eed0006-1002-0000-0000-000000000001' AS id FROM document_readings WHERE id = UNHEX('5EED0006100200000000000000000001') AND status = 'DONE'\nGET /api/mcp/document-readings/5eed0006-1002-0000-0000-000000000001/download (guest)",
+     "r": "1행 [{\"id\": \"5eed0006-1002-0000-0000-000000000001\"}]\n401 null\ncheck r[1]['status'] == 401 and not r[1]['body'] -> True",
+     "at": "2026-10-25 08:33:44"
+    }
+   }
+  },
+  "WJBID_12031": {
+   "testId": "WJBID_12031",
+   "result": "N/T",
+   "steps": [
+    "",
+    "",
+    "pass",
+    "pass"
+   ],
+   "comment": "서버 판정 기대결과 2/4개",
+   "date": "2026-10-25",
+   "at": "2026-10-25 09:13:18",
+   "tester": "SERVER",
+   "evidence": {
+    "2": {
+     "q": "시딩 키 12.b031_server3_bid: SELECT '5eed0003-1201-0000-0000-000000000002' AS id, HEX(id) AS hex, JSON_LENGTH(state_history) AS hist FROM bid_requests WHERE id = UNHEX('5EED0003120100000000000000000002') AND state = 'DOCS_RECEIVED'\nPOST /api/admin/bid-requests/5eed0003-1201-0000-0000-000000000002/transition (admin:smoke-admin@example.com) {\"toState\": \"ANALYZING\", \"notes\": \"IT-12-031 서버 판정\"}\nSELECT state, JSON_LENGTH(state_history) AS hist, JSON_UNQUOTE(JSON_EXTRACT(state_history, '$[last].fromState')) AS from_state, JSON_UNQUOTE(JSON_EXTRACT(state_history, '$[last].toState')) AS to_state FROM bid_requests WHERE id = UNHEX('5EED0003120100000000000000000002')",
+     "r": "1행 [{\"id\": \"5eed0003-1201-0000-0000-000000000002\", \"hex\": \"5EED0003120100000000000000000002\", \"hist\": \"0\"}]\n200 {\"id\": \"5eed0003-1201-0000-0000-000000000002\", \"opportunityId\": \"5eed0002-1201-0000-0000-000000000002\", \"opportunityTitle\": \"Seed opportunity 12-1 B\", \"displayTitle\": \"Seed opportunity 12-1 B\", \"memberEmail\": \"seed.12-1.a@example.com\", \"state\": \"ANALYZING\", \"stateDisplay\": \"분석 중\", \"createdAt\": \"2026-10-25 08:33\", \"updatedAt\": \"2026-10-25 09:03\", \"history\": [{\"fromState\": \"DOCS_RECEIVED\", \"toState\"\n1행 [{\"state\": \"ANALYZING\", \"hist\": \"1\", \"from_state\": \"DOCS_RECEIVED\", \"to_state\": \"ANALYZING\"}]\ncheck r[1]['status'] == 200 and int(r[2][0]['hist']) == int(r[0][0]['hist']) + 1 and r[2][0]['from_state'] == 'DOCS_RECEIVED' and r[2][0]['to_state'] == 'ANALYZING' -> True",
+     "at": "2026-10-25 08:33:44"
+    },
+    "3": {
+     "q": "시딩 키 12.b031_server4_bid: SELECT '5eed0003-1201-0000-0000-000000000003' AS id, HEX(id) AS hex FROM bid_requests WHERE id = UNHEX('5EED0003120100000000000000000003') AND state = 'DOCS_RECEIVED'\nPOST /api/admin/bid-requests/5eed0003-1201-0000-0000-000000000003/transition (admin:smoke-admin@example.com) {\"toState\": \"ANALYZING\", \"notes\": \"IT-12-031 서버 판정\"}\nGET /api/admin/bid-requests/5eed0003-1201-0000-0000-000000000003 (admin:smoke-admin@example.com) 끝 식 x['body']['state'] != 'ANALYZING' 이 참이 될 때까지 600초\nSELECT state FROM bid_requests WHERE id = UNHEX('5EED0003120100000000000000000003')",
+     "r": "1행 [{\"id\": \"5eed0003-1201-0000-0000-000000000003\", \"hex\": \"5EED0003120100000000000000000003\"}]\n200 {\"id\": \"5eed0003-1201-0000-0000-000000000003\", \"opportunityId\": \"5eed0002-1201-0000-0000-000000000003\", \"opportunityTitle\": \"Seed opportunity 12-1 C\", \"displayTitle\": \"Seed opportunity 12-1 C\", \"memberEmail\": \"seed.12-1.a@example.com\", \"state\": \"ANALYZING\", \"stateDisplay\": \"분석 중\", \"createdAt\": \"2026-10-25 08:33\", \"updatedAt\": \"2026-10-25 09:03\", \"history\": [{\"fromState\": \"DOCS_RECEIVED\", \"toState\"\n한도 넘김 20회 571초 200 {\"id\": \"5eed0003-1201-0000-0000-000000000003\", \"opportunityId\": \"5eed0002-1201-0000-0000-000000000003\", \"opportunityTitle\": \"Seed opportunity 12-1 C\", \"displayTitle\": \"Seed opportunity 12-1 C\", \"memberEmail\": \"seed.12-1.a@example.com\", \"state\": \"ANALYZING\", \"stateDisplay\": \"분석 중\", \"createdAt\": \"2026-10-25 08:33\", \"updatedAt\": \"2026-10-25 09:03\", \"history\": [{\"fromState\": \"DOCS_RECEIVED\", \"toState\"\n1행 [{\"state\": \"ANALYZING\"}]\ncheck r[1]['status'] == 200 and r[3][0]['state'] == 'ANALYZING' -> True",
+     "at": "2026-10-25 08:33:44"
+    }
+   }
+  },
+  "WJBID_12034": {
+   "testId": "WJBID_12034",
+   "result": "N/T",
+   "steps": [
+    "",
+    "pass",
+    ""
+   ],
+   "comment": "서버 판정 기대결과 1/3개",
+   "date": "2026-10-25",
+   "at": "2026-10-25 09:13:18",
+   "tester": "SERVER",
+   "evidence": {
+    "1": {
+     "q": "시딩 키 12.b034_server_bid: SELECT '5eed0003-1202-0000-0000-000000000002' AS id, HEX(id) AS hex, JSON_LENGTH(state_history) AS hist FROM bid_requests WHERE id = UNHEX('5EED0003120200000000000000000002') AND state = 'ANALYZING'\nPOST /api/admin/bid-requests/5eed0003-1202-0000-0000-000000000002/transition (admin:smoke-admin@example.com) {\"toState\": \"GENERATING\", \"notes\": \"IT-12-034 서버 판정\"}\nSELECT state, JSON_LENGTH(state_history) AS hist, JSON_UNQUOTE(JSON_EXTRACT(state_history, '$[last].fromState')) AS from_state, JSON_UNQUOTE(JSON_EXTRACT(state_history, '$[last].toState')) AS to_state FROM bid_requests WHERE id = UNHEX('5EED0003120200000000000000000002')",
+     "r": "1행 [{\"id\": \"5eed0003-1202-0000-0000-000000000002\", \"hex\": \"5EED0003120200000000000000000002\", \"hist\": \"0\"}]\n200 {\"id\": \"5eed0003-1202-0000-0000-000000000002\", \"opportunityId\": \"5eed0002-1202-0000-0000-000000000002\", \"opportunityTitle\": \"Seed opportunity 12-2 B\", \"displayTitle\": \"Seed opportunity 12-2 B\", \"memberEmail\": \"seed.12-2.a@example.com\", \"state\": \"GENERATING\", \"stateDisplay\": \"문서 작성 중\", \"createdAt\": \"2026-10-25 08:33\", \"updatedAt\": \"2026-10-25 09:13\", \"history\": [{\"fromState\": \"ANALYZING\", \"toState\"\n1행 [{\"state\": \"GENERATING\", \"hist\": \"1\", \"from_state\": \"ANALYZING\", \"to_state\": \"GENERATING\"}]\ncheck r[1]['status'] == 200 and r[2][0]['state'] == 'GENERATING' and int(r[2][0]['hist']) == int(r[0][0]['hist']) + 1 and r[2][0]['from_state'] == 'ANALYZING' and r[2][0]['to_state'] == 'GENERATING' -> True",
+     "at": "2026-10-25 08:33:44"
+    }
+   }
+  },
+  "WJBID_16001": {
+   "testId": "WJBID_16001",
+   "result": "OK",
+   "steps": [
+    "pass",
+    "pass"
+   ],
+   "comment": "서버 판정 기대결과 2/2개",
+   "date": "2026-10-25",
+   "at": "2026-10-25 09:13:18",
+   "tester": "SERVER",
+   "evidence": {
+    "0": {
+     "q": "GET / (guest)",
+     "r": "200 \"<!doctype html>\\n<html lang=\\\"ko\\\">\\n  <head>\\n    <meta charset=\\\"UTF-8\\\" />\\n    <link rel=\\\"icon\\\" type=\\\"image/svg+xml\\\" href=\\\"/favicon.svg\\\" />\\n    <meta name=\\\"viewport\\\" content=\\\"width=device-width, initial-scale=1.0\\\" />\\n    <title>WJbid - 미군·연방 조달 입찰 정보 서비스</title>\\n    <link rel=\\\"preconnect\\\" href=\\\"https://fonts.googleapis.com\\\" />\\n    <link rel=\\\"preconnect\\\" href=\\\"https://font\ncheck r[0]['status'] == 200 and '<html' in str(r[0]['body']).lower() -> True",
+     "at": "2026-10-25 08:33:44"
+    },
+    "1": {
+     "q": "GET /admin/ (guest)",
+     "r": "200 \"<!doctype html>\\n<html lang=\\\"ko\\\">\\n  <head>\\n    <meta charset=\\\"UTF-8\\\" />\\n    <link rel=\\\"icon\\\" type=\\\"image/svg+xml\\\" href=\\\"/admin/favicon.svg\\\" />\\n    <meta name=\\\"viewport\\\" content=\\\"width=device-width, initial-scale=1.0\\\" />\\n    <title>WJbid 관리자</title>\\n    <link rel=\\\"stylesheet\\\" href=\\\"https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css\\\" />\\n    <link rel=\ncheck r[0]['status'] == 200 and '<html' in str(r[0]['body']).lower() -> True",
+     "at": "2026-10-25 08:33:44"
+    }
+   }
+  },
+  "WJBID_16002": {
+   "testId": "WJBID_16002",
+   "result": "OK",
+   "steps": [
+    "pass",
+    "pass"
+   ],
+   "comment": "서버 판정 기대결과 2/2개",
+   "date": "2026-10-25",
+   "at": "2026-10-25 09:13:18",
+   "tester": "SERVER",
+   "evidence": {
+    "0": {
+     "q": "POST /api/auth/login (guest) {\"email\": \"qa-cr143@example.com\", \"password\": \"$QA_PASSWORD\"}",
+     "r": "200 {\"accessToken\": \"eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJxYS1jcjE0M0BleGFtcGxlLmNvbSIsImlhdCI6MTc5Mjg4NzE5OSwiZXhwIjoxNzkyOTE1OTk5LCJqdGkiOiJiMjk4MTVlYS1hYWZiLTRkMTMtODMwOS02ZWFkNzkyMjMxOWQifQ.Mwypdp_kgu0OyIGc_EXTISWhLb_EqVgJgJwWCofz7s5LSW1zccKTsIStMyyglBsci_dOd8KEQgWEAUARKzAgrA\", \"refreshToken\": \"eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJxYS1jcjE0M0BleGFtcGxlLmNvbSIsImlhdCI6MTc5Mjg4NzE5OSwiZXhwIjoxNzkzNDkxOTk5LCJq\ncheck r[0]['status'] == 200 and len(r[0]['body'].get('accessToken') or '') > 20 -> True",
+     "at": "2026-10-25 08:33:44"
+    },
+    "1": {
+     "q": "GET /api/members/me (user:qa-cr143@example.com)",
+     "r": "200 {\"id\": \"dba4b1a2-5f81-4fe4-823b-cb4105885309\", \"email\": \"qa-cr143@example.com\", \"companyName\": \"운영시험 고객 CR-143 (권한 확인용)\", \"businessRegistrationNumber\": \"000-00-00143\", \"contactPerson\": \"운영시험\", \"phone\": \"010-0000-0143\", \"role\": \"CUSTOMER\", \"membership\": {\"member\": true, \"endsOn\": \"2099-12-31\"}}\ncheck r[0]['status'] == 200 and r[0]['body']['email'] == 'qa-cr143@example.com' -> True",
+     "at": "2026-10-25 08:33:44"
+    }
+   }
+  },
+  "WJBID_16003": {
+   "testId": "WJBID_16003",
+   "result": "OK",
+   "steps": [
+    "pass",
+    "pass"
+   ],
+   "comment": "서버 판정 기대결과 2/2개",
+   "date": "2026-10-25",
+   "at": "2026-10-25 09:13:18",
+   "tester": "SERVER",
+   "evidence": {
+    "0": {
+     "q": "GET /api/opportunities/collected?openOnly=true&latestOnly=true&size=50 (guest)",
+     "r": "200 {\"content\": [{\"id\": \"6186f1a8-d017-4cdd-b1ec-5579fdd2cf25\", \"noticeId\": \"b50057a47f784e25b02257e806b6c7fe\", \"solicitationNumber\": \"W90VN727RA001\", \"title\": \"Custodial Services at Kunsan AB\", \"titleKo\": \"Kunsan AB 청소 용역\", \"agencyName\": \"DEPT OF DEFENSE.DEPT OF THE ARMY.AMC.ACC.ACC-OO.411TH CSB.0906 AQ CO     DET B CONTRACTI\", \"naicsCode\": \"561720\", \"placeOfPerformance\": \"APO, AP\", \"type\": \"Combined\ncheck r[0]['status'] == 200 and r[0]['body']['totalElements'] > 0 and len(r[0]['body']['content']) > 0 -> True",
+     "at": "2026-10-25 08:33:44"
+    },
+    "1": {
+     "q": "GET /api/opportunities/collected?openOnly=true&latestOnly=true&size=50 (guest)",
+     "r": "200 {\"content\": [{\"id\": \"6186f1a8-d017-4cdd-b1ec-5579fdd2cf25\", \"noticeId\": \"b50057a47f784e25b02257e806b6c7fe\", \"solicitationNumber\": \"W90VN727RA001\", \"title\": \"Custodial Services at Kunsan AB\", \"titleKo\": \"Kunsan AB 청소 용역\", \"agencyName\": \"DEPT OF DEFENSE.DEPT OF THE ARMY.AMC.ACC.ACC-OO.411TH CSB.0906 AQ CO     DET B CONTRACTI\", \"naicsCode\": \"561720\", \"placeOfPerformance\": \"APO, AP\", \"type\": \"Combined\ncheck len(r[0]['body']['content']) > 0 and all(x.get('titleKo') and any('가' <= c <= '힣' for c in x['titleKo']) and x.get('responseDeadline') for x in r[0]['body']['content']) -> True",
+     "at": "2026-10-25 08:33:44"
+    }
+   }
+  },
+  "WJBID_16004": {
+   "testId": "WJBID_16004",
+   "result": "OK",
+   "steps": [
+    "pass",
+    "pass"
+   ],
+   "comment": "서버 판정 기대결과 2/2개",
+   "date": "2026-10-25",
+   "at": "2026-10-25 09:13:19",
+   "tester": "SERVER",
+   "evidence": {
+    "0": {
+     "q": "GET /api/opportunities/collected?openOnly=true&latestOnly=true&size=1 (guest)\nGET /api/opportunities/collected?openOnly=true&latestOnly=true&q=W90VN727RA001 (guest)",
+     "r": "200 {\"content\": [{\"id\": \"6186f1a8-d017-4cdd-b1ec-5579fdd2cf25\", \"noticeId\": \"b50057a47f784e25b02257e806b6c7fe\", \"solicitationNumber\": \"W90VN727RA001\", \"title\": \"Custodial Services at Kunsan AB\", \"titleKo\": \"Kunsan AB 청소 용역\", \"agencyName\": \"DEPT OF DEFENSE.DEPT OF THE ARMY.AMC.ACC.ACC-OO.411TH CSB.0906 AQ CO     DET B CONTRACTI\", \"naicsCode\": \"561720\", \"placeOfPerformance\": \"APO, AP\", \"type\": \"Combined\n200 {\"content\": [{\"id\": \"6186f1a8-d017-4cdd-b1ec-5579fdd2cf25\", \"noticeId\": \"b50057a47f784e25b02257e806b6c7fe\", \"solicitationNumber\": \"W90VN727RA001\", \"title\": \"Custodial Services at Kunsan AB\", \"titleKo\": \"Kunsan AB 청소 용역\", \"agencyName\": \"DEPT OF DEFENSE.DEPT OF THE ARMY.AMC.ACC.ACC-OO.411TH CSB.0906 AQ CO     DET B CONTRACTI\", \"naicsCode\": \"561720\", \"placeOfPerformance\": \"APO, AP\", \"type\": \"Combined\ncheck r[1]['status'] == 200 and r[1]['body']['totalElements'] >= 1 and all(r[0]['body']['content'][0]['solicitationNumber'].lower() in (x['solicitationNumber'] or '').lower() for x in r[1]['body']['content']) -> True",
+     "at": "2026-10-25 08:33:44"
+    },
+    "1": {
+     "q": "GET /api/opportunities/collected?openOnly=true&latestOnly=true&size=1 (guest)\nGET /api/opportunities/collected?openOnly=true&latestOnly=true&q=Kunsan%20AB%20%EC%B2%AD%EC%86%8C%20%EC%9A%A9%EC%97%AD (guest)",
+     "r": "200 {\"content\": [{\"id\": \"6186f1a8-d017-4cdd-b1ec-5579fdd2cf25\", \"noticeId\": \"b50057a47f784e25b02257e806b6c7fe\", \"solicitationNumber\": \"W90VN727RA001\", \"title\": \"Custodial Services at Kunsan AB\", \"titleKo\": \"Kunsan AB 청소 용역\", \"agencyName\": \"DEPT OF DEFENSE.DEPT OF THE ARMY.AMC.ACC.ACC-OO.411TH CSB.0906 AQ CO     DET B CONTRACTI\", \"naicsCode\": \"561720\", \"placeOfPerformance\": \"APO, AP\", \"type\": \"Combined\n200 {\"content\": [{\"id\": \"6186f1a8-d017-4cdd-b1ec-5579fdd2cf25\", \"noticeId\": \"b50057a47f784e25b02257e806b6c7fe\", \"solicitationNumber\": \"W90VN727RA001\", \"title\": \"Custodial Services at Kunsan AB\", \"titleKo\": \"Kunsan AB 청소 용역\", \"agencyName\": \"DEPT OF DEFENSE.DEPT OF THE ARMY.AMC.ACC.ACC-OO.411TH CSB.0906 AQ CO     DET B CONTRACTI\", \"naicsCode\": \"561720\", \"placeOfPerformance\": \"APO, AP\", \"type\": \"Combined\ncheck r[1]['status'] == 200 and r[0]['body']['content'][0]['id'] in [x['id'] for x in r[1]['body']['content']] -> True",
+     "at": "2026-10-25 08:33:44"
+    }
+   }
+  },
+  "WJBID_16005": {
+   "testId": "WJBID_16005",
+   "result": "OK",
+   "steps": [
+    "pass",
+    "pass"
+   ],
+   "comment": "서버 판정 기대결과 2/2개",
+   "date": "2026-10-25",
+   "at": "2026-10-25 09:13:19",
+   "tester": "SERVER",
+   "evidence": {
+    "0": {
+     "q": "GET /api/opportunities?includeExpired=true (user:qa-cr143@example.com)",
+     "r": "200 {\"content\": [{\"id\": \"4886e3bf-a715-4a48-8acc-de5a907414b0\", \"solicitationNumber\": \"W91QVN26QXXXX\", \"title\": \"주한미군 C4I 통신탑 및 시설 유지보수 용역(2027년도)\", \"agencyName\": \"DEPT OF DEFENSE.DEPT OF THE ARMY.AMC.ACC.ACC-OO.411TH CSB.0411 AQ HQ     CONTRACT AUG\", \"naicsCode\": \"237130\", \"responseDeadline\": \"2026-11-18\", \"responseDeadlineAt\": \"2026-11-18T13:00:00+09:00\", \"postedDate\": \"2026-10-19\", \"placeOfPerforma\ncheck r[0]['status'] == 200 and r[0]['body']['totalElements'] > 0 -> True",
+     "at": "2026-10-25 08:33:44"
+    },
+    "1": {
+     "q": "GET /api/opportunities?includeExpired=true (user:qa-cr143@example.com)\nGET /api/opportunities/4886e3bf-a715-4a48-8acc-de5a907414b0 (user:qa-cr143@example.com)",
+     "r": "200 {\"content\": [{\"id\": \"4886e3bf-a715-4a48-8acc-de5a907414b0\", \"solicitationNumber\": \"W91QVN26QXXXX\", \"title\": \"주한미군 C4I 통신탑 및 시설 유지보수 용역(2027년도)\", \"agencyName\": \"DEPT OF DEFENSE.DEPT OF THE ARMY.AMC.ACC.ACC-OO.411TH CSB.0411 AQ HQ     CONTRACT AUG\", \"naicsCode\": \"237130\", \"responseDeadline\": \"2026-11-18\", \"responseDeadlineAt\": \"2026-11-18T13:00:00+09:00\", \"postedDate\": \"2026-10-19\", \"placeOfPerforma\n200 {\"id\": \"4886e3bf-a715-4a48-8acc-de5a907414b0\", \"solicitationNumber\": \"W91QVN26QXXXX\", \"title\": \"주한미군 C4I 통신탑 및 시설 유지보수 용역(2027년도)\", \"agencyName\": \"DEPT OF DEFENSE.DEPT OF THE ARMY.AMC.ACC.ACC-OO.411TH CSB.0411 AQ HQ     CONTRACT AUG\", \"naicsCode\": \"237130\", \"responseDeadline\": \"2026-11-18\", \"responseDeadlineAt\": \"2026-11-18T13:00:00+09:00\", \"postedDate\": \"2026-10-19\", \"placeOfPerformance\": \"APO, A\ncheck r[1]['status'] == 200 and any('가' <= c <= '힣' for c in r[1]['body']['title']) and any('가' <= c <= '힣' for c in r[1]['body']['analysis']['summary']['overview']) and any('가' <= c <= '힣' for c in r[1]['body']['analysis']['summary']['scope']) -> True",
+     "at": "2026-10-25 08:33:44"
+    }
+   }
+  },
+  "WJBID_16006": {
+   "testId": "WJBID_16006",
+   "result": "OK",
+   "steps": [
+    "pass",
+    "pass"
+   ],
+   "comment": "서버 판정 기대결과 2/2개",
+   "date": "2026-10-25",
+   "at": "2026-10-25 09:13:19",
+   "tester": "SERVER",
+   "evidence": {
+    "0": {
+     "q": "GET /api/bid-requests/my (user:qa-cr143@example.com)",
+     "r": "200 {\"content\": [], \"pageable\": {\"pageNumber\": 0, \"pageSize\": 20, \"sort\": {\"unsorted\": true, \"sorted\": false, \"empty\": true}, \"offset\": 0, \"paged\": true, \"unpaged\": false}, \"totalPages\": 0, \"last\": true, \"totalElements\": 0, \"numberOfElements\": 0, \"first\": true, \"size\": 20, \"number\": 0, \"sort\": {\"unsorted\": true, \"sorted\": false, \"empty\": true}, \"empty\": true}\ncheck r[0]['status'] == 200 and 'content' in r[0]['body'] -> True",
+     "at": "2026-10-25 08:33:44"
+    },
+    "1": {
+     "q": "GET /api/member-documents (user:qa-cr143@example.com)",
+     "r": "200 {\"fixedSlots\": [{\"category\": \"BUSINESS_REGISTRATION\", \"categoryLabel\": \"사업자등록증\", \"files\": [{\"language\": null, \"document\": null}]}, {\"category\": \"BUSINESS_REGISTRATION_CERTIFICATE\", \"categoryLabel\": \"사업자등록증명원\", \"files\": [{\"language\": \"KO\", \"document\": null}, {\"language\": \"EN\", \"document\": null}]}, {\"category\": \"COMPANY_PROFILE\", \"categoryLabel\": \"지명원·회사소개 PPT\", \"files\": [{\"language\": \"KO\", \"documen\ncheck r[0]['status'] == 200 and len(r[0]['body']['fixedSlots']) == 5 -> True",
+     "at": "2026-10-25 08:33:44"
+    }
+   }
+  },
+  "WJBID_16007": {
+   "testId": "WJBID_16007",
+   "result": "OK",
+   "steps": [
+    "pass",
+    "pass",
+    "pass",
+    "pass"
+   ],
+   "comment": "서버 판정 기대결과 4/4개",
+   "date": "2026-10-25",
+   "at": "2026-10-25 09:13:19",
+   "tester": "SERVER",
+   "evidence": {
+    "0": {
+     "q": "GET /api/admin/bid-requests/stats (admin:smoke-admin@example.com)",
+     "r": "200 {\"REVIEW\": 0, \"ANALYZING\": 15, \"CREATED\": 0, \"SUBMITTED\": 0, \"CONFIRMED\": 0, \"GENERATING\": 5, \"DOCS_RECEIVED\": 4, \"CLOSED\": 0, \"DOCS_PENDING\": 4}\ncheck r[0]['status'] == 200 and len(r[0]['body']) > 0 and all(int(v) == v for v in r[0]['body'].values()) -> True",
+     "at": "2026-10-25 08:33:44"
+    },
+    "1": {
+     "q": "GET /api/admin/bid-requests (admin:smoke-admin@example.com)",
+     "r": "200 {\"content\": [{\"id\": \"0205d8fb-5d78-44c2-a7c1-3c42453c08d8\", \"opportunityId\": \"bf176531-240b-4e3b-a94f-0b43eaf4f718\", \"opportunityTitle\": \"Life Support Area (LSA) Cleaning - USAG Humphreys\", \"displayTitle\": \"Life Support Area (LSA) Cleaning - USAG Humphreys\", \"solicitationNumber\": \"W91QVN26QX001\", \"agencyName\": \"DEPT OF DEFENSE.DEPT OF THE ARMY.AMC.ACC.ACC-OO.411TH CSB.0411 AQ HQ     CONTRACT AUG\",\ncheck r[0]['status'] == 200 and 'content' in r[0]['body'] -> True",
+     "at": "2026-10-25 08:33:44"
+    },
+    "2": {
+     "q": "GET /api/admin/opportunities (admin:smoke-admin@example.com)",
+     "r": "200 {\"content\": [{\"id\": \"ca6b83ee-44bc-4ac6-a293-933ce07e0410\", \"noticeId\": \"4f1e25feb0e440edbcdeda296cf9fcd1\", \"solicitationNumber\": \"W90VN827RA001\", \"title\": \"Cleaning of Food Service Exhaust Fans and Ducts for Dining Facilities in USAG Yongsan-Casey.\", \"type\": null, \"organizationName\": \"DEPT OF DEFENSE.DEPT OF THE ARMY.AMC.ACC.ACC-OO.411TH CSB.0906 AQ CO     CONTRACTING BAT\", \"postedDate\": \"2026-10\ncheck r[0]['status'] == 200 and r[0]['body']['totalElements'] > 0 -> True",
+     "at": "2026-10-25 08:33:44"
+    },
+    "3": {
+     "q": "GET /api/admin/notices (admin:smoke-admin@example.com)",
+     "r": "200 {\"content\": [{\"id\": \"4886e3bf-a715-4a48-8acc-de5a907414b0\", \"opportunityId\": \"55f1d820-2a47-4671-978f-3f73454e050d\", \"originTitle\": \"USFK C4I Communication Tower and Facility Maintenance CY27\", \"solicitationNumber\": \"W91QVN26QXXXX\", \"organizationName\": \"DEPT OF DEFENSE.DEPT OF THE ARMY.AMC.ACC.ACC-OO.411TH CSB.0411 AQ HQ     CONTRACT AUG\", \"noticeTypeKo\": \"입찰요청\", \"naicsLabelKo\": \"건설 (NAICS 237130)\ncheck r[0]['status'] == 200 and r[0]['body']['totalElements'] > 0 -> True",
+     "at": "2026-10-25 08:33:44"
+    }
+   }
+  },
+  "WJBID_16008": {
+   "testId": "WJBID_16008",
+   "result": "OK",
+   "steps": [
+    "pass",
+    "pass",
+    "pass",
+    "pass",
+    "pass"
+   ],
+   "comment": "서버 판정 기대결과 5/5개",
+   "date": "2026-10-25",
+   "at": "2026-10-25 09:15:05",
+   "tester": "SERVER",
+   "evidence": {
+    "0": {
+     "q": "POST /api/admin/notices/018d62d8-3fe3-46d2-9ee4-83b39eaadd02/regenerate (admin:smoke-admin@example.com)",
+     "r": "202 {\"message\": \"한글화 재생성이 시작되었습니다.\", \"status\": \"ACCEPTED\", \"noticeId\": \"018d62d8-3fe3-46d2-9ee4-83b39eaadd02\"}\ncheck r[0]['status'] == 202 -> True",
+     "at": "2026-10-25 08:33:44"
+    },
+    "1": {
+     "q": "GET /api/admin/notices/018d62d8-3fe3-46d2-9ee4-83b39eaadd02 (admin:smoke-admin@example.com) 끝 식 x['status'] != 200 or x['body']['generationStatus'] != 'ANALYZING' 이 참이 될 때까지 1200초",
+     "r": "끝남 8회 105초 200 {\"id\": \"018d62d8-3fe3-46d2-9ee4-83b39eaadd02\", \"opportunityId\": \"3f0dfcf5-d605-44f3-a75d-34532fb438f3\", \"originTitle\": \"Grounds Maintenance Services for Test Contracting Office Building 100\", \"solicitationNumber\": null, \"organizationName\": null, \"noticeTypeKo\": null, \"naicsLabelKo\": null, \"postedDate\": null, \"responseDeadline\": null, \"koreanTitle\": \"테스트 계약사무소 100동 부지(그라운즈) 유지관리 용역 (스모크 테스트 샘플)\", \"\ncheck r[0]['status'] == 200 and r[0]['body']['generationStatus'] == 'COMPLETED' and (r[0]['body']['analyzedAt'] or '')[:19] >= RUN_STARTED -> True",
+     "at": "2026-10-25 08:33:44"
+    },
+    "2": {
+     "q": "GET /api/admin/notices/018d62d8-3fe3-46d2-9ee4-83b39eaadd02 (admin:smoke-admin@example.com)",
+     "r": "200 {\"id\": \"018d62d8-3fe3-46d2-9ee4-83b39eaadd02\", \"opportunityId\": \"3f0dfcf5-d605-44f3-a75d-34532fb438f3\", \"originTitle\": \"Grounds Maintenance Services for Test Contracting Office Building 100\", \"solicitationNumber\": null, \"organizationName\": null, \"noticeTypeKo\": null, \"naicsLabelKo\": null, \"postedDate\": null, \"responseDeadline\": null, \"koreanTitle\": \"테스트 계약사무소 100동 부지(그라운즈) 유지관리 용역 (스모크 테스트 샘플)\", \"\ncheck r[0]['status'] == 200 and any('가' <= c <= '힣' for c in r[0]['body']['koreanTitle'] or '') -> True",
+     "at": "2026-10-25 08:33:44"
+    },
+    "3": {
+     "q": "GET /api/admin/notices/018d62d8-3fe3-46d2-9ee4-83b39eaadd02 (admin:smoke-admin@example.com)",
+     "r": "200 {\"id\": \"018d62d8-3fe3-46d2-9ee4-83b39eaadd02\", \"opportunityId\": \"3f0dfcf5-d605-44f3-a75d-34532fb438f3\", \"originTitle\": \"Grounds Maintenance Services for Test Contracting Office Building 100\", \"solicitationNumber\": null, \"organizationName\": null, \"noticeTypeKo\": null, \"naicsLabelKo\": null, \"postedDate\": null, \"responseDeadline\": null, \"koreanTitle\": \"테스트 계약사무소 100동 부지(그라운즈) 유지관리 용역 (스모크 테스트 샘플)\", \"\ncheck r[0]['status'] == 200 and any('가' <= c <= '힣' for c in r[0]['body']['analysis']['summary']['overview'] or '') and any('가' <= c <= '힣' for c in r[0]['body']['analysis']['summary']['scope'] or '') and any('가' <= c <= '힣' for c in r[0]['body']['analysis']['summary']['eligibility'] or '') -> True",
+     "at": "2026-10-25 08:33:44"
+    },
+    "4": {
+     "q": "GET /api/admin/notices/018d62d8-3fe3-46d2-9ee4-83b39eaadd02 (admin:smoke-admin@example.com)",
+     "r": "200 {\"id\": \"018d62d8-3fe3-46d2-9ee4-83b39eaadd02\", \"opportunityId\": \"3f0dfcf5-d605-44f3-a75d-34532fb438f3\", \"originTitle\": \"Grounds Maintenance Services for Test Contracting Office Building 100\", \"solicitationNumber\": null, \"organizationName\": null, \"noticeTypeKo\": null, \"naicsLabelKo\": null, \"postedDate\": null, \"responseDeadline\": null, \"koreanTitle\": \"테스트 계약사무소 100동 부지(그라운즈) 유지관리 용역 (스모크 테스트 샘플)\", \"\ncheck r[0]['status'] == 200 and r[0]['body']['visibility'] != 'VISIBLE' -> True",
+     "at": "2026-10-25 08:33:44"
+    }
+   }
+  },
+  "WJBID_16009": {
+   "testId": "WJBID_16009",
+   "result": "OK",
+   "steps": [
+    "pass",
+    "pass"
+   ],
+   "comment": "서버 판정 기대결과 2/2개",
+   "date": "2026-10-25",
+   "at": "2026-10-25 09:15:05",
+   "tester": "SERVER",
+   "evidence": {
+    "0": {
+     "q": "GET /api/admin/collection/runs?size=20 (admin:smoke-admin@example.com)",
+     "r": "200 {\"content\": [{\"id\": \"b472ab1a-af8e-4afd-88d0-cd8638d97de8\", \"createdAt\": \"2026-10-25T06:00:00\", \"updatedAt\": \"2026-10-25T06:00:01\", \"keyword\": \"411TH CSB\", \"startedAt\": \"2026-10-25T06:00:00\", \"completedAt\": \"2026-10-25T06:00:01\", \"totalFetched\": 4, \"newCount\": 0, \"updatedCount\": 0, \"success\": true, \"errorMessage\": null, \"triggeredBy\": \"SCHEDULED\"}, {\"id\": \"c3fafcb9-671a-480c-99bf-dea4286043bd\", \"c\ncheck r[0]['status'] == 200 and len([x for x in r[0]['body']['content'] if x.get('completedAt')]) > 0 and [x for x in r[0]['body']['content'] if x.get('completedAt')][0]['startedAt'][:19] >= SINCE_24H -> True",
+     "at": "2026-10-25 08:33:44"
+    },
+    "1": {
+     "q": "GET /api/admin/collection/runs?size=20 (admin:smoke-admin@example.com)",
+     "r": "200 {\"content\": [{\"id\": \"b472ab1a-af8e-4afd-88d0-cd8638d97de8\", \"createdAt\": \"2026-10-25T06:00:00\", \"updatedAt\": \"2026-10-25T06:00:01\", \"keyword\": \"411TH CSB\", \"startedAt\": \"2026-10-25T06:00:00\", \"completedAt\": \"2026-10-25T06:00:01\", \"totalFetched\": 4, \"newCount\": 0, \"updatedCount\": 0, \"success\": true, \"errorMessage\": null, \"triggeredBy\": \"SCHEDULED\"}, {\"id\": \"c3fafcb9-671a-480c-99bf-dea4286043bd\", \"c\ncheck r[0]['status'] == 200 and len([x for x in r[0]['body']['content'] if x.get('completedAt')]) > 0 and [x for x in r[0]['body']['content'] if x.get('completedAt')][0]['success'] is True -> True",
+     "at": "2026-10-25 08:33:44"
+    }
+   }
+  }
+ }
+}

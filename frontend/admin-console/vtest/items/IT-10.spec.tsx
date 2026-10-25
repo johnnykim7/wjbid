@@ -194,7 +194,7 @@ test('IT-10-048 읽지 못한 서류를 다시 읽는다', async () => {
   }
   const seen = `다시 읽기 직후 ${first ? shown([first]) : '줄 없음'} / 끝 ${last ? shown([last]) : '줄 없음'}`
   if (first?.status === '읽는 중' && last?.status === '읽지 못함') {
-    // 시딩 서류는 내용 해시만 있고 저장소에 실제 파일이 없어 끝까지 읽을 수 없다. 읽는 중으로 넘어간 것까지만 본다
+    // 파일 놓기 명령(TESTBOOK_SEED_FILE_CMD) 없이 시딩하면 저장소에 실제 파일이 없어 끝까지 읽을 수 없다. 읽는 중으로 넘어간 것까지만 본다
     noMaterial(ID, 1, `시딩 서류에 실제 파일이 없어 읽음까지 갈 수 없다. ${seen}`)
     return
   }
