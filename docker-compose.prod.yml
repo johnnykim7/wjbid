@@ -41,4 +41,3 @@ services:
       # CR-028: 제안서 파이프라인 3단계 워크플로우 (application.yml 기본값과 동일, 운영 가시성용 명시)
       AIMBASE_WF_PROPOSAL_DESIGN: proposal-design
       AIMBASE_WF_PROPOSAL_WRITE_SECTION: proposal-write-section
-      AIMBASE_WF_PROPOSAL_ASSEMBLE: proposal-assemble

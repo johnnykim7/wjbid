@@ -34,8 +34,8 @@ import java.util.*;
 /**
  * MCP 도구: 제안서 파이프라인 3단계 (CR-028).
  *
- * design / write-section / assemble 워크플로우가 자율주행하며 호출하는 도구 모음.
- * assemble 의 최종 저장은 기존 save_document_version({@link DocumentMcpTool}) 을 그대로 재사용한다.
+ * design / write-section 워크플로우가 자율주행하며 호출하는 도구 모음.
+ * assemble 은 서버가 한다 (CR-169, ProposalAssembleService).
  *
  * - get_proposal_design_input : design WF — documentId 로 공고/factorTree/공고텍스트 조회
  * - save_proposal_structure   : design WF 콜백 — chapter/section 트리 통째 저장

@@ -17,5 +17,5 @@ public enum GenerationTargetType {
     // CR-028 파이프라인 단계 단위 (CR-029 비용 추적)
     DESIGN,        // proposal-design — targetId = documentId
     WRITE_SECTION, // proposal-write-section — targetId = sectionId
-    ASSEMBLE       // proposal-assemble — targetId = documentId
+    ASSEMBLE       // proposal-assemble, targetId = documentId. CR-169 부터 서버가 묶어 새 줄은 쌓이지 않고 옛 줄을 읽으려 남긴다
 }
