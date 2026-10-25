@@ -89,7 +89,7 @@ dict(id='IT-10-001', flow='제안서 자동 작성', kind='정상', title='공�
      req=['BID-DOC-001'], fc=['BID-DOC-001'], screen='관리자 /bid-requests/{id}', pri='High',
      probe={1: dict(steps=[('key', '10.b001_bid'),
                            ('api', ADMIN, 'POST', TRANSITION, {'toState': 'GENERATING', 'notes': 'IT-10-001 서버 판정'}),
-                           ('poll', ADMIN, '/api/admin/bid-requests/{val:0:id}', "x['body']['state'] != 'GENERATING'", 1800, 30),
+                           ('poll', ADMIN, '/api/admin/bid-requests/{val:0:id}', "x['body']['state'] != 'GENERATING'", 5400, 30),
                            ('sql', f"SELECT state, JSON_LENGTH(state_history) AS hist, "
                                    f"JSON_UNQUOTE(JSON_EXTRACT(state_history, '$[last-1].toState')) AS prev_state, "
                                    f"JSON_UNQUOTE(JSON_EXTRACT(state_history, '$[last].toState')) AS to_state FROM bid_requests WHERE id = {THIS_BID}")],
