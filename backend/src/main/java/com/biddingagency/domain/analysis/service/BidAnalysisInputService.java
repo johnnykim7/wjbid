@@ -45,7 +45,7 @@ public class BidAnalysisInputService {
 
     /** 같은 기관 최근 공고 수. 스킬 01 STEP 3 발주처 동향을 웹 자료 대신 모은 공고로 본다 */
     static final int AGENCY_RECENT_LIMIT = 20;
-    static final String ELIGIBILITY_SOURCE = "참가 자격 답";
+    static final String ELIGIBILITY_SOURCE = "참가 자격 답(고객이 스스로 답한 것)";
     /** DECISION 이 읽는 종합 분석 리포트 칸(자격, 경쟁사와 BCC, 공정성, 발주 이력) */
     private static final List<String> DECISION_REPORT_KEYS = List.of("eligibility", "competitors", "fairness", "orderHistory");
 
