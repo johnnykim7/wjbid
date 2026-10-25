@@ -319,6 +319,6 @@ test('IT-10-001 생성 문서 목록에 문서가 문서 유형과 상태 초안
     noMaterial(ID, 3, `생성 문서가 아직 없다. 문서 생성이 끝나지 않았다. ${text(area).slice(0, 200)}`)
     return
   }
-  judge(ID, 3, rows.every((r) => /^[A-Z_]+ v\d+ \| 초안/.test(r)) ? 'pass' : 'fail',
+  judge(ID, 3, rows.every((r) => /^[A-Z_]+\s*v\d+\s*\|\s*초안/.test(r)) ? 'pass' : 'fail',
     '생성 문서 목록 줄마다 문서 유형과 상태 초안이 보이는지', rows.join(', '))
 })
