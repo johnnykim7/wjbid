@@ -1,6 +1,6 @@
 # 실행 지시서: SAM.gov Bidding Agency Platform
 
-> 설계 버전: 1.16 | 최종 수정: 2026-10-25 | 관련 CR: CR-003, CR-132, CR-133, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-146, CR-147, CR-153, CR-155, CR-157, CR-159, CR-160, CR-162, CR-169
+> 설계 버전: 1.17 | 최종 수정: 2026-10-25 | 관련 CR: CR-003, CR-132, CR-133, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-146, CR-147, CR-153, CR-155, CR-157, CR-159, CR-160, CR-162, CR-169, CR-170
 
 > **프로젝트:** bidding-agency-platform (미군 조달 입찰 AI 대행 서비스)
 > **프로젝트 유형:** 풀스택 (BE: Java 17 + Spring Boot 3.2 / FE: React 19 × 2)
@@ -306,7 +306,7 @@ SAM.gov에 올라오는 미군(USFK) 조달 입찰 공고를 자동 수집하고
 ### Sprint 6: 문서 생성 + 템플릿
 
 **전제:** Sprint 5 완료
-**기능:** 7개 (BID-TPL-001~002, BID-DOC-001~005). BID-DOC-004~005 는 CR-169
+**기능:** 9개 (BID-TPL-001~002, BID-DOC-001~007). BID-DOC-004~005 는 CR-169, BID-DOC-006~007 은 CR-170
 
 #### BE 참조
 
@@ -336,6 +336,9 @@ SAM.gov에 올라오는 미군(USFK) 조달 입찰 공고를 자동 수집하고
 - **(CR-169)** 읽는 중이면 GENERATING 전환 409(BIZ-087). 설계가 절마다 sourceReadingIds 를 고르고 서버는 읽음 후보만 받는다(BIZ-088). 절 작성과 절 검증은 sourceDocuments 를 받고 회사 사실은 거기서만, 없으면 `[Client data required: ...]`(BIZ-089)
 - **(CR-169)** Aimbase 소스는 고치지 않는다. 워크플로우 정의(`docs/workflows/client-document-read.steps.json` 신설, proposal-design, proposal-write-section, proposal-verify-fidelity 지시문)만 올린다. MCP 도구가 바뀌므로 배포 뒤 Aimbase 연결을 다시 맺는다
 - **(CR-169)** 문서 묶기는 서버(ProposalAssembleService)가 한다. 장, 절, 블록 순서로 TipTap 문서를 만들어 새 버전으로 저장하고(편집자는 작성을 시킨 관리자), 모든 문서 종류를 마친 뒤 하나라도 묶였으면 REVIEW 로 넘긴다. Aimbase proposal-assemble 은 부르지 않는다(10/25 상용 4차 시험 결함, 사용자 10:27 "1")
+- **(CR-170)** 고객 서류 읽기가 끝나면(진입 때 읽을 것이 없으면 바로) 서버가 입찰 분석 회차(bid_analyses)를 만들고 Aimbase 워크플로우 bid-analysis 를 부른다(BIZ-090). 단계 셋이 스킬 01 STEP 2~7, 11, 02 로 종합 분석 리포트, 캡처플랜, Bid/No-Bid 결정을 save_bid_analysis 로 차례로 저장한다. 자료는 get_bid_analysis_input 과 search_award_history(federal_contracts, 낙찰 공고)이고 웹 검색은 쓰지 않는다(BIZ-093)
+- **(CR-170)** Pwin, 판정, 강점과 약점, 핵심이슈 순위는 DECISION 저장 때 서버가 POL-041 로 계산한다(BIZ-091). 관리자 결정이 GO, CONDITIONAL_GO 가 아니면 GENERATING 전환 409 `BID_DECISION_REQUIRED`(BIZ-092). ANALYZING 에서 CLOSED 를 허용한다
+- **(CR-170)** Aimbase 소스는 고치지 않는다. 워크플로우 정의 `docs/workflows/bid-analysis.steps.json` 을 신설해 올린다. MCP 도구가 셋 늘어나므로 배포 뒤 Aimbase 연결을 다시 맺는다
 
 **핵심 검증:** 템플릿 등록 → **사전 분석 캐시 확인** → Aimbase Workflow 실행 (3파이프라인 입력) → 문서 생성 → DB 저장 → 관리자 이메일
 
@@ -562,6 +565,7 @@ sequenceDiagram
 | Admin 공고문 관리 상세의 컴플라이언스 매트릭스 (CR-159) | `GET /admin/notices/{id}/compliance-matrix` | 읽기만. 매트릭스 줄은 공고 분석이 내고 서버가 REQ ID 를 맞춰 준다(BIZ-073~075). 워크플로우는 Aimbase 범용 스킬 묶음 뒤 |
 | Admin 제안서 Section 관리 (CR-030, CR-159) | `GET /admin/bid-documents/{documentId}/chapters`, `/sections/{sectionId}[/verification]`, `POST .../regenerate, /lock, /unlock, /reverify`, `GET .../coverage` | 커버리지 검증은 볼 때 계산, 경고만 하고 막지 않는다(BIZ-078). CR-169: 절 상세에 근거 서류 |
 | Admin 입찰 상세 관리의 고객 서류 읽기 (CR-169) | `GET /admin/bid-requests/{id}/document-readings`, `GET /admin/document-readings/{readingId}`, `POST /admin/bid-requests/{id}/document-readings/run` | 읽는 중이면 10초마다 다시 부르고 문서 작성 중 전환을 막는다(BIZ-087) |
+| Admin 입찰 상세 관리의 입찰 분석 (CR-170) | `GET /admin/bid-requests/{id}/bid-analysis`, `POST /admin/bid-requests/{id}/bid-analysis/run`, `POST /admin/bid-requests/{id}/bid-analysis/decision` | 분석 중이거나 읽는 중이면 10초마다 다시 부른다. Go, 조건부 Go 가 아니면 문서 작성 중 전환을 막는다(BIZ-092) |
 
 ### 8-4. 리뷰 체크리스트
 

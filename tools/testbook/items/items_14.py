@@ -226,14 +226,14 @@ dict(id='IT-14-026', flow='상태 도구', kind='정상', title='transition_bid_
 
 dict(id='IT-14-027', flow='상태 도구', kind='예외', title='transition_bid_state 로도 허용 목록 밖 전이는 거부된다',
      pre='서버 열쇠(MCP_API_KEY)를 아는 호출자, 상태 ANALYZING 입찰 요청',
-     steps='1. POST /mcp 에 tools/call 본문(name transition_bid_state, bidRequestId 그 건, targetState CLOSED)을 보낸다',
+     steps='1. POST /mcp 에 tools/call 본문(name transition_bid_state, bidRequestId 그 건, targetState REVIEW)을 보낸다',
      expect='1. 응답에 오류가 담긴다\n'
             '2. 그 입찰 요청 state 가 ANALYZING 그대로이고 state_history 줄 수가 늘지 않는다',
      judge=['서버', '서버'],
      req=['BID-MCP-004'], fc=['BID-MCP-004'], screen='', pri='High'),
 
 dict(id='IT-14-028', flow='워크플로우 실행', kind='정상', title='GENERATING 전이 때 Aimbase 문서 생성 워크플로우가 자동으로 돈다',
-     pre='관리자 계정, 상태 ANALYZING 이고 공고 사전 분석이 COMPLETED 인 입찰 요청, Aimbase 에 닿는 배포 환경',
+     pre='관리자 계정, 상태 ANALYZING 이고 공고 사전 분석이 COMPLETED 이며 입찰 분석의 관리자 결정이 Go 인 입찰 요청, Aimbase 에 닿는 배포 환경',
      steps='1. 관리자 화면 그 입찰 요청의 입찰 상세 관리에서 GENERATING 으로 전이한다\n'
            '2. Aimbase 실행 기록에서 그 실행을 연다\n3. 실행이 끝날 때까지 기다린다',
      expect='1. Aimbase 에 문서 생성 워크플로우 실행이 1건 생기고 입력에 그 입찰 요청 id 가 있다\n'
@@ -253,7 +253,7 @@ dict(id='IT-14-029', flow='워크플로우 실행', kind='예외', title='워크
      req=['BID-MCP-005'], fc=['BID-MCP-005'], screen='', pri='High'),
 
 dict(id='IT-14-030', flow='워크플로우 실행', kind='예외', title='워크플로우가 실패하면 관리자 알림을 남긴다',
-     pre='관리자 계정, 실패로 끝나도록 만든 Aimbase 문서 생성 워크플로우, 상태 ANALYZING 입찰 요청',
+     pre='관리자 계정, 실패로 끝나도록 만든 Aimbase 문서 생성 워크플로우, 상태 ANALYZING 이고 입찰 분석의 관리자 결정이 Go 인 입찰 요청',
      steps='1. 그 입찰 요청을 GENERATING 으로 전이해 워크플로우를 시작시킨다\n2. 실행이 failed 로 끝날 때까지 기다린다',
      expect='1. notification_logs 에 AI_WORKFLOW_FAILED 줄이 관리자 주소로 생긴다\n'
             '2. 그 입찰 요청 state 가 REVIEW 로 바뀌지 않는다',
@@ -358,5 +358,13 @@ dict(id='IT-14-042', flow='마감 알림', kind='예외', title='알림 날 설�
             '2. "7,a,1" 일 때도 DEADLINE_ALERT 줄이 생기지 않는다',
      judge=['서버', '서버'],
      req=['BID-NOTIFY-002'], fc=['BID-NOTIFY-002'], screen='', pri='Medium'),
+
+dict(id='IT-14-043', flow='상태 도구', kind='예외', title='transition_bid_state 로도 Bid/No-Bid 결정 없이는 문서 작성 중으로 전환되지 않는다',
+     pre='서버 열쇠(MCP_API_KEY)를 아는 호출자, 입찰 분석이 분석 완료이고 관리자 결정이 없는 상태 ANALYZING 입찰 요청',
+     steps='1. POST /mcp 에 tools/call 본문(name transition_bid_state, bidRequestId 그 건, targetState GENERATING)을 보낸다',
+     expect='1. 응답에 오류가 담긴다\n'
+            '2. 그 입찰 요청 state 가 ANALYZING 그대로이고 state_history 줄 수가 늘지 않는다',
+     judge=['서버', '서버'],
+     req=['BID-MCP-004'], fc=['BID-MCP-004', 'BID-DOC-007'], screen='', pri='High'),
 
 ]

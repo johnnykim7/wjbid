@@ -1,6 +1,6 @@
 # SAM.gov Bidding Agency Platform FSM 상태 정의
 
-> 설계 버전: 1.7 | 최종 수정: 2026-10-25 | 관련 CR: CR-003, CR-018, CR-132, CR-141, CR-154, CR-162, CR-169
+> 설계 버전: 1.8 | 최종 수정: 2026-10-25 | 관련 CR: CR-003, CR-018, CR-132, CR-141, CR-154, CR-162, CR-169, CR-170
 
 > 단계: 1. Requirements | 설계
 >
@@ -118,6 +118,7 @@ stateDiagram-v2
     CREATED --> CLOSED : 취소
     DOCS_PENDING --> CLOSED : 취소
     DOCS_RECEIVED --> CLOSED : 취소
+    ANALYZING --> CLOSED : No-Go 종료 (CR-170)
     REVIEW --> GENERATING : 재생성 요청
     CONFIRMED --> REVIEW : 수정 필요
 ```
@@ -145,12 +146,16 @@ stateDiagram-v2
 ### ANALYZING | 분석 중
 - **설명**: AI(Aimbase)가 공고 요구사항을 분석하는 상태
 - **진입 조건**: 관리자 승인 또는 자동 트리거 (문서 접수 완료 시)
-- **허용 다음 상태**: GENERATING
-- **관련 기능 ID**: BID-DOC-001
+- **허용 다음 상태**: GENERATING, CLOSED (CR-170)
+- **관련 기능 ID**: BID-DOC-001, BID-DOC-004, BID-DOC-006, BID-DOC-007
 - **비고**: Aimbase Workflow 비동기 실행. 실패 시 관리자에게 알림 후 ANALYZING에 머뭄
 - **변경 (CR-141)**: 진입 때 부르던 AI 요구사항 추출을 걷어낸다. 요구 항목은 공고 분석에서 이미 채워져 있다(BIZ-045). 진입 때 실행하는 AI 작업은 없고, 다음 상태로는 관리자가 전환한다
 - **변경 (CR-169)**: 진입 때 고객 서류 읽기(BID-DOC-004)를 비동기로 시작한다. 읽기가 실패해도 이 상태에 머물고 관리자가 다시 읽기를 고를 수 있다
 - **GENERATING 전이 가드 (CR-169, BIZ-087)**: 후보 서류 가운데 읽는 중(워크플로우 대기 한도 안)인 것이 있으면 409 `DOCUMENT_READING_IN_PROGRESS`. 읽지 못함과 읽을 수 없는 형식은 막지 않는다. 상태와 전이 목록은 그대로다
+- **변경 (CR-170)**: 고객 서류 읽기가 끝나면(진입 때 읽을 것이 없으면 바로) 입찰 분석(BID-DOC-006)을 비동기로 시작한다(BIZ-090). 분석이 실패해도 이 상태에 머물고 관리자가 다시 분석을 선택하거나 분석 없이 결정을 기록할 수 있다
+- **GENERATING 전이 가드 (CR-170, BIZ-092)**: 지금 입찰 분석의 관리자 결정이 GO, CONDITIONAL_GO 가 아니면 409 `BID_DECISION_REQUIRED`. 읽는 중 가드(BIZ-087)를 먼저 보고, 읽는 중이 아닐 때 결정을 본다
+- **CLOSED 전이 (CR-170)**: No-Go 로 정한 건을 관리자가 종료하는 전이다. 막지 않으며 고객 알림은 없다(BIZ-094). 종료한 건도 관리자 화면에 고객 서류 읽기와 입찰 분석을 보인다
+- **금지 전이 (CR-170)**: 관리자 결정이 없거나 No-Go 인 채 GENERATING 으로 전환(409). 고객은 이 상태에서 전환할 수 없다(고객이 고를 수 있는 대상은 DOCS_RECEIVED 뿐)
 
 ### GENERATING | 문서 작성 중
 - **설명**: AI(Aimbase)가 제안서를 생성하는 상태
@@ -201,6 +206,7 @@ stateDiagram-v2
 - **진입 조건**: 고객 취소 요청 또는 관리자 종료 처리 또는 공고 마감 초과
 - **허용 다음 상태**: (최종 상태)
 - **관련 기능 ID**: BID-FSM-001
+- **변경 (CR-170)**: 분석 단계에서도 관리자가 종료할 수 있다(No-Go)
 
 ---
 

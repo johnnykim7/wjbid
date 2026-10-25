@@ -247,7 +247,7 @@ dict(id='IT-13-027', flow='가이드 편집', kind='예외', title='고객 계�
      req=['BID-RFP-004'], fc=['BID-RFP-004'], screen='', pri='High'),
 
 dict(id='IT-13-028', flow='성공 자산 주입', kind='정상', title='분류된 공고의 제안서 작성에 그 유형 성공 자산이 들어간다',
-     pre='관리자 계정, industry_type 이 GROUND_MAINTENANCE 인 공고의 상태 ANALYZING 입찰 요청, '
+     pre='관리자 계정, industry_type 이 GROUND_MAINTENANCE 인 공고의 상태 ANALYZING 이고 입찰 분석의 관리자 결정이 Go 인 입찰 요청, '
          '추출이 끝난 GROUND_MAINTENANCE 가이드, 제안서 파일과 PWS 파일이 있는 GROUND_MAINTENANCE 성공 제안서, Aimbase 에 닿는 배포 환경',
      steps='1. 관리자 화면에서 그 입찰 요청을 GENERATING 으로 전이한다\n2. Aimbase 실행 기록에서 그 문서 생성 워크플로우의 입력을 연다',
      expect='1. 입력의 successGuide 가 GROUND_MAINTENANCE 가이드의 guideJson 과 같다\n'
@@ -258,7 +258,7 @@ dict(id='IT-13-028', flow='성공 자산 주입', kind='정상', title='분류�
      req=['BID-RFP-005'], fc=['BID-RFP-005'], screen='', pri='High'),
 
 dict(id='IT-13-029', flow='성공 자산 주입', kind='정상', title='미분류 공고는 성공 자산 없이 제안서를 만든다',
-     pre='관리자 계정, industry_type 이 NULL 인 공고의 상태 ANALYZING 입찰 요청, Aimbase 에 닿는 배포 환경',
+     pre='관리자 계정, industry_type 이 NULL 인 공고의 상태 ANALYZING 이고 입찰 분석의 관리자 결정이 Go 인 입찰 요청, Aimbase 에 닿는 배포 환경',
      steps='1. 관리자 화면에서 그 입찰 요청을 GENERATING 으로 전이한다\n2. Aimbase 실행 기록에서 그 문서 생성 워크플로우의 입력을 연다\n'
            '3. 생성이 끝날 때까지 기다린다',
      expect='1. 입력의 successGuide 가 비어 있다\n'

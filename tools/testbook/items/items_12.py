@@ -327,7 +327,7 @@ dict(id='IT-12-033', flow='상태 전이', kind='정상', title='요구 항목�
      req=['BID-FSM-001'], fc=['BID-FSM-001'], screen='관리자 /bid-requests/{id}', pri='High'),
 
 dict(id='IT-12-034', flow='상태 전이', kind='정상', title='ANALYZING 을 GENERATING 으로 전이하면 AI 문서 생성이 시작된다',
-     pre='관리자 계정, 상태 ANALYZING 이고 공고 사전 분석이 COMPLETED 이며 고객 서류 읽기가 끝나 읽는 중인 서류가 없는 입찰 요청, Aimbase 에 닿는 배포 환경',
+     pre='관리자 계정, 상태 ANALYZING 이고 공고 사전 분석이 COMPLETED 이며 고객 서류 읽기가 끝나 읽는 중인 서류가 없고 입찰 분석의 관리자 결정이 Go 인 입찰 요청, Aimbase 에 닿는 배포 환경',
      steps='1. 그 입찰 요청의 입찰 상세 관리를 연다\n2. 다음 상태 GENERATING 으로 전이를 실행한다\n3. AI 문서 생성이 끝날 때까지 기다린다',
      expect='1. 상태 패널의 현재 상태가 GENERATING 으로 바뀐다\n'
             '2. state 가 GENERATING 이고 state_history 에 ANALYZING 에서 GENERATING 으로의 줄이 더해진다\n'
@@ -390,7 +390,7 @@ dict(id='IT-12-039', flow='상태 전이', kind='정상', title='CREATED, DOCS_P
 
 dict(id='IT-12-040', flow='상태 전이', kind='예외', title='허용 목록에 없는 전이는 거부된다',
      pre='관리자 계정, 상태 ANALYZING 입찰 요청 1건, 상태 SUBMITTED 입찰 요청 1건',
-     steps='1. 관리자 토큰으로 POST /api/admin/bid-requests/{ANALYZING 건 id}/transition 에 목표 상태 CLOSED 를 보낸다\n'
+     steps='1. 관리자 토큰으로 POST /api/admin/bid-requests/{ANALYZING 건 id}/transition 에 목표 상태 REVIEW 를 보낸다\n'
            '2. 같은 방법으로 SUBMITTED 건에 목표 상태 REVIEW 를 보낸다',
      expect='1. 두 요청 모두 실패 응답으로 거부된다\n'
             '2. 두 건의 state 가 ANALYZING, SUBMITTED 그대로이고 state_history 줄 수가 늘지 않는다',
@@ -482,11 +482,11 @@ dict(id='IT-12-050', flow='다음 가능 상태', kind='정상', title='REVIEW �
      judge=['가상', '가상', '서버'],
      req=['BID-FSM-003'], fc=['BID-FSM-003'], screen='관리자 /bid-requests/{id}', pri='Medium'),
 
-dict(id='IT-12-051', flow='다음 가능 상태', kind='정상', title='ANALYZING 입찰 건의 허용 다음 상태는 GENERATING 하나다',
+dict(id='IT-12-051', flow='다음 가능 상태', kind='정상', title='ANALYZING 입찰 건의 허용 다음 상태는 GENERATING, CLOSED 둘이다',
      pre='관리자 계정, 상태 ANALYZING 입찰 요청',
      steps='1. 그 입찰 요청의 입찰 상세 관리를 연다\n2. 관리자 토큰으로 GET /api/bid-requests/{id}/next-states 를 부른다',
-     expect='1. 상태 패널의 허용 다음 상태가 GENERATING 하나다\n'
-            '2. 다음 상태 응답이 GENERATING 하나다',
+     expect='1. 상태 패널의 허용 다음 상태가 GENERATING, CLOSED 둘이다\n'
+            '2. 다음 상태 응답이 GENERATING, CLOSED 다',
      judge=['가상', '서버'],
      req=['BID-FSM-003'], fc=['BID-FSM-003'], screen='관리자 /bid-requests/{id}', pri='Medium'),
 

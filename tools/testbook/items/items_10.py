@@ -77,7 +77,7 @@ STRUCTURE = ("SELECT HEX(pc.id) AS chapter, pc.factor_label, HEX(ps.id) AS secti
 ITEMS = [
 
 dict(id='IT-10-001', flow='제안서 자동 작성', kind='정상', title='공고 유형에 맞는 성공 제안서가 있는 입찰 건의 제안서를 AI 가 작성한다',
-     pre='관리자 계정, 사전 분석 COMPLETED 이고 industry_type 이 있으며 그 유형에 성공 제안서 1건 이상이 있는 공고의 입찰 건(ANALYZING, 고객 서류 접수 완료, 고객 서류 읽기가 끝나 읽음 서류가 있음), Aimbase 문서 생성 워크플로우가 도는 상태',
+     pre='관리자 계정, 사전 분석 COMPLETED 이고 industry_type 이 있으며 그 유형에 성공 제안서 1건 이상이 있는 공고의 입찰 건(ANALYZING, 고객 서류 접수 완료, 고객 서류 읽기가 끝나 읽음 서류가 있음, 입찰 분석의 관리자 결정이 Go), Aimbase 문서 생성 워크플로우가 도는 상태',
      steps='1. 관리자 화면 메뉴 [입찰 요청 관리] 에서 그 입찰 건 상세를 연다\n2. [상태 전환] 에서 GENERATING 을 골라 전환한다\n3. 생성이 끝날 때까지 기다린 뒤 화면을 새로고침한다\n4. 생성 문서의 [편집] 으로 본문을 연다',
      expect='1. 입찰 건 상태가 GENERATING 을 거쳐 REVIEW 가 되고 상태 이력에 GENERATING, REVIEW 두 줄이 더해진다\n'
             '2. 그 입찰 건에 입찰 문서(bid_documents) 행이 상태 DRAFT 로 생기고 현재 버전의 content_json 이 본문이 든 TipTap JSON 이다. 버전 1 은 설계 단계가 만든 빈 문서다\n'
@@ -106,7 +106,7 @@ dict(id='IT-10-001', flow='제안서 자동 작성', kind='정상', title='공�
      issue='T1-1 은 "고객이 필요 문서를 제출하면" 자동 작성이라 하고 T1-5 는 CR-141 뒤 ANALYZING 다음 상태로 관리자가 전환한다고 해 생성이 시작되는 때가 어긋난다. Aimbase 가 만드는 최종 Word, PDF 를 어디서 받는지 T3-2, T3-3 에 없다'),
 
 dict(id='IT-10-002', flow='제안서 자동 작성', kind='정상', title='미분류 공고의 입찰 건은 성공 제안서 자산 없이 제안서를 작성한다',
-     pre='관리자 계정, 사전 분석 COMPLETED 이고 industry_type 이 NULL 인 공고의 입찰 건(ANALYZING), Aimbase 문서 생성 워크플로우가 도는 상태',
+     pre='관리자 계정, 사전 분석 COMPLETED 이고 industry_type 이 NULL 인 공고의 입찰 건(ANALYZING, 입찰 분석의 관리자 결정이 Go), Aimbase 문서 생성 워크플로우가 도는 상태',
      steps='1. 관리자 화면 메뉴 [입찰 요청 관리] 에서 그 입찰 건 상세를 연다\n2. [상태 전환] 에서 GENERATING 을 골라 전환한다\n3. 생성이 끝날 때까지 기다린다',
      expect='1. 입찰 건 상태가 REVIEW 가 되고 입찰 문서 행이 상태 DRAFT 로 생긴다\n'
             '2. 문서 생성 워크플로우 입력의 successGuide 와 referenceSamples 가 비어 있다\n'
@@ -115,7 +115,7 @@ dict(id='IT-10-002', flow='제안서 자동 작성', kind='정상', title='미�
      req=['BID-DOC-001'], fc=['BID-DOC-001'], screen='관리자 /bid-requests/{id}', pri='High'),
 
 dict(id='IT-10-003', flow='제안서 자동 작성', kind='예외', title='사전 분석이 COMPLETED 가 아닌 공고의 입찰 건은 제안서를 작성하지 않는다',
-     pre='관리자 계정, 사전 분석이 FAILED 인 공고의 입찰 건(ANALYZING)',
+     pre='관리자 계정, 사전 분석이 FAILED 인 공고의 입찰 건(ANALYZING, 입찰 분석의 관리자 결정이 Go)',
      steps='1. 관리자 화면 메뉴 [입찰 요청 관리] 에서 그 입찰 건 상세를 연다\n2. [상태 전환] 에서 GENERATING 을 골라 전환한다\n3. 몇 분 기다린 뒤 그 입찰 건의 입찰 문서를 조회한다',
      expect='1. 그 입찰 건에 입찰 문서 행이 생기지 않는다\n'
             '2. 입찰 건 상태가 REVIEW 로 넘어가지 않는다',
@@ -207,7 +207,7 @@ dict(id='IT-10-013', flow='제안서 절 관리', kind='예외', title='잠긴 �
      req=['BID-DOC-001'], fc=['BID-DOC-001'], screen='', pri='High'),
 
 dict(id='IT-10-014', flow='생성 완료 알림', kind='정상', title='제안서 생성이 끝나면 관리자에게 완료 메일이 간다',
-     pre='관리자 계정과 관리자 메일함, IT-10-001 과 같은 조건의 입찰 건(ANALYZING), Aimbase 문서 생성 워크플로우가 도는 상태',
+     pre='관리자 계정과 관리자 메일함, IT-10-001 과 같은 조건의 입찰 건(ANALYZING, 입찰 분석의 관리자 결정이 Go), Aimbase 문서 생성 워크플로우가 도는 상태',
      steps='1. 관리자 화면에서 그 입찰 건을 GENERATING 으로 전환하고 생성이 끝날 때까지 기다린다\n2. 관리자 메일함을 연다\n3. 메일의 바로가기 링크를 누른다',
      expect='1. 관리자 메일함에 문서 생성 완료 메일이 1통 온다\n'
             '2. 메일에 생성된 문서 유형과 그 입찰 건의 공고 제목이 있다\n'
@@ -504,11 +504,12 @@ dict(id='IT-10-044', flow='고객 서류 읽기', kind='정상', title='그림, 
      req=['BID-DOC-004'], fc=['BID-DOC-004'], screen='관리자 /bid-requests/{id}', pri='High'),
 
 dict(id='IT-10-045', flow='고객 서류 읽기', kind='예외', title='읽을 수 없는 형식은 읽지 않고 표시하며 문서 작성 중 전환을 막지 않는다',
-     pre='관리자 계정, 상태 DOCS_RECEIVED 입찰 건 1건(공고별 서류로 옛 워드 DOC 1개와 글자 층이 있는 PDF 1개를 올림), Aimbase 고객 서류 읽기 워크플로우가 도는 상태',
-     steps='1. 그 입찰 건의 입찰 상세 관리에서 다음 상태 ANALYZING 으로 전환한다\n2. PDF 줄이 읽음이 될 때까지 기다린다\n3. 다음 상태 GENERATING 으로 전환한다',
+     pre='관리자 계정, 상태 DOCS_RECEIVED 입찰 건 1건(공고별 서류로 옛 워드 DOC 1개와 글자 층이 있는 PDF 1개를 올림), Aimbase 고객 서류 읽기와 입찰 분석 워크플로우가 도는 상태',
+     steps='1. 그 입찰 건의 입찰 상세 관리에서 다음 상태 ANALYZING 으로 전환한다\n2. PDF 줄이 읽음이 될 때까지 기다린다\n'
+           '3. 입찰 분석 영역이 분석 완료가 될 때까지 기다린 뒤 관리자 결정에서 Go 를 선택하고 [저장] 을 누른다\n4. 다음 상태 GENERATING 으로 전환한다',
      expect='1. 2단계에서 DOC 줄의 상태가 "읽을 수 없는 형식" 이다\n'
             '2. document_readings 의 DOC 줄이 status UNSUPPORTED, read_as NONE 이다\n'
-            '3. 3단계 전환이 거부되지 않고 state 가 GENERATING 이 된다',
+            '3. 4단계 전환이 거부되지 않고 state 가 GENERATING 이 된다',
      judge=['가상', '서버', '서버'],
      req=['BID-DOC-004'], fc=['BID-DOC-004'], screen='관리자 /bid-requests/{id}', pri='Medium',
      probe={2: dict(steps=[('key', '10.b045_server2_bid'),
@@ -522,7 +523,7 @@ dict(id='IT-10-045', flow='고객 서류 읽기', kind='예외', title='읽을 �
                     check="r[1]['status'] == 200 and r[2]['status'] == 200 and r[3][0]['state'] == 'GENERATING'")}),
 
 dict(id='IT-10-046', flow='고객 서류 읽기', kind='예외', title='고객 서류를 읽는 중이면 문서 작성 중으로 전환되지 않는다',
-     pre='관리자 계정, 상태 ANALYZING 이고 후보 서류 한 줄이 READING 이며 상태가 바뀐 지 5분이 안 된 입찰 건',
+     pre='관리자 계정, 상태 ANALYZING 이고 후보 서류 한 줄이 READING 이며 상태가 바뀐 지 5분이 안 된 입찰 건(입찰 분석 회차가 없어 관리자 결정도 없음)',
      steps='1. 그 입찰 건의 입찰 상세 관리를 연다\n2. 상태 패널의 다음 상태 GENERATING 을 본다\n'
            '3. 관리자 토큰으로 POST /admin/bid-requests/{id}/transition 에 GENERATING 을 실어 부른다\n4. 그 입찰 건의 state 와 state_history 를 조회한다',
      expect='1. 2단계에서 GENERATING 전환이 눌리지 않고 "고객 서류를 읽는 중입니다" 가 보인다\n'
@@ -539,7 +540,7 @@ dict(id='IT-10-046', flow='고객 서류 읽기', kind='예외', title='고객 �
                     check="r[2][0]['state'] == 'ANALYZING' and r[2][0]['hist'] == r[0][0]['hist']")}),
 
 dict(id='IT-10-047', flow='고객 서류 읽기', kind='예외', title='읽기가 워크플로우 대기 한도를 넘게 끝나지 않은 서류는 읽지 못함이 되어 전환을 막지 않는다',
-     pre='관리자 계정, 상태 ANALYZING 이고 후보 서류 한 줄이 READING 이며 status_at 이 워크플로우 대기 한도(설정 app.aimbase.polling 간격과 횟수, 10/25 상용 60분)보다 오래 전인 입찰 건',
+     pre='관리자 계정, 상태 ANALYZING 이고 후보 서류 한 줄이 READING 이며 status_at 이 워크플로우 대기 한도(설정 app.aimbase.polling 간격과 횟수, 10/25 상용 60분)보다 오래 전이고 입찰 분석의 관리자 결정이 Go 인 입찰 건',
      steps='1. 그 입찰 건의 입찰 상세 관리를 연다\n2. 다음 상태 GENERATING 으로 전환한다',
      expect='1. 1단계에서 그 줄의 상태가 "읽지 못함" 이고 사유 "읽기 시간 초과" 가 보인다\n'
             '2. 2단계 전환이 거부되지 않고 state 가 GENERATING 이 된다',
@@ -644,7 +645,7 @@ dict(id='IT-10-052', flow='절별 근거 서류', kind='정상', title='절 작�
                     check=f"len({mcp_json(2)}['sourceDocuments']) > 0 and {mcp_json(3)}['sourceDocuments'] == {mcp_json(2)}['sourceDocuments']")}),
 
 dict(id='IT-10-053', flow='절별 근거 서류', kind='정상', title='제안서 본문의 회사 사실은 근거 서류에서 오고 근거가 없으면 자리표시가 들어간다',
-     pre='관리자 계정, 고객 서류 읽기가 끝난 ANALYZING 입찰 건(실적 증명서는 읽음, 인력 서류는 내지 않음, 공고 평가 항목에 수행 실적과 인력이 있음), Aimbase 제안서 워크플로우가 도는 상태',
+     pre='관리자 계정, 고객 서류 읽기가 끝난 ANALYZING 입찰 건(실적 증명서는 읽음, 인력 서류는 내지 않음, 공고 평가 항목에 수행 실적과 인력이 있음, 입찰 분석의 관리자 결정이 Go), Aimbase 제안서 워크플로우가 도는 상태',
      steps='1. 그 입찰 건의 입찰 상세 관리에서 다음 상태 GENERATING 으로 전환한다\n2. 생성이 끝날 때까지 기다린다\n'
            '3. 그 제안서의 /documents/{documentId}/sections 에서 수행 실적 절과 인력 절을 차례로 고른다',
      expect='1. 수행 실적 절의 근거 서류에 실적 증명서가 걸려 있다\n'
@@ -674,5 +675,284 @@ dict(id='IT-10-054', flow='고객 서류 읽기', kind='예외', title='관리�
             3: dict(steps=[('key', '10.b054_reading'),
                            ('api', 'guest', 'GET', '/api/mcp/document-readings/{val:0:id}/download')],
                     check="r[1]['status'] == 401 and not r[1]['body']")}),
+
+dict(id='IT-10-055', flow='입찰 분석', kind='정상', title='고객 서류를 다 읽으면 입찰 분석이 돌아 종합 분석 리포트, 캡처플랜, Bid/No-Bid 결정이 차례로 채워진다',
+     pre='관리자 계정, 공고 분석이 COMPLETED 인 공고의 상태 DOCS_RECEIVED 입찰 건 1건(공고별 서류로 글자 층이 있는 실적 증명서 PDF 1개를 올림), 그 공고 NAICS 의 미 연방 계약이 federal_contracts 에 있음, Aimbase 고객 서류 읽기와 입찰 분석 워크플로우가 도는 상태',
+     steps='1. 관리자 화면 [입찰 요청 관리] 에서 그 입찰 건의 입찰 상세 관리를 열고 다음 상태 ANALYZING 으로 전환한다\n'
+           '2. 고객 서류 읽기 영역의 실적 증명서 줄이 읽음이 될 때까지 기다리며 입찰 분석 영역을 본다\n'
+           '3. 입찰 분석 영역 머리가 분석 완료가 될 때까지 기다린다\n'
+           '4. 종합 분석 리포트, 캡처플랜, Bid/No-Bid 결정 탭을 차례로 연다',
+     expect='1. 2단계에서 서류를 읽는 동안 입찰 분석 영역에 "고객 서류를 다 읽으면 입찰 분석을 시작합니다" 가 보인다\n'
+            '2. 실적 증명서 줄이 읽음이 된 뒤 bid_analyses 에 그 입찰 건의 status RUNNING 줄이 1줄 생긴다\n'
+            '3. 3단계 뒤 그 줄의 status 가 DONE 이고 report_json, capture_plan_json, decision_json, finished_at 이 모두 채워져 있다\n'
+            '4. 3단계 뒤 머리에 Pwin(%)과 판정(Strong Go, 조건부 Go, Weak, No-Go 가운데 하나)과 판정 이유가 보인다\n'
+            '5. 종합 분석 리포트 탭의 사업명, 발주처, 마감이 그 공고의 값과 같고 발주 이력 표에 그 공고 NAICS 의 미 연방 계약이 계약번호와 수주사로 들어 있다\n'
+            '6. 캡처플랜 탭에 양식 1장부터 5장까지가 차례로 있고 2장 이슈 정리에 핵심이슈 순위 표가 있다\n'
+            '7. Bid/No-Bid 결정 탭의 스코어카드에 자사와 경쟁사마다 일곱 팩터(고객 관계, 솔루션 적합도, 경쟁 환경, 가격 경쟁력, 과거 실적, 참여 인력, 환경 요인)의 점수와 근거, 가중 점수가 있다\n'
+            '8. 종합 분석 리포트의 자사 실적(사업명, 발주처)이 실적 증명서의 값이고 다른 회사의 실적이 섞이지 않는다',
+     judge=['가상', '서버', '서버', '가상', '합동', '합동', '합동', '합동'],
+     req=['BID-DOC-006'], fc=['BID-DOC-006'], screen='관리자 /bid-requests/{id}', pri='High'),
+
+dict(id='IT-10-056', flow='입찰 분석', kind='정상', title='읽을 서류가 없는 입찰 건은 분석 단계로 전환하자마자 입찰 분석이 시작된다',
+     pre='관리자 계정, 공고에 필수 서류 칸이 없어 공고별 서류도 만료되지 않은 서류함 서류도 없이 DOCS_RECEIVED 가 된 입찰 건, Aimbase 입찰 분석 워크플로우가 도는 상태',
+     steps='1. 관리자 화면에서 그 입찰 건의 입찰 상세 관리를 연다\n2. 다음 상태 ANALYZING 으로 전환한다\n3. 입찰 분석 영역을 본다',
+     expect='1. 1단계에서 입찰 상세 관리에 입찰 분석 영역이 없다\n'
+            '2. 2단계 직후 bid_analyses 에 그 입찰 건의 status RUNNING 줄이 1줄 있고 started_at 이 전환 시각이다\n'
+            '3. 3단계에서 입찰 분석 영역 머리가 분석 중이고 [다시 분석] 과 관리자 결정 [저장] 이 꺼져 있다',
+     judge=['가상', '서버', '가상'],
+     req=['BID-DOC-006'], fc=['BID-DOC-006'], screen='관리자 /bid-requests/{id}', pri='High'),
+
+dict(id='IT-10-057', flow='입찰 분석', kind='정상', title='다른 입찰 건이 같은 내용의 서류를 읽어 끝나도 그 건의 입찰 분석이 시작된다',
+     pre='관리자 계정, 같은 회원의 상태 ANALYZING 입찰 건 A 와 DOCS_RECEIVED 입찰 건 B(둘 다 같은 내용의 실적 증명서 PDF 를 공고별 서류로 올림), A 의 그 서류를 읽는 중',
+     steps='1. B 를 다음 상태 ANALYZING 으로 전환한다\n2. A 의 읽기 회차가 끝날 때까지 기다린다\n3. A 와 B 의 입찰 상세 관리에서 입찰 분석 영역을 본다',
+     expect='1. 1단계 직후 B 의 bid_analyses 줄이 없다\n'
+            '2. 2단계 뒤 A 와 B 에 bid_analyses status RUNNING 줄이 각 1줄 생긴다\n'
+            '3. 3단계에서 두 건의 입찰 분석 영역 머리가 분석 중이다',
+     judge=['서버', '서버', '가상'],
+     req=['BID-DOC-006'], fc=['BID-DOC-006'], screen='관리자 /bid-requests/{id}', pri='High'),
+
+dict(id='IT-10-058', flow='입찰 분석', kind='정상', title='입찰 분석 회차가 이미 있는 건은 서류를 다시 읽어도 입찰 분석이 자동으로 다시 돌지 않는다',
+     pre='관리자 계정, 상태 ANALYZING 이고 입찰 분석이 분석 완료이며 후보 서류에 읽지 못함 1줄이 있는 입찰 건',
+     steps='1. 그 입찰 건의 입찰 상세 관리에서 고객 서류 읽기 영역의 [다시 읽기] 를 누른다\n2. 그 줄을 다시 읽어 끝날 때까지 기다린다\n3. 입찰 분석 영역을 본다',
+     expect='1. 2단계 뒤 bid_analyses 의 그 입찰 건 줄 수가 1단계 전과 같다\n'
+            '2. 3단계에서 머리가 분석 완료 그대로이고 [다시 분석] 이 살아 있다',
+     judge=['서버', '가상'],
+     req=['BID-DOC-006'], fc=['BID-DOC-006'], screen='관리자 /bid-requests/{id}', pri='High'),
+
+dict(id='IT-10-059', flow='입찰 분석', kind='정상', title='조사한 값마다 확신도와 출처가 붙고 웹 자료가 필요한 칸은 미상으로 확인 필요에 오른다',
+     pre='관리자 계정, 입찰 분석이 분석 완료인 ANALYZING 입찰 건',
+     steps='1. 입찰 분석 영역의 종합 분석 리포트 탭을 연다\n2. 발주처 칸과 발주 이력 표를 본다\n3. 확인 필요 목록을 본다',
+     expect='1. 1단계에서 근거 값마다 확정, 추정, 미상 가운데 하나의 확신도 꼬리표와 출처가 함께 보인다\n'
+            '2. report_json, capture_plan_json, decision_json 의 근거 값마다 confidence 가 CONFIRMED, ESTIMATED, UNKNOWN 가운데 하나이고 source 가 비어 있지 않다\n'
+            '3. 세 산출물에서 source 가 "웹 자료 미사용" 인 근거 값은 모두 confidence 가 UNKNOWN 이다\n'
+            '4. 3단계 확인 필요 목록에 source 가 "웹 자료 미사용" 인 칸마다 그 칸을 묻는 줄이 있다\n'
+            '5. 3단계 확인 필요 목록이 고객에게 물을 것과 관리자가 볼 것 두 묶음으로 나뉘어 있고 줄마다 질문과 이유가 있다\n'
+            '6. 리포트의 고객 회사 사실은 출처가 고객 회사 칸, 고객 서류 사실, 참가 자격 답 가운데 하나이고 참가 자격 답에서 온 값의 출처에 고객이 스스로 답한 것이라는 말이 있다',
+     judge=['가상', '서버', '서버', '합동', '가상', '합동'],
+     req=['BID-DOC-006'], fc=['BID-DOC-006'], screen='관리자 /bid-requests/{id}', pri='High',
+     issue='참가 자격 답에서 온 값을 고객이 스스로 답한 것으로 표시하는 문구가 설계서(T3-4)에 없다'),
+
+dict(id='IT-10-060', flow='입찰 분석', kind='정상', title='Pwin, 판정, 강점과 약점, 핵심이슈 순위는 서버가 점수로 계산한 값이다',
+     pre='관리자 계정, 입찰 분석이 분석 완료인 ANALYZING 입찰 건, system_settings BID_PWIN_WEIGHTS 와 BID_PWIN_THRESHOLDS 가 초기값',
+     steps='1. 입찰 분석 영역 머리와 Bid/No-Bid 결정 탭의 스코어카드를 본다\n2. 캡처플랜 탭의 핵심이슈 순위 표를 본다\n'
+           '3. 관리자 토큰으로 GET /admin/bid-requests/{id}/bid-analysis 를 부른다',
+     expect='1. 3단계 응답의 pwinPercent 가 scorecard 의 OUR_COMPANY 일곱 팩터 점수에 초기 가중치를 곱해 더하고 5 로 나눈 값(소수 첫째 자리)과 같다\n'
+            '2. 3단계 응답의 qualification 에 resolvable false 가 없으면 aiVerdict 가 pwinPercent 70 이상 STRONG_GO, 50 이상 CONDITIONAL_GO, 30 이상 WEAK, 그 아래 NO_GO 와 맞다\n'
+            '3. 3단계 응답의 strengths 와 weaknesses 가 BCC 테마마다 자사 점수에서 경쟁사 최고점을 뺀 값이 +1 이상인 테마, -1 이하인 테마와 같다\n'
+            '4. 3단계 응답의 issueRanking 이 묶은 이슈마다 속한 관련자 이슈의 영향력 x 중요도를 합한 값의 높은 순이다\n'
+            '5. 1단계 머리의 Pwin 과 판정이 3단계 응답의 pwinPercent, aiVerdict 와 같다\n'
+            '6. 2단계 순위 표의 차례가 3단계 응답의 issueRanking 과 같다\n'
+            '7. 해결할 수 없는 자격 미달이 한 줄이라도 있으면 Pwin 이 70 이상이어도 판정이 NO_GO 이고 판정 이유에 그 항목이 있다',
+     judge=['서버', '서버', '서버', '서버', '가상', '가상', '단위'],
+     req=['BID-DOC-006'], fc=['BID-DOC-006'], screen='관리자 /bid-requests/{id}', pri='High'),
+
+dict(id='IT-10-061', flow='입찰 분석', kind='정상', title='Pwin 가중치를 바꾸면 다음 계산부터 맞고 이미 계산한 회차는 그대로다',
+     pre='관리자 계정, 입찰 분석이 분석 완료인 ANALYZING 입찰 건(읽는 중인 서류 없음), system_settings BID_PWIN_WEIGHTS 가 초기값',
+     steps='1. 그 회차의 pwin_percent 를 적어 둔다\n'
+           '2. system_settings 의 BID_PWIN_WEIGHTS 를 합 100 인 다른 값(CUSTOMER_RELATION:40,SOLUTION_FIT:10,COMPETITION:10,PRICE:10,PAST_PERFORMANCE:10,PERSONNEL:10,ENVIRONMENT:10)으로 바꾼다\n'
+           '3. 입찰 분석 영역의 [다시 분석] 으로 신규 회차를 돌려 분석 완료가 될 때까지 기다린다\n'
+           '4. BID_PWIN_WEIGHTS 를 초기값으로 되돌린다',
+     expect='1. 3단계 뒤 앞 회차의 pwin_percent 가 1단계에 적은 값 그대로다\n'
+            '2. 신규 회차의 pwin_percent 가 2단계에서 바꾼 가중치로 계산한 값이다\n'
+            '3. BID_PWIN_WEIGHTS 의 합이 100 이 아니거나 팩터가 빠지면 초기 가중치로 계산하고 경고 로그가 1줄 남는다',
+     judge=['단위', '단위', '단위'],
+     req=['BID-DOC-006'], fc=['BID-DOC-006'], screen='', pri='High'),
+
+dict(id='IT-10-062', flow='입찰 분석', kind='정상', title='다시 분석하면 신규 회차가 지금 분석이 되고 앞 회차의 결정은 이어지지 않는다',
+     pre='관리자 계정, 입찰 분석이 분석 완료이고 관리자 결정이 Go 인 ANALYZING 입찰 건(읽는 중인 서류 없음), Aimbase 입찰 분석 워크플로우가 도는 상태',
+     steps='1. 입찰 분석 영역의 [다시 분석] 을 누른다\n2. 확인 창에서 확인을 누른다\n3. 분석 완료가 될 때까지 기다린다\n'
+           '4. 관리자 토큰으로 POST /admin/bid-requests/{id}/transition 에 GENERATING 을 실어 부른다',
+     expect='1. 1단계에서 "다시 분석하면 지금 결정은 이어지지 않습니다" 확인 창이 뜬다\n'
+            '2. 2단계 뒤 bid_analyses 에 그 입찰 건 줄이 하나 늘고 늘어난 줄이 status RUNNING, admin_decision 빈 값, started_by 그 관리자다\n'
+            '3. 3단계 뒤 머리의 관리자 결정이 비어 있고 상태 패널의 GENERATING 전환이 막혀 있다\n'
+            '4. 4단계 응답이 409 이고 코드가 BID_DECISION_REQUIRED 이며 state 가 ANALYZING 그대로다',
+     judge=['가상', '서버', '가상', '서버'],
+     req=['BID-DOC-006'], fc=['BID-DOC-006', 'BID-DOC-007'], screen='관리자 /bid-requests/{id}', pri='High'),
+
+dict(id='IT-10-063', flow='입찰 분석 도구', kind='정상', title='get_bid_analysis_input 은 단계마다 정해진 자료를 돌려보낸다',
+     pre='서버 열쇠(MCP_API_KEY)를 아는 호출자, 입찰 분석이 분석 완료인 ANALYZING 입찰 건(그 공고번호의 정정 공고 1건, 같은 기관 공고 21건 이상, 값이 300자를 넘는 고객 서류 사실 1개 이상)',
+     steps='1. POST /mcp 에 tools/call 본문(name get_bid_analysis_input, bidRequestId 그 건, analysisId 그 회차, step REPORT)을 보낸다\n'
+           '2. 같은 본문을 step CAPTURE_PLAN 으로 보낸다\n3. 같은 본문을 step DECISION 으로 보낸다',
+     expect='1. 1단계 결과에 같은 공고번호의 다른 공고 1건과 같은 기관 최근 공고 20건이 있다\n'
+            '2. 1단계 결과의 고객 서류 사실 값이 모두 300자 이하다\n'
+            '3. 2단계 결과에 그 회차의 종합 분석 리포트가 있다\n'
+            '4. 3단계 결과에 그 회차의 종합 분석 리포트와 캡처플랜, BID_PWIN_WEIGHTS 의 가중치가 있다',
+     judge=['서버', '서버', '서버', '서버'],
+     req=['BID-DOC-006'], fc=['BID-DOC-006'], screen='', pri='High'),
+
+dict(id='IT-10-064', flow='입찰 분석 도구', kind='정상', title='search_award_history 는 미 연방 계약과 낙찰 공고를 합쳐 출처를 달아 찾는다',
+     pre='서버 열쇠(MCP_API_KEY)를 아는 호출자, federal_contracts 와 낙찰 공고에 모두 있는 NAICS 코드 하나(합쳐 51건 이상)',
+     steps='1. POST /mcp 에 tools/call 본문(name search_award_history, naicsCodes 그 코드)을 보낸다\n2. 같은 본문에 limit 100 을 실어 보낸다',
+     expect='1. 1단계 결과 줄마다 source 가 FEDERAL_CONTRACT 나 SAM_AWARD_NOTICE 이고 두 값이 모두 나온다\n'
+            '2. 1단계 결과가 20줄이다\n'
+            '3. 1단계 결과 줄에 원본 JSON 칸이 없다\n'
+            '4. 2단계 결과가 50줄이다',
+     judge=['서버', '서버', '서버', '서버'],
+     req=['BID-DOC-006'], fc=['BID-DOC-006'], screen='', pri='High'),
+
+dict(id='IT-10-065', flow='입찰 분석', kind='예외', title='분석 중이 워크플로우 대기 한도를 넘으면 분석 실패 "분석 시간 초과" 가 된다',
+     pre='관리자 계정, 상태 ANALYZING 이고 입찰 분석 회차가 RUNNING 이며 started_at 이 워크플로우 대기 한도(설정 app.aimbase.polling 간격과 횟수, 10/25 상용 60분)보다 오래 전인 입찰 건',
+     steps='1. 그 입찰 건의 입찰 상세 관리를 연다\n2. 관리자 토큰으로 GET /admin/bid-requests/{id}/bid-analysis 를 부른다\n'
+           '3. 입찰 분석 영역의 [다시 분석] 을 누르고 확인한다',
+     expect='1. 1단계 입찰 분석 영역 머리가 분석 실패이고 사유 "분석 시간 초과" 가 보이며 [다시 분석] 이 살아 있다\n'
+            '2. 2단계 응답의 analysis.status 가 FAILED 이고 failureReason 이 "분석 시간 초과" 다\n'
+            '3. 3단계 뒤 bid_analyses 에 그 입찰 건의 status RUNNING 줄이 하나 늘어 있다',
+     judge=['가상', '서버', '서버'],
+     req=['BID-DOC-006'], fc=['BID-DOC-006'], screen='관리자 /bid-requests/{id}', pri='High'),
+
+dict(id='IT-10-066', flow='입찰 분석', kind='예외', title='Bid/No-Bid 결정을 저장하지 못하고 끝난 입찰 분석은 분석 실패가 되고 앞 단계 탭은 남는다',
+     pre='관리자 계정, 입찰 분석 워크플로우가 종합 분석 리포트와 캡처플랜만 저장하고 끝난 ANALYZING 입찰 건',
+     steps='1. 워크플로우가 끝난 뒤 그 입찰 건의 입찰 상세 관리를 연다\n2. 종합 분석 리포트와 캡처플랜, Bid/No-Bid 결정 탭을 차례로 연다',
+     expect='1. 그 회차의 status 가 FAILED 이고 failure_reason 이 "Bid/No-Bid 결정이 저장되지 않음" 이다\n'
+            '2. 1단계 머리가 분석 실패이고 사유 "Bid/No-Bid 결정이 저장되지 않음" 이 보인다\n'
+            '3. 2단계에서 종합 분석 리포트와 캡처플랜 탭에 저장된 내용이 보이고 Bid/No-Bid 결정 탭에는 스코어카드가 없다',
+     judge=['단위', '가상', '가상'],
+     req=['BID-DOC-006'], fc=['BID-DOC-006'], screen='관리자 /bid-requests/{id}', pri='High'),
+
+dict(id='IT-10-067', flow='입찰 분석', kind='예외', title='분석 중이거나 서류를 읽는 중이면 다시 분석이 막히고 분석 중이면 결정 저장도 막힌다',
+     pre='관리자 계정, 입찰 분석 회차가 RUNNING(대기 한도 안)인 ANALYZING 입찰 건 A, 입찰 분석이 분석 완료이고 후보 서류 한 줄이 READING 인 ANALYZING 입찰 건 B',
+     steps='1. A 의 입찰 상세 관리를 열어 입찰 분석 영역을 본다\n'
+           '2. 관리자 토큰으로 A 에 POST /admin/bid-requests/{id}/bid-analysis/run 을 부른다\n'
+           '3. 관리자 토큰으로 A 에 POST /admin/bid-requests/{id}/bid-analysis/decision 에 GO 를 실어 부른다\n'
+           '4. B 의 입찰 상세 관리를 열어 입찰 분석 영역을 본다\n'
+           '5. 관리자 토큰으로 B 에 POST /admin/bid-requests/{id}/bid-analysis/run 을 부른다',
+     expect='1. 1단계에서 [다시 분석] 과 관리자 결정 [저장] 이 꺼져 있다\n'
+            '2. 2단계 응답이 409 BID_ANALYSIS_NOT_ALLOWED 이고 사유가 ANALYSIS_RUNNING 이다\n'
+            '3. 3단계 응답이 409 BID_ANALYSIS_NOT_ALLOWED 이고 A 의 bid_analyses 줄 수와 admin_decision 이 부르기 전과 같다\n'
+            '4. 4단계에서 [다시 분석] 이 꺼져 있다\n'
+            '5. 5단계 응답이 409 BID_ANALYSIS_NOT_ALLOWED 이고 사유가 READING_IN_PROGRESS 다',
+     judge=['가상', '서버', '서버', '가상', '서버'],
+     req=['BID-DOC-006'], fc=['BID-DOC-006', 'BID-DOC-007'], screen='관리자 /bid-requests/{id}', pri='High'),
+
+dict(id='IT-10-068', flow='입찰 분석', kind='예외', title='분석 단계가 아닌 입찰 건은 다시 분석과 관리자 결정을 할 수 없다',
+     pre='관리자 계정, 입찰 분석이 분석 완료이고 관리자 결정이 Go 인 채 GENERATING 으로 전환된 입찰 건',
+     steps='1. 그 입찰 건의 입찰 상세 관리를 연다\n'
+           '2. 관리자 토큰으로 POST /admin/bid-requests/{id}/bid-analysis/run 을 부른다\n'
+           '3. 관리자 토큰으로 POST /admin/bid-requests/{id}/bid-analysis/decision 에 NO_GO 와 사유를 실어 부른다',
+     expect='1. 1단계 입찰 분석 영역에 Pwin, 판정, 관리자 결정 Go 가 보이고 [다시 분석] 과 관리자 결정 폼이 없다\n'
+            '2. 2단계 응답이 409 BID_ANALYSIS_NOT_ALLOWED 이고 사유가 NOT_ANALYZING 이다\n'
+            '3. 3단계 응답이 409 BID_ANALYSIS_NOT_ALLOWED 이고 admin_decision 이 GO 그대로다',
+     judge=['가상', '서버', '서버'],
+     req=['BID-DOC-006'], fc=['BID-DOC-006', 'BID-DOC-007'], screen='관리자 /bid-requests/{id}', pri='High'),
+
+dict(id='IT-10-069', flow='입찰 분석 도구', kind='예외', title='입찰 분석 저장과 낙찰 이력 찾기는 틀린 호출을 거부한다',
+     pre='서버 열쇠(MCP_API_KEY)를 아는 호출자, 입찰 분석이 분석 완료인 입찰 건 A 의 회차, 회차가 RUNNING 이고 아무것도 저장하지 않은 입찰 건 B 의 회차',
+     steps='1. POST /mcp 에 tools/call 본문(name save_bid_analysis, A 회차, part REPORT, 꼴이 맞는 본문)을 보낸다\n'
+           '2. 같은 도구에 B 회차, part CAPTURE_PLAN 을 보낸다\n'
+           '3. 같은 도구에 B 회차, part REPORT 이고 eligibility 첫 줄 evidence 에 confidence 가 없는 본문을 보낸다\n'
+           '4. POST /mcp 에 tools/call 본문(name search_award_history, 인자 없음)을 보낸다',
+     expect='1. 1단계 결과가 오류이고 A 회차의 report_json 이 부르기 전과 같다\n'
+            '2. 2단계 결과가 오류이고 B 회차의 capture_plan_json 이 비어 있다\n'
+            '3. 3단계 결과가 오류이고 틀린 곳 eligibility[0].evidence.confidence 가 담겨 있으며 B 회차의 report_json 이 비어 있다\n'
+            '4. 4단계 결과가 오류다',
+     judge=['서버', '서버', '서버', '서버'],
+     req=['BID-DOC-006'], fc=['BID-DOC-006'], screen='', pri='High'),
+
+dict(id='IT-10-070', flow='입찰 분석', kind='예외', title='관리자가 아니면 입찰 분석을 보거나 다시 분석하거나 결정할 수 없고 고객 화면에 입찰 분석이 없다',
+     pre='회원 계정 로그인 토큰, 그 회원의 입찰 분석이 분석 완료인 ANALYZING 입찰 건',
+     steps='1. 회원 토큰으로 GET /admin/bid-requests/{id}/bid-analysis 를 부른다\n'
+           '2. 회원 토큰으로 POST /admin/bid-requests/{id}/bid-analysis/run 을 부른다\n'
+           '3. 회원 토큰으로 POST /admin/bid-requests/{id}/bid-analysis/decision 에 GO 를 실어 부른다\n'
+           '4. 회원 토큰으로 PATCH /bid-requests/{id}/state 에 CLOSED 를 실어 부른다\n'
+           '5. 회원 토큰으로 GET /bid-requests/{id} 를 부른다\n'
+           '6. 고객 화면에서 그 입찰 건의 입찰 상세를 연다',
+     expect='1. 1단계 응답이 403 이다\n'
+            '2. 2단계 응답이 403 이고 bid_analyses 의 그 입찰 건 줄 수가 부르기 전과 같다\n'
+            '3. 3단계 응답이 403 이고 admin_decision 이 부르기 전과 같다\n'
+            '4. 4단계 응답이 403 이고 코드가 CUSTOMER_TRANSITION_NOT_ALLOWED 이며 state 가 ANALYZING 그대로다\n'
+            '5. 5단계 응답에 Pwin, 판정, 관리자 결정 칸이 없다\n'
+            '6. 6단계 입찰 상세에 입찰 분석, Pwin, 판정, Bid/No-Bid 결정이 어디에도 없다',
+     judge=['서버', '서버', '서버', '서버', '서버', '가상'],
+     req=['BID-DOC-006'], fc=['BID-DOC-006', 'BID-DOC-007'], screen='고객 /bid-requests/{id}', pri='High'),
+
+dict(id='IT-10-071', flow='Bid/No-Bid 결정', kind='정상', title='Go 로 정하면 정한 사람과 시각이 남고 문서 작성 중으로 전환된다',
+     pre='관리자 계정, 입찰 분석이 분석 완료이고 관리자 결정이 없는 ANALYZING 입찰 건(읽는 중인 서류 없음), Aimbase 제안서 워크플로우가 도는 상태',
+     steps='1. 관리자 화면 [입찰 요청 관리] 에서 그 입찰 건의 입찰 상세 관리를 연다\n'
+           '2. 상태 패널의 GENERATING 전환을 본다\n'
+           '3. 입찰 분석 영역 관리자 결정에서 Go 를 선택하고 [저장] 을 누른다\n'
+           '4. 상태 패널에서 GENERATING 으로 전환한다\n'
+           '5. 화면을 새로고침한다',
+     expect='1. 2단계에서 GENERATING 전환이 막혀 있고 "Bid/No-Bid 결정을 Go 나 조건부 Go 로 정해야 문서 작성으로 넘어갑니다" 가 보인다\n'
+            '2. 3단계 뒤 머리에 관리자 결정 Go, 정한 관리자 이름, 저장 시각이 보이고 GENERATING 전환이 풀린다\n'
+            '3. bid_analyses 지금 회차의 admin_decision 이 GO, decided_by 가 그 관리자, decided_at 이 저장 시각이다\n'
+            '4. 4단계 뒤 state 가 GENERATING 이고 state_history 에 ANALYZING 에서 GENERATING 으로의 줄이 더해진다\n'
+            '5. 5단계 뒤 입찰 분석 영역에 관리자 결정 Go 와 정한 관리자 이름이 그대로 보이고 관리자 결정 폼과 [다시 분석] 이 없다\n'
+            '6. 3단계 결정 저장으로 notification_logs 에 줄이 생기지 않는다',
+     judge=['합동', '합동', '서버', '서버', '가상', '서버'],
+     req=['BID-DOC-007'], fc=['BID-DOC-007'], screen='관리자 /bid-requests/{id}', pri='High'),
+
+dict(id='IT-10-072', flow='Bid/No-Bid 결정', kind='정상', title='조건부 Go 로 조건을 기재해 정하면 문서 작성 중으로 전환된다',
+     pre='관리자 계정, 입찰 분석이 분석 완료이고 관리자 결정이 없는 ANALYZING 입찰 건(읽는 중인 서류 없음)',
+     steps='1. 관리자 결정에서 조건부 Go 를 선택하고 조건 "참여 인력 이력서를 고객에게 받는 조건" 을 기재해 [저장] 을 누른다\n'
+           '2. 상태 패널에서 GENERATING 으로 전환한다',
+     expect='1. 1단계 뒤 머리에 관리자 결정 조건부 Go 와 조건 "참여 인력 이력서를 고객에게 받는 조건" 이 보인다\n'
+            '2. 지금 회차의 admin_decision 이 CONDITIONAL_GO 이고 admin_note 가 기재한 조건이다\n'
+            '3. 2단계 전환이 거부되지 않고 state 가 GENERATING 이 된다',
+     judge=['가상', '서버', '서버'],
+     req=['BID-DOC-007'], fc=['BID-DOC-007'], screen='관리자 /bid-requests/{id}', pri='High'),
+
+dict(id='IT-10-073', flow='Bid/No-Bid 결정', kind='정상', title='No-Go 로 정하면 문서 작성 중은 막히고 종료해도 고객에게 알리지 않는다',
+     pre='관리자 계정, 입찰 분석이 분석 완료인 ANALYZING 입찰 건, 그 고객의 메일 주소',
+     steps='1. 관리자 결정에서 No-Go 를 선택하고 사유 "자격 미달" 을 기재해 [저장] 을 누른다\n'
+           '2. 관리자 토큰으로 POST /admin/bid-requests/{id}/transition 에 GENERATING 을 실어 부른다\n'
+           '3. 상태 패널에서 CLOSED 로 전환한다\n'
+           '4. 입찰 상세 관리를 새로고침한다\n'
+           '5. 관리자 토큰으로 GET /admin/bid-requests/{id}/document-readings 를 부른다',
+     expect='1. 1단계 뒤 머리에 No-Go 와 사유 "자격 미달" 이 보이고 GENERATING 전환이 막혀 있다\n'
+            '2. 2단계 응답이 409 이고 코드가 BID_DECISION_REQUIRED 다\n'
+            '3. 3단계 뒤 state 가 CLOSED 이고 closed_at 이 채워지며 state_history 에 ANALYZING 에서 CLOSED 로의 줄이 더해진다\n'
+            '4. 3단계 전환으로 notification_logs 에 그 고객 주소의 줄이 생기지 않는다\n'
+            '5. 4단계에서 고객 서류 읽기 영역과 입찰 분석 영역이 그대로 보이고 [다시 읽기], [다시 분석], 관리자 결정 폼이 없다\n'
+            '6. 5단계 응답의 readingStarted 가 true 다',
+     judge=['가상', '서버', '서버', '서버', '가상', '서버'],
+     req=['BID-DOC-007'], fc=['BID-DOC-007', 'BID-DOC-004'], screen='관리자 /bid-requests/{id}', pri='High'),
+
+dict(id='IT-10-074', flow='Bid/No-Bid 결정', kind='정상', title='입찰 분석이 실패했거나 회차가 없는 건도 결정을 기록할 수 있다',
+     pre='관리자 계정, 입찰 분석이 분석 실패인 ANALYZING 입찰 건 A, CR-170 배포 전에 분석 단계에 들어가 입찰 분석 회차가 없고 읽는 중인 서류도 없는 ANALYZING 입찰 건 B',
+     steps='1. A 의 입찰 분석 영역 관리자 결정에서 Go 를 선택하고 [저장] 을 누른다\n'
+           '2. B 의 입찰 상세 관리를 연다\n'
+           '3. B 의 관리자 결정에서 Go 를 선택하고 [저장] 을 누른다',
+     expect='1. 1단계 뒤 A 의 지금 회차 status 가 FAILED 그대로이고 admin_decision 이 GO 다\n'
+            '2. 2단계에서 B 의 입찰 분석 영역에 "입찰 분석이 없습니다" 가 보이고 [다시 분석] 과 관리자 결정 [저장] 이 살아 있다\n'
+            '3. 3단계 뒤 B 에 bid_analyses 줄이 1줄 생기고 status 가 DECISION_ONLY, admin_decision 이 GO 다\n'
+            '4. 3단계 뒤 B 의 머리가 결정만이고 종합 분석 리포트, 캡처플랜, Bid/No-Bid 결정 탭이 없다',
+     judge=['서버', '가상', '서버', '가상'],
+     req=['BID-DOC-007'], fc=['BID-DOC-007'], screen='관리자 /bid-requests/{id}', pri='High'),
+
+dict(id='IT-10-075', flow='Bid/No-Bid 결정', kind='정상', title='결정을 다시 정하면 덮어쓰고 정한 시각이 바뀐다',
+     pre='관리자 계정, 관리자 결정이 Go 인 ANALYZING 입찰 건(분석 중 아님)',
+     steps='1. 관리자 결정에서 No-Go 를 선택하고 사유 "가격 경쟁력 부족" 을 기재해 [저장] 을 누른다\n'
+           '2. 관리자 토큰으로 GET /admin/bid-requests/{id}/bid-analysis 를 부른다',
+     expect='1. 1단계 뒤 머리의 관리자 결정이 No-Go 와 사유 "가격 경쟁력 부족" 으로 바뀐다\n'
+            '2. 2단계 응답의 adminDecision 이 NO_GO, adminNote 가 "가격 경쟁력 부족" 이고 decidedAt 이 Go 로 정한 시각보다 뒤다\n'
+            '3. 1단계 뒤 bid_analyses 의 그 입찰 건 줄 수가 1단계 전과 같다',
+     judge=['가상', '서버', '서버'],
+     req=['BID-DOC-007'], fc=['BID-DOC-007'], screen='관리자 /bid-requests/{id}', pri='High'),
+
+dict(id='IT-10-076', flow='Bid/No-Bid 결정', kind='예외', title='결정을 선택하지 않거나 조건부 Go 의 조건, No-Go 의 사유가 비면 결정이 저장되지 않는다',
+     pre='관리자 계정, 입찰 분석이 분석 완료이고 관리자 결정이 없는 ANALYZING 입찰 건',
+     steps='1. 관리자 결정에서 아무것도 선택하지 않고 [저장] 을 누른다\n'
+           '2. 조건부 Go 를 선택하고 조건을 비운 채 [저장] 을 누른다\n'
+           '3. No-Go 를 선택하고 사유를 비운 채 [저장] 을 누른다\n'
+           '4. 관리자 토큰으로 POST /admin/bid-requests/{id}/bid-analysis/decision 에 CONDITIONAL_GO 와 빈 note 를 실어 부른다\n'
+           '5. 같은 요청에 NO_GO 와 빈 note 를 실어 부른다',
+     expect='1. 1단계에서 "결정을 선택하세요" 가 보이고 요청이 가지 않는다\n'
+            '2. 2단계에서 저장 버튼 아래 "조건을 기재하세요" 가 보이고 요청이 가지 않는다\n'
+            '3. 3단계에서 "사유를 기재하세요" 가 보이고 요청이 가지 않는다\n'
+            '4. 4단계 응답이 400 이고 코드가 DECISION_NOTE_REQUIRED 다\n'
+            '5. 5단계 응답이 400 이고 코드가 DECISION_NOTE_REQUIRED 이며 admin_decision 이 빈 값 그대로다',
+     judge=['가상', '가상', '가상', '서버', '서버'],
+     req=['BID-DOC-007'], fc=['BID-DOC-007'], screen='관리자 /bid-requests/{id}', pri='High'),
+
+dict(id='IT-10-077', flow='Bid/No-Bid 결정', kind='예외', title='관리자 결정이 없으면 문서 작성 중으로 전환되지 않는다',
+     pre='관리자 계정, 입찰 분석이 분석 완료이고 관리자 결정이 없는 ANALYZING 입찰 건(읽는 중인 서류 없음)',
+     steps='1. 그 입찰 건의 입찰 상세 관리에서 상태 패널의 GENERATING 전환을 본다\n'
+           '2. 관리자 토큰으로 POST /admin/bid-requests/{id}/transition 에 GENERATING 을 실어 부른다\n'
+           '3. 그 입찰 건의 state 와 state_history 를 조회한다',
+     expect='1. 1단계에서 GENERATING 전환이 막혀 있고 "Bid/No-Bid 결정을 Go 나 조건부 Go 로 정해야 문서 작성으로 넘어갑니다" 가 보인다\n'
+            '2. 2단계 응답이 409 이고 코드가 BID_DECISION_REQUIRED 다\n'
+            '3. 3단계에서 state 가 ANALYZING 그대로이고 state_history 줄 수가 늘지 않았다',
+     judge=['가상', '서버', '서버'],
+     req=['BID-DOC-007'], fc=['BID-DOC-007'], screen='관리자 /bid-requests/{id}', pri='High'),
 
 ]

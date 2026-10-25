@@ -1,6 +1,6 @@
 # SAM.gov Bidding Agency Platform API 설계
 
-> 설계 버전: 1.22 | 최종 수정: 2026-10-24 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-144, CR-146, CR-147, CR-152, CR-153, CR-155, CR-157, CR-159, CR-160, CR-162, CR-168, CR-169
+> 설계 버전: 1.23 | 최종 수정: 2026-10-25 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-144, CR-146, CR-147, CR-152, CR-153, CR-155, CR-157, CR-159, CR-160, CR-162, CR-168, CR-169, CR-170
 
 > 단계: 3. Detail Design | 실행스펙 섹션 3에 포함
 >
@@ -553,10 +553,15 @@ CR-137 전에 있던 `POST /opportunities/{id}/qualification-check`(AI 자격 �
 | GET | /admin/bid-requests/{id}/document-readings | 고객 서류 읽기 후보 목록 (CR-169) | 🔒 ADMIN | BID-DOC-004 |
 | GET | /admin/document-readings/{readingId} | 고객 서류 사실 목록 (CR-169) | 🔒 ADMIN | BID-DOC-004 |
 | POST | /admin/bid-requests/{id}/document-readings/run | 고객 서류 다시 읽기 (CR-169) | 🔒 ADMIN | BID-DOC-004 |
+| GET | /admin/bid-requests/{id}/bid-analysis | 지금 입찰 분석 (CR-170) | 🔒 ADMIN | BID-DOC-006 |
+| POST | /admin/bid-requests/{id}/bid-analysis/run | 다시 분석 (CR-170) | 🔒 ADMIN | BID-DOC-006 |
+| POST | /admin/bid-requests/{id}/bid-analysis/decision | Bid/No-Bid 결정 기록 (CR-170) | 🔒 ADMIN | BID-DOC-007 |
 
 **POST /admin/bid-requests/{id}/transition (CR-169)**: 입찰 건이 ANALYZING 이 되면 고객 서류 읽기를 비동기로 시작한다. ANALYZING 에서 GENERATING 으로 갈 때 후보 가운데 읽는 중(워크플로우 대기 한도 안)인 서류가 있으면 409 `DOCUMENT_READING_IN_PROGRESS`(BIZ-087).
 
-**GET /admin/bid-requests/{id}/document-readings 응답 (CR-169)**: `{readingStarted, inProgress, items[]}`. readingStarted 는 그 건이 분석 단계를 지났는지, inProgress 는 읽는 중인 후보가 있는지다. items 줄 하나:
+**POST /admin/bid-requests/{id}/transition (CR-170)**: ANALYZING 진입 때 읽을 대상이 없고 읽는 중인 후보도 없으면 입찰 분석을 바로 시작한다(BIZ-090). ANALYZING 에서 GENERATING 으로 갈 때 고객 서류를 읽는 중이면 먼저 409 `DOCUMENT_READING_IN_PROGRESS`(BIZ-087)이고, 읽는 중이 아니면 지금 입찰 분석의 관리자 결정이 GO, CONDITIONAL_GO 가 아니면 409 `BID_DECISION_REQUIRED`(BIZ-092). ANALYZING 에서 CLOSED 를 허용한다.
+
+**GET /admin/bid-requests/{id}/document-readings 응답 (CR-169)**: `{readingStarted, inProgress, items[]}`. readingStarted 는 그 건이 분석 단계에 들어간 적이 있는지(지금 상태가 ANALYZING 이후이거나, 종료한 건은 상태 이력 state_history 에 ANALYZING 진입이 있으면 true. CR-170 에서 분석에서 종료로 가는 전이가 생겨 지금 상태만으로 판단하지 않는다), inProgress 는 읽는 중인 후보가 있는지다. items 줄 하나:
 
 | 칸 | 설명 |
 |----|------|
@@ -573,6 +578,21 @@ CR-137 전에 있던 `POST /opportunities/{id}/qualification-check`(AI 자격 �
 **GET /admin/document-readings/{readingId} 응답 (CR-169)**: `{readingId, fileName, status, readAs, visionUsed, failureReason, readAt, facts[{category, key, value, page, anchor, confidence, readMode}]}`. 없으면 404.
 
 **POST /admin/bid-requests/{id}/document-readings/run (CR-169)**: 요청 `{readingIds?: [], force: false}`. readingIds 가 비면 읽음이 아닌 후보 전부를, 있으면 그것만(그 건의 후보가 아니면 400) 다시 읽는다. force 면 읽음도 다시 읽는다. 읽는 중인 서류는 건너뛴다. 입찰 건이 ANALYZING 이 아니면 409 `NOT_ANALYZING`. 응답은 목록 조회와 같다.
+
+**GET /admin/bid-requests/{id}/bid-analysis 응답 (CR-170)**: `{analysis, readingInProgress}`. analysis 는 지금 분석이고 회차가 없으면 null 이다. readingInProgress 는 읽는 중인 후보 서류가 있는지다. analysis 칸:
+
+| 칸 | 설명 |
+|----|------|
+| analysisId, status, startedAt, finishedAt, failureReason | 회차. 대기 한도를 넘은 RUNNING 은 FAILED 로 바꿔 응답한다 |
+| report, capturePlan, decision | 산출물 본문. 아직 없으면 null. 칸별 내용은 CR-170 문서 2.4 |
+| questions | 확인 필요 `[{target, question, reason, field}]` |
+| pwinPercent, aiVerdict, verdictReason, scores, strengths, weaknesses, issueRanking | 서버 계산(BIZ-091) |
+| adminDecision, adminNote, decidedBy{id, name}, decidedAt | 관리자 결정 |
+| startedBy{id, name} | 시작한 관리자 |
+
+**POST /admin/bid-requests/{id}/bid-analysis/run (CR-170)**: 요청 본문 없음. 신규 회차를 RUNNING 으로 만들고 워크플로우 bid-analysis 를 비동기로 시작한다. 입찰 건이 ANALYZING 이 아니거나, 지금 분석이 분석 중이거나, 읽는 중인 후보 서류가 있으면 409 `BID_ANALYSIS_NOT_ALLOWED`(사유 `NOT_ANALYZING`, `ANALYSIS_RUNNING`, `READING_IN_PROGRESS`). 응답은 조회와 같다.
+
+**POST /admin/bid-requests/{id}/bid-analysis/decision (CR-170)**: 요청 `{decision, note}`. decision 은 `GO`, `CONDITIONAL_GO`, `NO_GO`. 입찰 건이 ANALYZING 이 아니거나 지금 분석이 분석 중이면 409 `BID_ANALYSIS_NOT_ALLOWED`. CONDITIONAL_GO 와 NO_GO 는 note 가 비면 400 `DECISION_NOTE_REQUIRED`. 지금 분석이 없으면 DECISION_ONLY 회차를 생성해 기록한다. 다시 정하면 덮어쓰고 정한 사람과 시각을 갱신한다. 응답은 조회와 같다(BIZ-092).
 
 ---
 
@@ -850,6 +870,9 @@ CR-137 전에 있던 `POST /opportunities/{id}/qualification-check`(AI 자격 �
 | save_section_blocks | 절 블록 저장 (CR-028). CR-159 변경 없음 | sectionId, blocks | BID-DOC-001 |
 | get_section_verify_input | 절 검증 입력 (CR-031). CR-159: requirements(get_section_context 와 같은 꼴)를 더 준다. CR-169: sourceDocuments(get_section_context 와 같은 꼴)를 더 준다(BIZ-089) | sectionId | BID-DOC-001, BID-DOC-005 |
 | save_client_document_facts | 고객 서류 읽기 결과 저장 (CR-169). results 줄의 sourceFile 을 targets 의 targetPath 와 맞춰 readingId 별로 사실을 저장하고 읽음으로 바꾼다. 사실이 0개여도 읽음이다. targets 에 없는 경로와 그 건 후보가 아닌 readingId 는 버리고 응답의 ignored 로 준다. 저장한 수와 버린 수를 돌려준다 | bidRequestId, targets[{readingId, targetPath}], results(extract_facts 의 structured_data 배열) | BID-DOC-004 |
+| get_bid_analysis_input | 입찰 분석 입력 (CR-170). step 마다 필요한 것만 제공한다. REPORT: 공고 메타(공고번호, 종류, 기관, NAICS, PSC, 게시일, 마감일), 공고 분석(get_proposal_design_input 과 같은 꼴), 같은 공고번호의 다른 공고, 같은 기관 최근 공고 20건(제목, 종류, 공고번호, 게시일, NAICS, 낙찰사), 고객 회사 칸, 고객 서류 사실(분류별, 값 300자까지), 참가 자격 답. CAPTURE_PLAN: 공고 메타, 공고 분석 요약과 평가 항목 구조, 고객 회사 칸, 고객 서류 사실, 그 회차의 종합 분석 리포트. DECISION: 공고 메타, 그 회차의 종합 분석 리포트(자격, 경쟁사, BCC, 공정성, 발주 이력)와 캡처플랜, 고객 회사 칸, 매트릭스 줄 수와 고객 제출 줄, 정책 가중치 | bidRequestId, analysisId, step | BID-DOC-006 |
+| search_award_history | 낙찰 이력 찾기 (CR-170). 읽기만. federal_contracts 와 낙찰 공고를 같이 찾아 줄마다 source `FEDERAL_CONTRACT`, `SAM_AWARD_NOTICE` 를 단다. 줄: 계약번호나 공고번호, 제목이나 설명, 수주사 이름과 UEI, 금액, 시작일과 끝날, NAICS, PSC, 계약 부서, 계약 구분. 원본 JSON 은 제공하지 않는다. limit 은 50 까지(초기값 20). 조건이 하나도 없으면 거부한다 | naicsCodes[], pscCodes[], recipientName, keyword, solicitationNumber, fromDate, toDate, limit | BID-DOC-006 |
+| save_bid_analysis | 입찰 분석 저장 (CR-170). 그 회차가 RUNNING 일 때만 저장한다. part 는 REPORT, CAPTURE_PLAN, DECISION 순서이고 앞 단계가 없으면 거부한다. 본문 꼴이 틀리면 틀린 곳의 경로를 응답하고 거부한다. questions 는 앞 단계 것 뒤에 이어 붙인다. DECISION 이면 Pwin, 판정, 강점과 약점, 핵심이슈 순위를 계산하고 DONE 으로 바꾼다(BIZ-091). 응답은 저장한 것과 계산 값이다 | bidRequestId, analysisId, part, body, questions | BID-DOC-006 |
 | get_notice_verify_input | 공고문 검증 입력 (CR-031). CR-159 변경 없음 | noticeId | BID-OPP-006 |
 | save_verification_result | 검증 결과 저장 (CR-031). CR-159: 제안서 절이면 requirementChecks[{reqId, answered, evidenceQuote, reason}] 를 더 받아 충족 매핑을 채운다(BIZ-077) | targetType, targetId, verdict, attempt, hallucinations, missingFromSource, wordCount, requirementChecks | BID-COMP-001 |
 
@@ -881,9 +904,12 @@ app.aimbase:
     opportunity-analysis: ${AIMBASE_WF_OPP_ANALYSIS:...}
     slot-pattern-extraction: ${AIMBASE_WF_SLOT_PATTERN:placeholder-slot-pattern-workflow-id}  # CR-013
     client-document-read: ${AIMBASE_WF_CLIENT_DOCUMENT_READ:client-document-read}  # CR-169
+    bid-analysis: ${AIMBASE_WF_BID_ANALYSIS:bid-analysis}  # CR-170
 ```
 
 **고객 서류 읽기 워크플로우 입력 (CR-169)**: `{bidRequestId, files[{readingId, fileName, downloadUrl, workspacePath}], hwpFiles[{readingId, workspacePath, convertedPath}], targets[{readingId, targetPath}]}`. workspacePath 는 `docs/{readingId}.{확장자}`(그림은 `.pdf`, DOCX, XLSX, PPTX, TXT, CSV, MD 는 `.txt`, HWP 는 원래 확장자), HWP 의 targetPath 는 convertedPath(`docs/{readingId}.txt`), 나머지는 workspacePath 다. 읽을 수 없는 형식은 넣지 않는다. 실행이 끝나면 서버가 targets 가운데 아직 읽는 중인 줄을 읽지 못함으로 바꾼다.
+
+**입찰 분석 워크플로우 입력 (CR-170)**: `{bidRequestId, analysisId}`. 단계 report, capture_plan, decision 이 차례로 get_bid_analysis_input 과 save_bid_analysis 를 부른다(AGENT_CALL, 연결 cli-runner-bidding-tools-001, 스킬 sam-proposal). 정의는 `docs/workflows/bid-analysis.steps.json`.
 
 ---
 
@@ -922,7 +948,7 @@ app.aimbase:
 | E. 자격 진단 | 4 | 3, CR-137, CR-140 |
 | F. 입찰 접수 | 7 | 4 |
 | G. 고객 문서 제출 | 8 | 4, CR-010, CR-141 |
-| H. 입찰 관리 (Admin) | 6 | 4 |
+| H. 입찰 관리 (Admin) | 12 | 4, CR-169, CR-170 |
 | I. 문서 템플릿 (Admin) | 5 | 6 |
 | J. 문서 편집 | 7 | 7 |
 | K. 회원 관리 (Admin) | 1 | — |
@@ -933,10 +959,10 @@ app.aimbase:
 | P. 성공 제안서 패턴 (Admin) | 13 | CR-013 |
 | B-3. 공고문 관리 (Admin) | 9 | CR-016, CR-039, CR-040, CR-159 |
 | J-2. 제안서 트리 (Admin) | 8 | CR-030, CR-159 |
-| MCP Tools | 19 | 5, CR-003, CR-013, CR-028, CR-031, CR-141 |
+| MCP Tools | 23 | 5, CR-003, CR-013, CR-028, CR-031, CR-141, CR-169, CR-170 |
 | MCP SSE 엔드포인트 | 2 | CR-002 |
 | Aimbase 워크플로우 호출 | 2 | CR-002 |
-| **합계** | **REST 140 + MCP 19 + SSE 2 + Aimbase 2** | |
+| **합계** | **REST 146 + MCP 23 + SSE 2 + Aimbase 2** | |
 
 > CR-141: G 는 문서 3, 슬롯 3(올리기, 서류함에서 고르기, 빼기. 목록 조회는 걷어냄), 제출 전 검사 2 다. 그전에는 슬롯을 세지 않았다.
 
@@ -945,6 +971,8 @@ app.aimbase:
 > CR-153: 고객 화면 사진 관리자 4(B-6)와 공개 2(C-6)를 더해 123 이다.
 
 > CR-159: 이 표에 없던 B-3 공고문 관리 8 과 J-2 제안서 트리 7, 이번에 더한 둘(컴플라이언스 매트릭스, 커버리지 검증)을 넣어 REST 140 이다. MCP 는 표에 빠져 있던 제안서와 검증 도구 일곱을 넣어 19 다.
+
+> CR-170: H 는 CR-169 의 고객 서류 읽기 셋이 빠져 있던 것과 이번 입찰 분석 셋을 더해 12, REST 146 이다. MCP 는 CR-169 의 save_client_document_facts 가 빠져 있던 것과 이번 셋을 더해 23 이다.
 
 ---
 
