@@ -404,10 +404,10 @@ dict(id='IT-10-013', flow='제안서 절 관리', kind='예외', title='잠긴 �
 dict(id='IT-10-014', flow='생성 완료 알림', kind='정상', title='제안서 생성이 끝나면 관리자에게 완료 메일이 간다',
      pre='관리자 계정과 관리자 메일함, IT-10-001 과 같은 조건의 입찰 건(ANALYZING, 입찰 분석의 관리자 결정이 Go), Aimbase 문서 생성 워크플로우가 도는 상태',
      steps='1. 관리자 화면에서 그 입찰 건을 GENERATING 으로 전환하고 생성이 끝날 때까지 기다린다\n2. 관리자 메일함을 연다\n3. 메일의 바로가기 링크를 누른다',
-     expect='1. 관리자 메일함에 문서 생성 완료 메일이 1통 온다\n'
+     expect='1. 관리자 메일함에 문서 생성 완료 메일이 묶인 문서마다 1통씩 온다(문서가 둘이면 2통)\n'
             '2. 메일에 생성된 문서 유형과 그 입찰 건의 공고 제목이 있다\n'
             '3. 바로가기 링크를 누르면 관리자 화면에서 그 입찰 건이나 그 문서가 열린다\n'
-            '4. 알림 이력에 notification_type DOCUMENT_GENERATED, success true 인 행이 그 입찰 건을 참조로 1건 더해진다',
+            '4. 알림 이력에 notification_type DOCUMENT_GENERATED, success true 인 행이 그 입찰 건을 참조로 관리자 메일 주소마다 묶인 문서 수만큼 더해진다',
      judge=['합동', '합동', '합동', '서버'],
      req=['BID-DOC-002'], fc=['BID-DOC-002'], screen='', pri='High'),
 
