@@ -25,7 +25,7 @@ export const COMPANY = {
   name: '(주)우진이엔씨',
   ceo: '(대표자명)',
   businessNumber: '(사업자등록번호)',
-  address: '경기도 평택시 팽성읍 안정 순환로 153-16',
+  address: '서울 강서구 화곡로68길 82, 402호(강서IT밸리)',
   tel: '031-651-0433',
   mobile: '010-7156-7707',
   email: 'woojinenc25@gmail.com',
