@@ -13,19 +13,19 @@
     ""
    ],
    "comment": "서버 판정 기대결과 2/6개",
-   "date": "2026-10-25",
-   "at": "2026-10-26 00:01:01",
+   "date": "2026-10-26",
+   "at": "2026-10-26 21:02:09",
    "tester": "SERVER",
    "evidence": {
     "0": {
      "q": "시딩 키 10.b001_bid: SELECT '5eed0003-1010-0000-0000-000000000001' AS id, HEX(id) AS hex, state, JSON_LENGTH(state_history) AS hist FROM bid_requests WHERE id = UNHEX('5EED0003101000000000000000000001')\nPOST /api/admin/bid-requests/5eed0003-1010-0000-0000-000000000001/transition (admin:smoke-admin@example.com) {\"toState\": \"GENERATING\", \"notes\": \"IT-10-001 서버 판정\"}\nGET /api/admin/bid-requests/5eed0003-1010-0000-0000-000000000001 (admin:smoke-admin@example.com) 끝 식 x['body']['state'] != 'GENERATING' 이 참이 될 때까지 3600초\nSELECT state, JSON_LENGTH(state_history) AS hist, JSON_UNQUOTE(JSON_EXTRACT(state_history, '$[last-1].toState')) AS prev_state, JSON_UNQUOTE(JSON_EXTRACT(state_history, '$[last].toState')) AS to_state FROM bid_requests WHERE id = UNHEX('5EED0003101000000000000000000001')",
-     "r": "1행 [{\"id\": \"5eed0003-1010-0000-0000-000000000001\", \"hex\": \"5EED0003101000000000000000000001\", \"state\": \"ANALYZING\", \"hist\": \"0\"}]\n200 {\"id\": \"5eed0003-1010-0000-0000-000000000001\", \"opportunityId\": \"8753846d-9735-4a98-970c-e3171a17ac11\", \"noticeId\": \"a14256be-4670-41f3-8ed9-5bc858a7c507\", \"opportunityTitle\": \"(LCS) GROUND MAINTENANCE SERVICES, USAG-DAEGU AREA WIDE, KOREA \", \"displayTitle\": \"대구 지역 전체 지상 정비(조경) 용역 (USAG-Daegu), 한국 지원 비용 분담 프로그램(LCS)\", \"solicitationNumber\": \"W90VN926QA049\", \"agencyName\": \"DEPT OF DEFENSE.DEPT OF TH\n끝남 63회 1863초 200 {\"id\": \"5eed0003-1010-0000-0000-000000000001\", \"opportunityId\": \"8753846d-9735-4a98-970c-e3171a17ac11\", \"noticeId\": \"a14256be-4670-41f3-8ed9-5bc858a7c507\", \"opportunityTitle\": \"(LCS) GROUND MAINTENANCE SERVICES, USAG-DAEGU AREA WIDE, KOREA \", \"displayTitle\": \"대구 지역 전체 지상 정비(조경) 용역 (USAG-Daegu), 한국 지원 비용 분담 프로그램(LCS)\", \"solicitationNumber\": \"W90VN926QA049\", \"agencyName\": \"DEPT OF DEFENSE.DEPT OF TH\n1행 [{\"state\": \"REVIEW\", \"hist\": \"2\", \"prev_state\": \"GENERATING\", \"to_state\": \"REVIEW\"}]\ncheck r[1]['status'] == 200 and r[3][0]['state'] == 'REVIEW' and int(r[3][0]['hist']) == int(r[0][0]['hist']) + 2 and r[3][0]['prev_state'] == 'GENERATING' and r[3][0]['to_state'] == 'REVIEW' -> True",
-     "at": "2026-10-25 23:29:56"
+     "r": "1행 [{\"id\": \"5eed0003-1010-0000-0000-000000000001\", \"hex\": \"5EED0003101000000000000000000001\", \"state\": \"ANALYZING\", \"hist\": \"0\"}]\n200 {\"id\": \"5eed0003-1010-0000-0000-000000000001\", \"opportunityId\": \"8753846d-9735-4a98-970c-e3171a17ac11\", \"noticeId\": \"a14256be-4670-41f3-8ed9-5bc858a7c507\", \"opportunityTitle\": \"(LCS) GROUND MAINTENANCE SERVICES, USAG-DAEGU AREA WIDE, KOREA \", \"displayTitle\": \"대구 지역 전체 부지 유지관리(Ground Maintenance) 용역 (한국 현지조달 LCS)\", \"solicitationNumber\": \"W90VN926QA049\", \"agencyName\": \"DEPT OF DEFENSE.DEPT OF THE AR\n끝남 96회 2855초 200 {\"id\": \"5eed0003-1010-0000-0000-000000000001\", \"opportunityId\": \"8753846d-9735-4a98-970c-e3171a17ac11\", \"noticeId\": \"a14256be-4670-41f3-8ed9-5bc858a7c507\", \"opportunityTitle\": \"(LCS) GROUND MAINTENANCE SERVICES, USAG-DAEGU AREA WIDE, KOREA \", \"displayTitle\": \"대구 지역 전체 부지 유지관리(Ground Maintenance) 용역 (한국 현지조달 LCS)\", \"solicitationNumber\": \"W90VN926QA049\", \"agencyName\": \"DEPT OF DEFENSE.DEPT OF THE AR\n1행 [{\"state\": \"REVIEW\", \"hist\": \"2\", \"prev_state\": \"GENERATING\", \"to_state\": \"REVIEW\"}]\ncheck r[1]['status'] == 200 and r[3][0]['state'] == 'REVIEW' and int(r[3][0]['hist']) == int(r[0][0]['hist']) + 2 and r[3][0]['prev_state'] == 'GENERATING' and r[3][0]['to_state'] == 'REVIEW' -> True",
+     "at": "2026-10-26 20:14:30"
     },
     "1": {
      "q": "시딩 키 10.b001_bid: SELECT '5eed0003-1010-0000-0000-000000000001' AS id, HEX(id) AS hex, state, JSON_LENGTH(state_history) AS hist FROM bid_requests WHERE id = UNHEX('5EED0003101000000000000000000001')\nSELECT bd.status, JSON_UNQUOTE(JSON_EXTRACT(v.content_json, '$.type')) AS t, JSON_LENGTH(v.content_json, '$.content') AS n FROM bid_documents bd LEFT JOIN bid_document_versions v ON v.document_id = bd.id AND v.version_no = bd.current_version_no WHERE bd.bid_request_id = UNHEX('5EED0003101000000000000000000001')",
-     "r": "1행 [{\"id\": \"5eed0003-1010-0000-0000-000000000001\", \"hex\": \"5EED0003101000000000000000000001\", \"state\": \"REVIEW\", \"hist\": \"2\"}]\n2행 [{\"status\": \"DRAFT\", \"t\": \"doc\", \"n\": \"15\"}, {\"status\": \"DRAFT\", \"t\": \"doc\", \"n\": \"173\"}]\ncheck len(r[1]) > 0 and all(x['status'] == 'DRAFT' and x['t'] == 'doc' and int(x['n'] or 0) > 0 for x in r[1]) -> True",
-     "at": "2026-10-25 23:29:56"
+     "r": "1행 [{\"id\": \"5eed0003-1010-0000-0000-000000000001\", \"hex\": \"5EED0003101000000000000000000001\", \"state\": \"REVIEW\", \"hist\": \"2\"}]\n3행 [{\"status\": \"DRAFT\", \"t\": \"doc\", \"n\": \"151\"}, {\"status\": \"DRAFT\", \"t\": \"doc\", \"n\": \"27\"}, {\"status\": \"DRAFT\", \"t\": \"doc\", \"n\": \"26\"}]\ncheck len(r[1]) > 0 and all(x['status'] == 'DRAFT' and x['t'] == 'doc' and int(x['n'] or 0) > 0 for x in r[1]) -> True",
+     "at": "2026-10-26 20:14:30"
     }
    }
   },
@@ -1282,6 +1282,49 @@
      "q": "GET /api/admin/collection/runs?size=20 (admin:smoke-admin@example.com)",
      "r": "200 {\"content\": [{\"id\": \"4ecf68c0-b865-4473-baef-238906c51a24\", \"createdAt\": \"2026-10-25T23:00:00\", \"updatedAt\": \"2026-10-25T23:00:01\", \"keyword\": \"411TH CSB\", \"startedAt\": \"2026-10-25T23:00:00\", \"completedAt\": \"2026-10-25T23:00:01\", \"totalFetched\": 4, \"newCount\": 0, \"updatedCount\": 0, \"success\": true, \"errorMessage\": null, \"triggeredBy\": \"SCHEDULED\"}, {\"id\": \"d95eaa42-6ff3-47ac-88cc-0f38cabd39a5\", \"c\ncheck r[0]['status'] == 200 and len([x for x in r[0]['body']['content'] if x.get('completedAt')]) > 0 and [x for x in r[0]['body']['content'] if x.get('completedAt')][0]['success'] is True -> True",
      "at": "2026-10-25 23:29:56"
+    }
+   }
+  },
+  "WJBID_10014": {
+   "testId": "WJBID_10014",
+   "result": "NG",
+   "steps": [
+    "",
+    "",
+    "",
+    "fail"
+   ],
+   "comment": "서버 판정 기대결과 1/4개. 미충족 4번",
+   "date": "2026-10-26",
+   "at": "2026-10-26 21:02:09",
+   "tester": "SERVER",
+   "evidence": {
+    "3": {
+     "q": "시딩 키 10.b001_bid: SELECT '5eed0003-1010-0000-0000-000000000001' AS id, HEX(id) AS hex, state, JSON_LENGTH(state_history) AS hist FROM bid_requests WHERE id = UNHEX('5EED0003101000000000000000000001')\nSELECT (SELECT COUNT(*) FROM members WHERE role = 'ADMIN') AS admins, (SELECT COUNT(*) FROM bid_documents WHERE bid_request_id = UNHEX('5EED0003101000000000000000000001')) AS docs, COUNT(*) AS n, COUNT(DISTINCT n.recipient_email) AS emails FROM notification_logs n WHERE n.reference_id = UNHEX('5EED0003101000000000000000000001') AND n.notification_type = 'DOCUMENT_GENERATED' AND n.success = 1 AND n.created_at >= (SELECT MIN(v.created_at) FROM bid_documents bd JOIN bid_document_versions v ON v.document_id = bd.id AND v.version_no = bd.current_version_no WHERE bd.bid_request_id = UNHEX('5EED0003101000000000000000000001'))",
+     "r": "1행 [{\"id\": \"5eed0003-1010-0000-0000-000000000001\", \"hex\": \"5EED0003101000000000000000000001\", \"state\": \"REVIEW\", \"hist\": \"2\"}]\n1행 [{\"admins\": \"5\", \"docs\": \"3\", \"n\": \"3\", \"emails\": \"1\"}]\ncheck int(r[1][0]['admins']) > 0 and int(r[1][0]['docs']) > 0 and int(r[1][0]['n']) == int(r[1][0]['admins']) * int(r[1][0]['docs']) and int(r[1][0]['emails']) == int(r[1][0]['admins']) -> False",
+     "at": "2026-10-26 20:14:30"
+    }
+   }
+  },
+  "WJBID_14028": {
+   "testId": "WJBID_14028",
+   "result": "N/T",
+   "steps": [
+    "",
+    "",
+    "pass",
+    "",
+    ""
+   ],
+   "comment": "서버 판정 기대결과 1/5개",
+   "date": "2026-10-26",
+   "at": "2026-10-26 21:02:59",
+   "tester": "SERVER",
+   "evidence": {
+    "2": {
+     "q": "시딩 키 10.b001_bid: SELECT '5eed0003-1010-0000-0000-000000000001' AS id, HEX(id) AS hex, state, JSON_LENGTH(state_history) AS hist FROM bid_requests WHERE id = UNHEX('5EED0003101000000000000000000001')\nSELECT state, JSON_UNQUOTE(JSON_EXTRACT(state_history, '$[last-1].toState')) AS prev_state, JSON_UNQUOTE(JSON_EXTRACT(state_history, '$[last].toState')) AS to_state, DATE_FORMAT((TIMESTAMP(CONCAT_WS('-', JSON_EXTRACT(state_history, '$[last-1].timestamp[0]'), JSON_EXTRACT(state_history, '$[last-1].timestamp[1]'), JSON_EXTRACT(state_history, '$[last-1].timestamp[2]')), CONCAT_WS(':', JSON_EXTRACT(state_history, '$[last-1].timestamp[3]'), JSON_EXTRACT(state_history, '$[last-1].timestamp[4]'), JSON_EXTRACT(state_history, '$[last-1].timestamp[5]'))) + INTERVAL FLOOR(JSON_EXTRACT(state_history, '$[last-1].timestamp[6]') / 1000) MICROSECOND), '%Y-%m-%d %H:%i:%s.%f') AS gen_at, DATE_FORMAT((TIMESTAMP(CONCAT_WS('-', JSON_EXTRACT(state_history, '$[last].timestamp[0]'), JSON_EXTRACT(state_history, '$[last].timestamp[1]'), JSON_EXTRACT(state_history, '$[last].timestamp[2]')), CONCAT_WS(':', JSON_EXTRACT(state_history, '$[last].timestamp[3]'), JSON_EXTRACT(state_history, '$[last].timestamp[4]'), JSON_EXTRACT(state_history, '$[last].timestamp[5]'))) + INTERVAL FLOOR(JSON_EXTRACT(state_history, '$[last].timestamp[6]') / 1000) MICROSECOND), '%Y-%m-%d %H:%i:%s.%f') AS review_at FROM bid_requests WHERE id = UNHEX('5EED0003101000000000000000000001')\nSELECT bd.document_type, bd.current_version_no AS ver, DATE_FORMAT(v.created_at, '%Y-%m-%d %H:%i:%s.%f') AS saved_at FROM bid_documents bd LEFT JOIN bid_document_versions v ON v.document_id = bd.id AND v.version_no = bd.current_version_no WHERE bd.bid_request_id = UNHEX('5EED0003101000000000000000000001')",
+     "r": "1행 [{\"id\": \"5eed0003-1010-0000-0000-000000000001\", \"hex\": \"5EED0003101000000000000000000001\", \"state\": \"REVIEW\", \"hist\": \"2\"}]\n1행 [{\"state\": \"REVIEW\", \"prev_state\": \"GENERATING\", \"to_state\": \"REVIEW\", \"gen_at\": \"2026-10-26 20:14:31.815705\", \"review_at\": \"2026-10-26 21:02:00.865305\"}]\n3행 [{\"document_type\": \"TECHNICAL_PROPOSAL\", \"ver\": \"2\", \"saved_at\": \"2026-10-26 20:52:08.000000\"}, {\"document_type\": \"PRICING_SUMMARY\", \"ver\": \"2\", \"saved_at\": \"2026-10-26 21:02:00.000000\"}, {\"document_type\": \"PAST_PERFORMANCE\", \"ver\": \"2\", \"saved_at\": \"2026-10-26 20:55:39.000000\"}]\ncheck r[1][0]['state'] == 'REVIEW' and r[1][0]['prev_state'] == 'GENERATING' and r[1][0]['to_state'] == 'REVIEW' and len(r[2]) > 0 and all(x['document_type'] and int(x['ver'] or 0) >= 2 and x['saved_at'] and r[1][0]['gen_at'] <= x['saved_at'] <= r[1][0]['review_at'] for x in r[2]) -> True",
+     "at": "2026-10-26 21:02:58"
     }
    }
   }

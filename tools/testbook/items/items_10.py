@@ -409,7 +409,18 @@ dict(id='IT-10-014', flow='생성 완료 알림', kind='정상', title='제안�
             '3. 바로가기 링크를 누르면 관리자 화면에서 그 입찰 건이나 그 문서가 열린다\n'
             '4. 알림 이력에 notification_type DOCUMENT_GENERATED, success true 인 행이 그 입찰 건을 참조로 관리자 메일 주소마다 묶인 문서 수만큼 더해진다',
      judge=['합동', '합동', '합동', '서버'],
-     req=['BID-DOC-002'], fc=['BID-DOC-002'], screen='', pri='High'),
+     req=['BID-DOC-002'], fc=['BID-DOC-002'], screen='', pri='High',
+     probe={4: dict(steps=[('key', '10.b001_bid'),
+                           ('sql', f"SELECT (SELECT COUNT(*) FROM members WHERE role = 'ADMIN') AS admins, "
+                                   f"(SELECT COUNT(*) FROM bid_documents WHERE bid_request_id = {THIS_BID}) AS docs, "
+                                   f"COUNT(*) AS n, COUNT(DISTINCT n.recipient_email) AS emails FROM notification_logs n "
+                                   f"WHERE n.reference_id = {THIS_BID} AND n.notification_type = 'DOCUMENT_GENERATED' AND n.success = 1 "
+                                   f"AND n.created_at >= (SELECT MIN(v.created_at) FROM bid_documents bd JOIN bid_document_versions v "
+                                   f"ON v.document_id = bd.id AND v.version_no = bd.current_version_no WHERE bd.bid_request_id = {THIS_BID})")],
+                    need="r[0][0]['state'] != 'ANALYZING'",
+                    check="int(r[1][0]['admins']) > 0 and int(r[1][0]['docs']) > 0 "
+                          "and int(r[1][0]['n']) == int(r[1][0]['admins']) * int(r[1][0]['docs']) "
+                          "and int(r[1][0]['emails']) == int(r[1][0]['admins'])")}),
 
 dict(id='IT-10-015', flow='문서 편집', kind='정상', title='관리자가 초안 문서를 고쳐 저장하면 새 버전이 생긴다',
      pre='관리자 계정, REVIEW 상태 입찰 건의 DRAFT 문서 1건(버전 1)',
