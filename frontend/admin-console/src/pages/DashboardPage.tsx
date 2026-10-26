@@ -1,25 +1,34 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { CircleCheck, FilePenLine, Loader } from 'lucide-react'
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTable,
+  CardTitle,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@therecommerce-develop/ds-ui'
 import { getBidRequestStats, getAdminBidRequests } from '../api/client'
-import { STATE_LABELS } from '../utils/bidState'
-
-const STATE_COLORS: Record<string, string> = {
-  ANALYZING: 'bg-purple-100 text-purple-700',
-  GENERATING: 'bg-blue-100 text-blue-700',
-  REVIEW: 'bg-yellow-100 text-yellow-700',
-  CONFIRMED: 'bg-green-100 text-green-700',
-  SUBMITTED: 'bg-emerald-100 text-emerald-700',
-  CLOSED: 'bg-gray-100 text-gray-600',
-}
+import StateBadge from '../components/StateBadge'
+import { Loading, TableMessageRow } from '../components/LoadState'
 
 interface BidRequest {
   id: string
   state: string
-  opportunity?: { title: string; organizationName: string }
-  member?: { email: string; companyName: string }
+  opportunityTitle?: string
+  agencyName?: string
+  memberEmail?: string
   createdAt?: string
 }
 
 export default function DashboardPage() {
+  const navigate = useNavigate()
   const [stats, setStats] = useState<Record<string, number>>({})
   const [recent, setRecent] = useState<BidRequest[]>([])
   const [loading, setLoading] = useState(true)
@@ -37,79 +46,63 @@ export default function DashboardPage() {
   const submitted = stats.SUBMITTED ?? 0
 
   const STAT_CARDS = [
-    { label: '전체 입찰 요청', value: total, icon: 'fa-solid fa-file-contract', color: 'text-blue-600', bg: 'bg-blue-50' },
-    { label: '진행 중', value: active, icon: 'fa-solid fa-spinner', color: 'text-purple-600', bg: 'bg-purple-50' },
-    { label: '제출 완료', value: submitted, icon: 'fa-solid fa-circle-check', color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { label: '전체 입찰 요청', value: total, Icon: FilePenLine, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { label: '진행 중', value: active, Icon: Loader, color: 'text-purple-600', bg: 'bg-purple-50' },
+    { label: '제출 완료', value: submitted, Icon: CircleCheck, color: 'text-emerald-600', bg: 'bg-emerald-50' },
   ]
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64 text-gray-400">
-        <i className="fa-solid fa-circle-notch fa-spin mr-2" /> 불러오는 중...
-      </div>
-    )
-  }
+  if (loading) return <Loading className="h-64" />
 
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-xl font-bold text-gray-900">대시보드</h1>
-        <p className="text-sm text-gray-500 mt-0.5">입찰 요청 현황을 한눈에 확인합니다.</p>
-      </div>
-
-      {/* 통계 카드 */}
+    <div className="space-y-4">
       <div className="grid grid-cols-3 gap-4">
-        {STAT_CARDS.map(({ label, value, icon, color, bg }) => (
-          <div key={label} className="bg-white rounded-xl border border-gray-200 p-5">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-gray-500">{label}</span>
-              <div className={`w-9 h-9 rounded-lg ${bg} flex items-center justify-center`}>
-                <i className={`${icon} ${color} text-sm`} />
+        {STAT_CARDS.map(({ label, value, Icon, color, bg }) => (
+          <Card key={label}>
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm text-muted-foreground">{label}</span>
+                <div className={`size-9 rounded-lg ${bg} flex items-center justify-center`}>
+                  <Icon className={`size-4 ${color}`} />
+                </div>
               </div>
-            </div>
-            <div className="text-3xl font-bold text-gray-900">{value}</div>
-          </div>
+              <div className="text-3xl font-bold text-foreground">{value}</div>
+            </CardContent>
+          </Card>
         ))}
       </div>
 
-      {/* 최근 입찰 요청 */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100">
-          <h2 className="text-sm font-semibold text-gray-900">최근 입찰 요청</h2>
-        </div>
-        {recent.length === 0 ? (
-          <div className="flex items-center justify-center h-32 text-sm text-gray-400">
-            입찰 요청이 없습니다.
-          </div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-100">
-                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">공고 제목</th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">회원</th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">상태</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
+      <Card>
+        <CardHeader>
+          <CardTitle>최근 입찰 요청</CardTitle>
+        </CardHeader>
+        <CardTable>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>공고 제목</TableHead>
+                <TableHead>기관</TableHead>
+                <TableHead>회원</TableHead>
+                <TableHead>상태</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {recent.length === 0 && <TableMessageRow colSpan={4}>입찰 요청이 없습니다.</TableMessageRow>}
               {recent.slice(0, 8).map((br) => (
-                <tr key={br.id} className="hover:bg-gray-50">
-                  <td className="px-5 py-3 text-gray-900 max-w-xs truncate">
-                    {br.opportunity?.title ?? '-'}
-                  </td>
-                  <td className="px-5 py-3 text-gray-500">
-                    {br.member?.email ?? '-'}
-                  </td>
-                  <td className="px-5 py-3">
-                    <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${STATE_COLORS[br.state] ?? 'bg-gray-100 text-gray-600'}`}>
-                      {STATE_LABELS[br.state] ?? br.state}
-                    </span>
-                  </td>
-                </tr>
+                <TableRow key={br.id} className="cursor-pointer" onClick={() => navigate(`/bid-requests/${br.id}`)}>
+                  <TableCell className="max-w-xs truncate font-medium text-foreground">
+                    {br.opportunityTitle ?? '-'}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{br.agencyName ?? '-'}</TableCell>
+                  <TableCell className="text-muted-foreground">{br.memberEmail ?? '-'}</TableCell>
+                  <TableCell>
+                    <StateBadge state={br.state} />
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+            </TableBody>
+          </Table>
+        </CardTable>
+      </Card>
     </div>
   )
 }

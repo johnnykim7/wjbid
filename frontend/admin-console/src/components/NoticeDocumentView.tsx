@@ -1,16 +1,19 @@
 /**
- * NoticeDocumentView — CR-021 / CR-114 재설계
+ * NoticeDocumentView, CR-021 / CR-114 재설계
  *
  * 공고문(Notice) 본문을 PDF 양식 계열로 렌더링.
  *
  * CR-114: contentJson(LLM이 골격을 채운 TipTap JSON) 의존 제거.
  *  - contentJson 에 들어갈 값은 전부 summary/requiredDocuments 의 재배열일 뿐(새 정보 0).
- *  - LLM 에게 골격 치환을 시키면 무거워서 null 로 회피(실측) → 화면이 데이터로 직접 그린다.
+ *  - LLM 에게 골격 치환을 시키면 무거워서 null 로 회피(실측)해서 화면이 데이터로 직접 그린다.
  *  - 노드 컴포넌트(KvTable/DataTable/CalloutList/GroupedList/Heading...)는 그대로 재사용,
  *    메인이 summary/requiredDocuments 로 섹션을 결정론적으로 조립.
  *
  * 디자인: 네이비 정부문서 계열.
  */
+import { CircleCheck, Link, Quote, ShieldHalf } from 'lucide-react'
+import { Alert, AlertDescription } from '@therecommerce-develop/ds-ui'
+import { ToneBadge } from './StateBadge'
 
 type Node = {
   type: string
@@ -39,7 +42,7 @@ export interface NoticeSummary {
   keyDates?: { label?: string; date?: string; note?: string }[]
   specialNotes?: string[]
   contactInfo?: { name?: string; role?: string; email?: string; phone?: string; organization?: string }[]
-  // CR-117: 옛 NOTICE_VIEW 10섹션 골격 복원 — 계약 기간 / 현장 설명회 전용 섹션
+  // CR-117: 옛 NOTICE_VIEW 10섹션 골격 복원. 계약 기간 / 현장 설명회 전용 섹션
   contractPeriod?: string
   siteVisit?: string
 }
@@ -60,11 +63,11 @@ interface Props {
   documents?: RequiredDocumentItem[]
   solicitationNumber?: string | null
   organizationName?: string | null
-  // CR-117: 옛 NOTICE_VIEW "1.공고 기본정보" 행 복원 — opportunity 메타 직접 공급(LLM 무관)
+  // CR-117: 옛 NOTICE_VIEW "1.공고 기본정보" 행 복원. opportunity 메타 직접 공급(LLM 무관)
   noticeTypeKo?: string | null
   naicsLabelKo?: string | null
   responseDeadline?: string | null
-  // CR-033: 정밀추출 자격요건 — "참여 자격요건" 섹션
+  // CR-033: 정밀추출 자격요건, "참여 자격요건" 섹션
   eligibility?: EligibilityItem[]
   // 공고 게시일(SAM 수집 확정값)
   postedDate?: string | null
@@ -89,16 +92,16 @@ export default function NoticeDocumentView({
   // CR-114: 분석 데이터가 전혀 없으면 안내 (COMPLETED 인데 summary 빈 경우)
   if (!summary && (!documents || documents.length === 0) && (!eligibility || eligibility.length === 0)) {
     return (
-      <div className="rounded-lg bg-yellow-50 border border-yellow-200 px-4 py-3 text-sm text-yellow-800">
-        공고문 분석 결과가 아직 없습니다. 한글화/분석을 다시 실행해 주세요.
-      </div>
+      <Alert variant="warning" appearance="light">
+        <AlertDescription>공고문 분석 결과가 아직 없습니다. 한글화/분석을 다시 실행해 주세요.</AlertDescription>
+      </Alert>
     )
   }
 
   const hasElig = !!eligibility && eligibility.length > 0
   const issuedDate = fmtDateKo(postedDate) || str(postedDate)
 
-  // CR-117: 기본 정보 kvTable — 옛 NOTICE_VIEW 골격 복원(공고번호/공고유형/발주기관/공고일/마감일/NAICS).
+  // CR-117: 기본 정보 kvTable 은 옛 NOTICE_VIEW 골격 복원(공고번호/공고유형/발주기관/공고일/마감일/NAICS).
   //         값 있는 행만 동적 노출(조달방식은 데이터 없어 제거, 평가방식은 8.낙찰기준 전용 섹션으로 이관).
   const deadlineKo = fmtDateKo(responseDeadline) || str(responseDeadline)
   const basicRows = (
@@ -112,7 +115,7 @@ export default function NoticeDocumentView({
     ].filter(Boolean) as { label: string; value: string }[]
   )
 
-  // 주요 일정 dataTable (label/date/note → 행)
+  // 주요 일정 dataTable (label/date/note 를 행으로)
   const timelineRows = (summary?.keyDates ?? [])
     .map((d) => [str(d.label), [str(d.date), str(d.note)].filter(Boolean).join(' / ')])
     .filter((r) => r[0] || r[1])
@@ -201,7 +204,7 @@ export default function NoticeDocumentView({
         <EmptySection />
       )}
 
-      {/* 8. 참고 사항 (현재 전용 데이터 없음 — 골격 유지) */}
+      {/* 8. 참고 사항 (현재 전용 데이터 없음, 골격 유지) */}
       <Heading level={2} content={[{ type: 'text', text: '8. 참고 사항' }]} />
       <EmptySection />
 
@@ -221,7 +224,7 @@ export default function NoticeDocumentView({
         <EmptySection />
       )}
 
-      {/* 11. 제출 서류 (요구사항 10항목 밖 부가 정보 — 별도 섹션) */}
+      {/* 11. 제출 서류 (요구사항 10항목 밖 부가 정보, 별도 섹션) */}
       <Heading level={2} content={[{ type: 'text', text: '11. 제출 서류' }]} />
       {docRows.length > 0 ? (
         <DataTable headers={docHeaders} rows={docRows} />
@@ -232,7 +235,7 @@ export default function NoticeDocumentView({
   )
 }
 
-// CR-117: 데이터 없는 섹션의 골격 유지용 — "해당 없음" 플레이스홀더
+// CR-117: 데이터 없는 섹션의 골격 유지용 "해당 없음" 플레이스홀더
 function EmptySection() {
   return <p className="text-sm text-slate-400 italic mb-4">해당 없음</p>
 }
@@ -243,24 +246,20 @@ function EligibilityBlock({ items }: { items: EligibilityItem[] }) {
     <div className="space-y-2 mb-4">
       {items.map((e, i) => (
         <div key={i} className="flex items-start gap-3 p-3 bg-white border border-slate-200 rounded-md">
-          <i className={`fa-solid ${e.isGate ? 'fa-shield-halved text-amber-500' : 'fa-circle-check text-slate-300'} text-lg mt-0.5`} />
+          {e.isGate
+            ? <ShieldHalf className="mt-0.5 size-4 shrink-0 text-amber-500" />
+            : <CircleCheck className="mt-0.5 size-4 shrink-0 text-slate-300" />}
           <div className="flex-1 text-sm">
             <div className="flex items-center gap-2 mb-0.5 flex-wrap">
               <span className="font-semibold text-slate-900">{e.title}</span>
-              {e.mandatory ? (
-                <span className="px-1.5 py-0.5 bg-red-50 text-red-600 rounded text-[10px] font-semibold uppercase">필수</span>
-              ) : (
-                <span className="px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded text-[10px] font-semibold uppercase">선택</span>
-              )}
-              {e.isGate && (
-                <span className="px-1.5 py-0.5 bg-amber-50 text-amber-600 rounded text-[10px] font-semibold">미충족 시 부적격</span>
-              )}
+              {e.mandatory ? <ToneBadge size="sm" tone="destructive">필수</ToneBadge> : <ToneBadge size="sm" tone="gray">선택</ToneBadge>}
+              {e.isGate && <ToneBadge size="sm" tone="warning">미충족 시 부적격</ToneBadge>}
             </div>
             {e.description && <p className="text-slate-600 mb-0.5">{e.description}</p>}
             {e.evidenceBy && (
-              <p className="text-xs text-emerald-600 mt-1"><i className="fa-solid fa-link mr-1" />증빙 서류: {e.evidenceBy}</p>
+              <p className="text-xs text-emerald-600 mt-1"><Link className="mr-1 inline size-3.5" />증빙 서류: {e.evidenceBy}</p>
             )}
-            {e.sourceRef && <p className="text-[11px] text-slate-400 mt-1"><i className="fa-solid fa-quote-left mr-1" />{e.sourceRef}</p>}
+            {e.sourceRef && <p className="text-[11px] text-slate-400 mt-1"><Quote className="mr-1 inline size-3" />{e.sourceRef}</p>}
           </div>
         </div>
       ))}
@@ -319,14 +318,14 @@ function Paragraph({ tone, content }: { tone?: string; content: Node[] }) {
 function splitEnumerations(s: string): string {
   if (!s) return s
   return s
-    // "항목 A | 항목 B" / "항목 A / 항목 B"처럼 LLM이 구분자로 이어 쓴 열거 → 항목별 줄바꿈.
+    // "항목 A | 항목 B" / "항목 A / 항목 B"처럼 LLM이 구분자로 이어 쓴 열거는 항목별로 줄바꿈.
     // 양쪽 공백이 있는 "|" "/" 만 처리해 식별자·URL(a/b, http://)·날짜(7/1)는 보존한다.
     .replace(/[ \t]+[|/][ \t]+/g, '\n')
-    // " (1) " / " (2) " 처럼 앞에 공백이 있는 괄호 숫자 열거 → 줄바꿈
+    // " (1) " / " (2) " 처럼 앞에 공백이 있는 괄호 숫자 열거 앞에서 줄바꿈
     .replace(/\s+(\(\d+\))/g, '\n$1')
-    // "Phase One:" "Phase Two:" 등 (앞에 공백) → 줄바꿈
+    // "Phase One:" "Phase Two:" 등 (앞에 공백) 앞에서 줄바꿈
     .replace(/\s+(Phase\s+(?:One|Two|Three|Four|1|2|3|4)\b)/gi, '\n$1')
-    // 한글 라벨 열거(현장설명회·제출서류 비고 등): 라벨 앞 공백 → 줄바꿈
+    // 한글 라벨 열거(현장설명회·제출서류 비고 등): 라벨 앞 공백을 줄바꿈으로
     .replace(/\s+(장소:|POC:|일시:|비고:|형식:|필수\s*여부:|연락처:)/g, '\n$1')
     .replace(/^\n+/, '')
     .trim()

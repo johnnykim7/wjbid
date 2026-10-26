@@ -171,7 +171,7 @@ export const getBidDocumentsByBidRequest = (bidRequestId: string) =>
 
 // Client Documents
 export const getClientDocuments = (bidRequestId: string) =>
-  api.get(`/client-documents/${bidRequestId}`)
+  api.get(`/bid-requests/${bidRequestId}/client-documents`)
 
 // CR-169 고객 서류 읽기
 export const getDocumentReadings = (bidRequestId: string) =>

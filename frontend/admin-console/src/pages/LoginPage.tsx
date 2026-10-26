@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Alert, AlertDescription, Button, Card, CardContent, Input, Label, Spinner } from '@therecommerce-develop/ds-ui'
 import { login } from '../api/client'
 
 export default function LoginPage() {
@@ -31,49 +32,50 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-primary flex items-center justify-center">
-      <div className="bg-white rounded-2xl shadow-2xl p-10 w-full max-w-sm">
-        <div className="text-center mb-8">
-          <div className="text-2xl font-bold text-primary mb-1">Bidding Agency</div>
-          <div className="text-sm text-gray-500">Admin Console</div>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">이메일</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary text-sm"
-              placeholder="admin@example.com"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">비밀번호</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary text-sm"
-              placeholder="••••••••"
-            />
+      <Card className="w-full max-w-sm shadow-2xl">
+        <CardContent className="p-10">
+          <div className="text-center mb-8">
+            <div className="text-2xl font-bold text-primary mb-1">Bidding Agency</div>
+            <div className="text-sm text-muted-foreground">Admin Console</div>
           </div>
 
-          {error && (
-            <p className="text-sm text-red-500 text-center">{error}</p>
-          )}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-1">
+              <Label htmlFor="login-email">이메일</Label>
+              <Input
+                id="login-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                placeholder="admin@example.com"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="login-password">비밀번호</Label>
+              <Input
+                id="login-password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                placeholder="••••••••"
+              />
+            </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-2.5 bg-secondary text-white rounded-lg font-medium text-sm hover:bg-blue-600 transition disabled:opacity-50"
-          >
-            {loading ? '로그인 중...' : '로그인'}
-          </button>
-        </form>
-      </div>
+            {error && (
+              <Alert variant="destructive" appearance="light">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            <Button type="submit" variant="primary" disabled={loading} className="w-full">
+              {loading && <Spinner />}
+              로그인
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   )
 }

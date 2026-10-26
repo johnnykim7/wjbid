@@ -1,33 +1,28 @@
 /**
- * CR-132 — 1:1 문의 목록과 상세가 함께 쓰는 상태·유형·구분 표시.
+ * CR-132: 1:1 문의 목록과 상세가 함께 쓰는 상태, 유형, 구분 표시.
  */
-import { Badge } from '@therecommerce-develop/ds-ui'
+import { Check, Clock } from 'lucide-react'
 import type { InquiryStatus } from '../api/client'
-
-const PILL = 'rounded-full h-auto px-2.5 py-0.5 text-xs gap-1.5'
+import { ToneBadge } from './StateBadge'
 
 export function InquiryStatusPill({ status }: { status: InquiryStatus }) {
   return status === 'ANSWERED' ? (
-    <Badge className={`${PILL} bg-emerald-100 text-emerald-700 font-semibold`}>
-      <i className="fa-solid fa-check" />
+    <ToneBadge tone="success">
+      <Check className="size-3" />
       답변완료
-    </Badge>
+    </ToneBadge>
   ) : (
-    <Badge className={`${PILL} bg-amber-100 text-amber-700 font-semibold`}>
-      <i className="fa-regular fa-clock" />
+    <ToneBadge tone="warning">
+      <Clock className="size-3" />
       미답변
-    </Badge>
+    </ToneBadge>
   )
 }
 
 export function InquiryTypePill({ label }: { label: string }) {
-  return <Badge className={`${PILL} bg-gray-100 text-gray-700 font-medium`}>{label}</Badge>
+  return <ToneBadge tone="gray">{label}</ToneBadge>
 }
 
 export function InquiryMemberPill({ member }: { member: boolean }) {
-  return member ? (
-    <Badge className={`${PILL} bg-blue-100 text-blue-700 font-medium`}>회원</Badge>
-  ) : (
-    <Badge className={`${PILL} bg-gray-100 text-gray-500 font-medium`}>비회원</Badge>
-  )
+  return member ? <ToneBadge tone="info">회원</ToneBadge> : <ToneBadge tone="gray">비회원</ToneBadge>
 }

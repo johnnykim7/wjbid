@@ -13,3 +13,20 @@ export const STATE_LABELS: Record<string, string> = {
   NOT_AWARDED: '탈락',
   CLOSED: '종료',
 }
+
+export type StateTone = 'gray' | 'info' | 'warning' | 'success' | 'destructive'
+
+// 상태 배지 색. 진행 단계, 사람 손 기다림, 끝남, 탈락, 처음과 닫힘으로 묶는다(CR-182 4.4)
+export const STATE_TONE: Record<string, StateTone> = {
+  CREATED: 'gray',
+  DOCS_PENDING: 'warning',
+  DOCS_RECEIVED: 'info',
+  ANALYZING: 'info',
+  GENERATING: 'info',
+  REVIEW: 'warning',
+  CONFIRMED: 'success',
+  SUBMITTED: 'success',
+  AWARDED: 'success',
+  NOT_AWARDED: 'destructive',
+  CLOSED: 'gray',
+}

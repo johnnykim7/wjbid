@@ -1,11 +1,17 @@
 /**
- * CR-132 — 1:1 문의 목록.
+ * CR-132: 1:1 문의 목록.
  * 고른 상태·유형·쪽은 주소에 두고, 보던 스크롤 위치는 상세에 들어갈 때 적어 두었다가 돌아오면 되살린다.
  */
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Button,
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTable,
+  CardToolbar,
   Select,
   SelectContent,
   SelectItem,
@@ -27,6 +33,8 @@ import {
   type InquiryStatus,
 } from '../api/client'
 import { InquiryMemberPill, InquiryStatusPill, InquiryTypePill } from '../components/InquiryPills'
+import ListPagination from '../components/ListPagination'
+import { TableMessageRow } from '../components/LoadState'
 
 const PAGE_SIZE = 20
 const ALL = 'ALL'
@@ -112,14 +120,9 @@ export default function InquiryAdminPage() {
   const to = Math.min(total, (page + 1) * PAGE_SIZE)
 
   return (
-    <div ref={rootRef} className="p-6 flex flex-col gap-5">
-      <div>
-        <h1 className="text-xl font-bold text-gray-900">1:1 문의</h1>
-        <p className="text-sm text-gray-500 mt-0.5">고객센터로 들어온 문의를 확인하고 답변합니다.</p>
-      </div>
-
-      <div className="bg-white border border-gray-200 rounded-xl">
-        <div className="flex flex-wrap items-center gap-3 px-4 py-3.5 border-b border-gray-200">
+    <div ref={rootRef} className="space-y-4">
+      <Card>
+        <CardHeader className="py-2.5">
           <div className="inline-flex">
             {STATUS_TABS.map((tab) => (
               <Button
@@ -128,7 +131,7 @@ export default function InquiryAdminPage() {
                 size="sm"
                 variant={status === tab.key ? 'primary' : 'outline'}
                 onClick={() => setFilter({ status: tab.key })}
-                className="rounded-none first:rounded-l-lg last:rounded-r-lg -ml-px first:ml-0 text-[13px]"
+                className="rounded-none first:rounded-l-lg last:rounded-r-lg -ml-px first:ml-0"
               >
                 {tab.label}
                 {counts && <span className="ml-1 text-xs opacity-80">{tab.count(counts)}</span>}
@@ -136,101 +139,79 @@ export default function InquiryAdminPage() {
             ))}
           </div>
 
-          <Select value={typeCode} onValueChange={(v) => setFilter({ type: v })}>
-            <SelectTrigger className="w-48 bg-white">
-              <SelectValue placeholder="유형 전체" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>유형 전체</SelectItem>
-              {types.map((t) => (
-                <SelectItem key={t.code} value={t.code}>
-                  {t.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <div className="flex-1" />
-          <span className="text-xs text-gray-500">최근 접수 순</span>
-        </div>
+          <CardToolbar>
+            <span className="text-xs text-muted-foreground">최근 접수 순</span>
+            <Select value={typeCode} onValueChange={(v) => setFilter({ type: v })}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="유형 전체" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>유형 전체</SelectItem>
+                {types.map((t) => (
+                  <SelectItem key={t.code} value={t.code}>
+                    {t.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </CardToolbar>
+        </CardHeader>
 
         {failed ? (
-          <div className="px-4 py-12 text-center text-sm text-gray-500 space-y-3">
+          <CardContent className="space-y-3 py-12 text-center text-sm text-muted-foreground">
             <p>문의를 불러오지 못했습니다.</p>
             <Button variant="outline" size="sm" onClick={load}>
               다시 시도
             </Button>
-          </div>
+          </CardContent>
         ) : (
-          <Table className="text-sm">
-            <TableHeader>
-              <TableRow className="border-gray-200 bg-gray-50 hover:bg-gray-50">
-                {['접수 일시', '유형', '제목', '이름', '이메일', '구분', '상태'].map((h) => (
-                  <TableHead key={h} className="h-auto px-4 py-3 text-xs font-semibold text-gray-500">
-                    {h}
-                  </TableHead>
+          <CardTable>
+            <Table>
+              <TableHeader className="bg-muted">
+                <TableRow>
+                  {['접수 일시', '유형', '제목', '이름', '이메일', '구분', '상태'].map((h) => (
+                    <TableHead key={h}>{h}</TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {!rows && <TableMessageRow colSpan={7} loading />}
+                {rows && rows.length === 0 && <TableMessageRow colSpan={7}>해당하는 문의가 없습니다.</TableMessageRow>}
+                {rows?.map((r) => (
+                  <TableRow key={r.id} onClick={() => openDetail(r.id)} className="cursor-pointer">
+                    <TableCell className="whitespace-nowrap text-xs text-muted-foreground">{r.createdAt}</TableCell>
+                    <TableCell>
+                      <InquiryTypePill label={r.typeLabel} />
+                    </TableCell>
+                    <TableCell
+                      className={`max-w-[360px] truncate text-foreground ${
+                        r.status === 'RECEIVED' ? 'font-bold' : 'font-medium'
+                      }`}
+                    >
+                      {r.title}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{r.name}</TableCell>
+                    <TableCell className="whitespace-nowrap text-xs text-muted-foreground">{r.email}</TableCell>
+                    <TableCell>
+                      <InquiryMemberPill member={r.member} />
+                    </TableCell>
+                    <TableCell>
+                      <InquiryStatusPill status={r.status} />
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows && rows.length === 0 && (
-                <TableRow className="border-gray-100">
-                  <TableCell colSpan={7} className="px-4 py-12 text-center text-gray-500">
-                    해당하는 문의가 없습니다.
-                  </TableCell>
-                </TableRow>
-              )}
-              {rows?.map((r) => (
-                <TableRow
-                  key={r.id}
-                  onClick={() => openDetail(r.id)}
-                  className="border-gray-100 cursor-pointer hover:bg-gray-50"
-                >
-                  <TableCell className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{r.createdAt}</TableCell>
-                  <TableCell className="px-4 py-3">
-                    <InquiryTypePill label={r.typeLabel} />
-                  </TableCell>
-                  <TableCell
-                    className={`px-4 py-3 max-w-[360px] truncate text-gray-900 ${
-                      r.status === 'RECEIVED' ? 'font-bold' : 'font-medium'
-                    }`}
-                  >
-                    {r.title}
-                  </TableCell>
-                  <TableCell className="px-4 py-3 text-gray-600">{r.name}</TableCell>
-                  <TableCell className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{r.email}</TableCell>
-                  <TableCell className="px-4 py-3">
-                    <InquiryMemberPill member={r.member} />
-                  </TableCell>
-                  <TableCell className="px-4 py-3">
-                    <InquiryStatusPill status={r.status} />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableBody>
+            </Table>
+          </CardTable>
         )}
 
         {!failed && (
-          <div className="flex items-center justify-between px-4 py-3 text-[13px] text-gray-500">
+          <CardFooter className="justify-between py-2 text-xs text-muted-foreground">
             <span>{total === 0 ? '0건' : `${total}건 중 ${from}-${to}`}</span>
-            {totalPages > 1 && (
-              <div className="flex gap-1.5">
-                {Array.from({ length: totalPages }, (_, i) => (
-                  <Button
-                    key={i}
-                    size="sm"
-                    variant={i === page ? 'primary' : 'outline'}
-                    onClick={() => setFilter({ page: i })}
-                  >
-                    {i + 1}
-                  </Button>
-                ))}
-              </div>
-            )}
-          </div>
+            <ListPagination page={page} totalPages={totalPages} onChange={(p) => setFilter({ page: p })} />
+          </CardFooter>
         )}
-      </div>
+      </Card>
     </div>
   )
 }

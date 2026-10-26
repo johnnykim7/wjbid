@@ -1,10 +1,44 @@
 import { useState, useEffect, useCallback } from 'react'
+import type { ReactNode } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
 import TextAlign from '@tiptap/extension-text-align'
 import Placeholder from '@tiptap/extension-placeholder'
+import {
+  Bold,
+  FileDown,
+  Heading1,
+  Heading2,
+  Heading3,
+  Italic,
+  List,
+  ListOrdered,
+  ListTree,
+  Lock,
+  LockOpen,
+  Save,
+  TextAlignCenter,
+  TextAlignEnd,
+  TextAlignStart,
+  Underline as UnderlineIcon,
+} from 'lucide-react'
+import {
+  Alert,
+  AlertDescription,
+  Badge,
+  Button,
+  Card,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+  Input,
+  PageHeader,
+  Separator,
+  Spinner,
+  Toggle,
+} from '@therecommerce-develop/ds-ui'
 import {
   getBidDocument,
   getBidDocumentVersions,
@@ -14,6 +48,10 @@ import {
   unlockDocument,
   exportDocumentPdf,
 } from '../api/client'
+import { ToneBadge } from '../components/StateBadge'
+import { Loading } from '../components/LoadState'
+import { docTypeLabel } from '../utils/documentType'
+import type { StateTone } from '../utils/bidState'
 
 interface DocumentVersion {
   id: string
@@ -37,21 +75,11 @@ interface BidDocumentData {
   latestVersion?: DocumentVersion
 }
 
-const DOC_TYPE_LABELS: Record<string, string> = {
-  COVER_LETTER: 'Cover Letter',
-  TECHNICAL_PROPOSAL: 'Technical Proposal',
-  PAST_PERFORMANCE: 'Past Performance',
-  COMPANY_PROFILE: 'Company Profile',
-  COMPLIANCE_MATRIX: 'Compliance Matrix',
-  PRICING_SUMMARY: 'Pricing Summary',
-  OTHER: 'Other',
-}
-
-const STATUS_COLORS: Record<string, string> = {
-  DRAFT: 'bg-yellow-100 text-yellow-800',
-  READY: 'bg-blue-100 text-blue-800',
-  APPROVED: 'bg-green-100 text-green-800',
-  LOCKED: 'bg-red-100 text-red-800',
+const STATUS_TONE: Record<string, StateTone> = {
+  DRAFT: 'warning',
+  READY: 'info',
+  APPROVED: 'success',
+  LOCKED: 'destructive',
 }
 
 export default function DocumentEditPage() {
@@ -98,7 +126,7 @@ export default function DocumentEditPage() {
         editor.commands.setContent(docRes.data.latestVersion.contentJson)
         setSelectedVersion(docRes.data.currentVersionNo)
       }
-    } catch (err: unknown) {
+    } catch {
       setError('문서를 불러올 수 없습니다.')
     } finally {
       setLoading(false)
@@ -127,7 +155,7 @@ export default function DocumentEditPage() {
       setSuccess('저장되었습니다.')
       setTimeout(() => setSuccess(''), 3000)
       await loadDocument()
-    } catch (err: unknown) {
+    } catch {
       setError('저장 실패')
     } finally {
       setSaving(false)
@@ -185,222 +213,219 @@ export default function DocumentEditPage() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-secondary" />
-      </div>
-    )
-  }
+  if (loading) return <Loading className="h-64" />
 
   if (!doc) {
     return (
-      <div className="p-6">
-        <p className="text-red-500">문서를 찾을 수 없습니다.</p>
-        <button onClick={() => navigate(-1)} className="mt-4 text-secondary underline">
-          뒤로 가기
-        </button>
+      <div className="space-y-4">
+        <PageHeader variant="detail" back={{ onClick: () => navigate(-1) }} />
+        <Alert variant="destructive" appearance="light">
+          <AlertDescription>문서를 찾을 수 없습니다.</AlertDescription>
+        </Alert>
       </div>
     )
   }
 
   return (
-    <div className="flex h-[calc(100vh-64px)]">
-      {/* Main editor area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="border-b bg-white px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate(-1)}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              ← 뒤로
-            </button>
-            <h1 className="text-lg font-semibold">
-              {DOC_TYPE_LABELS[doc.documentType] || doc.documentType}
-            </h1>
-            <span className={`px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[doc.status] || 'bg-gray-100'}`}>
-              {doc.status}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
+    <div className="space-y-4">
+      <PageHeader
+        variant="detail"
+        back={{ onClick: () => navigate(-1) }}
+        title={docTypeLabel(doc.documentType)}
+        badge={<ToneBadge tone={STATUS_TONE[doc.status] ?? 'gray'}>{doc.status}</ToneBadge>}
+        actions={
+          <>
             {isLocked ? (
-              <button
-                onClick={handleUnlock}
-                className="px-3 py-1.5 text-sm bg-yellow-500 text-white rounded hover:bg-yellow-600"
-              >
-                🔓 잠금 해제
-              </button>
+              <Button variant="outline" onClick={handleUnlock}>
+                <LockOpen />
+                잠금 해제
+              </Button>
             ) : (
-              <>
-                <button
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="px-3 py-1.5 text-sm bg-secondary text-white rounded hover:bg-blue-600 disabled:opacity-50"
-                >
-                  {saving ? '저장 중...' : '💾 저장'}
-                </button>
-                <button
-                  onClick={handleLock}
-                  className="px-3 py-1.5 text-sm bg-red-500 text-white rounded hover:bg-red-600"
-                >
-                  🔒 잠금
-                </button>
-              </>
+              <Button variant="outline" onClick={handleLock}>
+                <Lock />
+                잠금
+              </Button>
             )}
-            <button
-              onClick={() => navigate(`/documents/${id}/sections`)}
-              className="px-3 py-1.5 text-sm border rounded hover:bg-gray-50"
-            >
-              🗂 Section 관리
-            </button>
-            <button
-              onClick={handleExportPdf}
-              className="px-3 py-1.5 text-sm bg-gray-600 text-white rounded hover:bg-gray-700"
-            >
-              📄 PDF
-            </button>
-          </div>
-        </div>
+            <Button variant="outline" onClick={() => navigate(`/documents/${id}/sections`)}>
+              <ListTree />
+              Section 관리
+            </Button>
+            <Button variant="outline" onClick={handleExportPdf}>
+              <FileDown />
+              PDF
+            </Button>
+            {!isLocked && (
+              <Button variant="primary" onClick={handleSave} disabled={saving}>
+                {saving ? <Spinner /> : <Save />}
+                {saving ? '저장 중...' : '저장'}
+              </Button>
+            )}
+          </>
+        }
+      />
 
-        {/* Toolbar */}
-        {!isLocked && editor && (
-          <div className="border-b bg-gray-50 px-6 py-2 flex items-center gap-1 flex-wrap">
-            <ToolbarButton
-              onClick={() => editor.chain().focus().toggleBold().run()}
-              active={editor.isActive('bold')}
-              label="B"
-              className="font-bold"
-            />
-            <ToolbarButton
-              onClick={() => editor.chain().focus().toggleItalic().run()}
-              active={editor.isActive('italic')}
-              label="I"
-              className="italic"
-            />
-            <ToolbarButton
-              onClick={() => editor.chain().focus().toggleUnderline().run()}
-              active={editor.isActive('underline')}
-              label="U"
-              className="underline"
-            />
-            <div className="w-px h-5 bg-gray-300 mx-1" />
-            <ToolbarButton
-              onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-              active={editor.isActive('heading', { level: 1 })}
-              label="H1"
-            />
-            <ToolbarButton
-              onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-              active={editor.isActive('heading', { level: 2 })}
-              label="H2"
-            />
-            <ToolbarButton
-              onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-              active={editor.isActive('heading', { level: 3 })}
-              label="H3"
-            />
-            <div className="w-px h-5 bg-gray-300 mx-1" />
-            <ToolbarButton
-              onClick={() => editor.chain().focus().toggleBulletList().run()}
-              active={editor.isActive('bulletList')}
-              label="• List"
-            />
-            <ToolbarButton
-              onClick={() => editor.chain().focus().toggleOrderedList().run()}
-              active={editor.isActive('orderedList')}
-              label="1. List"
-            />
-            <div className="w-px h-5 bg-gray-300 mx-1" />
-            <ToolbarButton
-              onClick={() => editor.chain().focus().setTextAlign('left').run()}
-              active={editor.isActive({ textAlign: 'left' })}
-              label="Left"
-            />
-            <ToolbarButton
-              onClick={() => editor.chain().focus().setTextAlign('center').run()}
-              active={editor.isActive({ textAlign: 'center' })}
-              label="Center"
-            />
-            <ToolbarButton
-              onClick={() => editor.chain().focus().setTextAlign('right').run()}
-              active={editor.isActive({ textAlign: 'right' })}
-              label="Right"
-            />
-          </div>
-        )}
-
-        {/* Messages */}
-        {error && (
-          <div className="mx-6 mt-2 p-2 bg-red-50 text-red-700 text-sm rounded">
-            {error}
-          </div>
-        )}
-        {success && (
-          <div className="mx-6 mt-2 p-2 bg-green-50 text-green-700 text-sm rounded">
-            {success}
-          </div>
-        )}
-
-        {/* Editor */}
-        <div className="flex-1 overflow-auto bg-white">
-          <EditorContent editor={editor} />
-        </div>
-
-        {/* Change summary input */}
-        {!isLocked && (
-          <div className="border-t bg-gray-50 px-6 py-2 flex items-center gap-2">
-            <input
-              type="text"
-              value={changeSummary}
-              onChange={(e) => setChangeSummary(e.target.value)}
-              placeholder="변경 사항 요약 (선택)"
-              className="flex-1 px-3 py-1.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-secondary"
-            />
-          </div>
-        )}
-      </div>
-
-      {/* Version sidebar */}
-      <div className="w-64 border-l bg-gray-50 flex flex-col overflow-hidden">
-        <div className="px-4 py-3 border-b bg-white">
-          <h2 className="text-sm font-semibold text-gray-700">버전 이력</h2>
-          <p className="text-xs text-gray-500 mt-0.5">
-            총 {versions.length}개 버전
-          </p>
-        </div>
-        <div className="flex-1 overflow-auto">
-          {versions.map((v) => (
-            <button
-              key={v.versionNo}
-              onClick={() => handleVersionSelect(v.versionNo)}
-              className={`w-full text-left px-4 py-3 border-b hover:bg-blue-50 transition-colors ${
-                selectedVersion === v.versionNo ? 'bg-blue-50 border-l-2 border-l-secondary' : ''
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-800">
-                  {v.versionLabel}
-                </span>
-                {v.versionNo === doc.currentVersionNo && (
-                  <span className="text-[10px] bg-secondary text-white px-1.5 py-0.5 rounded">
-                    latest
-                  </span>
-                )}
-              </div>
-              {v.changeSummary && (
-                <p className="text-xs text-gray-600 mt-1 line-clamp-2">
-                  {v.changeSummary}
-                </p>
-              )}
-              <p className="text-[10px] text-gray-400 mt-1">{v.editedAt}</p>
-            </button>
-          ))}
-          {versions.length === 0 && (
-            <p className="text-xs text-gray-400 p-4">버전이 없습니다.</p>
+      {/* 머리줄, 본문 여백, PageHeader 를 뺀 높이로 두어 편집기와 버전 이력이 각자 안에서만 스크롤한다 */}
+      <div className="flex h-[calc(100vh-9rem)] min-h-[480px] gap-4">
+        {/* Main editor area */}
+        <Card className="min-w-0 flex-1 overflow-hidden">
+          {/* Toolbar */}
+          {!isLocked && editor && (
+            <CardHeader className="justify-start gap-1 py-1.5">
+              <ToolbarButton
+                onClick={() => editor.chain().focus().toggleBold().run()}
+                active={editor.isActive('bold')}
+                label="Bold"
+              >
+                <Bold />
+              </ToolbarButton>
+              <ToolbarButton
+                onClick={() => editor.chain().focus().toggleItalic().run()}
+                active={editor.isActive('italic')}
+                label="Italic"
+              >
+                <Italic />
+              </ToolbarButton>
+              <ToolbarButton
+                onClick={() => editor.chain().focus().toggleUnderline().run()}
+                active={editor.isActive('underline')}
+                label="Underline"
+              >
+                <UnderlineIcon />
+              </ToolbarButton>
+              <Separator orientation="vertical" className="mx-1 h-5" />
+              <ToolbarButton
+                onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+                active={editor.isActive('heading', { level: 1 })}
+                label="Heading 1"
+              >
+                <Heading1 />
+              </ToolbarButton>
+              <ToolbarButton
+                onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+                active={editor.isActive('heading', { level: 2 })}
+                label="Heading 2"
+              >
+                <Heading2 />
+              </ToolbarButton>
+              <ToolbarButton
+                onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+                active={editor.isActive('heading', { level: 3 })}
+                label="Heading 3"
+              >
+                <Heading3 />
+              </ToolbarButton>
+              <Separator orientation="vertical" className="mx-1 h-5" />
+              <ToolbarButton
+                onClick={() => editor.chain().focus().toggleBulletList().run()}
+                active={editor.isActive('bulletList')}
+                label="Bullet List"
+              >
+                <List />
+              </ToolbarButton>
+              <ToolbarButton
+                onClick={() => editor.chain().focus().toggleOrderedList().run()}
+                active={editor.isActive('orderedList')}
+                label="Numbered List"
+              >
+                <ListOrdered />
+              </ToolbarButton>
+              <Separator orientation="vertical" className="mx-1 h-5" />
+              <ToolbarButton
+                onClick={() => editor.chain().focus().setTextAlign('left').run()}
+                active={editor.isActive({ textAlign: 'left' })}
+                label="Left"
+              >
+                <TextAlignStart />
+              </ToolbarButton>
+              <ToolbarButton
+                onClick={() => editor.chain().focus().setTextAlign('center').run()}
+                active={editor.isActive({ textAlign: 'center' })}
+                label="Center"
+              >
+                <TextAlignCenter />
+              </ToolbarButton>
+              <ToolbarButton
+                onClick={() => editor.chain().focus().setTextAlign('right').run()}
+                active={editor.isActive({ textAlign: 'right' })}
+                label="Right"
+              >
+                <TextAlignEnd />
+              </ToolbarButton>
+            </CardHeader>
           )}
-        </div>
+
+          {/* Messages */}
+          {(error || success) && (
+            <div className="space-y-2 px-4 pt-3">
+              {error && (
+                <Alert variant="destructive" appearance="light" size="sm">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+              {success && (
+                <Alert variant="success" appearance="light" size="sm">
+                  <AlertDescription>{success}</AlertDescription>
+                </Alert>
+              )}
+            </div>
+          )}
+
+          {/* Editor */}
+          <div className="min-h-0 flex-1 overflow-auto">
+            <EditorContent editor={editor} />
+          </div>
+
+          {/* Change summary input */}
+          {!isLocked && (
+            <CardFooter className="py-2">
+              <Input
+                value={changeSummary}
+                onChange={(e) => setChangeSummary(e.target.value)}
+                placeholder="변경 사항 요약 (선택)"
+              />
+            </CardFooter>
+          )}
+        </Card>
+
+        {/* Version sidebar */}
+        <Card className="w-64 shrink-0 overflow-hidden">
+          <CardHeader className="flex-col items-start justify-center gap-1 py-2.5">
+            <CardTitle>버전 이력</CardTitle>
+            <p className="text-xs text-muted-foreground">총 {versions.length}개 버전</p>
+          </CardHeader>
+          <div className="min-h-0 flex-1 overflow-auto">
+            {versions.map((v) => (
+              <Button
+                key={v.versionNo}
+                variant="ghost"
+                onClick={() => handleVersionSelect(v.versionNo)}
+                className={`h-auto w-full flex-col items-stretch gap-0 whitespace-normal rounded-none border-b border-border px-4 py-3 text-left font-normal ${
+                  selectedVersion === v.versionNo ? 'border-l-2 border-l-secondary bg-accent' : ''
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-foreground">
+                    {v.versionLabel}
+                  </span>
+                  {v.versionNo === doc.currentVersionNo && (
+                    <Badge variant="secondary" appearance="light" size="xs" className="whitespace-nowrap">
+                      latest
+                    </Badge>
+                  )}
+                </div>
+                {v.changeSummary && (
+                  <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                    {v.changeSummary}
+                  </p>
+                )}
+                <p className="mt-1 text-[10px] text-muted-foreground">{v.editedAt}</p>
+              </Button>
+            ))}
+            {versions.length === 0 && (
+              <p className="p-4 text-xs text-muted-foreground">버전이 없습니다.</p>
+            )}
+          </div>
+        </Card>
       </div>
     </div>
   )
@@ -410,21 +435,16 @@ function ToolbarButton({
   onClick,
   active,
   label,
-  className = '',
+  children,
 }: {
   onClick: () => void
   active: boolean
   label: string
-  className?: string
+  children: ReactNode
 }) {
   return (
-    <button
-      onClick={onClick}
-      className={`px-2 py-1 text-xs rounded transition-colors ${className} ${
-        active ? 'bg-secondary text-white' : 'bg-white text-gray-700 hover:bg-gray-200 border'
-      }`}
-    >
-      {label}
-    </button>
+    <Toggle size="sm" pressed={active} onPressedChange={onClick} aria-label={label} title={label}>
+      {children}
+    </Toggle>
   )
 }

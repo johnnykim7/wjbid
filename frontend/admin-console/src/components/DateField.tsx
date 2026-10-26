@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { CalendarIcon } from 'lucide-react'
 import { Button, Calendar, Popover, PopoverContent, PopoverTrigger } from '@therecommerce-develop/ds-ui'
 import { toDate, toYmd } from '../utils/ymd'
 
@@ -17,8 +18,8 @@ export default function DateField({ value, onChange, placeholder, label, disable
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="outline" aria-label={label} disabled={disabled} className="min-w-36 justify-start">
-          <i className="fa-regular fa-calendar text-gray-400" />
-          <span className={value ? '' : 'text-gray-400'}>{value ?? placeholder}</span>
+          <CalendarIcon className="size-4 text-muted-foreground" />
+          <span className={value ? '' : 'text-muted-foreground'}>{value ?? placeholder}</span>
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-2" align="start">

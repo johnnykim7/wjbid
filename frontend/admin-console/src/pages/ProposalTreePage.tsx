@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { FilePenLine, Lock, LockOpen, RotateCw, ShieldCheck } from 'lucide-react'
 import {
   getProposalTree,
   getProposalSection,
@@ -10,12 +11,31 @@ import {
   reverifyProposalSection,
   getProposalCoverage,
 } from '../api/client'
-import { Badge, Button } from '@therecommerce-develop/ds-ui'
+import {
+  Alert,
+  AlertContent,
+  AlertDescription,
+  AlertTitle,
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardToolbar,
+  ConfirmDialog,
+  InfoGrid,
+  PageHeader,
+  toast,
+} from '@therecommerce-develop/ds-ui'
 import CoverageBand from '../components/CoverageBand'
 import DocumentReadingFacts from '../components/DocumentReadingFacts'
+import { ToneBadge } from '../components/StateBadge'
+import { Loading } from '../components/LoadState'
 import { readingStatusLabel } from '../components/documentReading'
 import type { SourceDocument } from '../components/documentReading'
 import type { Coverage } from '../components/CoverageBand'
+import type { StateTone } from '../utils/bidState'
 
 // ── 타입 (BE ProposalTreeDto 대응) ──
 interface SectionNode {
@@ -74,13 +94,13 @@ interface VerificationView {
   message?: string
 }
 
-const STATUS_STYLE: Record<SectionStatus, string> = {
-  PENDING: 'bg-gray-100 text-gray-600',
-  DRAFTING: 'bg-blue-100 text-blue-700',
-  DRAFTED: 'bg-indigo-100 text-indigo-700',
-  VERIFIED: 'bg-green-100 text-green-700',
-  NEEDS_REGEN: 'bg-red-100 text-red-700',
-  LOCKED: 'bg-gray-300 text-gray-700',
+const STATUS_TONE: Record<SectionStatus, StateTone> = {
+  PENDING: 'gray',
+  DRAFTING: 'info',
+  DRAFTED: 'info',
+  VERIFIED: 'success',
+  NEEDS_REGEN: 'destructive',
+  LOCKED: 'gray',
 }
 
 const STATUS_LABEL: Record<SectionStatus, string> = {
@@ -117,6 +137,7 @@ export default function ProposalTreePage() {
   const [coverage, setCoverage] = useState<Coverage | null>(null)
   const [coverageFailed, setCoverageFailed] = useState(false)
   const [openSourceId, setOpenSourceId] = useState<string | null>(null)
+  const [regenerateId, setRegenerateId] = useState<string | null>(null)
 
   const loadTree = useCallback(async () => {
     if (!documentId) return
@@ -193,7 +214,7 @@ export default function ProposalTreePage() {
       await reverifyProposalSection(documentId, detail.id)
       setError(null)
       await loadCoverage()
-      alert('재검증을 시작했습니다. 잠시 후 새로고침하면 결과가 갱신됩니다.')
+      toast.success('재검증을 시작했습니다. 잠시 후 새로고침하면 결과가 갱신됩니다.')
     } catch {
       setError('재검증 요청에 실패했습니다.')
     } finally {
@@ -201,15 +222,14 @@ export default function ProposalTreePage() {
     }
   }
 
-  const handleRegenerate = async () => {
-    if (!documentId || !detail) return
-    if (!confirm('이 section 본문을 재생성합니다. 기존 본문은 교체됩니다. 진행할까요?')) return
+  const handleRegenerate = async (sectionId: string) => {
+    if (!documentId) return
     setActing(true)
     setError(null)
     try {
-      await regenerateProposalSection(documentId, detail.id)
+      await regenerateProposalSection(documentId, sectionId)
       await loadTree()
-      await loadDetail(detail.id)
+      await loadDetail(sectionId)
       await loadCoverage()
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message
@@ -238,29 +258,75 @@ export default function ProposalTreePage() {
     }
   }
 
-  return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <button
-            onClick={() => navigate(-1)}
-            className="text-sm text-gray-500 hover:text-gray-700 mb-1"
+  const reqRefsValue = (sectionDetail: SectionDetail) => {
+    const refs = refsOf(sectionDetail.id)
+    if (!refs) {
+      return sectionDetail.requirementRefs && sectionDetail.requirementRefs.length > 0
+        ? sectionDetail.requirementRefs.join(', ')
+        : null
+    }
+    if (refs.length === 0) return null
+    const unknown = unknownIn(sectionDetail.id)
+    const known = refs.filter((r) => !unknown.has(r.reqId))
+    return (
+      <>
+        {known.map((r) => (
+          <Badge
+            key={r.reqId}
+            variant={r.fulfilled ? 'success' : 'warning'}
+            appearance="light"
+            size="sm"
+            className="whitespace-nowrap"
           >
-            ← 뒤로
-          </button>
-          <h1 className="text-xl font-bold">제안서 Section 관리</h1>
-          <p className="text-sm text-gray-500">문서 {documentId}</p>
-        </div>
-        <button
-          onClick={() => documentId && navigate(`/documents/${documentId}/edit`)}
-          className="px-3 py-1.5 text-sm border rounded hover:bg-gray-50"
+            {r.reqId} {r.fulfilled ? '충족' : '누락'}
+          </Badge>
+        ))}
+        {unknown.size > 0 && (
+          <span className="text-xs text-destructive">
+            매트릭스에 없는 ID: {[...unknown].join(', ')}
+          </span>
+        )}
+      </>
+    )
+  }
+
+  const sourcesValue = (sectionDetail: SectionDetail) =>
+    (sectionDetail.sourceDocuments ?? []).length === 0 ? (
+      <span className="text-muted-foreground">근거 서류 없음</span>
+    ) : (
+      (sectionDetail.sourceDocuments ?? []).map((d) => (
+        <Button
+          key={d.readingId}
+          variant={openSourceId === d.readingId ? 'secondary' : 'outline'}
+          size="sm"
+          onClick={() => setOpenSourceId(openSourceId === d.readingId ? null : d.readingId)}
         >
-          통합 편집기
-        </button>
-      </div>
+          {d.fileName} 사실 {d.factCount}
+          {d.status !== 'DONE' && ` (${readingStatusLabel(d.status)})`}
+        </Button>
+      ))
+    )
+
+  const showDetail = detail !== null && !detailLoading
+
+  return (
+    <div className="space-y-4">
+      <PageHeader
+        variant="detail"
+        back={{ onClick: () => navigate(-1) }}
+        title="제안서 Section 관리"
+        actions={
+          <Button variant="outline" onClick={() => documentId && navigate(`/documents/${documentId}/edit`)}>
+            <FilePenLine />
+            통합 편집기
+          </Button>
+        }
+      />
 
       {error && (
-        <div className="mb-4 p-3 bg-red-50 text-red-700 text-sm rounded">{error}</div>
+        <Alert variant="destructive" appearance="light">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
 
       <CoverageBand
@@ -273,276 +339,237 @@ export default function ProposalTreePage() {
 
       <div className="grid grid-cols-12 gap-4">
         {/* ── 좌: 트리 ── */}
-        <div className="col-span-4 bg-white border rounded-lg p-3 max-h-[75vh] overflow-y-auto">
-          {loading ? (
-            <p className="text-sm text-gray-400 p-2">불러오는 중…</p>
-          ) : chapters.length === 0 ? (
-            <p className="text-sm text-gray-400 p-2">생성된 section 이 없습니다.</p>
-          ) : (
-            chapters.map((ch) => (
-              <div key={ch.id} className="mb-3">
-                <div className="font-semibold text-sm text-gray-800 px-1 py-1">
-                  {ch.factorLabel ? `${ch.factorLabel}. ` : ''}
-                  {ch.factorTitle || '(제목 없음)'}
+        <Card className="col-span-4 max-h-[75vh] overflow-hidden">
+          <CardContent className="min-h-0 overflow-y-auto p-3">
+            {loading ? (
+              <Loading className="h-32" />
+            ) : chapters.length === 0 ? (
+              <p className="p-2 text-sm text-muted-foreground">생성된 section 이 없습니다.</p>
+            ) : (
+              chapters.map((ch) => (
+                <div key={ch.id} className="mb-3">
+                  <div className="px-1 py-1 text-sm font-semibold text-foreground">
+                    {ch.factorLabel ? `${ch.factorLabel}. ` : ''}
+                    {ch.factorTitle || '(제목 없음)'}
+                  </div>
+                  <ul className="ml-2">
+                    {ch.sections.map((s) => {
+                      const refs = refsOf(s.id)
+                      const done = refs ? refs.filter((r) => r.fulfilled).length : 0
+                      return (
+                        <li key={s.id}>
+                          <Button
+                            variant="ghost"
+                            onClick={() => loadDetail(s.id)}
+                            className={`h-auto w-full justify-between gap-2 px-2 py-1.5 text-left text-sm font-normal ${
+                              selectedId === s.id ? 'bg-accent ring-1 ring-input' : ''
+                            }`}
+                          >
+                            <span className="truncate">
+                              {s.subfactorLabel ? `${s.subfactorLabel} ` : ''}
+                              {s.title || '(무제)'}
+                            </span>
+                            <span className="flex shrink-0 items-center gap-1">
+                              {refs && refs.length > 0 && (
+                                done < refs.length ? (
+                                  <ToneBadge tone="warning">{done}/{refs.length}</ToneBadge>
+                                ) : (
+                                  <span className="text-[11px] text-muted-foreground">{done}/{refs.length}</span>
+                                )
+                              )}
+                              <ToneBadge tone={STATUS_TONE[s.status]}>{STATUS_LABEL[s.status]}</ToneBadge>
+                            </span>
+                          </Button>
+                        </li>
+                      )
+                    })}
+                  </ul>
                 </div>
-                <ul className="ml-2">
-                  {ch.sections.map((s) => (
-                    <li key={s.id}>
-                      <button
-                        onClick={() => loadDetail(s.id)}
-                        className={`w-full text-left px-2 py-1.5 rounded text-sm flex items-center justify-between gap-2 ${
-                          selectedId === s.id ? 'bg-blue-50 ring-1 ring-blue-200' : 'hover:bg-gray-50'
-                        }`}
-                      >
-                        <span className="truncate">
-                          {s.subfactorLabel ? `${s.subfactorLabel} ` : ''}
-                          {s.title || '(무제)'}
-                        </span>
-                        <span className="shrink-0 flex items-center gap-1">
-                          {(() => {
-                            const refs = refsOf(s.id)
-                            if (!refs || refs.length === 0) return null
-                            const done = refs.filter((r) => r.fulfilled).length
-                            return (
-                              <span className={`text-[11px] ${done < refs.length ? 'text-amber-700' : 'text-gray-500'}`}>
-                                {done}/{refs.length}
-                              </span>
-                            )
-                          })()}
-                          <span className={`text-[11px] px-1.5 py-0.5 rounded ${STATUS_STYLE[s.status]}`}>
-                            {STATUS_LABEL[s.status]}
-                          </span>
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))
-          )}
-        </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
 
         {/* ── 우: 상세 ── */}
-        <div className="col-span-8 bg-white border rounded-lg p-4 max-h-[75vh] overflow-y-auto">
-          {!detail ? (
-            <p className="text-sm text-gray-400">좌측에서 section 을 선택하세요.</p>
-          ) : detailLoading ? (
-            <p className="text-sm text-gray-400">불러오는 중…</p>
-          ) : (
-            <>
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <h2 className="font-bold text-lg">
-                    {detail.subfactorLabel ? `${detail.subfactorLabel} ` : ''}
-                    {detail.title || '(무제)'}
-                  </h2>
-                  <span
-                    className={`inline-block mt-1 text-xs px-2 py-0.5 rounded ${STATUS_STYLE[detail.status]}`}
-                  >
-                    {STATUS_LABEL[detail.status]}
-                  </span>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleRegenerate}
+        <Card className="col-span-8 max-h-[75vh] overflow-hidden">
+          {showDetail && (
+            <CardHeader>
+              <div className="flex min-w-0 items-center gap-2">
+                <CardTitle className="truncate text-base">
+                  {detail.subfactorLabel ? `${detail.subfactorLabel} ` : ''}
+                  {detail.title || '(무제)'}
+                </CardTitle>
+                <ToneBadge tone={STATUS_TONE[detail.status]}>{STATUS_LABEL[detail.status]}</ToneBadge>
+              </div>
+              <CardToolbar>
+                {/* 잠긴 section 의 안내를 보이려고 감싼다. 끈 단추는 마우스를 받지 않는다 */}
+                <span title={detail.locked ? '잠긴 section 은 재생성할 수 없습니다' : ''}>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => setRegenerateId(detail.id)}
                     disabled={acting || detail.locked}
-                    className="px-3 py-1.5 text-sm rounded bg-blue-600 text-white disabled:opacity-40 hover:bg-blue-700"
-                    title={detail.locked ? '잠긴 section 은 재생성할 수 없습니다' : ''}
                   >
+                    <RotateCw />
                     재생성
-                  </button>
-                  <button
-                    onClick={handleToggleLock}
-                    disabled={acting}
-                    className="px-3 py-1.5 text-sm rounded border disabled:opacity-40 hover:bg-gray-50"
-                  >
-                    {detail.locked ? '잠금 해제' : '잠금'}
-                  </button>
-                </div>
-              </div>
-
-              {/* 메타 */}
-              <div className="mb-4 text-sm grid grid-cols-2 gap-2">
-                <div>
-                  <span className="text-gray-500">최소 분량</span>{' '}
-                  {detail.minWords != null ? `${detail.minWords} words` : '—'}
-                </div>
-                <div>
-                  <span className="text-gray-500">대응 REQ ID</span>{' '}
-                  {(() => {
-                    const refs = refsOf(detail.id)
-                    if (!refs) {
-                      return detail.requirementRefs && detail.requirementRefs.length > 0
-                        ? detail.requirementRefs.join(', ')
-                        : '-'
-                    }
-                    if (refs.length === 0) return '-'
-                    const unknown = unknownIn(detail.id)
-                    const known = refs.filter((r) => !unknown.has(r.reqId))
-                    return (
-                      <span className="inline-flex flex-wrap items-center gap-1 align-middle">
-                        {known.map((r) => (
-                          <Badge key={r.reqId} variant={r.fulfilled ? 'success' : 'warning'} size="sm">
-                            {r.reqId} {r.fulfilled ? '충족' : '누락'}
-                          </Badge>
-                        ))}
-                        {unknown.size > 0 && (
-                          <span className="text-xs text-red-700">
-                            매트릭스에 없는 ID: {[...unknown].join(', ')}
-                          </span>
-                        )}
-                      </span>
-                    )
-                  })()}
-                </div>
-              </div>
-
-              {/* 근거 서류 (CR-169) */}
-              <div className="mb-4 text-sm space-y-2">
-                <div className="flex flex-wrap items-center gap-1">
-                  <span className="text-gray-500 mr-1">근거 서류</span>
-                  {(detail.sourceDocuments ?? []).length === 0 ? (
-                    <span className="text-gray-500">근거 서류 없음</span>
-                  ) : (
-                    (detail.sourceDocuments ?? []).map((d) => (
-                      <Button
-                        key={d.readingId}
-                        variant={openSourceId === d.readingId ? 'secondary' : 'outline'}
-                        size="sm"
-                        onClick={() => setOpenSourceId(openSourceId === d.readingId ? null : d.readingId)}
-                      >
-                        {d.fileName} 사실 {d.factCount}
-                        {d.status !== 'DONE' && ` (${readingStatusLabel(d.status)})`}
-                      </Button>
-                    ))
-                  )}
-                </div>
+                  </Button>
+                </span>
+                <Button variant="outline" size="sm" onClick={handleToggleLock} disabled={acting}>
+                  {detail.locked ? <LockOpen /> : <Lock />}
+                  {detail.locked ? '잠금 해제' : '잠금'}
+                </Button>
+              </CardToolbar>
+            </CardHeader>
+          )}
+          <CardContent className="min-h-0 overflow-y-auto">
+            {!detail ? (
+              <p className="text-sm text-muted-foreground">좌측에서 section 을 선택하세요.</p>
+            ) : detailLoading ? (
+              <Loading className="h-32" />
+            ) : (
+              <div className="space-y-4">
+                <InfoGrid
+                  items={[
+                    { label: '최소 분량', value: detail.minWords != null ? `${detail.minWords} words` : null },
+                    { label: '대응 REQ ID', value: reqRefsValue(detail) },
+                    // CR-169 근거 서류
+                    { label: '근거 서류', value: sourcesValue(detail), span: 2 },
+                    ...(detail.scope ? [{ label: '작성 지침', value: detail.scope, span: 2 }] : []),
+                  ]}
+                />
                 {openSourceId && (
-                  <div className="p-2 bg-gray-50 rounded">
+                  <div className="rounded-md bg-muted p-2">
                     <DocumentReadingFacts readingId={openSourceId} />
                   </div>
                 )}
-              </div>
 
-              {detail.scope && (
-                <div className="mb-4 p-2 bg-gray-50 rounded text-sm text-gray-600">
-                  <span className="font-medium text-gray-700">작성 지침: </span>
-                  {detail.scope}
-                </div>
-              )}
-
-              {/* 검증 결과 (CR-031) */}
-              <div className="mb-4">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm font-medium text-gray-700">충실성·분량 검증</span>
-                  <button
-                    onClick={handleReverify}
-                    disabled={acting}
-                    className="px-2 py-1 text-xs rounded border disabled:opacity-40 hover:bg-gray-50"
-                  >
-                    재검증
-                  </button>
-                </div>
-                {!verification || !verification.available ? (
-                  <div className="p-2 border border-dashed rounded text-xs text-gray-400">
-                    {verification?.message || '아직 검증되지 않았습니다.'}
+                {/* 검증 결과 (CR-031) */}
+                <div>
+                  <div className="mb-1 flex items-center justify-between">
+                    <span className="text-sm font-medium text-foreground">충실성·분량 검증</span>
+                    <Button variant="outline" size="sm" onClick={handleReverify} disabled={acting}>
+                      <ShieldCheck />
+                      재검증
+                    </Button>
                   </div>
-                ) : (
-                  <div className="p-2 border rounded text-sm">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span
-                        className={`text-xs px-2 py-0.5 rounded font-medium ${
-                          verification.verdict === 'PASS'
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-red-100 text-red-700'
-                        }`}
-                      >
-                        {verification.verdict === 'PASS' ? '검증 통과' : '검증 실패'}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        {verification.method === 'RULE' ? '정형 룰' : 'LLM 충실성'}
-                        {verification.attempt && verification.attempt > 1
-                          ? ` · 재시도 ${verification.attempt - 1}회`
-                          : ''}
-                        {verification.wordCount != null ? ` · ${verification.wordCount} words` : ''}
-                      </span>
+                  {!verification || !verification.available ? (
+                    <div className="rounded border border-dashed border-border p-2 text-xs text-muted-foreground">
+                      {verification?.message || '아직 검증되지 않았습니다.'}
                     </div>
-
-                    {/* 환각 문장 */}
-                    {verification.hallucinations && verification.hallucinations.length > 0 && (
-                      <div className="mt-2">
-                        <div className="text-xs font-medium text-red-700 mb-1">
-                          근거 없는 문장 (환각) {verification.hallucinations.length}건
-                        </div>
-                        <ul className="space-y-1">
-                          {verification.hallucinations.map((h, i) => (
-                            <li key={i} className="text-xs bg-red-50 rounded p-1.5">
-                              <span className="text-gray-800">“{h.sentence}”</span>
-                              {h.reason && <span className="text-gray-500"> — {h.reason}</span>}
-                            </li>
-                          ))}
-                        </ul>
+                  ) : (
+                    <div className="space-y-2 rounded border border-border p-2 text-sm">
+                      <div className="flex items-center gap-2">
+                        <ToneBadge tone={verification.verdict === 'PASS' ? 'success' : 'destructive'}>
+                          {verification.verdict === 'PASS' ? '검증 통과' : '검증 실패'}
+                        </ToneBadge>
+                        <span className="text-xs text-muted-foreground">
+                          {verification.method === 'RULE' ? '정형 룰' : 'LLM 충실성'}
+                          {verification.attempt && verification.attempt > 1
+                            ? ` · 재시도 ${verification.attempt - 1}회`
+                            : ''}
+                          {verification.wordCount != null ? ` · ${verification.wordCount} words` : ''}
+                        </span>
                       </div>
-                    )}
 
-                    {/* 누락 */}
-                    {verification.missingFromSource && verification.missingFromSource.length > 0 && (
-                      <div className="mt-2">
-                        <div className="text-xs font-medium text-amber-700 mb-1">
-                          원문 누락 {verification.missingFromSource.length}건
-                        </div>
-                        <ul className="space-y-1">
-                          {verification.missingFromSource.map((m, i) => (
-                            <li key={i} className="text-xs bg-amber-50 rounded p-1.5">
-                              <span className="text-gray-800">“{m.source_quote}”</span>
-                              {m.reason && <span className="text-gray-500"> — {m.reason}</span>}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
+                      {/* 환각 문장 */}
+                      {verification.hallucinations && verification.hallucinations.length > 0 && (
+                        <Alert variant="destructive" appearance="light" size="sm">
+                          <AlertContent>
+                            <AlertTitle className="text-destructive">
+                              근거 없는 문장 (환각) {verification.hallucinations.length}건
+                            </AlertTitle>
+                            <AlertDescription>
+                              <ul className="space-y-1">
+                                {verification.hallucinations.map((h, i) => (
+                                  <li key={i} className="text-xs">
+                                    <span className="text-foreground">“{h.sentence}”</span>
+                                    {h.reason && <span className="text-muted-foreground">, {h.reason}</span>}
+                                  </li>
+                                ))}
+                              </ul>
+                            </AlertDescription>
+                          </AlertContent>
+                        </Alert>
+                      )}
 
-                    {/* 정형 룰 위반 */}
-                    {verification.ruleFindings && verification.ruleFindings.length > 0 && (
-                      <div className="mt-2">
-                        <div className="text-xs font-medium text-red-700 mb-1">정형 룰 위반</div>
-                        <ul className="list-disc ml-4 space-y-0.5">
-                          {verification.ruleFindings.map((f, i) => (
-                            <li key={i} className="text-xs text-gray-700">
-                              {f}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+                      {/* 누락 */}
+                      {verification.missingFromSource && verification.missingFromSource.length > 0 && (
+                        <Alert variant="warning" appearance="light" size="sm">
+                          <AlertContent>
+                            <AlertTitle>원문 누락 {verification.missingFromSource.length}건</AlertTitle>
+                            <AlertDescription>
+                              <ul className="space-y-1">
+                                {verification.missingFromSource.map((m, i) => (
+                                  <li key={i} className="text-xs">
+                                    <span className="text-foreground">“{m.source_quote}”</span>
+                                    {m.reason && <span className="text-muted-foreground">, {m.reason}</span>}
+                                  </li>
+                                ))}
+                              </ul>
+                            </AlertDescription>
+                          </AlertContent>
+                        </Alert>
+                      )}
 
-              {/* 본문 (읽기 전용 미리보기) */}
-              <div className="border-t pt-3">
-                <div className="text-sm font-medium text-gray-700 mb-2">
-                  본문 ({detail.blocks.length} blocks)
+                      {/* 정형 룰 위반 */}
+                      {verification.ruleFindings && verification.ruleFindings.length > 0 && (
+                        <Alert variant="destructive" appearance="light" size="sm">
+                          <AlertContent>
+                            <AlertTitle className="text-destructive">정형 룰 위반</AlertTitle>
+                            <AlertDescription>
+                              <ul className="ml-4 list-disc space-y-0.5">
+                                {verification.ruleFindings.map((f, i) => (
+                                  <li key={i} className="text-xs text-foreground">
+                                    {f}
+                                  </li>
+                                ))}
+                              </ul>
+                            </AlertDescription>
+                          </AlertContent>
+                        </Alert>
+                      )}
+                    </div>
+                  )}
                 </div>
-                {detail.blocks.length === 0 ? (
-                  <p className="text-sm text-gray-400">작성된 본문이 없습니다.</p>
-                ) : (
-                  <div className="space-y-2">
-                    {detail.blocks.map((b) => {
-                      const text = extractText(b.contentJson)
-                      return (
-                        <p key={b.id} className="text-sm text-gray-800 whitespace-pre-wrap">
-                          {text || <span className="text-gray-300">(빈 block)</span>}
-                        </p>
-                      )
-                    })}
+
+                {/* 본문 (읽기 전용 미리보기) */}
+                <div className="border-t border-border pt-3">
+                  <div className="mb-2 text-sm font-medium text-foreground">
+                    본문 ({detail.blocks.length} blocks)
                   </div>
-                )}
+                  {detail.blocks.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">작성된 본문이 없습니다.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {detail.blocks.map((b) => {
+                        const text = extractText(b.contentJson)
+                        return (
+                          <p key={b.id} className="whitespace-pre-wrap text-sm text-foreground">
+                            {text || <span className="text-muted-foreground">(빈 block)</span>}
+                          </p>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
-            </>
-          )}
-        </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
+
+      <ConfirmDialog
+        open={regenerateId !== null}
+        onOpenChange={(open) => { if (!open) setRegenerateId(null) }}
+        title="section 본문 재생성"
+        description="기존 본문은 새 본문으로 바뀝니다."
+        confirmLabel="재생성"
+        onConfirm={() => {
+          const sectionId = regenerateId
+          setRegenerateId(null)
+          if (sectionId) handleRegenerate(sectionId)
+        }}
+      />
     </div>
   )
 }

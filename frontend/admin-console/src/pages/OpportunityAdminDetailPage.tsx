@@ -1,5 +1,36 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import {
+  Download,
+  ExternalLink,
+  Flag,
+  Languages,
+  RotateCcw,
+  SquareArrowOutUpRight,
+  Trash2,
+  TriangleAlert,
+  Upload,
+  WandSparkles,
+} from 'lucide-react'
+import {
+  Alert,
+  AlertContent,
+  AlertDescription,
+  AlertIcon,
+  AlertTitle,
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardToolbar,
+  ConfirmDialog,
+  Input,
+  PageHeader,
+  Spinner,
+  toast,
+} from '@therecommerce-develop/ds-ui'
 import {
   getAdminOpportunityDetail,
   createNotice,
@@ -11,6 +42,9 @@ import {
   setOpportunityPieeLinkBroken,
 } from '../api/client'
 import OpportunityMetaPanel from '../components/OpportunityMetaPanel'
+import { ToneBadge } from '../components/StateBadge'
+import { Loading } from '../components/LoadState'
+import type { StateTone } from '../utils/bidState'
 
 interface OpportunityDetail {
   id: string
@@ -31,7 +65,7 @@ interface OpportunityDetail {
   placeOfPerformanceShort?: string // CR-022 2차
   setAsideKo?: string              // CR-022 2차
   naicsLabelKo?: string            // CR-022 2차
-  // CR-021 2차 — SAM 원본 메타 (raw_json 기반)
+  // CR-021 2차, SAM 원본 메타 (raw_json 기반)
   setAside?: string | null
   naicsCode?: string | null
   classificationCode?: string | null
@@ -63,18 +97,18 @@ function formatSeoulShort(value?: string | null): string {
   return `${value.slice(5, 7)}/${value.slice(8, 10)} ${value.slice(11, 16)}`
 }
 
-function pieeFetchLine(opp: OpportunityDetail): { text: string; tone: 'ok' | 'busy' | 'muted' | 'error' } | null {
+function pieeFetchLine(opp: OpportunityDetail): { text: string; tone: StateTone; detail?: string } | null {
   const at = formatSeoulShort(opp.pieeFetchStatusAt)
   switch (opp.pieeFetchStatus) {
     case 'DONE':
-      return { text: `PIEE 입찰서류 ${opp.pieeFileCount ?? 0}개 받음 (${at})`, tone: 'ok' }
+      return { text: `PIEE 입찰서류 ${opp.pieeFileCount ?? 0}개 받음 (${at})`, tone: 'success' }
     case 'WAITING':
     case 'FETCHING':
-      return { text: 'PIEE 입찰서류 받는 중', tone: 'busy' }
+      return { text: 'PIEE 입찰서류 받는 중', tone: 'info' }
     case 'NOT_FOUND':
-      return { text: `PIEE 에 이 공고가 없습니다 (${at})`, tone: 'muted' }
+      return { text: `PIEE 에 이 공고가 없습니다 (${at})`, tone: 'gray' }
     case 'FAILED':
-      return { text: `PIEE 입찰서류 받기 실패 (${at}): ${opp.pieeFetchMessage ?? ''}`, tone: 'error' }
+      return { text: `PIEE 입찰서류 받기 실패 (${at})`, tone: 'destructive', detail: opp.pieeFetchMessage ?? undefined }
     default:
       return null
   }
@@ -89,6 +123,11 @@ interface Attachment {
   downloadStatus: 'SUCCESS' | 'FAILED' | 'LINK_ONLY' | 'MANUAL_FETCH_REQUIRED'
   manualFetchRequired: boolean
   downloadedAt?: string
+}
+
+interface MismatchedFile {
+  name: string
+  solNo: string
 }
 
 /** 바이트를 사람이 읽기 좋은 단위로. null/0/미상은 빈 문자열 반환(표시 생략). */
@@ -113,6 +152,9 @@ export default function OpportunityAdminDetailPage() {
   const [actionLoading, setActionLoading] = useState(false)
   const [uploadLoading, setUploadLoading] = useState(false)
   const [translateLoading, setTranslateLoading] = useState(false)
+  const [pendingUpload, setPendingUpload] = useState<{ files: File[]; mismatched: MismatchedFile[] } | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Attachment | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const fetchData = async () => {
     if (!id) return
@@ -137,14 +179,14 @@ export default function OpportunityAdminDetailPage() {
     if (!id) return
     setActionLoading(true)
     try {
-      // 기존 공고문이 있으면 BE가 그 noticeId를 반환(중복 생성 안 함) → 해당 상세로 이동
+      // 기존 공고문이 있으면 BE가 그 noticeId를 반환하므로(중복 생성 안 함) 그 상세로 이동
       const res = await createNotice(id)
       const noticeId = res?.data?.noticeId
       navigate(noticeId ? `/notices/${noticeId}` : '/notices')
     } catch (err: any) {
       console.error('공고문 생성 실패:', err)
       const reason = err?.response?.data?.reason
-      alert(reason || '공고문 생성에 실패했습니다.')
+      toast.error(reason || '공고문 생성에 실패했습니다.')
     } finally {
       setActionLoading(false)
     }
@@ -156,7 +198,7 @@ export default function OpportunityAdminDetailPage() {
     try {
       const { data } = await retranslateOpportunityDescription(id)
       if (data?.status === 'FAILED_OR_EMPTY') {
-        alert('번역에 실패했거나 원본 본문이 비어있습니다. 잠시 후 다시 시도해 주세요.')
+        toast.error('번역에 실패했거나 원본 본문이 비어 있습니다. 잠시 후 다시 시도해 주세요.')
       }
       fetchData()
     } catch (err) {
@@ -164,7 +206,7 @@ export default function OpportunityAdminDetailPage() {
       // BE는 동기 트랜잭션으로 끝까지 돌아 DB에 저장된다. 에러여도 한 번 더 조회해
       // 저장된 번역을 반영한다(저장이 아직이면 빈손이라 안내).
       console.error('본문 번역 응답 수신 실패(번역은 백그라운드 진행 중일 수 있음):', err)
-      alert('번역에 시간이 걸려 응답이 지연됐습니다. 화면을 갱신합니다 — 아직 반영 안 됐으면 잠시 후 다시 눌러주세요.')
+      toast.info('번역에 시간이 걸려 응답이 늦어졌습니다. 화면을 다시 불러옵니다. 아직 반영되지 않았으면 잠시 후 다시 눌러 주세요.')
       fetchData()
     } finally {
       setTranslateLoading(false)
@@ -195,32 +237,14 @@ export default function OpportunityAdminDetailPage() {
       setOpp({ ...opp, pieeLinkBroken: next })
     } catch (err) {
       console.error('PIEE 링크 오류 표식 변경 실패:', err)
-      alert('표식 변경에 실패했습니다. 잠시 후 다시 시도해 주세요.')
+      toast.error('표식 변경에 실패했습니다. 잠시 후 다시 시도해 주세요.')
     } finally {
       setActionLoading(false)
     }
   }
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!id || !e.target.files?.length) return
-    const files = Array.from(e.target.files)
-
-    // 공고번호 패턴 zip인데 현재 공고번호와 불일치하는 파일 검출
-    const currentSolNo = opp?.solicitationNumber?.trim().toUpperCase()
-    if (currentSolNo) {
-      const mismatched = files
-        .map((f) => ({ name: f.name, solNo: fileBaseAsSolNo(f.name) }))
-        .filter((f) => f.solNo && f.solNo !== currentSolNo)
-      if (mismatched.length > 0) {
-        const list = mismatched.map((f) => `· ${f.name} → ${f.solNo}`).join('\n')
-        const ok = window.confirm(
-          `다음 파일명이 현재 공고번호(${opp?.solicitationNumber})와 다릅니다.\n` +
-          `다른 공고의 입찰서류를 잘못 올린 것은 아닌지 확인하세요.\n\n${list}\n\n그대로 업로드할까요?`
-        )
-        if (!ok) { e.target.value = ''; return }
-      }
-    }
-
+  const uploadFiles = async (files: File[]) => {
+    if (!id) return
     setUploadLoading(true)
     try {
       await uploadOpportunityAttachment(id, files)
@@ -229,8 +253,26 @@ export default function OpportunityAdminDetailPage() {
       console.error('파일 업로드 실패:', err)
     } finally {
       setUploadLoading(false)
-      e.target.value = '' // 같은 파일 재선택 허용
     }
+  }
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!id || !e.target.files?.length) return
+    const files = Array.from(e.target.files)
+    e.target.value = '' // 같은 파일 재선택 허용
+
+    // 공고번호 패턴 zip인데 현재 공고번호와 불일치하는 파일 검출
+    const currentSolNo = opp?.solicitationNumber?.trim().toUpperCase()
+    if (currentSolNo) {
+      const mismatched = files
+        .map((f) => ({ name: f.name, solNo: fileBaseAsSolNo(f.name) }))
+        .filter((f): f is MismatchedFile => !!f.solNo && f.solNo !== currentSolNo)
+      if (mismatched.length > 0) {
+        setPendingUpload({ files, mismatched })
+        return
+      }
+    }
+    uploadFiles(files)
   }
 
   // CR-034: 저장된 첨부 다운로드 (blob 응답을 받아 브라우저 저장)
@@ -248,88 +290,88 @@ export default function OpportunityAdminDetailPage() {
       window.URL.revokeObjectURL(url)
     } catch (err) {
       console.error('첨부 다운로드 실패:', err)
-      alert('다운로드에 실패했습니다.')
+      toast.error('다운로드에 실패했습니다.')
     }
   }
 
   // CR-034: 수동 업로드 첨부 삭제 (SAM 수집 첨부는 버튼 자체가 없음)
-  const handleDelete = async (a: Attachment) => {
-    if (!id) return
-    if (!window.confirm(`"${a.fileName || '이 첨부'}"를 삭제할까요?`)) return
-    setActionLoading(true)
-    try {
-      await deleteOpportunityAttachment(id, a.id)
-      fetchData()
-    } catch (err) {
-      console.error('첨부 삭제 실패:', err)
-      alert('삭제에 실패했습니다. (SAM 수집 첨부는 삭제할 수 없습니다)')
-    } finally {
-      setActionLoading(false)
-    }
+  const confirmDelete = async () => {
+    if (!id || !deleteTarget) return
+    await deleteOpportunityAttachment(id, deleteTarget.id)
+    setDeleteTarget(null)
+    fetchData()
   }
 
-  if (loading) {
+  if (loading) return <Loading className="h-64" />
+
+  if (!opp) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="w-8 h-8 border-2 border-gray-200 border-t-secondary rounded-full animate-spin" />
+      <div className="space-y-4">
+        <PageHeader variant="detail" back={{ onClick: () => navigate('/opportunities') }} />
+        <p className="py-12 text-center text-sm text-muted-foreground">원본 공고를 찾을 수 없습니다.</p>
       </div>
     )
   }
 
-  if (!opp) {
-    return <div className="p-6 text-center text-gray-400">원본 공고를 찾을 수 없습니다.</div>
-  }
+  const pieeLine = pieeFetchLine(opp)
 
   return (
-    <div className="p-6 space-y-5">
-      <div className="flex items-start justify-between">
-        <div>
-          <button onClick={() => navigate('/opportunities')} className="text-sm text-gray-500 hover:text-gray-700 mb-2">
-            <i className="fa-solid fa-arrow-left mr-1" />원본 공고
-          </button>
-          <h1 className="text-xl font-bold text-gray-900 line-clamp-2">{opp.titleKo || opp.title}</h1>
-          {opp.titleKo && (
-            <p className="text-sm text-gray-500 line-clamp-2 mt-1">{opp.title}</p>
-          )}
-          <div className="flex items-center gap-3 mt-2 flex-wrap">
-            <span className="text-xs text-gray-500 font-mono">{opp.solicitationNumber || opp.noticeId}</span>
-            <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
-              opp.noticeCount > 0 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
-            }`}>
-              {opp.noticeCount > 0 ? `공고문 ${opp.noticeCount}개` : '공고문 미생성'}
-            </span>
-            {opp.translatedAt ? (
-              <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700"
-                title={`번역 완료: ${new Date(opp.translatedAt).toLocaleString('ko')}`}>
-                <i className="fa-solid fa-language mr-1" />번역됨
-              </span>
-            ) : (
-              <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700"
-                title="제목 한글화 미완료 — 영문 fallback">
-                미번역 (영문 표시)
-              </span>
-            )}
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={handleRetranslate}
-            disabled={translateLoading}
-            className="px-3 py-2 text-sm rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-40"
-            title="원본 본문을 LLM으로 한글 번역 (자동 실패 시 수동)"
-          >
-            <i className={`fa-solid ${translateLoading ? 'fa-spinner fa-spin' : 'fa-language'} mr-1.5`} />
-            한글 번역하기
-          </button>
-          <button
-            onClick={handleCreateNotice}
-            disabled={actionLoading || attachments.length === 0}
-            title={attachments.length === 0 ? '첨부파일이 있어야 공고문을 만들 수 있습니다' : undefined}
-            className="px-4 py-2 text-sm rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <i className="fa-solid fa-wand-magic-sparkles mr-1.5" />공고문 만들기
-          </button>
-        </div>
+    <div className="space-y-4">
+      <div className="space-y-1">
+        <PageHeader
+          variant="detail"
+          back={{ onClick: () => navigate('/opportunities') }}
+          title={opp.titleKo || opp.title}
+          badge={
+            <>
+              {opp.noticeCount > 0 ? (
+                <Badge variant="success" appearance="light" className="whitespace-nowrap">
+                  공고문 {opp.noticeCount}개
+                </Badge>
+              ) : (
+                <ToneBadge tone="gray">공고문 미생성</ToneBadge>
+              )}
+              {opp.translatedAt ? (
+                <Badge
+                  variant="info"
+                  appearance="light"
+                  className="whitespace-nowrap"
+                  title={`번역 완료: ${new Date(opp.translatedAt).toLocaleString('ko')}`}
+                >
+                  <Languages />
+                  번역됨
+                </Badge>
+              ) : (
+                <Badge variant="warning" appearance="light" className="whitespace-nowrap" title="제목 한글화 미완료, 영문 fallback">
+                  미번역 (영문 표시)
+                </Badge>
+              )}
+            </>
+          }
+          actions={
+            <>
+              <Button
+                variant="outline"
+                onClick={handleRetranslate}
+                disabled={translateLoading}
+                title="원본 본문을 LLM으로 한글 번역 (자동 실패 시 수동)"
+              >
+                {translateLoading ? <Spinner /> : <Languages />}
+                한글 번역하기
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleCreateNotice}
+                disabled={actionLoading || attachments.length === 0}
+                title={attachments.length === 0 ? '첨부파일이 있어야 공고문을 만들 수 있습니다' : undefined}
+              >
+                <WandSparkles />
+                공고문 만들기
+              </Button>
+            </>
+          }
+        />
+        {opp.titleKo && <p className="text-sm text-muted-foreground">{opp.title}</p>}
       </div>
 
       {/* CR-021 2차: SAM.gov 원본 메타 패널 (페이지 헤더가 별도로 있으므로 hideHeader) */}
@@ -348,7 +390,7 @@ export default function OpportunityAdminDetailPage() {
           // CR-022 한글화 라벨이 있으면 우선
           setAside: opp.setAsideKo || opp.setAside,
           naicsCode: opp.naicsLabelKo
-            ? `${opp.naicsCode || ''} — ${opp.naicsLabelKo}`.trim().replace(/^—\s*/, '')
+            ? [opp.naicsCode, opp.naicsLabelKo].filter(Boolean).join(', ')
             : opp.naicsCode,
           classificationCode: opp.classificationCode,
           placeOfPerformance: opp.placeOfPerformanceShort || opp.placeOfPerformance,
@@ -358,153 +400,186 @@ export default function OpportunityAdminDetailPage() {
         }}
       />
 
-      <div className="grid grid-cols-1 gap-4">
-        <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-gray-700">첨부파일</h3>
-            <label
-              className={`px-3 py-1.5 text-xs rounded-lg bg-blue-50 text-blue-700 ${
-                uploadLoading ? 'opacity-60 cursor-not-allowed' : 'hover:bg-blue-100 cursor-pointer'
-              }`}
-            >
-              {uploadLoading ? (
-                <>
-                  <i className="fa-solid fa-spinner fa-spin mr-1" />업로드 중...
-                </>
-              ) : (
-                <>
-                  <i className="fa-solid fa-upload mr-1" />수동 업로드
-                </>
-              )}
-              <input
-                type="file"
-                multiple
-                className="hidden"
-                onChange={handleFileUpload}
-                disabled={uploadLoading}
-              />
-            </label>
-          </div>
-          {/* CR-034: PIEE 입찰서류 안내 — 첨부 유무와 무관하게 항상 노출. 입찰서류 정본/추가본이 PIEE에 있을 수 있음 */}
+      <Card>
+        <CardHeader>
+          <CardTitle>첨부파일</CardTitle>
+          <CardToolbar>
+            <Input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={handleFileUpload}
+              disabled={uploadLoading}
+            />
+            <Button size="sm" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={uploadLoading}>
+              {uploadLoading ? <Spinner /> : <Upload />}
+              {uploadLoading ? '업로드 중...' : '수동 업로드'}
+            </Button>
+          </CardToolbar>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {/* CR-034: PIEE 입찰서류 안내. 첨부 유무와 무관하게 항상 노출. 입찰서류 정본/추가본이 PIEE에 있을 수 있음 */}
           {/* CR-043: pieeLinkBroken=true면 빨강 경고로 전환. 일부 공고는 PIEE에 직링크로 안 열려(메인 리다이렉트) 헛클릭 방지 */}
           {opp.solicitationNumber && (
-            <div className={`rounded-lg border px-3 py-2.5 ${
-              opp.pieeLinkBroken ? 'border-red-300 bg-red-50' : 'border-amber-300 bg-amber-50'
-            }`}>
-              {opp.pieeLinkBroken && (
-                <p className="text-xs font-semibold text-red-700 mb-2 flex items-center gap-1.5">
-                  <i className="fa-solid fa-triangle-exclamation" />
-                  이 공고의 PIEE 링크는 오류로 표시됨 — 직링크가 PIEE 메인으로 튕길 수 있습니다. 클릭 전 확인.
-                </p>
-              )}
-              <p className={`text-xs mb-2 leading-relaxed ${opp.pieeLinkBroken ? 'text-red-800' : 'text-amber-800'}`}>
-                입찰서류 정본(본 공고서·수정본·추가서류)은 PIEE에도 게시될 수 있습니다.
-                아래에서 공고번호 <span className="font-semibold">{opp.solicitationNumber}</span>로 확인 후,
-                필요한 파일을 받아 "수동 업로드" 하세요.
-              </p>
-              {(() => {
-                const line = pieeFetchLine(opp)
-                if (!line) return null
-                const toneClass = {
-                  ok: 'text-green-700',
-                  busy: 'text-gray-600',
-                  muted: 'text-gray-500',
-                  error: 'text-red-700',
-                }[line.tone]
-                return <p className={`text-xs font-medium mb-2 ${toneClass}`}>{line.text}</p>
-              })()}
-              <div className="flex items-center gap-2 flex-wrap">
-                {opp.pieeUrl && (
-                  <a
-                    href={opp.pieeUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-white ${
-                      opp.pieeLinkBroken ? 'bg-red-600 hover:bg-red-700' : 'bg-amber-600 hover:bg-amber-700'
-                    }`}
-                  >
-                    <i className="fa-solid fa-up-right-from-square" />
-                    PIEE 입찰서류 보기
-                  </a>
+            <Alert variant={opp.pieeLinkBroken ? 'destructive' : 'warning'} appearance="light">
+              <AlertContent className="grow">
+                {opp.pieeLinkBroken && (
+                  <AlertTitle className="flex items-center gap-1.5 text-destructive">
+                    <TriangleAlert className="size-4" />
+                    이 공고의 PIEE 링크는 오류로 표시됨, 직링크가 PIEE 메인으로 튕길 수 있습니다. 클릭 전 확인.
+                  </AlertTitle>
                 )}
-                <button
-                  type="button"
-                  onClick={handleTogglePieeLinkBroken}
-                  disabled={actionLoading}
-                  className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium disabled:opacity-50 ${
-                    opp.pieeLinkBroken
-                      ? 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
-                      : 'border-red-300 bg-white text-red-700 hover:bg-red-50'
-                  }`}
-                >
-                  <i className={`fa-solid ${opp.pieeLinkBroken ? 'fa-rotate-left' : 'fa-flag'}`} />
-                  {opp.pieeLinkBroken ? '오류 표식 해제' : 'PIEE 링크 오류로 표시'}
-                </button>
-              </div>
-            </div>
+                <AlertDescription>
+                  <p>
+                    입찰서류 정본(본 공고서·수정본·추가서류)은 PIEE에도 게시될 수 있습니다.
+                    아래에서 공고번호 <span className="font-semibold">{opp.solicitationNumber}</span>로 확인 후,
+                    필요한 파일을 받아 "수동 업로드" 하세요.
+                  </p>
+                  {pieeLine && (
+                    <div className="mb-2 flex flex-wrap items-center gap-2">
+                      <ToneBadge tone={pieeLine.tone}>{pieeLine.text}</ToneBadge>
+                      {pieeLine.detail && <span className="text-destructive">{pieeLine.detail}</span>}
+                    </div>
+                  )}
+                  <div className="flex flex-wrap items-center gap-2">
+                    {opp.pieeUrl && (
+                      <Button asChild variant={opp.pieeLinkBroken ? 'destructive' : 'primary'}>
+                        <a href={opp.pieeUrl} target="_blank" rel="noreferrer">
+                          <SquareArrowOutUpRight />
+                          PIEE 입찰서류 보기
+                        </a>
+                      </Button>
+                    )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className={opp.pieeLinkBroken ? undefined : 'text-destructive'}
+                      onClick={handleTogglePieeLinkBroken}
+                      disabled={actionLoading}
+                    >
+                      {opp.pieeLinkBroken ? <RotateCcw /> : <Flag />}
+                      {opp.pieeLinkBroken ? '오류 표식 해제' : 'PIEE 링크 오류로 표시'}
+                    </Button>
+                  </div>
+                </AlertDescription>
+              </AlertContent>
+            </Alert>
           )}
           {opp.manualFetchRequiredCount > 0 && (
-            <div className="text-xs bg-amber-50 text-amber-700 rounded-lg px-3 py-2">
-              <i className="fa-solid fa-triangle-exclamation mr-1" />
-              외부 사이트 첨부 {opp.manualFetchRequiredCount}건 — 아래 링크에서 직접 받아 "수동 업로드" 하세요.
-            </div>
+            <Alert variant="warning" appearance="light">
+              <AlertIcon>
+                <TriangleAlert />
+              </AlertIcon>
+              <AlertDescription>
+                외부 사이트 첨부 {opp.manualFetchRequiredCount}건, 아래 링크에서 직접 받아 "수동 업로드" 하세요.
+              </AlertDescription>
+            </Alert>
           )}
           {attachments.length === 0 ? (
-            <div className="text-sm text-gray-400">첨부파일 없음</div>
+            <p className="text-sm text-muted-foreground">첨부파일 없음</p>
           ) : (
             <ul className="space-y-2">
               {attachments.map((a) => (
-                <li key={a.id} className="flex items-center justify-between gap-2 text-sm border border-gray-100 rounded-lg px-3 py-2">
+                <li key={a.id} className="flex items-center justify-between gap-2 rounded-lg border border-border px-3 py-2 text-sm">
                   <div className="min-w-0">
-                    <div className="font-medium text-gray-800 truncate">
+                    <div className="truncate font-medium text-foreground">
                       {a.fileName || '(이름 없음)'}
                       {formatFileSize(a.fileSize) && (
-                        <span className="ml-2 font-normal text-xs text-gray-400">{formatFileSize(a.fileSize)}</span>
+                        <span className="ml-2 text-xs font-normal text-muted-foreground">{formatFileSize(a.fileSize)}</span>
                       )}
                     </div>
                     {/* CR-160: PIEE 에서 받은 파일의 출처는 주소가 아니라 "piee:공고번호/압축 안 경로" 라 링크를 걸지 않는다 */}
                     {a.sourceUrl && a.sourceUrl !== 'admin-upload' && !a.sourceUrl.startsWith('piee:') && (
-                      <a href={a.sourceUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline truncate inline-block max-w-full">
-                        <i className="fa-solid fa-external-link mr-1" />외부 원본 링크
+                      <a
+                        href={a.sourceUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex max-w-full items-center gap-1 truncate text-xs text-secondary hover:underline"
+                      >
+                        <ExternalLink className="size-4 shrink-0" />
+                        외부 원본 링크
                       </a>
                     )}
                   </div>
-                  <div className="shrink-0 flex items-center gap-1.5">
+                  <div className="flex shrink-0 items-center gap-1.5">
                     {a.manualFetchRequired ? (
-                      <span className="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700">가져와야 함</span>
+                      <Badge variant="warning" appearance="light" className="whitespace-nowrap">가져와야 함</Badge>
                     ) : a.downloadStatus === 'SUCCESS' ? (
-                      <span className="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">수집됨</span>
+                      <Badge variant="success" appearance="light" className="whitespace-nowrap">수집됨</Badge>
                     ) : (
-                      <span className="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500">{a.downloadStatus}</span>
+                      <ToneBadge tone="gray">{a.downloadStatus}</ToneBadge>
                     )}
                     {/* CR-034: 저장된 파일(수집됨)은 다운로드 가능 */}
                     {a.downloadStatus === 'SUCCESS' && (
-                      <button
+                      <Button
+                        variant="outline"
+                        mode="icon"
+                        size="icon-xs"
                         onClick={() => handleDownload(a)}
-                        className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 hover:bg-blue-100"
                         title="다운로드"
+                        aria-label="다운로드"
                       >
-                        <i className="fa-solid fa-download" />
-                      </button>
+                        <Download />
+                      </Button>
                     )}
                     {/* CR-034: 관리자 수동 업로드분만 삭제 가능. SAM 수집 첨부는 삭제 버튼 없음 */}
                     {a.sourceUrl === 'admin-upload' && (
-                      <button
-                        onClick={() => handleDelete(a)}
+                      <Button
+                        variant="outline"
+                        mode="icon"
+                        size="icon-xs"
+                        className="text-destructive"
+                        onClick={() => setDeleteTarget(a)}
                         disabled={actionLoading}
-                        className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-50"
                         title="삭제 (수동 업로드분)"
+                        aria-label="삭제"
                       >
-                        <i className="fa-solid fa-trash" />
-                      </button>
+                        <Trash2 />
+                      </Button>
                     )}
                   </div>
                 </li>
               ))}
             </ul>
           )}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
+
+      <ConfirmDialog
+        open={pendingUpload !== null}
+        onOpenChange={(open) => { if (!open) setPendingUpload(null) }}
+        title="다른 공고의 서류일 수 있습니다"
+        description={`다음 파일 이름이 지금 공고번호(${opp.solicitationNumber ?? ''})와 다릅니다.\n다른 공고의 입찰서류를 잘못 올린 것은 아닌지 확인하세요.`}
+        confirmLabel="그대로 올리기"
+        onConfirm={() => {
+          const files = pendingUpload?.files ?? []
+          setPendingUpload(null)
+          uploadFiles(files)
+        }}
+      >
+        {pendingUpload && (
+          <ul className="space-y-1 text-sm">
+            {pendingUpload.mismatched.map((f, i) => (
+              <li key={i} className="break-all">
+                <span className="font-medium text-foreground">{f.name}</span>
+                <span className="ml-2 text-muted-foreground">파일의 공고번호 {f.solNo}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </ConfirmDialog>
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
+        title="첨부 삭제"
+        description={`"${deleteTarget?.fileName || '이 첨부'}" 을 삭제합니다.`}
+        confirmLabel="삭제"
+        confirmVariant="destructive"
+        onConfirm={confirmDelete}
+        errorText={() => '삭제에 실패했습니다. SAM 수집 첨부는 삭제할 수 없습니다.'}
+      />
     </div>
   )
 }

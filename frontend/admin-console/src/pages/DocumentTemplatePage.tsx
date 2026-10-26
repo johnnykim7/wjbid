@@ -1,4 +1,39 @@
 import { useEffect, useState } from 'react'
+import { Plus } from 'lucide-react'
+import {
+  Alert,
+  AlertDescription,
+  Badge,
+  Button,
+  Card,
+  CardHeader,
+  CardTable,
+  CardToolbar,
+  Checkbox,
+  ConfirmDialog,
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  FieldError,
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Spinner,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  Textarea,
+} from '@therecommerce-develop/ds-ui'
 import {
   getDocumentTemplates,
   createDocumentTemplate,
@@ -6,9 +41,11 @@ import {
   deactivateDocumentTemplate,
   activateDocumentTemplate,
 } from '../api/client'
+import { ToneBadge } from '../components/StateBadge'
+import { TableMessageRow } from '../components/LoadState'
 
 const DOCUMENT_TYPES = [
-  { value: 'NOTICE_VIEW',        label: '공고문 표시 양식 (Notice View) — TipTap JSON 골격' },
+  { value: 'NOTICE_VIEW',        label: '공고문 표시 양식 (Notice View), TipTap JSON 골격' },
   { value: 'COVER_LETTER',       label: '커버레터 (Cover Letter)' },
   { value: 'TECHNICAL_PROPOSAL', label: '기술 제안서 (Technical Proposal)' },
   { value: 'PAST_PERFORMANCE',   label: '실적 증명 (Past Performance)' },
@@ -53,9 +90,11 @@ export default function DocumentTemplatePage() {
   const [showModal, setShowModal] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [nameError, setNameError] = useState('')
   const [jsonError, setJsonError] = useState('')
   const [includeInactive, setIncludeInactive] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [deactivateTarget, setDeactivateTarget] = useState<Template | null>(null)
 
   // 폼 상태
   const [form, setForm] = useState({
@@ -80,6 +119,7 @@ export default function DocumentTemplatePage() {
 
   const openModal = () => {
     setForm({ templateName: '', documentType: 'COVER_LETTER', contentJsonStr: DEFAULT_CONTENT_JSON })
+    setNameError('')
     setJsonError('')
     setError('')
     setEditingId(null)
@@ -96,6 +136,7 @@ export default function DocumentTemplatePage() {
       documentType: t.documentType,
       contentJsonStr: jsonStr,
     })
+    setNameError('')
     setJsonError('')
     setError('')
     setEditingId(t.id)
@@ -104,7 +145,7 @@ export default function DocumentTemplatePage() {
 
   const handleSave = async () => {
     if (!form.templateName.trim()) {
-      setError('템플릿 이름을 입력하세요.')
+      setNameError('템플릿 이름을 입력하세요.')
       return
     }
 
@@ -141,14 +182,11 @@ export default function DocumentTemplatePage() {
     }
   }
 
-  const handleDeactivate = async (id: string, name: string) => {
-    if (!confirm(`"${name}" 템플릿을 비활성화하시겠습니까?`)) return
-    try {
-      await deactivateDocumentTemplate(id)
-      await load()
-    } catch {
-      setError('비활성화에 실패했습니다.')
-    }
+  const handleDeactivate = async () => {
+    if (!deactivateTarget) return
+    await deactivateDocumentTemplate(deactivateTarget.id)
+    setDeactivateTarget(null)
+    load()
   }
 
   const handleActivate = async (id: string) => {
@@ -164,243 +202,214 @@ export default function DocumentTemplatePage() {
     DOCUMENT_TYPES.find((d) => d.value === value)?.label ?? value
 
   return (
-    <div className="p-6">
-      {/* 헤더 */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">문서 템플릿 관리</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
-            Claude가 문서 생성 시 사용하는 TipTap JSON 템플릿을 관리합니다.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <label className="inline-flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={includeInactive}
-              onChange={(e) => setIncludeInactive(e.target.checked)}
-              className="w-4 h-4 accent-secondary"
-            />
-            비활성 포함
-          </label>
-          <button
-            onClick={openModal}
-            className="flex items-center gap-2 px-4 py-2 bg-secondary text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition"
-          >
-            <i className="fa-solid fa-plus" />
-            새 템플릿 등록
-          </button>
-        </div>
-      </div>
-
+    <div className="space-y-4">
       {error && !showModal && (
-        <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
-          {error}
-        </div>
+        <Alert variant="destructive" appearance="light">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
 
       {/* 템플릿 목록 */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        {loading ? (
-          <div className="flex items-center justify-center h-48 text-gray-400">
-            <i className="fa-solid fa-circle-notch fa-spin mr-2" />
-            불러오는 중...
-          </div>
-        ) : templates.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-48 text-gray-400">
-            <i className="fa-solid fa-file-lines text-3xl mb-3 opacity-30" />
-            <p className="text-sm">등록된 템플릿이 없습니다.</p>
-            <button
-              onClick={openModal}
-              className="mt-3 text-sm text-secondary hover:underline"
-            >
-              첫 번째 템플릿 등록하기
-            </button>
-          </div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                  템플릿 이름
-                </th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                  문서 타입
-                </th>
-                <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                  버전
-                </th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                  등록일
-                </th>
-                <th className="px-5 py-3" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {templates.map((t) => (
-                <tr key={t.id} className={`hover:bg-gray-50 transition ${!t.active ? 'opacity-60 bg-gray-50/50' : ''}`}>
-                  <td className="px-5 py-3.5 font-medium text-gray-900">
-                    <div className="flex items-center gap-2">
-                      {t.templateName}
-                      {!t.active && (
-                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-gray-200 text-gray-600 uppercase">
-                          비활성
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-                      {docTypeLabel(t.documentType)}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3.5 text-center text-gray-500">
-                    v{t.templateVersion}
-                  </td>
-                  <td className="px-5 py-3.5 text-gray-500">
-                    {t.createdAt ? new Date(t.createdAt).toLocaleDateString('ko-KR') : '-'}
-                  </td>
-                  <td className="px-5 py-3.5 text-right space-x-3">
-                    {t.active && (
-                      <button
-                        onClick={() => openEditModal(t)}
-                        className="text-xs text-secondary hover:text-blue-700 transition"
-                      >
-                        수정
-                      </button>
-                    )}
-                    {t.active ? (
-                      <button
-                        onClick={() => handleDeactivate(t.id, t.templateName)}
-                        className="text-xs text-red-500 hover:text-red-700 transition"
-                      >
-                        비활성화
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => handleActivate(t.id)}
-                        className="text-xs text-green-600 hover:text-green-700 transition font-semibold"
-                      >
-                        재활성화
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+      <Card>
+        <CardHeader className="py-2.5">
+          <CardToolbar className="ms-auto">
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="template-include-inactive"
+                checked={includeInactive}
+                onCheckedChange={(v) => setIncludeInactive(v === true)}
+              />
+              <Label htmlFor="template-include-inactive" className="cursor-pointer font-normal">
+                비활성 포함
+              </Label>
+            </div>
+            <Button variant="primary" onClick={openModal}>
+              <Plus />
+              새 템플릿 등록
+            </Button>
+          </CardToolbar>
+        </CardHeader>
+        <CardTable>
+          <Table>
+            <TableHeader className="bg-muted">
+              <TableRow>
+                <TableHead>템플릿 이름</TableHead>
+                <TableHead>문서 타입</TableHead>
+                <TableHead className="text-center">버전</TableHead>
+                <TableHead>등록일</TableHead>
+                <TableHead />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableMessageRow colSpan={5} loading />
+              ) : templates.length === 0 ? (
+                <TableMessageRow colSpan={5}>
+                  등록된 템플릿이 없습니다.
+                  <Button mode="link" variant="primary" className="ms-2 text-secondary" onClick={openModal}>
+                    첫 번째 템플릿 등록하기
+                  </Button>
+                </TableMessageRow>
+              ) : (
+                templates.map((t) => (
+                  <TableRow key={t.id} className={!t.active ? 'bg-muted/50 opacity-60' : undefined}>
+                    <TableCell className="font-medium text-foreground">
+                      <div className="flex items-center gap-2">
+                        {t.templateName}
+                        {!t.active && <ToneBadge tone="gray">비활성</ToneBadge>}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="info" appearance="light" className="whitespace-nowrap">
+                        {docTypeLabel(t.documentType)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-center text-muted-foreground">
+                      v{t.templateVersion}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {t.createdAt ? new Date(t.createdAt).toLocaleDateString('ko-KR') : '-'}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex justify-end gap-2">
+                        {t.active && (
+                          <Button size="sm" variant="outline" onClick={() => openEditModal(t)}>
+                            수정
+                          </Button>
+                        )}
+                        {t.active ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-destructive"
+                            onClick={() => setDeactivateTarget(t)}
+                          >
+                            비활성화
+                          </Button>
+                        ) : (
+                          <Button size="sm" variant="outline" onClick={() => handleActivate(t.id)}>
+                            재활성화
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardTable>
+      </Card>
+
+      <ConfirmDialog
+        open={deactivateTarget !== null}
+        onOpenChange={(open) => { if (!open) setDeactivateTarget(null) }}
+        title="템플릿 비활성화"
+        description={`"${deactivateTarget?.templateName ?? ''}" 템플릿을 비활성화합니다.`}
+        confirmLabel="비활성화"
+        confirmVariant="destructive"
+        onConfirm={handleDeactivate}
+        errorText={() => '비활성화에 실패했습니다.'}
+      />
 
       {/* 등록 모달 */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 flex flex-col max-h-[90vh]">
-            {/* 모달 헤더 */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-              <div>
-                <h2 className="text-base font-bold text-gray-900">{editingId ? '템플릿 수정' : '새 템플릿 등록'}</h2>
-                {editingId && (
-                  <p className="text-xs text-amber-600 mt-0.5">
-                    저장하면 새 버전이 생성되고 현재 버전은 비활성화됩니다 (버전 불변성).
-                  </p>
-                )}
-              </div>
-              <button
-                onClick={() => setShowModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <i className="fa-solid fa-xmark text-lg" />
-              </button>
+      <Dialog open={showModal} onOpenChange={setShowModal}>
+        {/* 바깥을 눌러도 닫지 않는다. 고쳐 쓰던 JSON 을 잃지 않게 */}
+        <DialogContent className="max-h-[90vh] max-w-2xl" onInteractOutside={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle>{editingId ? '템플릿 수정' : '새 템플릿 등록'}</DialogTitle>
+          </DialogHeader>
+
+          <DialogBody className="min-h-0 space-y-4 overflow-y-auto">
+            {error && (
+              <Alert variant="destructive" appearance="light">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            {editingId && (
+              <Alert variant="warning" appearance="light">
+                <AlertDescription>
+                  저장하면 새 버전이 생성되고 현재 버전은 비활성화됩니다 (버전 불변성).
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <div className="space-y-1.5">
+              <Label htmlFor="template-name">
+                템플릿 이름 <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="template-name"
+                value={form.templateName}
+                onChange={(e) => {
+                  setForm({ ...form, templateName: e.target.value })
+                  setNameError('')
+                }}
+                placeholder="예: 커버레터 기본 템플릿"
+                aria-invalid={!!nameError}
+                aria-describedby="template-name-error"
+              />
+              <FieldError id="template-name-error">{nameError}</FieldError>
             </div>
 
-            {/* 모달 바디 */}
-            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-              {error && (
-                <div className="px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
-                  {error}
-                </div>
-              )}
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  템플릿 이름 <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={form.templateName}
-                  onChange={(e) => setForm({ ...form, templateName: e.target.value })}
-                  placeholder="예: 커버레터 기본 템플릿"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-secondary"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  문서 타입 <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={form.documentType}
-                  onChange={(e) => setForm({ ...form, documentType: e.target.value })}
-                  disabled={!!editingId}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-secondary bg-white disabled:bg-gray-100 disabled:text-gray-500"
-                >
+            <div className="space-y-1.5">
+              <Label htmlFor="template-type">
+                문서 타입 <span className="text-destructive">*</span>
+              </Label>
+              <Select
+                value={form.documentType}
+                onValueChange={(v) => setForm({ ...form, documentType: v })}
+                disabled={!!editingId}
+              >
+                <SelectTrigger id="template-type" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
                   {DOCUMENT_TYPES.map((d) => (
-                    <option key={d.value} value={d.value}>{d.label}</option>
+                    <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
                   ))}
-                </select>
-                {editingId && (
-                  <p className="text-xs text-gray-400 mt-1">수정 시 문서 타입은 변경할 수 없습니다.</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  TipTap JSON <span className="text-red-500">*</span>
-                </label>
-                <p className="text-xs text-gray-400 mb-2">
-                  TipTap 에디터 형식의 JSON을 입력하세요. Claude가 이 구조를 기반으로 문서를 작성합니다.
-                </p>
-                <textarea
-                  value={form.contentJsonStr}
-                  onChange={(e) => {
-                    setForm({ ...form, contentJsonStr: e.target.value })
-                    setJsonError('')
-                  }}
-                  rows={14}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs font-mono focus:outline-none focus:ring-2 focus:ring-secondary resize-none"
-                  spellCheck={false}
-                />
-                {jsonError && (
-                  <p className="mt-1 text-xs text-red-500">
-                    <i className="fa-solid fa-triangle-exclamation mr-1" />
-                    {jsonError}
-                  </p>
-                )}
-              </div>
+                </SelectContent>
+              </Select>
+              {editingId && (
+                <p className="text-xs text-muted-foreground">수정 시 문서 타입은 변경할 수 없습니다.</p>
+              )}
             </div>
 
-            {/* 모달 푸터 */}
-            <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-200">
-              <button
-                onClick={() => setShowModal(false)}
-                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition"
-              >
-                취소
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="px-5 py-2 bg-secondary text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition disabled:opacity-50"
-              >
-                {saving ? (
-                  <><i className="fa-solid fa-circle-notch fa-spin mr-2" />저장 중...</>
-                ) : '저장'}
-              </button>
+            <div className="space-y-1.5">
+              <Label htmlFor="template-json">
+                TipTap JSON <span className="text-destructive">*</span>
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                TipTap 에디터 형식의 JSON을 입력하세요. Claude가 이 구조를 기반으로 문서를 작성합니다.
+              </p>
+              <Textarea
+                id="template-json"
+                value={form.contentJsonStr}
+                onChange={(e) => {
+                  setForm({ ...form, contentJsonStr: e.target.value })
+                  setJsonError('')
+                }}
+                rows={14}
+                className="resize-none font-mono text-xs"
+                spellCheck={false}
+                aria-invalid={!!jsonError}
+                aria-describedby="template-json-error"
+              />
+              <FieldError id="template-json-error">{jsonError}</FieldError>
             </div>
-          </div>
-        </div>
-      )}
+          </DialogBody>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowModal(false)}>
+              취소
+            </Button>
+            <Button variant="primary" onClick={handleSave} disabled={saving}>
+              {saving && <Spinner />}
+              {saving ? '저장 중...' : '저장'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

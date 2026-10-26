@@ -1,11 +1,24 @@
 /**
- * CR-132 — 1:1 문의 상세와 답변.
+ * CR-132: 1:1 문의 상세와 답변.
  * 답변은 고객 메일이 나간 뒤에만 저장되므로, 메일이 실패하면 쓴 답변을 칸에 그대로 두고 다시 보내게 한다.
  */
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import axios from 'axios'
-import { Button, Textarea } from '@therecommerce-develop/ds-ui'
+import { Check, Send, User, X } from 'lucide-react'
+import {
+  Alert,
+  AlertDescription,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  InfoGrid,
+  PageHeader,
+  Spinner,
+  Textarea,
+} from '@therecommerce-develop/ds-ui'
 import {
   answerAdminInquiry,
   getAdminInquiry,
@@ -72,24 +85,20 @@ export default function InquiryAdminDetailPage() {
       .finally(() => setSending(false))
   }
 
-  if (notFound) {
+  if (notFound || loadFailed) {
     return (
-      <div className="p-6 space-y-4">
-        <p className="text-sm text-gray-600">없는 문의입니다.</p>
-        <Button variant="outline" size="sm" onClick={() => navigate('/inquiries')}>
-          목록으로
-        </Button>
-      </div>
-    )
-  }
-
-  if (loadFailed) {
-    return (
-      <div className="p-6 space-y-4">
-        <p className="text-sm text-gray-600">문의를 불러오지 못했습니다.</p>
-        <Button variant="outline" size="sm" onClick={load}>
-          다시 시도
-        </Button>
+      <div className="space-y-4">
+        <PageHeader variant="detail" back={{ onClick: () => navigate('/inquiries') }} />
+        <Alert variant="destructive" appearance="light">
+          <AlertDescription className="flex items-center justify-between gap-3">
+            {notFound ? '없는 문의입니다.' : '문의를 불러오지 못했습니다.'}
+            {loadFailed && (
+              <Button variant="outline" size="sm" onClick={load}>
+                다시 시도
+              </Button>
+            )}
+          </AlertDescription>
+        </Alert>
       </div>
     )
   }
@@ -99,117 +108,128 @@ export default function InquiryAdminDetailPage() {
   const answered = detail.status === 'ANSWERED'
   const notice = detail.adminNotice
 
+  const noticeValue =
+    notice.total === 0 ? (
+      <span className="text-muted-foreground">기록 없음</span>
+    ) : notice.success > 0 ? (
+      <span className="inline-flex flex-wrap items-center gap-1 text-emerald-700">
+        <Check className="size-4" />
+        보냄 {notice.lastSentAt} <span className="whitespace-nowrap">({notice.success}명)</span>
+      </span>
+    ) : (
+      <span className="inline-flex items-center gap-1 text-destructive">
+        <X className="size-4" />
+        보내지 못함 ({notice.total}명)
+      </span>
+    )
+
   return (
-    <div className="p-6 flex flex-col gap-5">
-      <Button variant="ghost" size="sm" onClick={backToList} className="self-start px-0 text-[13px] text-gray-500 hover:bg-transparent">
-        <i className="fa-solid fa-arrow-left" />
-        목록으로
-      </Button>
+    <div className="space-y-4">
+      <PageHeader
+        variant="detail"
+        back={{ onClick: backToList }}
+        title={detail.title}
+        badge={
+          <>
+            <InquiryStatusPill status={detail.status} />
+            <InquiryTypePill label={detail.typeLabel} />
+          </>
+        }
+      />
 
-      <div>
-        <div className="flex items-center gap-1.5">
-          <InquiryStatusPill status={detail.status} />
-          <InquiryTypePill label={detail.typeLabel} />
-        </div>
-        <h1 className="text-lg font-bold text-gray-900 mt-1.5">{detail.title}</h1>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-5 items-start">
-        <div className="flex flex-col gap-5">
-          <section className="bg-white border border-gray-200 rounded-xl px-6 py-5">
-            <h2 className="text-[15px] font-bold mb-3.5 flex items-center gap-2">
-              <i className="fa-regular fa-envelope text-secondary" />
-              문의 내용
-            </h2>
-            <div className="text-sm leading-7 text-gray-700 whitespace-pre-line bg-gray-50 border border-gray-200 rounded-[10px] px-[18px] py-4">
-              {detail.content}
-            </div>
-          </section>
-
-          <section className="bg-white border border-gray-200 rounded-xl px-6 py-5">
-            <h2 className="text-[15px] font-bold mb-3.5 flex items-center gap-2">
-              <i className="fa-solid fa-reply text-secondary" />
-              답변
-            </h2>
-
-            {answered ? (
-              <div className="border border-emerald-200 bg-emerald-50 rounded-[10px] px-[18px] py-4">
-                <div className="text-xs text-emerald-700 mb-2.5 flex flex-wrap gap-3.5">
-                  <span>
-                    <i className="fa-solid fa-paper-plane mr-1" />
-                    보냄 {detail.answeredAt}
-                  </span>
-                  {detail.answeredByEmail && (
-                    <span>
-                      <i className="fa-regular fa-user mr-1" />
-                      {detail.answeredByEmail}
-                    </span>
-                  )}
-                  <span>
-                    <i className="fa-solid fa-check mr-1" />
-                    고객 메일 발송 성공
-                  </span>
-                </div>
-                <div className="text-sm leading-7 text-gray-900 whitespace-pre-line">{detail.answer}</div>
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>문의 내용</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="whitespace-pre-line rounded-lg border border-border bg-muted px-4 py-4 text-sm leading-7 text-foreground">
+                {detail.content}
               </div>
-            ) : (
-              <>
-                <Textarea
-                  value={answer}
-                  onChange={(e) => setAnswer(e.target.value)}
-                  maxLength={ANSWER_MAX}
-                  disabled={sending}
-                  placeholder={`${detail.name} 님께 보낼 답변을 적어 주세요.`}
-                  className="min-h-[168px] text-sm leading-7 rounded-[10px] px-4 py-3.5"
-                />
-                {sendError && <p className="mt-3 text-sm text-danger">{sendError}</p>}
-                <div className="flex items-center justify-between gap-3 mt-3">
-                  <span className="text-xs text-gray-500 leading-relaxed">
-                    보내면 {detail.email} 으로 메일이 가고 상태가 답변완료로 바뀝니다. 보낸 답변은 고칠 수 없습니다.
-                  </span>
-                  <Button variant="secondary" onClick={send} disabled={sending || !answer.trim()} className="shrink-0">
-                    <i className="fa-solid fa-paper-plane" />
-                    {sending ? '보내는 중' : '답변 보내기'}
-                  </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>답변</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {answered ? (
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-4">
+                  <div className="mb-2.5 flex flex-wrap gap-3.5 text-xs text-emerald-700">
+                    <span className="inline-flex items-center gap-1">
+                      <Send className="size-3.5" />
+                      보냄 {detail.answeredAt}
+                    </span>
+                    {detail.answeredByEmail && (
+                      <span className="inline-flex items-center gap-1">
+                        <User className="size-3.5" />
+                        {detail.answeredByEmail}
+                      </span>
+                    )}
+                    <span className="inline-flex items-center gap-1">
+                      <Check className="size-3.5" />
+                      고객 메일 발송 성공
+                    </span>
+                  </div>
+                  <div className="whitespace-pre-line text-sm leading-7 text-foreground">{detail.answer}</div>
                 </div>
-              </>
-            )}
-          </section>
+              ) : (
+                <div className="space-y-3">
+                  {sendError && (
+                    <Alert variant="destructive" appearance="light">
+                      <AlertDescription>{sendError}</AlertDescription>
+                    </Alert>
+                  )}
+                  <Textarea
+                    value={answer}
+                    onChange={(e) => setAnswer(e.target.value)}
+                    maxLength={ANSWER_MAX}
+                    disabled={sending}
+                    placeholder={`${detail.name} 님께 보낼 답변을 적어 주세요.`}
+                    className="min-h-[168px] text-sm leading-7"
+                  />
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-xs leading-relaxed text-muted-foreground">
+                      보내면 {detail.email} 으로 메일이 가고 상태가 답변완료로 바뀝니다. 보낸 답변은 고칠 수 없습니다.
+                    </span>
+                    <Button variant="primary" onClick={send} disabled={sending || !answer.trim()} className="shrink-0">
+                      {sending ? <Spinner /> : <Send />}
+                      답변 보내기
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
-        <section className="bg-white border border-gray-200 rounded-xl px-6 py-5">
-          <h2 className="text-[15px] font-bold mb-3.5 flex items-center gap-2">
-            <i className="fa-regular fa-user text-secondary" />
-            문의자
-          </h2>
-          <dl className="grid grid-cols-[96px_1fr] gap-y-3 text-[13px]">
-            <dt className="text-gray-500">이름</dt>
-            <dd className="text-gray-900 font-medium break-all">{detail.name}</dd>
-            <dt className="text-gray-500">이메일</dt>
-            <dd className="text-gray-900 font-medium break-all">{detail.email}</dd>
-            <dt className="text-gray-500">구분</dt>
-            <dd className="text-gray-900 font-medium flex items-center gap-1.5 flex-wrap">
-              <InquiryMemberPill member={!!detail.memberId} />
-              {detail.memberCompanyName}
-            </dd>
-            <dt className="text-gray-500">접수 일시</dt>
-            <dd className="text-gray-900 font-medium">{detail.createdAt}</dd>
-            <dt className="text-gray-500">관리자 알림</dt>
-            {notice.total === 0 ? (
-              <dd className="text-gray-500 font-medium">기록 없음</dd>
-            ) : notice.success > 0 ? (
-              <dd className="text-emerald-700 font-medium">
-                <i className="fa-solid fa-check mr-1" />
-                보냄 {notice.lastSentAt} <span className="whitespace-nowrap">({notice.success}명)</span>
-              </dd>
-            ) : (
-              <dd className="text-danger font-medium">
-                <i className="fa-solid fa-xmark mr-1" />
-                보내지 못함 ({notice.total}명)
-              </dd>
-            )}
-          </dl>
-        </section>
+        <Card>
+          <CardHeader>
+            <CardTitle>문의자</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <InfoGrid
+              cols={1}
+              items={[
+                { label: '이름', value: <span className="break-all">{detail.name}</span> },
+                { label: '이메일', value: <span className="break-all">{detail.email}</span> },
+                {
+                  label: '구분',
+                  value: (
+                    <span className="flex flex-wrap items-center gap-1.5">
+                      <InquiryMemberPill member={!!detail.memberId} />
+                      {detail.memberCompanyName}
+                    </span>
+                  ),
+                },
+                { label: '접수 일시', value: detail.createdAt },
+                { label: '관리자 알림', value: noticeValue },
+              ]}
+            />
+          </CardContent>
+        </Card>
       </div>
     </div>
   )
