@@ -67,7 +67,7 @@ dict(id='IT-09-007', flow='공고 본문 한글화', kind='예외', title='번�
 
 dict(id='IT-09-008', flow='수동 수집', kind='정상', title='관리자가 SAM.gov 수집 화면에서 조회 기간을 넣어 바로 수집한다',
      pre='관리자 계정, SAM.gov 호출 한도가 남아 있음',
-     steps='1. 관리자 화면에 로그인해 메뉴 [SAM.gov 수집] 을 연다\n2. 수집 기간(daysBack)에 3 을 넣고 [수집 시작] 을 누른 뒤 확인 창에서 확인을 누른다\n3. 수집이 끝날 때까지 기다린 뒤 화면을 새로고침한다',
+     steps='1. 관리자 화면에 로그인해 메뉴 [SAM.gov 수집] 을 연다\n2. 수집 기간(daysBack)에 3 을 넣고 [수집 시작] 을 누른 뒤 확인 창의 [수집 시작] 을 누른다\n3. 수집이 끝날 때까지 기다린 뒤 화면을 새로고침한다',
      expect='1. 수집 상태 영역의 마지막 수집 시간이 2단계에서 실행한 시각으로 바뀐다\n'
             '2. 수집 상태 영역의 결과에 이번 회차의 조회 건수, 신규 건수, 갱신 건수가 숫자로 보인다\n'
             '3. 수집 실행 이력에 triggered_by MANUAL 인 행이 1건 더해지고 new_count, updated_count 가 화면의 신규, 갱신 건수와 같다\n'
@@ -272,14 +272,15 @@ dict(id='IT-09-031', flow='사전 분석', kind='정상', title='관리자가 �
      issue='T3-3 에 사전 분석 결과(요약, 양식, 필요 서류)를 보고 보정하는 관리자 화면이 없어 API 로만 절차를 쓸 수 있다'),
 
 dict(id='IT-09-032', flow='컴플라이언스 매트릭스', kind='정상', title='공고 분석 저장에 매트릭스가 오면 요구 항목에 매트릭스 줄이 REQ ID 와 함께 생긴다',
-     pre='관리자 계정과 MCP 열쇠, 공고문이 있고 매트릭스 줄이 없는 공고 1건, shall, should, may 원문 줄 하나씩(그중 1줄은 질의 후보)과 평가 항목 구조를 담은 매트릭스 시험 자료',
+     pre='관리자 계정과 MCP 열쇠, 공고문이 있고 매트릭스 줄이 없는 공고 1건, shall, should, may 원문 줄 하나씩(그중 1줄은 질의 후보)과 평가 항목 구조(평가 항목마다 문서 종류, 맨 위에 커버레터 요구 여부)를 담은 매트릭스 시험 자료',
      steps='1. MCP save_opportunity_analysis 를 그 공고 id 와 시험 자료의 complianceMatrix, factorTree 로 부른다\n2. 그 공고의 요구 항목(opportunity_requirement_items), 공고문, 원본 공고를 조회한다',
      expect='1. 요구 항목에 req_id 가 REQ-001, REQ-002, REQ-003 인 매트릭스 줄 3개가 보낸 순서대로 생긴다\n'
             '2. 매트릭스 줄의 req_level 이 보낸 구분대로 SHALL, SHOULD, MAY 이고 is_blocker 가 모두 false 이다\n'
             '3. 매트릭스 줄의 category 가 TECHNICAL, FORMAT, SUBMISSION, DEADLINE, ELIGIBILITY, OTHER 가운데 하나이고 DOCUMENT 가 아니다\n'
             '4. 공고문의 compliance_matrix_json 에 보낸 매트릭스가, factor_tree_json 에 보낸 평가 항목 구조가 그대로 들어 있다\n'
-            '5. 원본 공고의 last_req_no 가 3 이다',
-     judge=['서버', '서버', '서버', '서버', '서버'],
+            '5. 원본 공고의 last_req_no 가 3 이다\n'
+            '6. 공고문 factor_tree_json 의 평가 항목마다 보낸 문서 종류(documentType)가, 맨 위에 보낸 커버레터 요구 여부(coverLetterRequired)가 남아 있다',
+     judge=['서버', '서버', '서버', '서버', '서버', '서버'],
      req=['BID-OPP-006'], fc=['BID-OPP-006'], screen='', pri='High'),
 
 dict(id='IT-09-033', flow='컴플라이언스 매트릭스', kind='정상', title='공고문 관리 상세에서 매트릭스와 질의 후보를 훑어본다',
@@ -399,5 +400,14 @@ dict(id='IT-09-045', flow='노출 승인', kind='예외', title='관리자가 �
             '2. 그 공고의 visibility 가 HIDDEN 그대로이다',
      judge=['서버', '서버'],
      req=['BID-OPP-008'], fc=['BID-OPP-008'], screen='', pri='High'),
+
+dict(id='IT-09-046', flow='컴플라이언스 매트릭스', kind='정상', title='공고 분석이 평가 항목마다 담을 문서 종류와 커버레터 요구 여부를 남긴다',
+     pre='관리자 계정, Section L 이 기술, 과거 실적, 가격을 문서(볼륨)로 나눠 내라고 하고 커버레터를 요구하지 않는 공고 1건(예: W90VN926QA049), Aimbase 공고 분석 워크플로우가 도는 상태',
+     steps='1. 관리자 화면 메뉴 [공고문 관리] 에서 그 공고문을 열고 다시 분석한다\n2. 분석이 끝나면 관리자 토큰으로 GET /admin/notices/{id}/compliance-matrix 를 부른다',
+     expect='1. factorTree 의 평가 항목마다 documentType 이 TECHNICAL_PROPOSAL, PAST_PERFORMANCE, PRICING_SUMMARY 가운데 하나다\n'
+            '2. 기술 평가 항목의 documentType 이 TECHNICAL_PROPOSAL, 과거 실적 평가 항목은 PAST_PERFORMANCE, 가격 평가 항목은 PRICING_SUMMARY 다\n'
+            '3. factorTree 의 coverLetterRequired 가 false 다',
+     judge=['서버', '서버', '서버'],
+     req=['BID-OPP-006'], fc=['BID-OPP-006'], screen='', pri='High'),
 
 ]

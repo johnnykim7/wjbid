@@ -1,6 +1,6 @@
 # 실행 지시서: SAM.gov Bidding Agency Platform
 
-> 설계 버전: 1.20 | 최종 수정: 2026-10-26 | 관련 CR: CR-003, CR-132, CR-133, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-146, CR-147, CR-153, CR-155, CR-157, CR-159, CR-160, CR-162, CR-169, CR-170, CR-178, CR-181
+> 설계 버전: 1.21 | 최종 수정: 2026-10-26 | 관련 CR: CR-003, CR-132, CR-133, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-146, CR-147, CR-153, CR-155, CR-157, CR-159, CR-160, CR-162, CR-169, CR-170, CR-178, CR-180, CR-181, CR-182
 
 > **프로젝트:** bidding-agency-platform (미군 조달 입찰 AI 대행 서비스)
 > **프로젝트 유형:** 풀스택 (BE: Java 17 + Spring Boot 3.2 / FE: React 19 × 2)
@@ -85,7 +85,7 @@ SAM.gov에 올라오는 미군(USFK) 조달 입찰 공고를 자동 수집하고
 |------|------|------|
 | 프레임워크 | React 19 + TypeScript 5 | Vite 7 빌드 |
 | 상태 관리 | Context API | AuthContext |
-| UI 라이브러리 | Radix UI + Lucide Icons | |
+| UI 라이브러리 | ds-ui(`@therecommerce-develop/ds-ui`) + Radix UI + Lucide Icons | 관리자 콘솔은 전 화면 ds-ui 부품, 아이콘 lucide-react, 글꼴 Pretendard (CR-182) |
 | 스타일 | TailwindCSS 4.1 | |
 | HTTP | Axios | |
 | 에디터 | TipTap | 문서 편집 |
@@ -341,6 +341,7 @@ SAM.gov에 올라오는 미군(USFK) 조달 입찰 공고를 자동 수집하고
 - **(CR-170)** Aimbase 소스는 고치지 않는다. 워크플로우 정의 `docs/workflows/bid-analysis.steps.json` 을 신설해 올린다. MCP 도구가 셋 늘어나므로 배포 뒤 Aimbase 연결을 다시 맺는다
 - **(CR-181)** 입찰 분석 PDF 다운로드는 관리자 콘솔만 바꾼다. 서버 API, 표, 워크플로우는 그대로다. 버튼이 인쇄용 문서를 body 바로 아래에 따로 그리고 window.print 를 부른다. 인쇄 전용 스타일로 인쇄 때는 그 문서만 보이게 한다. 세 탭과 확인 필요를 이어 그리되 그리는 조각은 화면 탭과 같은 것(BidAnalysisSections)을 쓰고, 접히는 내용은 인쇄 모드에서 펼친 채로 그린다. 인쇄 창이 닫히면(afterprint) 문서 제목을 되돌리고 인쇄용 문서를 지운다
 - **(CR-178)** 목차 설계는 문서 종류를 따른다. 평가받는 문서(TECHNICAL_PROPOSAL, PAST_PERFORMANCE, PRICING_SUMMARY)만 설계 입력에 factorTree, priceItems, complianceMatrix 를 받고 절에 requirementRefs 를 건다. 커버레터는 장 1, 절 1 의 1쪽 제출 편지로 짠다. 평가받지 않는 문서의 requirementRefs 는 저장 거부, unassignedReqIds 는 빈 배열, 커버리지 응답은 evaluatedDocument false(BIZ-095). Aimbase 소스는 고치지 않고 `docs/workflows/proposal-design.steps.json` 의 설계 지시를 고쳐 다시 올린다
+- **(CR-180)** 문서 구성은 공고를 따른다. 공고 분석 build_compliance_matrix 가 factorTree.factors[].documentType(TECHNICAL_PROPOSAL, PAST_PERFORMANCE, PRICING_SUMMARY, Section L 볼륨 구분이 없으면 TECHNICAL_PROPOSAL)과 factorTree.coverLetterRequired(Section L 이 cover letter, transmittal letter 를 요구할 때만 true)를 내고, save_opportunity_analysis 가 factor_tree_json 에 그대로 담는다(마이그레이션 없음). 문서 작성 시작은 구성(평가 항목의 문서 종류를 enum 순으로 한 번씩, 커버레터는 요구할 때만 맨 앞)대로 문서를 만들고, 두 키가 다 없는 옛 공고는 `app.ai.auto-generate-document-types`(POL-005)를 쓴다. 매트릭스 줄은 그 줄 factorId 의 평가 항목(하위 항목 ID 면 상위 항목)이 담기는 문서에 속하고, factorId 가 없거나 모르는 줄과 문서 종류가 없거나 모르는 평가 항목은 구성의 첫 평가받는 문서에 속한다. get_proposal_design_input, save_proposal_structure, 커버리지를 이 문서별 범위로 좁힌다(BIZ-096). Aimbase 소스는 고치지 않고 `docs/workflows/opportunity-analysis.steps.v3.json` 과 `docs/workflows/proposal-design.steps.json` 의 지시를 고쳐 다시 올린다
 
 **핵심 검증:** 템플릿 등록 → **사전 분석 캐시 확인** → Aimbase Workflow 실행 (3파이프라인 입력) → 문서 생성 → DB 저장 → 관리자 이메일
 

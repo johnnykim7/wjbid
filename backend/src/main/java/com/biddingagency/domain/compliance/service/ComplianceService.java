@@ -22,6 +22,8 @@ import com.biddingagency.domain.notice.entity.Notice;
 import com.biddingagency.domain.notice.repository.NoticeRepository;
 import com.biddingagency.domain.proposal.entity.ProposalChapter;
 import com.biddingagency.domain.proposal.entity.ProposalSection;
+import com.biddingagency.domain.proposal.service.DocumentComposition;
+import com.biddingagency.domain.proposal.service.DocumentCompositionService;
 import com.biddingagency.domain.proposal.service.ProposalService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
@@ -61,6 +63,7 @@ public class ComplianceService {
     private final BidDocumentRepository documentRepository;
     private final NoticeRepository noticeRepository;
     private final ProposalService proposalService;
+    private final DocumentCompositionService documentCompositionService;
     private final Clock clock;
 
     /**
@@ -331,6 +334,7 @@ public class ComplianceService {
      * BIZ-076: 절의 대응 REQ ID 는 매트릭스의 REQ ID 만 받는다. 없는 ID 가 하나라도 있으면 그 ID 들을 담아 거부한다.
      * 매트릭스 줄이 없는 공고는 검사하지 않는다.
      * BIZ-095: 평가받지 않는 문서는 매트릭스와 상관없이 대응 REQ ID 를 하나도 받지 않는다.
+     * BIZ-096: 매트릭스에 있어도 다른 문서가 받는 줄의 REQ ID 는 거부한다.
      */
     public void requireKnownReqIds(UUID documentId, Collection<String> requirementRefs) {
         BidDocument document = documentOf(documentId);
@@ -343,18 +347,28 @@ public class ComplianceService {
             }
             return;
         }
-        Set<String> known = matrixByReqId(document.getBidRequest().getOpportunity().getId()).keySet();
+        UUID opportunityId = document.getBidRequest().getOpportunity().getId();
+        Map<String, OpportunityRequirementItem> known = matrixByReqId(opportunityId);
         if (known.isEmpty()) {
             return;
         }
-        List<String> unknown = requirementRefs.stream().filter(ref -> !known.contains(ref)).distinct().sorted().toList();
+        List<String> unknown = requirementRefs.stream().filter(ref -> !known.containsKey(ref)).distinct().sorted().toList();
         if (!unknown.isEmpty()) {
             throw new IllegalArgumentException("매트릭스에 없는 ID: " + String.join(", ", unknown)
                     + ". 대응 REQ ID 는 get_proposal_design_input 의 complianceMatrix 에 있는 reqId 만 쓸 수 있습니다");
         }
+        DocumentComposition composition = documentCompositionService.compose(opportunityId);
+        List<String> others = requirementRefs.stream()
+                .filter(ref -> !composition.owns(document.getDocumentType(), factorIdOf(known.get(ref))))
+                .distinct().sorted().toList();
+        if (!others.isEmpty()) {
+            throw new IllegalArgumentException("이 문서(" + document.getDocumentType().name() + ")가 받지 않는 REQ ID: "
+                    + String.join(", ", others) + ". 다른 문서의 평가 항목 줄입니다. "
+                    + "대응 REQ ID 는 get_proposal_design_input 의 complianceMatrix 에 있는 reqId 만 쓸 수 있습니다");
+        }
     }
 
-    /** BIZ-076: 대상 줄 가운데 이 문서의 어느 절도 대응 REQ ID 로 들지 않은 것. 평가받지 않는 문서는 대상이 없다(BIZ-095) */
+    /** BIZ-076: 대상 줄 가운데 이 문서의 어느 절도 대응 REQ ID 로 들지 않은 것. 평가받지 않는 문서는 대상이 없고(BIZ-095), 다른 문서가 받는 줄은 세지 않는다(BIZ-096) */
     public List<String> unassignedReqIds(UUID documentId) {
         BidDocument document = documentOf(documentId);
         if (!document.getDocumentType().isEvaluated()) {
@@ -364,8 +378,11 @@ public class ComplianceService {
         for (ProposalSection section : proposalService.getAllSections(documentId)) {
             mapped.addAll(refsOf(section));
         }
-        return matrixLines(document.getBidRequest().getOpportunity().getId()).stream()
+        UUID opportunityId = document.getBidRequest().getOpportunity().getId();
+        DocumentComposition composition = documentCompositionService.compose(opportunityId);
+        return matrixLines(opportunityId).stream()
                 .filter(ComplianceService::isCoverageTarget)
+                .filter(item -> composition.owns(document.getDocumentType(), factorIdOf(item)))
                 .map(OpportunityRequirementItem::getReqId)
                 .filter(reqId -> !mapped.contains(reqId))
                 .toList();
@@ -423,7 +440,7 @@ public class ComplianceService {
     /**
      * BIZ-078 커버리지 검증. 대상은 Shall 이면서 플랫폼 생성인 매트릭스 줄이다.
      * 누락 REQ 는 대상 가운데 이 문서의 절로 충족된 매핑이 없는 줄이고, 그중 어느 절에도 걸리지 않은 줄이 매핑 안 된 REQ 다.
-     * 평가받지 않는 문서는 검증 대상이 아니다(BIZ-095).
+     * 평가받지 않는 문서는 검증 대상이 아니다(BIZ-095). 대상은 그 문서가 받는 줄로 좁힌다(BIZ-096).
      */
     public CoverageResult coverage(UUID documentId) {
         BidDocument document = documentRepository.findById(documentId)
@@ -463,7 +480,11 @@ public class ComplianceService {
             }
         }
 
-        List<OpportunityRequirementItem> targets = lines.stream().filter(ComplianceService::isCoverageTarget).toList();
+        DocumentComposition composition = documentCompositionService.compose(bidRequest.getOpportunity().getId());
+        List<OpportunityRequirementItem> targets = lines.stream()
+                .filter(ComplianceService::isCoverageTarget)
+                .filter(item -> composition.owns(document.getDocumentType(), factorIdOf(item)))
+                .toList();
         List<CoverageResult.Missing> missing = targets.stream()
                 .filter(item -> !fulfilled.contains(item.getId()))
                 .map(item -> new CoverageResult.Missing(item.getReqId(), text(item), !mapped.contains(item.getReqId())))
@@ -474,6 +495,10 @@ public class ComplianceService {
     private static boolean isCoverageTarget(OpportunityRequirementItem item) {
         return item.getReqLevel() == RequirementLevel.SHALL
                 && FulfillmentParty.PLATFORM_GENERATED.name().equals(json(item, RequirementSyncService.KEY_FULFILLMENT_PARTY));
+    }
+
+    private static String factorIdOf(OpportunityRequirementItem item) {
+        return json(item, RequirementSyncService.KEY_FACTOR_ID);
     }
 
     private Map<String, OpportunityRequirementItem> matrixByReqId(UUID opportunityId) {
