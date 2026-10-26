@@ -661,7 +661,7 @@ CR-137 전에 있던 `POST /opportunities/{id}/qualification-check`(AI 자격 �
 | 메서드 | 경로 | 설명 | 인증 | 기능 ID |
 |--------|------|------|------|---------|
 | GET | /admin/members | 회원 목록 (페이징). CR-157: 줄마다 `member`(회원 여부, 관리자 true), `membershipEndsOn`(지금 기간의 끝일, 없으면 null) | 🔒 ADMIN | BID-ADMIN-001, BID-ADMIN-002 |
-| GET | /admin/members/{memberId} | 회원 한 명의 가입 정보 `{ id, email, emailVerifiedAt, companyName, businessRegistrationNumber, contactPerson, phone, address, role, createdAt, lastLoginAt, member, membershipEndsOn }`. 시각은 목록과 같은 `yyyy-MM-dd HH:mm`, 빈 값은 null. 없는 회원 404 `MEMBER_NOT_FOUND` (CR-183) | 🔒 ADMIN | BID-ADMIN-002 |
+| GET | /admin/members/{memberId} | 회원 한 명의 가입 정보 `{ id, email, emailVerifiedAt, companyName, businessRegistrationNumber, contactPerson, phone, address, role, createdAt, lastLoginAt, member, membershipEndsOn }`. 시각은 목록과 같은 `yyyy-MM-dd HH:mm`, 빈 칸은 목록처럼 싣지 않는다. 없는 회원 404 `MEMBER_NOT_FOUND` (CR-183) | 🔒 ADMIN | BID-ADMIN-002 |
 | GET | /admin/members/{memberId}/memberships | 그 고객의 회원 기간 이력, 시작일 늦은 순. 줄 `{ id, startsOn, endsOn, memo, createdByEmail, createdAt, current }`. current 는 오늘을 품은 기간이면 true (CR-157) | 🔒 ADMIN | BID-ADMIN-002 |
 | POST | /admin/members/{memberId}/memberships | 회원 기간 넣기 `{ startsOn, endsOn, memo }`. 201 과 넣은 줄. 끝일이 시작일보다 앞이면 400 `MEMBERSHIP_PERIOD_INVALID`, 없는 회원 404 `MEMBER_NOT_FOUND` (CR-157, BIZ-072) | 🔒 ADMIN | BID-ADMIN-002 |
 | DELETE | /admin/members/{memberId}/memberships/{membershipId} | 회원 기간 지우기. 204. 그 고객의 기간이 아니면 404 `MEMBERSHIP_NOT_FOUND` (CR-157) | 🔒 ADMIN | BID-ADMIN-002 |
