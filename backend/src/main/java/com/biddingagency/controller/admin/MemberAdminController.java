@@ -2,12 +2,14 @@ package com.biddingagency.controller.admin;
 
 import com.biddingagency.domain.member.entity.Member;
 import com.biddingagency.domain.member.repository.MemberRepository;
+import com.biddingagency.domain.member.service.MemberService;
 import com.biddingagency.domain.member.service.MembershipService;
 import com.biddingagency.security.CustomUserDetails;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -34,6 +36,7 @@ import java.util.UUID;
 public class MemberAdminController {
 
     private final MemberRepository memberRepository;
+    private final MemberService memberService;
     private final MembershipService membershipService;
 
     @GetMapping
@@ -53,6 +56,15 @@ public class MemberAdminController {
     public ResponseEntity<MemberDetailDto> getMember(@PathVariable UUID memberId) {
         MembershipService.Detail detail = membershipService.detail(memberId);
         return ResponseEntity.ok(MemberDetailDto.from(detail.member(), detail.status()));
+    }
+
+    @PatchMapping("/{memberId}")
+    @Operation(summary = "회원 정보 수정 (CR-183)")
+    public ResponseEntity<MemberDetailDto> updateMember(@PathVariable UUID memberId,
+                                                        @Valid @RequestBody UpdateMemberRequest request) {
+        Member member = memberService.updateByAdmin(memberId, request.companyName(),
+                request.businessRegistrationNumber(), request.contactPerson(), request.phone(), request.address());
+        return ResponseEntity.ok(MemberDetailDto.from(member, membershipService.status(member)));
     }
 
     @GetMapping("/{memberId}/memberships")
@@ -78,6 +90,15 @@ public class MemberAdminController {
         membershipService.delete(memberId, membershipId);
         return ResponseEntity.noContent().build();
     }
+
+    /** 길이는 표 칸과 같다. 회사명만 비울 수 없다 (CR-183) */
+    public record UpdateMemberRequest(
+            @NotBlank @Size(max = 255) String companyName,
+            @Size(max = 50) String businessRegistrationNumber,
+            @Size(max = 100) String contactPerson,
+            @Size(max = 50) String phone,
+            String address
+    ) {}
 
     public record GrantMembershipRequest(
             LocalDate startsOn,

@@ -180,8 +180,9 @@ export const submitInquiry = (data: {
 export const getMyProfile = () =>
   api.get('/members/me')
 
+// 사업자등록번호는 빈 글자면 서버가 지운다 (CR-183)
 export const updateMyProfile = (data: {
-  companyName: string; contactPerson?: string; phone?: string; address?: string
+  companyName: string; businessRegistrationNumber: string; contactPerson?: string; phone?: string; address?: string
 }) => api.patch('/members/me', data)
 
 // Client Documents

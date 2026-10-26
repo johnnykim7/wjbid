@@ -47,6 +47,38 @@ export const getOpportunityCount = () =>
 export const getMembers = (page = 0) =>
   api.get('/admin/members', { params: { page, size: 20 } })
 
+/** 회원 상세 (CR-183). 빈 칸은 싣지 않는다 */
+export interface MemberDetail {
+  id: string
+  email: string
+  emailVerifiedAt?: string
+  companyName: string
+  businessRegistrationNumber?: string
+  contactPerson?: string
+  phone?: string
+  address?: string
+  role: string
+  createdAt: string
+  lastLoginAt?: string
+  member: boolean
+  membershipEndsOn?: string
+}
+
+/** 관리자가 고치는 다섯 칸. 통째로 보내고 빈 칸은 서버가 지운다 (CR-183) */
+export interface MemberEdit {
+  companyName: string
+  businessRegistrationNumber: string
+  contactPerson: string
+  phone: string
+  address: string
+}
+
+export const getMember = (memberId: string) =>
+  api.get<MemberDetail>(`/admin/members/${memberId}`)
+
+export const updateMember = (memberId: string, body: MemberEdit) =>
+  api.patch<MemberDetail>(`/admin/members/${memberId}`, body)
+
 /** 회원 기간 한 줄 (CR-157). current 는 오늘을 품은 기간 */
 export interface MembershipLine {
   id: string

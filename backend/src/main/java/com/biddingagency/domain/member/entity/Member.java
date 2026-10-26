@@ -73,6 +73,10 @@ public class Member extends BaseEntity {
         this.address = address;
     }
 
+    public void updateBusinessRegistrationNumber(String businessRegistrationNumber) {
+        this.businessRegistrationNumber = businessRegistrationNumber;
+    }
+
     /** SAM.gov 식별자 갱신 (프로필 화면, CR-124) */
     public void updateSamIdentifiers(String uei, String cageCode) {
         this.uei = uei;

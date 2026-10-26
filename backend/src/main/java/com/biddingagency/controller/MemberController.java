@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -42,6 +43,7 @@ public class MemberController {
         Member updated = memberService.updateProfile(
                 userDetails.getMember().getId(),
                 request.companyName(),
+                request.businessRegistrationNumber(),
                 request.contactPerson(),
                 request.phone(),
                 request.address()
@@ -83,6 +85,7 @@ public class MemberController {
 
     public record UpdateProfileRequest(
             @NotBlank String companyName,
+            @Size(max = 50) String businessRegistrationNumber,
             String contactPerson,
             String phone,
             String address
