@@ -3,6 +3,8 @@ package com.biddingagency.domain.member.service;
 import com.biddingagency.domain.member.AuthError;
 import com.biddingagency.domain.member.AuthFlowException;
 import com.biddingagency.domain.member.EmailAlreadyExistsException;
+import com.biddingagency.domain.member.MembershipError;
+import com.biddingagency.domain.member.MembershipException;
 import com.biddingagency.domain.member.entity.Member;
 import com.biddingagency.domain.member.entity.MemberConsent;
 import com.biddingagency.domain.member.repository.MemberConsentRepository;
@@ -27,6 +29,7 @@ import static org.mockito.BDDMockito.*;
 
 /**
  * TC-AUTH-001 ~ TC-AUTH-003, TC-AUTH-018 ~ TC-AUTH-019: MemberService 단위 테스트
+ * TC-MEM-017 ~ TC-MEM-020 (CR-183): 관리자 회원 정보 수정, 내 프로필 사업자등록번호
  */
 @ExtendWith(MockitoExtension.class)
 class MemberServiceTest {
@@ -177,5 +180,67 @@ class MemberServiceTest {
         assertThatThrownBy(() -> memberService.changePassword(memberId, "wrongPassword", "newPassword123"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Current password is incorrect");
+    }
+
+    private Member customer() {
+        return Member.builder()
+                .email(TEST_EMAIL)
+                .companyName(TEST_COMPANY)
+                .businessRegistrationNumber(TEST_BRN)
+                .contactPerson(TEST_CONTACT)
+                .phone(TEST_PHONE)
+                .address("서울시 중구")
+                .role(Member.Role.CUSTOMER)
+                .build();
+    }
+
+    @Test
+    @DisplayName("TC-MEM-017 관리자수정_다섯칸바뀌고빈칸은지움")
+    void 관리자수정_다섯칸바뀌고빈칸은지움() {
+        UUID memberId = UUID.randomUUID();
+        Member member = customer();
+        given(memberRepository.findById(memberId)).willReturn(Optional.of(member));
+
+        memberService.updateByAdmin(memberId, "새 회사", "111-22-33333", "김담당", "  ", null);
+
+        assertThat(member).extracting(Member::getCompanyName, Member::getBusinessRegistrationNumber,
+                        Member::getContactPerson, Member::getPhone, Member::getAddress)
+                .containsExactly("새 회사", "111-22-33333", "김담당", null, null);
+    }
+
+    @Test
+    @DisplayName("TC-MEM-018 관리자수정_없는회원_MEMBER_NOT_FOUND")
+    void 관리자수정_없는회원_MEMBER_NOT_FOUND() {
+        UUID memberId = UUID.randomUUID();
+        given(memberRepository.findById(memberId)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> memberService.updateByAdmin(memberId, "새 회사", null, null, null, null))
+                .isInstanceOfSatisfying(MembershipException.class,
+                        e -> assertThat(e.getError()).isEqualTo(MembershipError.MEMBER_NOT_FOUND));
+        then(memberRepository).should(never()).save(any());
+    }
+
+    @Test
+    @DisplayName("TC-MEM-019 내프로필수정_사업자등록번호보냄_저장")
+    void 내프로필수정_사업자등록번호보냄_저장() {
+        UUID memberId = UUID.randomUUID();
+        Member member = customer();
+        given(memberRepository.findById(memberId)).willReturn(Optional.of(member));
+
+        memberService.updateProfile(memberId, TEST_COMPANY, "222-33-44444", TEST_CONTACT, TEST_PHONE, null);
+
+        assertThat(member.getBusinessRegistrationNumber()).isEqualTo("222-33-44444");
+    }
+
+    @Test
+    @DisplayName("TC-MEM-020 내프로필수정_사업자등록번호안보냄_그대로")
+    void 내프로필수정_사업자등록번호안보냄_그대로() {
+        UUID memberId = UUID.randomUUID();
+        Member member = customer();
+        given(memberRepository.findById(memberId)).willReturn(Optional.of(member));
+
+        memberService.updateProfile(memberId, TEST_COMPANY, null, TEST_CONTACT, TEST_PHONE, null);
+
+        assertThat(member.getBusinessRegistrationNumber()).isEqualTo(TEST_BRN);
     }
 }

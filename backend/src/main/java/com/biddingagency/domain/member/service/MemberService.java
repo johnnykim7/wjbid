@@ -1,6 +1,8 @@
 package com.biddingagency.domain.member.service;
 
 import com.biddingagency.domain.member.EmailAlreadyExistsException;
+import com.biddingagency.domain.member.MembershipError;
+import com.biddingagency.domain.member.MembershipException;
 import com.biddingagency.domain.member.entity.Member;
 import com.biddingagency.domain.member.entity.MemberConsent;
 import com.biddingagency.domain.member.repository.MemberConsentRepository;
@@ -110,11 +112,28 @@ public class MemberService {
                 .orElseThrow(() -> new IllegalArgumentException("Member not found: " + email));
     }
 
+    /** 사업자등록번호가 null 이면 그대로 둔다. 배포 직후 옛 화면은 이 칸을 보내지 않는다 (CR-183) */
     @Transactional
-    public Member updateProfile(UUID memberId, String companyName, String contactPerson, String phone, String address) {
+    public Member updateProfile(UUID memberId, String companyName, String businessRegistrationNumber,
+                                String contactPerson, String phone, String address) {
         Member member = findById(memberId);
         member.updateProfile(companyName, contactPerson, phone, address);
+        if (businessRegistrationNumber != null) {
+            member.updateBusinessRegistrationNumber(blankToNull(businessRegistrationNumber));
+        }
         log.info("Member profile updated: {}", member.getEmail());
+        return member;
+    }
+
+    /** 관리자 회원 정보 수정. 다섯 칸을 통째로 바꾸고 빈 칸은 지운다. 이메일과 역할은 고치지 않는다 (CR-183) */
+    @Transactional
+    public Member updateByAdmin(UUID memberId, String companyName, String businessRegistrationNumber,
+                                String contactPerson, String phone, String address) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new MembershipException(MembershipError.MEMBER_NOT_FOUND));
+        member.updateProfile(companyName.trim(), blankToNull(contactPerson), blankToNull(phone), blankToNull(address));
+        member.updateBusinessRegistrationNumber(blankToNull(businessRegistrationNumber));
+        log.info("Member profile updated by admin: {}", member.getEmail());
         return member;
     }
 
@@ -132,5 +151,9 @@ public class MemberService {
     public void updateLastLogin(UUID memberId) {
         Member member = findById(memberId);
         member.updateLastLogin();
+    }
+
+    private static String blankToNull(String s) {
+        return s == null || s.isBlank() ? null : s.trim();
     }
 }

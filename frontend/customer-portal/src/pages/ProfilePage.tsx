@@ -67,6 +67,7 @@ export default function ProfilePage() {
     try {
       await updateMyProfile({
         companyName: form.companyName,
+        businessRegistrationNumber: form.businessRegistrationNumber,
         contactPerson: form.contactPerson || undefined,
         phone: form.phone || undefined,
         address: form.address || undefined,
@@ -161,6 +162,7 @@ export default function ProfilePage() {
                   type="text"
                   value={form.businessRegistrationNumber}
                   onChange={(e) => handleChange('businessRegistrationNumber', e.target.value)}
+                  maxLength={50}
                   className="font-mono"
                   placeholder="000-00-00000"
                 />
