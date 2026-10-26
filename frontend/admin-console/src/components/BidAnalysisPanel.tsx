@@ -1,9 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { FileDown } from 'lucide-react'
 import {
-  Badge,
+  Alert,
+  AlertDescription,
   Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardToolbar,
   ConfirmDialog,
   FieldError,
   Label,
@@ -35,15 +42,18 @@ import {
   requirementTexts,
 } from './bidAnalysis'
 import type { BidAnalysis, BidAnalysisOverview, BidDecision, BidQuestion, Json } from './bidAnalysis'
+import { Loading } from './LoadState'
+import { ToneBadge } from './StateBadge'
+import type { StateTone } from '../utils/bidState'
 
 const POLL_INTERVAL_MS = 10_000
 const NOT_ALLOWED_MESSAGE = '지금은 할 수 없습니다'
 
-const STATUS_VARIANT: Record<BidAnalysis['status'], 'info' | 'success' | 'destructive' | 'secondary'> = {
+const STATUS_TONE: Record<BidAnalysis['status'], StateTone> = {
   RUNNING: 'info',
   DONE: 'success',
   FAILED: 'destructive',
-  DECISION_ONLY: 'secondary',
+  DECISION_ONLY: 'gray',
 }
 
 type ApiError = { response?: { status?: number; data?: { error?: string; message?: string } } }
@@ -59,9 +69,9 @@ function questionsFor(questions: BidQuestion[], target: string) {
 }
 
 function QuestionList({ list }: { list: BidQuestion[] }) {
-  if (list.length === 0) return <p className="py-3 text-sm text-gray-400">없음</p>
+  if (list.length === 0) return <p className="py-3 text-sm text-muted-foreground">없음</p>
   return (
-    <ol className="divide-y divide-gray-100">
+    <ol className="divide-y divide-border">
       {list.map((q, i) => {
         const topic = questionTopic(q)
         return (
@@ -70,11 +80,11 @@ function QuestionList({ list }: { list: BidQuestion[] }) {
               {i + 1}
             </span>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium leading-relaxed text-gray-900">{q.question}</p>
+              <p className="text-sm font-medium leading-relaxed text-foreground">{q.question}</p>
               {(topic || q.reason) && (
                 <div className="mt-1 flex items-baseline gap-2">
-                  {topic && <span className="flex-none rounded bg-gray-100 px-1.5 text-[11px] leading-[18px] text-gray-600">{topic}</span>}
-                  {q.reason && <span className="text-xs leading-normal text-gray-500">{q.reason}</span>}
+                  {topic && <span className="flex-none rounded bg-muted px-1.5 text-[11px] leading-[18px] text-muted-foreground">{topic}</span>}
+                  {q.reason && <span className="text-xs leading-normal text-muted-foreground">{q.reason}</span>}
                 </div>
               )}
             </div>
@@ -91,8 +101,8 @@ function Questions({ questions }: { questions: BidQuestion[] }) {
   const of = (t: string) => questionsFor(questions, t)
   return (
     <div className="space-y-2">
-      <h3 className="text-sm font-semibold text-gray-900">
-        확인 필요 <span className="ml-1 font-normal text-gray-500">{questions.length}건</span>
+      <h3 className="text-sm font-semibold text-foreground">
+        확인 필요 <span className="ml-1 font-normal text-muted-foreground">{questions.length}건</span>
       </h3>
       <Tabs value={target} onValueChange={setTarget}>
         <TabsList variant="line">
@@ -111,30 +121,30 @@ function Questions({ questions }: { questions: BidQuestion[] }) {
 }
 
 function NotSaved() {
-  return <p className="text-sm text-gray-400">아직 저장되지 않았습니다.</p>
+  return <p className="text-sm text-muted-foreground">아직 저장되지 않았습니다.</p>
 }
 
 function Summary({ analysis }: { analysis: BidAnalysis }) {
   return (
     <div className="space-y-1.5 text-sm">
       {analysis.status === 'FAILED' && analysis.failureReason && (
-        <p className="text-red-700">{analysis.failureReason}</p>
+        <p className="text-destructive">{analysis.failureReason}</p>
       )}
       {analysis.pwinPercent !== null && (
-        <p className="text-gray-800">
+        <p className="text-foreground">
           Pwin <b>{analysis.pwinPercent}%</b>
           {analysis.aiVerdict && <> · 판정 <b>{VERDICT_LABEL[analysis.aiVerdict]}</b></>}
         </p>
       )}
-      {analysis.verdictReason && <p className="text-gray-600">{analysis.verdictReason}</p>}
+      {analysis.verdictReason && <p className="text-muted-foreground">{analysis.verdictReason}</p>}
       {analysis.adminDecision && (
-        <p className="text-gray-800">
+        <p className="text-foreground">
           관리자 결정 <b>{DECISION_LABEL[analysis.adminDecision]}</b>
-          <span className="text-gray-500"> · {analysis.decidedBy?.name ?? '-'} · {formatDateTime(analysis.decidedAt)}</span>
+          <span className="text-muted-foreground"> · {analysis.decidedBy?.name ?? '-'} · {formatDateTime(analysis.decidedAt)}</span>
         </p>
       )}
       {analysis.adminDecision && analysis.adminNote && (
-        <p className="text-gray-600 whitespace-pre-line">{[DECISION_NOTE_LABEL[analysis.adminDecision], analysis.adminNote].filter(Boolean).join(' ')}</p>
+        <p className="text-muted-foreground whitespace-pre-line">{[DECISION_NOTE_LABEL[analysis.adminDecision], analysis.adminNote].filter(Boolean).join(' ')}</p>
       )}
     </div>
   )
@@ -143,7 +153,7 @@ function Summary({ analysis }: { analysis: BidAnalysis }) {
 function PrintPart({ no, title, children }: { no: number; title: string; children: ReactNode }) {
   return (
     <section className="print-part space-y-4 pt-6">
-      <h2 className="text-base font-bold text-gray-900">{no}. {title}</h2>
+      <h2 className="text-base font-bold text-foreground">{no}. {title}</h2>
       {children}
     </section>
   )
@@ -156,10 +166,10 @@ function PrintDocument({ analysis, reqTexts }: { analysis: BidAnalysis; reqTexts
   return createPortal(
     <div className="bid-analysis-print">
       <PrintMode.Provider value>
-        <header className="space-y-2 border-b border-gray-200 pb-4">
-          <h1 className="text-lg font-bold text-gray-900">입찰 분석</h1>
-          {projectName && <p className="text-base font-semibold text-gray-900">{projectName}</p>}
-          <p className="text-sm text-gray-600">
+        <header className="space-y-2 border-b border-border pb-4">
+          <h1 className="text-lg font-bold text-foreground">입찰 분석</h1>
+          {projectName && <p className="text-base font-semibold text-foreground">{projectName}</p>}
+          <p className="text-sm text-muted-foreground">
             {STATUS_LABEL[analysis.status]} · {formatDateTime(analysis.startedAt)}
             {analysis.finishedAt && ` ~ ${formatDateTime(analysis.finishedAt)}`}
           </p>
@@ -183,7 +193,7 @@ function PrintDocument({ analysis, reqTexts }: { analysis: BidAnalysis; reqTexts
           <PrintPart no={4} title={`확인 필요 ${questions.length}건`}>
             {QUESTION_TARGETS.map((t) => (
               <div key={t} className="space-y-1">
-                <h3 className="text-sm font-semibold text-gray-900">{QUESTION_TARGET_LABEL[t]} {questionsFor(questions, t).length}</h3>
+                <h3 className="text-sm font-semibold text-foreground">{QUESTION_TARGET_LABEL[t]} {questionsFor(questions, t).length}</h3>
                 <QuestionList list={questionsFor(questions, t)} />
               </div>
             ))}
@@ -351,18 +361,19 @@ export default function BidAnalysisPanel({ bidRequestId, bidState, noticeId, rel
   const showTabs = analysis !== null && analysis.status !== 'DECISION_ONLY'
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2 mr-2">
-          <i className="fa-solid fa-scale-balanced text-secondary" /> 입찰 분석
-        </h2>
-        {analysis && <Badge variant={STATUS_VARIANT[analysis.status]} size="sm">{STATUS_LABEL[analysis.status]}</Badge>}
-        {!loading && !failed && (
-          <div className="ml-auto flex items-center gap-2">
+    <Card>
+      <CardHeader>
+        <div className="flex flex-wrap items-center gap-2">
+          <CardTitle className="mr-2">입찰 분석</CardTitle>
+          {analysis && <ToneBadge tone={STATUS_TONE[analysis.status]}>{STATUS_LABEL[analysis.status]}</ToneBadge>}
+        </div>
+        {!loading && !failed && (showTabs || analyzing) && (
+          <CardToolbar>
             {showTabs && analysis && (
               <Button variant="outline" size="sm"
                 onClick={() => setPrintJob({ title: printFileName(projectNameOf(analysis.report), analysis.startedAt) })}>
-                <i className="fa-solid fa-file-pdf mr-1" /> PDF 다운로드
+                <FileDown />
+                PDF 다운로드
               </Button>
             )}
             {analyzing && (
@@ -371,21 +382,24 @@ export default function BidAnalysisPanel({ bidRequestId, bidState, noticeId, rel
                 다시 분석
               </Button>
             )}
-          </div>
+          </CardToolbar>
         )}
-      </div>
+      </CardHeader>
 
+      <CardContent className="space-y-4">
       {loading ? (
-        <p className="text-sm text-gray-400">불러오는 중</p>
+        <Loading className="h-16" />
       ) : failed ? (
-        <div className="flex items-center gap-3">
-          <p className="text-sm text-red-600">불러오지 못했습니다.</p>
-          <Button variant="outline" size="sm" onClick={() => load()}>다시 시도</Button>
-        </div>
+        <Alert variant="destructive" appearance="light">
+          <AlertDescription className="flex items-center justify-between gap-3">
+            불러오지 못했습니다.
+            <Button variant="outline" size="sm" onClick={() => load()}>다시 시도</Button>
+          </AlertDescription>
+        </Alert>
       ) : (
         <>
           {analysis === null ? (
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-muted-foreground">
               {readingInProgress ? '고객 서류를 다 읽으면 입찰 분석을 시작합니다' : '입찰 분석이 없습니다'}
             </p>
           ) : (
@@ -419,8 +433,8 @@ export default function BidAnalysisPanel({ bidRequestId, bidState, noticeId, rel
           {analysis && <Questions questions={analysis.questions ?? []} />}
 
           {analyzing && (
-            <div className="space-y-3 border-t border-gray-100 pt-4">
-              <h3 className="text-sm font-semibold text-gray-900">관리자 결정</h3>
+            <div className="space-y-3 border-t border-border pt-4">
+              <h3 className="text-sm font-semibold text-foreground">관리자 결정</h3>
               <RadioGroup value={choice} onValueChange={(v) => { setChoice(v as BidDecision); setFormError('') }}
                 className="flex flex-wrap gap-5" disabled={!canDecide || saving}>
                 {(Object.keys(DECISION_LABEL) as BidDecision[]).map((d) => (
@@ -437,7 +451,7 @@ export default function BidAnalysisPanel({ bidRequestId, bidState, noticeId, rel
                     disabled={!canDecide || saving}
                     onChange={(e) => { setNote(e.target.value); setFormError('') }}
                     aria-describedby="bid-decision-error" />
-                  <p className="text-xs text-gray-400 text-right">{note.length}/{DECISION_NOTE_MAX}</p>
+                  <p className="text-xs text-muted-foreground text-right">{note.length}/{DECISION_NOTE_MAX}</p>
                 </div>
               )}
               <div>
@@ -448,6 +462,7 @@ export default function BidAnalysisPanel({ bidRequestId, bidState, noticeId, rel
           )}
         </>
       )}
+      </CardContent>
 
       {printJob && showTabs && analysis && <PrintDocument analysis={analysis} reqTexts={reqTexts} />}
 
@@ -460,6 +475,6 @@ export default function BidAnalysisPanel({ bidRequestId, bidState, noticeId, rel
         onConfirm={rerun}
         isLoading={rerunning}
       />
-    </div>
+    </Card>
   )
 }

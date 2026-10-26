@@ -12,10 +12,10 @@ beforeAll(async () => {
   await loginAs(ADMIN)
 })
 
-/** 입찰 상세 관리 머리의 현재 상태 표시 */
+/** 입찰 상세 머리(공고 제목 옆)의 현재 상태 표시 */
 function detailState(): string {
-  const head = screen.queryByText('입찰 요청 상세')?.closest('.justify-between')
-  return text(head?.querySelector('span.rounded-full'))
+  const head = document.querySelector('[data-slot="detail-header"]')
+  return text(head?.querySelector('[data-slot="badge"]'))
 }
 
 /** 입찰 요청 관리 목록에서 그 공고 제목의 줄 */

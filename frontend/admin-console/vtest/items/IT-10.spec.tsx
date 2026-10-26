@@ -351,7 +351,7 @@ const overviewOf = (id: string) => apiGet<Overview>(`/admin/bid-requests/${id}/b
 /** 입찰 분석 영역 카드. 제목 글자 '입찰 분석' 인 머리에서 카드까지 올라간다 */
 function analysisPanel(): HTMLElement | null {
   const h = screen.queryAllByRole('heading').find((el) => text(el) === '입찰 분석')
-  return (h?.closest('.rounded-xl') as HTMLElement | null) ?? null
+  return (h?.closest('[data-slot="card"]') as HTMLElement | null) ?? null
 }
 
 function panelButton(name: string): HTMLButtonElement | undefined {
