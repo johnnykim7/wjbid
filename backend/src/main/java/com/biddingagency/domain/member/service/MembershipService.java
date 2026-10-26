@@ -45,6 +45,10 @@ public class MembershipService {
                        String createdByEmail, LocalDateTime createdAt, boolean current) {
     }
 
+    /** 관리자 회원 상세 (CR-183) */
+    public record Detail(Member member, Status status) {
+    }
+
     public Status status(Member member) {
         if (member.isAdmin()) {
             return new Status(true, null);
@@ -80,6 +84,12 @@ public class MembershipService {
         return membershipRepository.findCovering(memberIds, today()).stream()
                 .collect(Collectors.toMap(MemberMembership::getMemberId, MemberMembership::getEndsOn,
                         (a, b) -> a.isAfter(b) ? a : b));
+    }
+
+    public Detail detail(UUID memberId) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new MembershipException(MembershipError.MEMBER_NOT_FOUND));
+        return new Detail(member, status(member));
     }
 
     public List<Line> history(UUID memberId) {

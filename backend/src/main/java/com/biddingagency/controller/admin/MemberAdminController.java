@@ -20,6 +20,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
@@ -45,6 +46,13 @@ public class MemberAdminController {
         Map<UUID, LocalDate> endsOn = membershipService.currentEndsOn(
                 members.getContent().stream().map(Member::getId).toList());
         return ResponseEntity.ok(members.map(m -> MemberDto.from(m, endsOn.get(m.getId()))));
+    }
+
+    @GetMapping("/{memberId}")
+    @Operation(summary = "회원 상세 (CR-183)")
+    public ResponseEntity<MemberDetailDto> getMember(@PathVariable UUID memberId) {
+        MembershipService.Detail detail = membershipService.detail(memberId);
+        return ResponseEntity.ok(MemberDetailDto.from(detail.member(), detail.status()));
     }
 
     @GetMapping("/{memberId}/memberships")
@@ -106,6 +114,45 @@ public class MemberAdminController {
                     m.isAdmin() || membershipEndsOn != null,
                     membershipEndsOn
             );
+        }
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record MemberDetailDto(
+            String id,
+            String email,
+            String emailVerifiedAt,
+            String companyName,
+            String businessRegistrationNumber,
+            String contactPerson,
+            String phone,
+            String address,
+            String role,
+            String createdAt,
+            String lastLoginAt,
+            boolean member,
+            LocalDate membershipEndsOn
+    ) {
+        public static MemberDetailDto from(Member m, MembershipService.Status status) {
+            return new MemberDetailDto(
+                    m.getId().toString(),
+                    m.getEmail(),
+                    format(m.getEmailVerifiedAt()),
+                    m.getCompanyName(),
+                    m.getBusinessRegistrationNumber(),
+                    m.getContactPerson(),
+                    m.getPhone(),
+                    m.getAddress(),
+                    m.getRole().name(),
+                    format(m.getCreatedAt()),
+                    format(m.getLastLoginAt()),
+                    status.member(),
+                    status.endsOn()
+            );
+        }
+
+        private static String format(LocalDateTime t) {
+            return t != null ? t.format(MemberDto.FMT) : null;
         }
     }
 }

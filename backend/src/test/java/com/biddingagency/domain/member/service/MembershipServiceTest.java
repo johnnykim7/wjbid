@@ -37,6 +37,7 @@ import static org.mockito.Mockito.when;
 
 /**
  * TC-MEM-001 ~ TC-MEM-011 (CR-157): 회원 판정, 회원 기간 넣기와 지우기, 회원 전용 막음(BID-AUTH-008, BID-ADMIN-002).
+ * TC-MEM-015 ~ TC-MEM-016 (CR-183): 관리자 회원 상세(BID-ADMIN-002).
  * 저장소는 목록에 담아 흉내 내고, 그날을 품은 기간은 기간 자신의 covers 로 고른다.
  */
 @ExtendWith(MockitoExtension.class)
@@ -201,5 +202,35 @@ class MembershipServiceTest {
                 () -> service().requireMember(null), MembershipException.class);
 
         assertThat(ex.getError()).isEqualTo(MembershipError.LOGIN_REQUIRED);
+    }
+
+    @Test
+    @DisplayName("TC-MEM-015 상세_가입정보와지금기간끝일_그대로")
+    void 상세_가입정보와지금기간끝일_그대로() {
+        Member customer = TestHelper.withId(Member.builder()
+                .email("customer@example.com")
+                .emailVerifiedAt(LocalDateTime.of(2026, 10, 1, 9, 30))
+                .companyName("시험 회사")
+                .businessRegistrationNumber("123-45-67890")
+                .phone("010-1234-5678")
+                .address("서울시 중구")
+                .role(Member.Role.CUSTOMER)
+                .build(), me);
+        when(memberRepository.findById(me)).thenReturn(Optional.of(customer));
+        period(oct(1), LocalDate.of(2026, 11, 30));
+
+        assertThat(service().detail(me)).isEqualTo(new MembershipService.Detail(
+                customer, new MembershipService.Status(true, LocalDate.of(2026, 11, 30))));
+    }
+
+    @Test
+    @DisplayName("TC-MEM-016 상세_없는회원_MEMBER_NOT_FOUND")
+    void 상세_없는회원_MEMBER_NOT_FOUND() {
+        when(memberRepository.findById(me)).thenReturn(Optional.empty());
+
+        MembershipException ex = catchThrowableOfType(
+                () -> service().detail(me), MembershipException.class);
+
+        assertThat(ex.getError()).isEqualTo(MembershipError.MEMBER_NOT_FOUND);
     }
 }
