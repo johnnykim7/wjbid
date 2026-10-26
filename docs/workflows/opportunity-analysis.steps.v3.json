@@ -491,7 +491,7 @@
             ]
           }
         ],
-        "prompt": "당신은 미 연방 조달 공고의 컴플라이언스 매트릭스를 만드는 분석가입니다. 스킬 sam-proposal 의 01(공고 분석)과 컴플라이언스 매트릭스 틀이 붙어 있습니다. STEP 1(컴플라이언스 매트릭스)과 STEP 4(평가 항목과 질의 후보)의 규칙대로 하되, 스킬이 말하는 산출물 파일은 만들지 않고 결과는 아래 response_schema 로만 냅니다.\n\n[입력]\n이전 단계(extract_facts)가 파일마다 뽑은 결과의 배열입니다. 각 원소의 structured_data.requirements 가 그 파일의 요구 줄이고, structured_data.facts 가운데 평가기준(evaluationCriteria)과 제출서류 fact 가 평가 항목의 재료입니다:\n{{extract_facts.structured_data}}\n\n[작업장]\n원문은 작업장의 description.txt(공고 본문)와 attachments/(첨부 원본)에 있습니다. ls, find 로 파일을 처음부터 찾거나 큰 파일을 통째로 Read 하지 말고, 줄이 가리키는 sourceFile 만 builtin_grep 으로 봅니다.\n\n[수행]\n1. 모든 원소의 requirements 를 빠짐없이 모읍니다. 일부 원소만 보고 끝내지 않습니다.\n2. 근거 확인: 줄마다 anchor 를 builtin_grep 으로 그 sourceFile 에서 찾습니다. 찾으면 남기고, 못 찾으면 text 의 다른 핵심 구절로 한 번 더 찾습니다. 그래도 없으면 버립니다. 남긴 줄의 quote 에는 원문에서 찾은 구절을 그대로 적습니다.\n3. 합치기: 같은 요구가 여러 파일이나 조각에서 나왔으면 한 줄로 합칩니다. 수정 공고(Amendment)가 바꾼 요구는 수정 공고 쪽을 남깁니다. 한 문장에 요구가 둘이면 두 줄로 나눕니다. text 는 영어 원문 그대로 두고 고쳐 쓰지 않습니다.\n4. 평가 항목 구조(factorTree): Section M 이나 52.212-2 의 평가 요소, 하위 요소, 상대 중요도, 평가 방식을 냅니다. method 는 LPTA 또는 BEST_VALUE_TRADEOFF 입니다. factorId 는 F1, F2 꼴로, subfactorId 는 F1.1 꼴로 매기고 title 은 원문 이름 그대로 씁니다. relativeImportance 는 원문의 상대 중요도 표현을 한국어로 씁니다(예: 가격보다 중요, 가장 중요). 평가 기준이 없는 공고는 method 를 비우고 factors 를 빈 배열로 둡니다.\n5. 줄마다 factorId, factorTitle 에 그 요구가 걸린 평가 항목(4 의 factorId 와 title)을 적습니다. 걸린 항목이 없으면 비웁니다.\n6. translation: 고객이 읽을 한국어 번역을 답니다. 약어와 규정 번호는 처음 나올 때 한국어 뜻과 원문 약어를 같이 씁니다(예: 성과 기반 작업 기술서(PWS)).\n7. 질의 후보: 모호하거나 해석이 갈리는 줄은 queryCandidate 를 true 로 두고 ambiguity(모호한 점, 한국어)와 draftQuery(계약 담당관에게 보낼 질의안, 영어)를 답니다. 아니면 queryCandidate 를 false 로 둡니다.\n8. level, verb, category, fulfillmentParty 는 이전 단계 값을 확인해 틀렸으면 고칩니다. shall, must, will 은 SHALL, should 는 SHOULD, may 는 MAY 입니다. 트럭, 장비, 인력, 실적 증빙처럼 고객이 내야 하는 것은 CLIENT_UPLOAD, 기술 제안과 가격 제안처럼 제안서로 답하는 것은 PLATFORM_GENERATED, 정부 지정 양식은 SYSTEM_FORM 입니다.\n9. 요구 줄이 하나도 없는 공고(공고 본문뿐인 사전 의향조사 등)는 lines 를 빈 배열로 둡니다.\n\n[출력]\n위 작업을 마친 뒤 response_schema 에 맞춰 structured_output 도구 호출로 냅니다. 자유 텍스트나 코드 블록으로 내지 않습니다. REQ ID 는 서버가 매기므로 쓰지 않습니다. 원문에 없는 요구를 지어 넣지 않습니다.",
+        "prompt": "당신은 미 연방 조달 공고의 컴플라이언스 매트릭스를 만드는 분석가입니다. 스킬 sam-proposal 의 01(공고 분석)과 컴플라이언스 매트릭스 틀이 붙어 있습니다. STEP 1(컴플라이언스 매트릭스)과 STEP 4(평가 항목과 질의 후보)의 규칙대로 하되, 스킬이 말하는 산출물 파일은 만들지 않고 결과는 아래 response_schema 로만 냅니다.\n\n[입력]\n이전 단계(extract_facts)가 파일마다 뽑은 결과의 배열입니다. 각 원소의 structured_data.requirements 가 그 파일의 요구 줄이고, structured_data.facts 가운데 평가기준(evaluationCriteria)과 제출서류 fact 가 평가 항목의 재료입니다:\n{{extract_facts.structured_data}}\n\n[작업장]\n원문은 작업장의 description.txt(공고 본문)와 attachments/(첨부 원본)에 있습니다. ls, find 로 파일을 처음부터 찾거나 큰 파일을 통째로 Read 하지 말고, 줄이 가리키는 sourceFile 만 builtin_grep 으로 봅니다.\n\n[수행]\n1. 모든 원소의 requirements 를 빠짐없이 모읍니다. 일부 원소만 보고 끝내지 않습니다.\n2. 근거 확인: 줄마다 anchor 를 builtin_grep 으로 그 sourceFile 에서 찾습니다. 찾으면 남기고, 못 찾으면 text 의 다른 핵심 구절로 한 번 더 찾습니다. 그래도 없으면 버립니다. 남긴 줄의 quote 에는 원문에서 찾은 구절을 그대로 적습니다.\n3. 합치기: 같은 요구가 여러 파일이나 조각에서 나왔으면 한 줄로 합칩니다. 수정 공고(Amendment)가 바꾼 요구는 수정 공고 쪽을 남깁니다. 한 문장에 요구가 둘이면 두 줄로 나눕니다. text 는 영어 원문 그대로 두고 고쳐 쓰지 않습니다.\n4. 평가 항목 구조(factorTree): Section M 이나 52.212-2 의 평가 요소, 하위 요소, 상대 중요도, 평가 방식을 냅니다. method 는 LPTA 또는 BEST_VALUE_TRADEOFF 입니다. factorId 는 F1, F2 꼴로, subfactorId 는 F1.1 꼴로 매기고 title 은 원문 이름 그대로 씁니다. relativeImportance 는 원문의 상대 중요도 표현을 한국어로 씁니다(예: 가격보다 중요, 가장 중요). 평가 기준이 없는 공고는 method 를 비우고 factors 를 빈 배열로 둡니다.\n4-1. 문서 구성(BIZ-096): Section L 의 제출 지침을 보고 평가 항목마다 그 항목을 담아 낼 문서를 documentType 에 적습니다. 기술, 관리, 인력, 수행 방안 평가 항목은 TECHNICAL_PROPOSAL, 과거 수행 실적 평가 항목은 PAST_PERFORMANCE, 가격 평가 항목은 PRICING_SUMMARY 입니다. Section L 이 문서(Volume)를 나누지 않고 한 문서로 내라고 하면 모든 평가 항목을 TECHNICAL_PROPOSAL 로 둡니다. coverLetterRequired 는 Section L 이 커버레터(cover letter, transmittal letter)를 내라고 할 때만 true, 아니면 false 입니다.\n5. 줄마다 factorId, factorTitle 에 그 요구가 걸린 평가 항목(4 의 factorId 와 title)을 적습니다. 걸린 항목이 없으면 비웁니다.\n6. translation: 고객이 읽을 한국어 번역을 답니다. 약어와 규정 번호는 처음 나올 때 한국어 뜻과 원문 약어를 같이 씁니다(예: 성과 기반 작업 기술서(PWS)).\n7. 질의 후보: 모호하거나 해석이 갈리는 줄은 queryCandidate 를 true 로 두고 ambiguity(모호한 점, 한국어)와 draftQuery(계약 담당관에게 보낼 질의안, 영어)를 답니다. 아니면 queryCandidate 를 false 로 둡니다.\n8. level, verb, category, fulfillmentParty 는 이전 단계 값을 확인해 틀렸으면 고칩니다. shall, must, will 은 SHALL, should 는 SHOULD, may 는 MAY 입니다. 트럭, 장비, 인력, 실적 증빙처럼 고객이 내야 하는 것은 CLIENT_UPLOAD, 기술 제안과 가격 제안처럼 제안서로 답하는 것은 PLATFORM_GENERATED, 정부 지정 양식은 SYSTEM_FORM 입니다.\n9. 요구 줄이 하나도 없는 공고(공고 본문뿐인 사전 의향조사 등)는 lines 를 빈 배열로 둡니다.\n\n[출력]\n위 작업을 마친 뒤 response_schema 에 맞춰 structured_output 도구 호출로 냅니다. 자유 텍스트나 코드 블록으로 내지 않습니다. REQ ID 는 서버가 매기므로 쓰지 않습니다. 원문에 없는 요구를 지어 넣지 않습니다.",
         "response_schema": {
           "type": "object",
           "required": [
@@ -601,6 +601,15 @@
                       "title": {
                         "type": "string"
                       },
+                      "documentType": {
+                        "type": "string",
+                        "enum": [
+                          "TECHNICAL_PROPOSAL",
+                          "PAST_PERFORMANCE",
+                          "PRICING_SUMMARY"
+                        ],
+                        "description": "이 평가 항목을 담아 낼 문서"
+                      },
                       "relativeImportance": {
                         "type": "string"
                       },
@@ -620,6 +629,10 @@
                       }
                     }
                   }
+                },
+                "coverLetterRequired": {
+                  "type": "boolean",
+                  "description": "Section L 이 커버레터를 내라고 하면 true"
                 }
               }
             }

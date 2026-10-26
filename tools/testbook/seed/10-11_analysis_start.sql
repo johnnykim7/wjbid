@@ -3,6 +3,7 @@
 -- 입찰 분석이 시작되는 장면. 1, 2번은 사전 분석이 끝난 실제 공고(그 업종의 미 연방 계약이 있는 것)에 건 서류 접수 완료 건으로
 -- 분석 단계로 넘기면 서류를 읽은 뒤 분석이 돈다. 맞는 공고가 없으면 입찰 건이 생기지 않아 키가 비고 재료 없음이 된다. 공고는 지우지 않는다
 -- 1번 회차가 끝나면 IT-10-059 가 그 산출물(워크플로우가 쓴 것)을 본다. 시딩 본문을 보면 시딩 값을 확인하는 것이라 쓰지 않는다
+-- 1번 회원은 그 공고의 참가 자격 첫 두 항목에 답해 둔다. IT-10-059 6번이 참가 자격 답에서 온 값의 출처를 보려면 답이 있어야 한다
 -- 3, 4번은 읽을 서류가 없는 건, 5, 6번은 같은 내용 서류를 올린 같은 회원의 두 건, 7, 8번은 두 건 모두 분석 중인 화면 시험 몫이다
 -- 분석 중 회차는 워크플로우 대기 한도(10/25 상용 60분) 안이어야 하므로 키는 50분 안에 시작한 것만 준다. 대기 한도를 50분 아래로 줄이면 이 창도 줄인다
 -- @file seed/10-11/1.pdf past-performance.pdf
@@ -50,3 +51,13 @@ INSERT INTO bid_analyses (id, bid_request_id, status, started_at, started_by, cr
 SELECT [[id:0c:1]], br.id, 'RUNNING', [[now]], (SELECT a.id FROM members a WHERE a.email = 'smoke-admin@example.com'), [[now]], [[now]] FROM bid_requests br WHERE br.id = [[id:03:7]];
 INSERT INTO bid_analyses (id, bid_request_id, status, started_at, started_by, created_at, updated_at)
 SELECT [[id:0c:2]], br.id, 'RUNNING', [[now]], (SELECT a.id FROM members a WHERE a.email = 'smoke-admin@example.com'), [[now]], [[now]] FROM bid_requests br WHERE br.id = [[id:03:8]];
+INSERT INTO eligibility_answers (id, member_id, notice_id, item_no, item_title, answer, created_at, updated_at)
+SELECT [[id:0e:1]], br.member_id, n.id, 0, JSON_UNQUOTE(JSON_EXTRACT(n.required_documents_json, '$.eligibility[0].title')), 'HAVE', [[now]], [[now]]
+FROM bid_requests br JOIN notices n ON n.opportunity_id = br.opportunity_id AND n.visibility = 'VISIBLE' AND n.generation_status = 'COMPLETED'
+WHERE br.id = [[id:03:1]] AND JSON_EXTRACT(n.required_documents_json, '$.eligibility[0].title') IS NOT NULL
+ORDER BY n.analyzed_at DESC LIMIT 1;
+INSERT INTO eligibility_answers (id, member_id, notice_id, item_no, item_title, answer, created_at, updated_at)
+SELECT [[id:0e:2]], br.member_id, n.id, 1, JSON_UNQUOTE(JSON_EXTRACT(n.required_documents_json, '$.eligibility[1].title')), 'LACK', [[now]], [[now]]
+FROM bid_requests br JOIN notices n ON n.opportunity_id = br.opportunity_id AND n.visibility = 'VISIBLE' AND n.generation_status = 'COMPLETED'
+WHERE br.id = [[id:03:1]] AND JSON_EXTRACT(n.required_documents_json, '$.eligibility[1].title') IS NOT NULL
+ORDER BY n.analyzed_at DESC LIMIT 1;

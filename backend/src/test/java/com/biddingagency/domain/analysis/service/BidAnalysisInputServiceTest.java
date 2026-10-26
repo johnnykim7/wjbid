@@ -122,7 +122,7 @@ class BidAnalysisInputServiceTest {
     }
 
     @Test
-    @DisplayName("TC-DOC-292 입력뒤단계_앞단계확인필요만")
+    @DisplayName("TC-DOC-302 입력뒤단계_앞단계확인필요만")
     void 뒤단계_앞단계확인필요만() throws Exception {
         given(analysisService.policy()).willReturn(PwinPolicy.defaults());
         analysis.saveQuestions(objectMapper.writeValueAsString(List.of(
