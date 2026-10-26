@@ -261,24 +261,24 @@
   },
   "WJBID_14028": {
    "testId": "WJBID_14028",
-   "result": "NG",
+   "result": "OK",
    "steps": [
-    "fail",
-    "fail",
-    "",
+    "pass",
+    "pass",
+    "pass",
     "pass",
     "pass"
    ],
-   "comment": "b001 상용 06:33:40 메뉴로 GENERATING 전환, 07:20:36 REVIEW. 1번과 2번은 지난 판정과 같음. 문구가 CR-169(서버가 묶어 저장), CR-180(문서 종류마다 설계) 이전 작성 순서 기준이라 케이스오류 후보, 문구 고침은 /시험항목",
+   "comment": "10/26 19:50 기대결과 1~3번을 지금 작성 순서(CR-169 서버 묶기, CR-180 문서 종류마다 설계)에 맞게 고친 뒤(/시험항목), 같은 06:33 회차 실행 기록으로 다시 판정. 앞선 NG 는 옛 문구(실행 1건, save_document_version 저장) 탓의 케이스오류",
    "date": "2026-10-26",
-   "at": "2026-10-26 07:28:28",
+   "at": "2026-10-26 19:44:58",
    "tester": "JOINT",
    "by": [
     "사람",
     "사람",
-    "",
-    "기계",
-    "기계"
+    "사람",
+    "사람",
+    "사람"
    ],
    "tc": [
     false,
@@ -288,24 +288,29 @@
    "flow": "워크플로우 실행",
    "evidence": {
     "0": {
-     "q": "Aimbase 실행 기록(06:33 이후, inputData 에 bidRequestId 5eed0003-1010-...-01)",
-     "r": "문서 생성 실행이 1건이 아니라 문서 종류마다 설계 1건씩 2건(f4a80075 COVER_LETTER 06:33:41, TECHNICAL_PROPOSAL 06:36:47)이고 절마다 절 작성, 검증 실행이 따로 생김. 두 설계 실행 입력 모두 bidRequestId 가 있음",
-     "at": "2026. 10. 26. 오전 7:28:28"
+     "q": "Aimbase 실행 기록: b001 06:33:40 GENERATING 전환 회차의 proposal-design 실행",
+     "r": "문서 종류마다 1건씩 2건(f4a80075 COVER_LETTER 06:33:41, TECHNICAL_PROPOSAL 06:36:47). 두 실행 입력 모두 bidRequestId 5eed0003-1010-...-01 과 documentType 이 있음",
+     "at": "2026. 10. 26. 오후 7:44:58"
     },
     "1": {
-     "q": "상용 입찰 서버 기록 MCP tool= 집계(06:33~07:21)",
-     "r": "Aimbase 가 부른 도구는 get_opportunity 1, get_proposal_design_input 2, save_proposal_structure 2, get_section_context 16, save_section_blocks 16, get_section_verify_input 16, save_verification_result 16. save_document_version 은 한 번도 불리지 않았고 문서 버전 v2 는 서버 묶기가 저장함",
-     "at": "2026. 10. 26. 오전 7:28:28"
+     "q": "Aimbase 가 부른 도구 횟수 + bid_document_versions",
+     "r": "절 작성 실행이 save_section_blocks 를 절마다 불러 16회(절 8개, 두 번씩). save_document_version 호출 없음. 표지 편지와 기술 제안서 모두 플랫폼 묶기로 버전 2 가 생김(버전 1 은 설계 단계의 빈 문서)",
+     "at": "2026. 10. 26. 오후 7:44:58"
+    },
+    "2": {
+     "q": "bid_requests.state_history",
+     "r": "두 문서 묶기가 끝난 07:20:36 에 GENERATING 에서 REVIEW",
+     "at": "2026. 10. 26. 오후 7:44:58"
     },
     "3": {
-     "q": "LLMPlatformClientPollingTest IT-14-028 4 설계워크플로우_결과를5초간격으로물음",
+     "q": "7차 단위시험",
      "r": "통과",
-     "at": "2026-10-25 23:30:02"
+     "at": "2026. 10. 26. 오후 7:44:58"
     },
     "4": {
-     "q": "LLMPlatformClientTest IT-14-028 5 설계워크플로우_실행요청과결과묻기_XApiKey실림",
+     "q": "7차 단위시험",
      "r": "통과",
-     "at": "2026-10-25 23:30:12"
+     "at": "2026. 10. 26. 오후 7:44:58"
     }
    },
    "route": "절차대로",

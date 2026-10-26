@@ -14,7 +14,7 @@ import {
   Textarea,
   toast,
 } from '@therecommerce-develop/ds-ui'
-import { getBidAnalysis, rerunBidAnalysis, saveBidDecision } from '../api/client'
+import { getBidAnalysis, getNoticeComplianceMatrix, rerunBidAnalysis, saveBidDecision } from '../api/client'
 import { CapturePlanView, DecisionView, ReportView } from './BidAnalysisSections'
 import {
   DECISION_LABEL,
@@ -26,6 +26,8 @@ import {
   VERDICT_LABEL,
   allowsGeneration,
   formatDateTime,
+  questionTopic,
+  requirementTexts,
 } from './bidAnalysis'
 import type { BidAnalysis, BidAnalysisOverview, BidDecision, BidQuestion, Json } from './bidAnalysis'
 
@@ -45,33 +47,56 @@ function errorOf(err: unknown) {
   return (err as ApiError)?.response
 }
 
-function Questions({ questions }: { questions: BidQuestion[] }) {
-  if (questions.length === 0) return null
+const QUESTION_TARGETS = ['CUSTOMER', 'ADMIN'] as const
+
+function QuestionList({ list }: { list: BidQuestion[] }) {
+  if (list.length === 0) return <p className="py-3 text-sm text-gray-400">없음</p>
   return (
-    <div className="space-y-2">
-      <h3 className="text-sm font-semibold text-gray-900">확인 필요</h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {(['CUSTOMER', 'ADMIN'] as const).map((target) => {
-          const list = questions.filter((q) => (q.target ?? 'ADMIN') === target)
-          return (
-            <div key={target} className="space-y-1">
-              <p className="text-xs font-medium text-gray-500">{QUESTION_TARGET_LABEL[target]} {list.length}건</p>
-              {list.length === 0 ? <p className="text-sm text-gray-400">없음</p> : (
-                <ul className="space-y-1.5 text-sm">
-                  {list.map((q, i) => (
-                    <li key={i}>
-                      <p className="text-gray-800">{q.question}</p>
-                      {(q.reason || q.field) && (
-                        <p className="text-xs text-gray-500">{[q.reason, q.field].filter(Boolean).join(' / ')}</p>
-                      )}
-                    </li>
-                  ))}
-                </ul>
+    <ol className="divide-y divide-gray-100">
+      {list.map((q, i) => {
+        const topic = questionTopic(q)
+        return (
+          <li key={i} className="flex gap-3 py-3.5">
+            <span className="mt-0.5 flex size-5.5 flex-none items-center justify-center rounded-full bg-indigo-50 text-xs font-semibold text-indigo-700">
+              {i + 1}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium leading-relaxed text-gray-900">{q.question}</p>
+              {(topic || q.reason) && (
+                <div className="mt-1 flex items-baseline gap-2">
+                  {topic && <span className="flex-none rounded bg-gray-100 px-1.5 text-[11px] leading-[18px] text-gray-600">{topic}</span>}
+                  {q.reason && <span className="text-xs leading-normal text-gray-500">{q.reason}</span>}
+                </div>
               )}
             </div>
-          )
-        })}
-      </div>
+          </li>
+        )
+      })}
+    </ol>
+  )
+}
+
+function Questions({ questions }: { questions: BidQuestion[] }) {
+  const [target, setTarget] = useState<string>('CUSTOMER')
+  if (questions.length === 0) return null
+  const of = (t: string) => questions.filter((q) => (q.target ?? 'ADMIN') === t)
+  return (
+    <div className="space-y-2">
+      <h3 className="text-sm font-semibold text-gray-900">
+        확인 필요 <span className="ml-1 font-normal text-gray-500">{questions.length}건</span>
+      </h3>
+      <Tabs value={target} onValueChange={setTarget}>
+        <TabsList variant="line">
+          {QUESTION_TARGETS.map((t) => (
+            <TabsTrigger key={t} value={t}>{QUESTION_TARGET_LABEL[t]} {of(t).length}</TabsTrigger>
+          ))}
+        </TabsList>
+        {QUESTION_TARGETS.map((t) => (
+          <TabsContent key={t} value={t}>
+            <QuestionList list={of(t)} />
+          </TabsContent>
+        ))}
+      </Tabs>
     </div>
   )
 }
@@ -85,9 +110,11 @@ function NotSaved() {
  * 분석 중이거나 서류를 읽는 중이면 10초마다 다시 부르고, 관리자 결정이 문서 작성 중 전환을 허용하는지 상태 패널에 알린다.
  * 불러오지 못하면 알 수 없음(null)으로 알려 전환을 막지 않는다. 서버가 409 로 막는다.
  */
-export default function BidAnalysisPanel({ bidRequestId, bidState, reloadKey, onDecisionChange }: {
+export default function BidAnalysisPanel({ bidRequestId, bidState, noticeId, reloadKey, onDecisionChange }: {
   bidRequestId: string
   bidState: string
+  /** REQ ID 옆에 요구 문장을 붙일 공고. 없으면 REQ ID 만 보인다 */
+  noticeId?: string
   reloadKey?: number
   onDecisionChange?: (allowsGeneration: boolean | null) => void
 }) {
@@ -147,6 +174,18 @@ export default function BidAnalysisPanel({ bidRequestId, bidState, reloadKey, on
     const timer = window.setInterval(() => load(true), POLL_INTERVAL_MS)
     return () => window.clearInterval(timer)
   }, [running, readingInProgress, awaitingAnalysis, load])
+
+  // 요구 문장은 공고마다 정해져 있어 10초마다 다시 부를 때 함께 부르지 않는다
+  const [reqTexts, setReqTexts] = useState<Record<string, string>>({})
+  const matrixOf = useRef<string | null>(null)
+  const hasAnalysis = analysis !== null
+  useEffect(() => {
+    if (!noticeId || !hasAnalysis || matrixOf.current === noticeId) return
+    matrixOf.current = noticeId
+    getNoticeComplianceMatrix(noticeId)
+      .then(({ data }) => setReqTexts(requirementTexts(data)))
+      .catch(() => setReqTexts({}))
+  }, [noticeId, hasAnalysis])
 
   const handleNotAllowed = (err: unknown, fallback: string) => {
     const res = errorOf(err)
@@ -265,7 +304,7 @@ export default function BidAnalysisPanel({ bidRequestId, bidState, reloadKey, on
                 <TabsTrigger value="decision">Bid/No-Bid 결정</TabsTrigger>
               </TabsList>
               <TabsContent value="report" className="pt-4">
-                {analysis.report ? <ReportView report={analysis.report as Json} /> : <NotSaved />}
+                {analysis.report ? <ReportView report={analysis.report as Json} reqTexts={reqTexts} /> : <NotSaved />}
               </TabsContent>
               <TabsContent value="capture" className="pt-4">
                 {analysis.capturePlan

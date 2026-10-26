@@ -75,6 +75,7 @@ interface BidRequest {
   agencyName?: string
   memberEmail?: string
   memberCompanyName?: string
+  noticeId?: string
   serviceLevel?: string
   createdAt?: string
 }
@@ -354,6 +355,7 @@ export default function BidRequestDetailPage() {
         <BidAnalysisPanel
           bidRequestId={bidRequest.id}
           bidState={bidRequest.state}
+          noticeId={bidRequest.noticeId}
           reloadKey={analysisReloadKey}
           onDecisionChange={setDecisionAllowsGeneration}
         />

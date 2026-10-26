@@ -247,10 +247,10 @@ dict(id='IT-14-027', flow='상태 도구', kind='예외', title='transition_bid_
 dict(id='IT-14-028', flow='워크플로우 실행', kind='정상', title='GENERATING 전이 때 Aimbase 문서 생성 워크플로우가 자동으로 돈다',
      pre='관리자 계정, 상태 ANALYZING 이고 공고 사전 분석이 COMPLETED 이며 입찰 분석의 관리자 결정이 Go 인 입찰 요청, Aimbase 에 닿는 배포 환경',
      steps='1. 관리자 화면 그 입찰 요청의 입찰 상세 관리에서 GENERATING 으로 전이한다\n'
-           '2. Aimbase 실행 기록에서 그 실행을 연다\n3. 실행이 끝날 때까지 기다린다',
-     expect='1. Aimbase 에 문서 생성 워크플로우 실행이 1건 생기고 입력에 그 입찰 요청 id 가 있다\n'
-            '2. 실행 중 Aimbase 가 이 플랫폼의 MCP 도구를 불러 입찰 요청을 읽고 save_document_version 으로 문서를 저장한다\n'
-            '3. 실행이 completed 가 되면 그 입찰 요청 state 가 REVIEW 로 바뀐다\n'
+           '2. Aimbase 실행 기록에서 그 입찰 요청의 문서 설계 실행을 연다\n3. 실행이 끝날 때까지 기다린다',
+     expect='1. Aimbase 에 문서 설계 워크플로우(proposal-design) 실행이 그 입찰 요청이 만들 문서 종류마다 1건씩 생기고, 입력에 그 입찰 요청 id 와 그 문서 종류가 있다\n'
+            '2. 절 작성 실행이 이 플랫폼의 MCP 도구 save_section_blocks 로 절 본문을 저장하고, 플랫폼이 그 절들을 묶어 문서마다 새 버전 1개(버전 2)를 저장한다\n'
+            '3. 모든 문서 종류의 작성이 끝나면 그 입찰 요청 state 가 REVIEW 로 바뀐다\n'
             '4. 플랫폼이 실행 결과를 5초 간격(설정 app.aimbase.polling.interval-ms 기본값)으로 묻는다\n'
             '5. 플랫폼의 실행 요청과 결과 묻기 요청에 X-API-Key 머리글이 실린다',
      judge=['합동', '합동', '서버', '단위', '단위'],

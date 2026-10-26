@@ -1,6 +1,6 @@
 # SAM.gov Bidding Agency Platform API 설계
 
-> 설계 버전: 1.27 | 최종 수정: 2026-10-26 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-144, CR-146, CR-147, CR-152, CR-153, CR-155, CR-157, CR-159, CR-160, CR-162, CR-168, CR-169, CR-170, CR-178, CR-180, CR-182
+> 설계 버전: 1.28 | 최종 수정: 2026-10-26 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-144, CR-146, CR-147, CR-152, CR-153, CR-155, CR-157, CR-159, CR-160, CR-162, CR-168, CR-169, CR-170, CR-178, CR-179, CR-180, CR-182
 
 > 단계: 3. Detail Design | 실행스펙 섹션 3에 포함
 >
@@ -874,7 +874,7 @@ CR-137 전에 있던 `POST /opportunities/{id}/qualification-check`(AI 자격 �
 | save_section_blocks | 절 블록 저장 (CR-028). CR-159 변경 없음 | sectionId, blocks | BID-DOC-001 |
 | get_section_verify_input | 절 검증 입력 (CR-031). CR-159: requirements(get_section_context 와 같은 꼴)를 더 준다. CR-169: sourceDocuments(get_section_context 와 같은 꼴)를 더 준다(BIZ-089) | sectionId | BID-DOC-001, BID-DOC-005 |
 | save_client_document_facts | 고객 서류 읽기 결과 저장 (CR-169). results 줄의 sourceFile 을 targets 의 targetPath 와 맞춰 readingId 별로 사실을 저장하고 읽음으로 바꾼다. 사실이 0개여도 읽음이다. targets 에 없는 경로와 그 건 후보가 아닌 readingId 는 버리고 응답의 ignored 로 준다. 저장한 수와 버린 수를 돌려준다 | bidRequestId, targets[{readingId, targetPath}], results(extract_facts 의 structured_data 배열) | BID-DOC-004 |
-| get_bid_analysis_input | 입찰 분석 입력 (CR-170). step 마다 필요한 것만 제공한다. REPORT: 공고 메타(공고번호, 종류, 기관, NAICS, PSC, 게시일, 마감일), 공고 분석(get_proposal_design_input 과 같은 꼴), 같은 공고번호의 다른 공고, 같은 기관 최근 공고 20건(제목, 종류, 공고번호, 게시일, NAICS, 낙찰사), 고객 회사 칸, 고객 서류 사실(분류별, 값 300자까지), 참가 자격 답. CAPTURE_PLAN: 공고 메타, 공고 분석 요약과 평가 항목 구조, 고객 회사 칸, 고객 서류 사실, 그 회차의 종합 분석 리포트. DECISION: 공고 메타, 그 회차의 종합 분석 리포트(자격, 경쟁사, BCC, 공정성, 발주 이력)와 캡처플랜, 고객 회사 칸, 매트릭스 줄 수와 고객 제출 줄, 정책 가중치 | bidRequestId, analysisId, step | BID-DOC-006 |
+| get_bid_analysis_input | 입찰 분석 입력 (CR-170). step 마다 필요한 것만 제공한다. REPORT: 공고 메타(공고번호, 종류, 기관, NAICS, PSC, 게시일, 마감일), 공고 분석(get_proposal_design_input 과 같은 꼴), 같은 공고번호의 다른 공고, 같은 기관 최근 공고 20건(제목, 종류, 공고번호, 게시일, NAICS, 낙찰사), 고객 회사 칸, 고객 서류 사실(분류별, 값 300자까지), 참가 자격 답. CAPTURE_PLAN: 공고 메타, 공고 분석 요약과 평가 항목 구조, 고객 회사 칸, 고객 서류 사실, 그 회차의 종합 분석 리포트, 앞 단계가 올린 확인 필요(priorQuestions, 대상과 질문). DECISION: 공고 메타, 그 회차의 종합 분석 리포트(자격, 경쟁사, BCC, 공정성, 발주 이력)와 캡처플랜, 고객 회사 칸, 매트릭스 줄 수와 고객 제출 줄, 정책 가중치, 앞 단계가 올린 확인 필요(CR-179). 단계마다 확인 필요를 따로 올려 같은 질문이 겹치므로 뒤 단계는 이것을 보고 새 것만 올린다 | bidRequestId, analysisId, step | BID-DOC-006 |
 | search_award_history | 낙찰 이력 찾기 (CR-170). 읽기만. federal_contracts 와 낙찰 공고를 같이 찾아 줄마다 source `FEDERAL_CONTRACT`, `SAM_AWARD_NOTICE` 를 단다. 줄: 계약번호나 공고번호, 제목이나 설명, 수주사 이름과 UEI, 금액, 시작일과 끝날, NAICS, PSC, 계약 부서, 계약 구분. 원본 JSON 은 제공하지 않는다. limit 은 50 까지(초기값 20). 조건이 하나도 없으면 거부한다 | naicsCodes[], pscCodes[], recipientName, keyword, solicitationNumber, fromDate, toDate, limit | BID-DOC-006 |
 | save_bid_analysis | 입찰 분석 저장 (CR-170). 그 회차가 RUNNING 일 때만 저장한다. part 는 REPORT, CAPTURE_PLAN, DECISION 순서이고 앞 단계가 없으면 거부한다. 본문 꼴이 틀리면 틀린 곳의 경로를 응답하고 거부한다. questions 는 앞 단계 것 뒤에 이어 붙인다. DECISION 이면 Pwin, 판정, 강점과 약점, 핵심이슈 순위를 계산하고 DONE 으로 바꾼다(BIZ-091). 응답은 저장한 것과 계산 값이다 | bidRequestId, analysisId, part, body, questions | BID-DOC-006 |
 | get_notice_verify_input | 공고문 검증 입력 (CR-031). CR-159 변경 없음 | noticeId | BID-OPP-006 |
