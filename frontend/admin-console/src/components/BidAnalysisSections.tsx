@@ -1,7 +1,6 @@
-import { Fragment, useState } from 'react'
+import { Fragment, useContext, useState } from 'react'
 import type { ReactNode } from 'react'
 import {
-  Badge,
   Button,
   Table,
   TableBody,
@@ -24,6 +23,7 @@ import {
   LIKELIHOOD_LABEL,
   ORDER_VERDICT_LABEL,
   OUR_COMPANY,
+  PrintMode,
   RISK_AREA_LABEL,
   arr,
   companyLabel,
@@ -32,16 +32,12 @@ import {
   str,
 } from './bidAnalysis'
 import type { CompanyScore, Json, RankedIssue, ThemeGap } from './bidAnalysis'
+import { ToneBadge } from './StateBadge'
 
 type Tone = 'success' | 'warning' | 'destructive' | 'info' | 'neutral'
 
-// 관리자 테마의 secondary 는 강조 파랑이라 미상, 낮음 같은 중립 값은 회색 알약을 직접 칠한다(CoverageBand 와 같은 방식)
-const NEUTRAL_PILL = 'bg-gray-100 text-gray-700'
-
 function Tag({ tone, children }: { tone: Tone; children: ReactNode }) {
-  return tone === 'neutral'
-    ? <Badge variant="secondary" size="sm" className={NEUTRAL_PILL}>{children}</Badge>
-    : <Badge variant={tone} size="sm">{children}</Badge>
+  return <ToneBadge size="sm" tone={tone === 'neutral' ? 'gray' : tone}>{children}</ToneBadge>
 }
 
 const CONFIDENCE_TONE: Record<string, Tone> = {
@@ -79,21 +75,21 @@ function label(map: Record<string, string>, v: unknown): string {
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="space-y-2">
-      <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
+      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
       {children}
     </section>
   )
 }
 
 function Empty() {
-  return <p className="text-sm text-gray-400">없음</p>
+  return <p className="text-sm text-muted-foreground">없음</p>
 }
 
 function Lines({ items }: { items: unknown[] }) {
   const lines = items.map(str).filter(Boolean)
   if (lines.length === 0) return <Empty />
   return (
-    <ul className="list-disc pl-5 space-y-1 text-sm text-gray-700">
+    <ul className="list-disc pl-5 space-y-1 text-sm text-foreground">
       {lines.map((l, i) => <li key={i}>{l}</li>)}
     </ul>
   )
@@ -104,17 +100,17 @@ export function Evidence({ value }: { value: unknown }) {
   const e = obj(value)
   if (!('confidence' in e) && !('value' in e)) {
     const s = str(value)
-    return <span className="text-gray-700">{s || '-'}</span>
+    return <span className="text-foreground">{s || '-'}</span>
   }
   const confidence = str(e.confidence)
   const shown = str(e.value)
   return (
     <span className="inline-flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-      <span className="text-gray-800">{shown || '-'}</span>
+      <span className="text-foreground">{shown || '-'}</span>
       {confidence && (
         <Tag tone={CONFIDENCE_TONE[confidence] ?? 'neutral'}>{CONFIDENCE_LABEL[confidence] ?? confidence}</Tag>
       )}
-      {str(e.source) && <span className="text-xs text-gray-500">출처 {str(e.source)}</span>}
+      {str(e.source) && <span className="text-xs text-muted-foreground">출처 {str(e.source)}</span>}
     </span>
   )
 }
@@ -124,7 +120,7 @@ function Fields({ rows }: { rows: [string, unknown][] }) {
     <dl className="grid grid-cols-[9rem_1fr] gap-x-4 gap-y-1.5 text-sm">
       {rows.map(([k, v]) => (
         <div key={k} className="contents">
-          <dt className="text-gray-500">{k}</dt>
+          <dt className="text-muted-foreground">{k}</dt>
           <dd><Evidence value={v} /></dd>
         </div>
       ))}
@@ -133,7 +129,7 @@ function Fields({ rows }: { rows: [string, unknown][] }) {
 }
 
 function Caption({ text }: { text?: string }) {
-  return text ? <p className="text-xs font-medium text-gray-500">{text}</p> : null
+  return text ? <p className="text-xs font-medium text-muted-foreground">{text}</p> : null
 }
 
 function shortColumns(rows: ReactNode[][]): Set<number> {
@@ -154,7 +150,7 @@ function SimpleTable({ title, head, rows, colClass = {} }: {
 }) {
   if (rows.length === 0) {
     return title
-      ? <p className="text-sm text-gray-400"><span className="text-xs font-medium text-gray-500 mr-2">{title}</span>없음</p>
+      ? <p className="text-sm text-muted-foreground"><span className="text-xs font-medium text-muted-foreground mr-2">{title}</span>없음</p>
       : <Empty />
   }
   const short = shortColumns(rows)
@@ -185,15 +181,15 @@ function joined(v: unknown): string {
 }
 
 function Muted({ text }: { text: string }) {
-  return <span className="text-xs leading-relaxed text-gray-500">{text}</span>
+  return <span className="text-xs leading-relaxed text-muted-foreground">{text}</span>
 }
 
 /** 위에 본 값, 아래 회색 덧붙임 */
 function Stacked({ main, sub }: { main: string; sub?: string }) {
   return (
     <div>
-      <div className="text-gray-900">{main || '-'}</div>
-      {sub && <div className="mt-0.5 text-xs text-gray-500">{sub}</div>}
+      <div className="text-foreground">{main || '-'}</div>
+      {sub && <div className="mt-0.5 text-xs text-muted-foreground">{sub}</div>}
     </div>
   )
 }
@@ -212,20 +208,21 @@ function Period({ value }: { value: unknown }) {
 /** REQ ID 와 그 요구 문장. 문장을 모르면 ID 만 보인다 */
 function ReqList({ ids, texts }: { ids: unknown; texts: Record<string, string> }) {
   const [open, setOpen] = useState(false)
+  const printing = useContext(PrintMode)
   const list = arr(ids).map(str).filter(Boolean)
-  if (list.length === 0) return <span className="text-gray-400">-</span>
-  const shown = open ? list : list.slice(0, REQ_SHOWN)
+  if (list.length === 0) return <span className="text-muted-foreground">-</span>
+  const shown = open || printing ? list : list.slice(0, REQ_SHOWN)
   return (
     <div className="space-y-1">
       <ul className="space-y-1">
         {shown.map((id) => (
           <li key={id} className="flex gap-2 leading-normal">
-            <span className="flex-none pt-px text-xs tabular-nums text-gray-500">{id}</span>
-            {texts[id] && <span className="text-gray-800">{texts[id]}</span>}
+            <span className="flex-none pt-px text-xs tabular-nums text-muted-foreground">{id}</span>
+            {texts[id] && <span className="text-foreground">{texts[id]}</span>}
           </li>
         ))}
       </ul>
-      {list.length > REQ_SHOWN && (
+      {list.length > REQ_SHOWN && !printing && (
         <Button variant="dim" size="sm" className="h-auto px-0 text-blue-600 hover:text-blue-700" onClick={() => setOpen(!open)}>
           {open ? '접기' : `${list.length - REQ_SHOWN}건 더 보기`}
         </Button>
@@ -237,17 +234,17 @@ function ReqList({ ids, texts }: { ids: unknown; texts: Record<string, string> }
 function Card({ title, badges, rows }: { title: string; badges?: ReactNode; rows: [string, ReactNode][] }) {
   const shown = rows.filter(([, v]) => v !== null && v !== undefined && v !== '')
   return (
-    <div className="space-y-2.5 rounded-lg border border-gray-200 px-4 py-3.5">
+    <div className="space-y-2.5 rounded-lg border border-border px-4 py-3.5 break-inside-avoid">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm font-semibold text-gray-900">{title || '-'}</span>
+        <span className="text-sm font-semibold text-foreground">{title || '-'}</span>
         {badges}
       </div>
       {shown.length > 0 && (
         <dl className="grid grid-cols-[7rem_1fr] gap-x-4 gap-y-2 text-sm leading-relaxed">
           {shown.map(([k, v]) => (
             <div key={k} className="contents">
-              <dt className="text-gray-500">{k}</dt>
-              <dd className="min-w-0 text-gray-800">{v}</dd>
+              <dt className="text-muted-foreground">{k}</dt>
+              <dd className="min-w-0 text-foreground">{v}</dd>
             </div>
           ))}
         </dl>
@@ -285,7 +282,7 @@ export function ReportView({ report, reqTexts }: { report: Json; reqTexts: Recor
           ['기간', overview.period],
           ['계약 방식', overview.contractType],
         ]} />
-        {str(overview.background) && <p className="text-sm text-gray-700 whitespace-pre-line">{str(overview.background)}</p>}
+        {str(overview.background) && <p className="text-sm text-foreground whitespace-pre-line">{str(overview.background)}</p>}
         <SimpleTable
           title="과업 분해"
           head={['과업', '세부 과업', '산출물']}
@@ -323,7 +320,7 @@ export function ReportView({ report, reqTexts }: { report: Json; reqTexts: Recor
       </Section>
 
       <Section title="발주 이력">
-        <p className="text-sm text-gray-700">판정 <b>{label(ORDER_VERDICT_LABEL, history.verdict) || '-'}</b></p>
+        <p className="text-sm text-foreground">판정 <b>{label(ORDER_VERDICT_LABEL, history.verdict) || '-'}</b></p>
         <SimpleTable
           head={['기간', '계약', '낙찰사', '금액(USD)', '구분', '비고']}
           colClass={{ 1: 'min-w-56', 3: NUMERIC_COL, 4: 'whitespace-nowrap', 5: 'min-w-48' }}
@@ -363,9 +360,9 @@ export function ReportView({ report, reqTexts }: { report: Json; reqTexts: Recor
             const e = obj(raw)
             return [
               <div className="space-y-1">
-                <div className="font-medium text-gray-900">{str(e.factor) || '-'}</div>
-                {str(e.importance) && <div className="text-xs text-gray-500">비중 {str(e.importance)}</div>}
-                {str(e.method) && <div className="text-xs text-gray-500">평가 방식 {str(e.method)}</div>}
+                <div className="font-medium text-foreground">{str(e.factor) || '-'}</div>
+                {str(e.importance) && <div className="text-xs text-muted-foreground">비중 {str(e.importance)}</div>}
+                {str(e.method) && <div className="text-xs text-muted-foreground">평가 방식 {str(e.method)}</div>}
               </div>,
               <ReqList ids={e.reqIds} texts={reqTexts} />,
             ]
@@ -408,7 +405,7 @@ export function ReportView({ report, reqTexts }: { report: Json; reqTexts: Recor
           return (
             <Card key={i} title={str(c.name)}
               badges={<>
-                {str(c.uei) && <span className="text-xs text-gray-400">UEI {str(c.uei)}</span>}
+                {str(c.uei) && <span className="text-xs text-muted-foreground">UEI {str(c.uei)}</span>}
                 {c.isIncumbent === true && <Tag tone="info">기존 수행사</Tag>}
                 {likelihood && (
                   <Tag tone={LIKELIHOOD_TONE[likelihood] ?? 'neutral'}>참여 가능성 {label(LIKELIHOOD_LABEL, likelihood)}</Tag>
@@ -421,7 +418,7 @@ export function ReportView({ report, reqTexts }: { report: Json; reqTexts: Recor
                       <li key={j} className="flex flex-wrap gap-x-3">
                         <span className="min-w-32">{str(w.piid)}</span>
                         <span className="min-w-24 text-right">{formatUsd(w.amountUsd)}</span>
-                        <span className="text-gray-500">{str(w.period)}</span>
+                        <span className="text-muted-foreground">{str(w.period)}</span>
                       </li>
                     ))}
                   </ul>
@@ -445,7 +442,7 @@ export function ReportView({ report, reqTexts }: { report: Json; reqTexts: Recor
       </Section>
 
       <Section title="진입 공정성">
-        <p className="text-sm text-gray-700">판단 <b>{label(FAIRNESS_LABEL, fairness.judgement) || '-'}</b></p>
+        <p className="text-sm text-foreground">판단 <b>{label(FAIRNESS_LABEL, fairness.judgement) || '-'}</b></p>
         <SimpleTable
           head={['순번', '징후', '해당', '근거']}
           rows={Object.entries(FAIRNESS_INDICATORS).map(([no, name]) => {
@@ -513,7 +510,7 @@ export function CapturePlanView({ plan, issueRanking }: { plan: Json; issueRanki
   return (
     <div className="space-y-6">
       <Section title="1. 사업">
-        <p className="text-xs font-medium text-gray-500">1.1 기본 정보</p>
+        <p className="text-xs font-medium text-muted-foreground">1.1 기본 정보</p>
         <Fields rows={[
           ['발주처', basic.agency],
           ['사업명', basic.projectName],
@@ -522,11 +519,11 @@ export function CapturePlanView({ plan, issueRanking }: { plan: Json; issueRanki
           ['일정', basic.schedule],
           ['평가', basic.evaluation],
         ]} />
-        <p className="text-xs font-medium text-gray-500">1.2 제안팀</p>
+        <p className="text-xs font-medium text-muted-foreground">1.2 제안팀</p>
         <Fields rows={[['책임자', team.lead], ['구성원', team.members]]} />
-        <p className="text-xs font-medium text-gray-500">1.3 발주처 정보</p>
+        <p className="text-xs font-medium text-muted-foreground">1.3 발주처 정보</p>
         <Fields rows={[['담당 부서', agencyInfo.office], ['핵심 관련자', agencyInfo.keyPeople]]} />
-        <p className="text-xs font-medium text-gray-500">1.4 사업 정보</p>
+        <p className="text-xs font-medium text-muted-foreground">1.4 사업 정보</p>
         <Fields rows={[
           ['배경', project.background],
           ['목표', project.goal],
@@ -537,7 +534,7 @@ export function CapturePlanView({ plan, issueRanking }: { plan: Json; issueRanki
       </Section>
 
       <Section title="2. 이슈">
-        <p className="text-xs font-medium text-gray-500">2.1 관련자 이슈</p>
+        <p className="text-xs font-medium text-muted-foreground">2.1 관련자 이슈</p>
         <SimpleTable
           head={['번호', '무리', '관련자', '영향력', '이슈', '중요도', '근거']}
           rows={arr(issues.stakeholderIssues).map((raw) => {
@@ -545,7 +542,7 @@ export function CapturePlanView({ plan, issueRanking }: { plan: Json; issueRanki
             return [str(s.id), str(s.group), str(s.stakeholder), str(s.influence), str(s.issue), str(s.importance), str(s.basis)]
           })}
         />
-        <p className="text-xs font-medium text-gray-500">2.2 이슈 정리 (영향력 x 중요도 합, 높은 순)</p>
+        <p className="text-xs font-medium text-muted-foreground">2.2 이슈 정리 (영향력 x 중요도 합, 높은 순)</p>
         <SimpleTable
           head={['순위', '묶은 이슈', '점수', '관련자 이슈']}
           rows={(issueRanking ?? []).map((r, i) => [
@@ -561,8 +558,8 @@ export function CapturePlanView({ plan, issueRanking }: { plan: Json; issueRanki
         {arr(plan.competitors).length === 0 ? <Empty /> : arr(plan.competitors).map((raw, i) => {
           const c = obj(raw)
           return (
-            <div key={i} className="space-y-2 border-l-2 border-gray-200 pl-3">
-              <p className="text-sm font-medium text-gray-800">{str(c.name)} <span className="text-xs text-gray-500">(자사 대비 경쟁사)</span></p>
+            <div key={i} className="space-y-2 border-l-2 border-border pl-3">
+              <p className="text-sm font-medium text-foreground">{str(c.name)} <span className="text-xs text-muted-foreground">(자사 대비 경쟁사)</span></p>
               <Competitiveness value={c.competitiveness} />
               <Fields rows={[['컨소시엄', c.consortium], ['경험', c.experience]]} />
               <Solutions value={c.solutions} />
@@ -572,7 +569,7 @@ export function CapturePlanView({ plan, issueRanking }: { plan: Json; issueRanki
       </Section>
 
       <Section title="4. 자사">
-        <p className="text-xs font-medium text-gray-500">4.1 경쟁력</p>
+        <p className="text-xs font-medium text-muted-foreground">4.1 경쟁력</p>
         <Competitiveness value={company.competitiveness} />
         <Fields rows={[['컨소시엄', company.consortium], ['경험', company.experience]]} />
         <Solutions value={company.solutions} title="4.2 해결 방안" />
@@ -590,9 +587,9 @@ export function CapturePlanView({ plan, issueRanking }: { plan: Json; issueRanki
 function Gaps({ title, rows }: { title: string; rows: ThemeGap[] | null }) {
   return (
     <div className="space-y-1">
-      <p className="text-xs font-medium text-gray-500">{title}</p>
+      <p className="text-xs font-medium text-muted-foreground">{title}</p>
       {(rows ?? []).length === 0 ? <Empty /> : (
-        <ul className="text-sm text-gray-700 space-y-0.5">
+        <ul className="text-sm text-foreground space-y-0.5">
           {(rows ?? []).map((g) => (
             <li key={g.theme}>{g.theme}: 자사 {g.our}, 경쟁사 최고 {g.bestCompetitor} ({g.diff > 0 ? `+${g.diff}` : g.diff})</li>
           ))}
@@ -605,13 +602,14 @@ function Gaps({ title, rows }: { title: string; rows: ThemeGap[] | null }) {
 // 점수 1~5 중 강점(4 이상)과 약점(2 이하)을 색으로 가른다
 function scoreTone(score: unknown): string {
   const n = Number(str(score))
-  if (str(score) === '' || Number.isNaN(n)) return 'text-gray-400'
-  return n >= 4 ? 'text-green-700' : n <= 2 ? 'text-red-700' : 'text-gray-700'
+  if (str(score) === '' || Number.isNaN(n)) return 'text-muted-foreground'
+  return n >= 4 ? 'text-green-700' : n <= 2 ? 'text-destructive' : 'text-foreground'
 }
 
 /** 팩터 줄에는 점수만 두고, 줄을 누르면 업체별 근거를 그 아래에 펼친다 */
 function Scorecard({ scorecard, percentOf }: { scorecard: Json[]; percentOf: Map<string, number | null> }) {
   const [open, setOpen] = useState<Set<string>>(new Set())
+  const printing = useContext(PrintMode)
   const toggle = (key: string) => setOpen((prev) => {
     const next = new Set(prev)
     if (next.has(key)) next.delete(key)
@@ -623,7 +621,7 @@ function Scorecard({ scorecard, percentOf }: { scorecard: Json[]; percentOf: Map
 
   return (
     <div className="space-y-1">
-      <p className="text-xs text-gray-500">점수는 1~5, 줄을 누르면 업체별 근거가 펼쳐집니다.</p>
+      <p className="text-xs text-muted-foreground">{printing ? '점수는 1~5.' : '점수는 1~5, 줄을 누르면 업체별 근거가 펼쳐집니다.'}</p>
       <Table className="text-sm">
         <TableHeader>
           <TableRow>
@@ -635,7 +633,7 @@ function Scorecard({ scorecard, percentOf }: { scorecard: Json[]; percentOf: Map
         </TableHeader>
         <TableBody>
           {FACTORS.map(({ key, label: factor }) => {
-            const isOpen = open.has(key)
+            const isOpen = printing || open.has(key)
             return (
               <Fragment key={key}>
                 <TableRow className="cursor-pointer" tabIndex={0} aria-expanded={isOpen}
@@ -647,7 +645,7 @@ function Scorecard({ scorecard, percentOf }: { scorecard: Json[]; percentOf: Map
                     }
                   }}>
                   <TableCell className="whitespace-nowrap">
-                    <span className="inline-block w-3.5 text-gray-400">{isOpen ? '-' : '+'}</span>{factor}
+                    {!printing && <span className="inline-block w-3.5 text-muted-foreground">{isOpen ? '-' : '+'}</span>}{factor}
                   </TableCell>
                   {scorecard.map((row, i) => {
                     const score = obj(obj(row.scores)[key]).score
@@ -655,15 +653,15 @@ function Scorecard({ scorecard, percentOf }: { scorecard: Json[]; percentOf: Map
                   })}
                 </TableRow>
                 {isOpen && (
-                  <TableRow className="bg-gray-50 hover:bg-gray-50">
+                  <TableRow className="bg-muted hover:bg-muted">
                     <TableCell colSpan={scorecard.length + 1} className="pb-3.5 pl-8">
                       <ul className="space-y-1.5 text-[13px] leading-relaxed">
                         {scorecard.map((row, i) => {
                           const f = obj(obj(row.scores)[key])
                           return (
                             <li key={i} className="grid grid-cols-[12rem_1fr] gap-3">
-                              <span className="font-medium text-gray-900">{companyLabel(str(row.company))} {str(f.score) || '-'}점</span>
-                              <span className="text-gray-600">{str(f.basis) || '-'}</span>
+                              <span className="font-medium text-foreground">{companyLabel(str(row.company))} {str(f.score) || '-'}점</span>
+                              <span className="text-muted-foreground">{str(f.basis) || '-'}</span>
                             </li>
                           )
                         })}
@@ -705,9 +703,9 @@ export function DecisionView({ decision, scores, strengths, weaknesses }: {
       </Section>
 
       <Section title="민감도">
-        <p className="text-sm text-gray-700">
+        <p className="text-sm text-foreground">
           {FACTORS.find((f) => f.key === str(sensitivity.factor))?.label ?? (str(sensitivity.factor) || '-')}
-          {str(sensitivity.reason) && <span className="text-gray-500">: {str(sensitivity.reason)}</span>}
+          {str(sensitivity.reason) && <span className="text-muted-foreground">: {str(sensitivity.reason)}</span>}
         </p>
       </Section>
 
@@ -727,7 +725,7 @@ export function DecisionView({ decision, scores, strengths, weaknesses }: {
             return [
               str(q.item),
               str(q.remedy),
-              q.resolvable === false ? <span className="text-red-700 font-medium">불가</span> : '가능',
+              q.resolvable === false ? <span className="text-destructive font-medium">불가</span> : '가능',
             ]
           })}
         />
@@ -758,7 +756,7 @@ export function DecisionView({ decision, scores, strengths, weaknesses }: {
             const severe = str(r.probability) === 'H' && str(r.impact) === 'H'
             return [
               label(RISK_AREA_LABEL, r.area),
-              severe ? <span className="text-red-700 font-medium">{str(r.risk)} (H x H)</span> : str(r.risk),
+              severe ? <span className="text-destructive font-medium">{str(r.risk)} (H x H)</span> : str(r.risk),
               str(r.probability),
               str(r.impact),
             ]
@@ -771,7 +769,7 @@ export function DecisionView({ decision, scores, strengths, weaknesses }: {
       </Section>
 
       <Section title="결정 조언">
-        <p className="text-sm text-gray-700 whitespace-pre-line">{str(decision.advice) || '-'}</p>
+        <p className="text-sm text-foreground whitespace-pre-line">{str(decision.advice) || '-'}</p>
       </Section>
     </div>
   )

@@ -409,7 +409,18 @@ dict(id='IT-10-014', flow='생성 완료 알림', kind='정상', title='제안�
             '3. 바로가기 링크를 누르면 관리자 화면에서 그 입찰 건이나 그 문서가 열린다\n'
             '4. 알림 이력에 notification_type DOCUMENT_GENERATED, success true 인 행이 그 입찰 건을 참조로 관리자 메일 주소마다 묶인 문서 수만큼 더해진다',
      judge=['합동', '합동', '합동', '서버'],
-     req=['BID-DOC-002'], fc=['BID-DOC-002'], screen='', pri='High'),
+     req=['BID-DOC-002'], fc=['BID-DOC-002'], screen='', pri='High',
+     probe={4: dict(steps=[('key', '10.b001_bid'),
+                           ('sql', f"SELECT (SELECT COUNT(*) FROM members WHERE role = 'ADMIN') AS admins, "
+                                   f"(SELECT COUNT(*) FROM bid_documents WHERE bid_request_id = {THIS_BID}) AS docs, "
+                                   f"COUNT(*) AS n, COUNT(DISTINCT n.recipient_email) AS emails FROM notification_logs n "
+                                   f"WHERE n.reference_id = {THIS_BID} AND n.notification_type = 'DOCUMENT_GENERATED' AND n.success = 1 "
+                                   f"AND n.created_at >= (SELECT MIN(v.created_at) FROM bid_documents bd JOIN bid_document_versions v "
+                                   f"ON v.document_id = bd.id AND v.version_no = bd.current_version_no WHERE bd.bid_request_id = {THIS_BID})")],
+                    need="r[0][0]['state'] != 'ANALYZING'",
+                    check="int(r[1][0]['admins']) > 0 and int(r[1][0]['docs']) > 0 "
+                          "and int(r[1][0]['n']) == int(r[1][0]['admins']) * int(r[1][0]['docs']) "
+                          "and int(r[1][0]['emails']) == int(r[1][0]['admins'])")}),
 
 dict(id='IT-10-015', flow='문서 편집', kind='정상', title='관리자가 초안 문서를 고쳐 저장하면 새 버전이 생긴다',
      pre='관리자 계정, REVIEW 상태 입찰 건의 DRAFT 문서 1건(버전 1)',
@@ -1483,5 +1494,48 @@ dict(id='IT-10-085', flow='제안서 설계와 REQ', kind='정상', title='과�
             '2. 커버리지의 targetCount 가 F2 대상 줄 수와 같다',
      judge=['서버', '서버'],
      req=['BID-DOC-001', 'BID-COMP-002'], fc=['BID-DOC-001', 'BID-COMP-002'], screen='', pri='High'),
+
+dict(id='IT-10-086', flow='입찰 분석', kind='정상', title='PDF 다운로드를 누르면 지금 회차의 머리와 네 부분이 한 문서로 이어진 인쇄 창이 열리고 PDF 로 저장된다',
+     pre='관리자 계정, 입찰 분석이 분석 완료이고 관리자 결정이 조건부 Go 로 저장된 ANALYZING 입찰 건(확인 필요가 고객에게 물을 것과 관리자가 볼 것에 각 1건 이상, REQ ID 가 셋 이상인 요구 항목 칸이 있음), 크롬 브라우저',
+     steps='1. 관리자 화면에서 그 입찰 건의 입찰 상세 관리를 열고 입찰 분석 영역의 캡처플랜 탭을 연다\n'
+           '2. 입찰 분석 영역 머리의 [PDF 다운로드] 를 누른다\n'
+           '3. 인쇄 창 미리보기를 끝까지 넘겨 본다\n'
+           '4. 대상을 PDF 로 저장으로 고르고 저장한 뒤 받은 파일을 연다\n'
+           '5. 인쇄 창이 닫힌 뒤 화면을 본다',
+     expect='1. 2단계 뒤 브라우저 인쇄 창이 열린다\n'
+            '2. 2단계에서 입찰 분석 조회(/bid-analysis)가 새로 나가지 않는다\n'
+            '3. 미리보기 머리에 「입찰 분석」, 그 회차 종합 분석 리포트의 사업명, 상태 분석 완료와 시작, 끝 시각, Pwin 과 판정과 이유, 관리자 결정 조건부 Go 와 정한 사람, 시각, 조건이 있다\n'
+            '4. 머리 다음에 종합 분석 리포트, 캡처플랜, Bid/No-Bid 결정, 확인 필요가 이 순서로 있다\n'
+            '5. 캡처플랜, Bid/No-Bid 결정, 확인 필요 부분이 저마다 새 쪽 맨 위에서 시작한다\n'
+            '6. 종합 분석 리포트 부분의 사업명, 발주처, 발주 이력 표 줄 수가 화면의 종합 분석 리포트 탭과 같다\n'
+            '7. 캡처플랜 부분에 양식 1장부터 5장까지가 차례로 있다\n'
+            '8. Bid/No-Bid 결정 부분의 스코어카드 팩터 줄 수와 가중 점수가 화면의 Bid/No-Bid 결정 탭과 같다\n'
+            '9. 요구 항목 칸마다 REQ ID 와 한글 요구 문장이 전부 있고 "건 더 보기" 버튼은 하나도 없다\n'
+            '10. 스코어카드 팩터마다 그 아래에 업체별 점수와 근거가 펼쳐져 있다\n'
+            '11. 확인 필요 부분에 고객에게 물을 것 묶음과 관리자가 볼 것 묶음이 차례로 있고 묶음별 건수가 화면 확인 필요 탭 이름의 건수와 같다\n'
+            '12. 미리보기 어느 쪽에도 왼쪽 메뉴, 머리 막대, 고객 서류 읽기 영역, [다시 분석], [PDF 다운로드], 관리자 결정 폼이 없다\n'
+            '13. 인쇄 창의 파일 이름 기본값이 입찰분석_사업명_회차시작일(YYYYMMDD 여덟 자리)이다\n'
+            '14. 받은 PDF 파일을 열면 한글이 네모나 물음표 없이 화면과 같은 글자로 보인다\n'
+            '15. 받은 PDF 파일의 확신도 꼬리표와 스코어카드 점수 칸이 화면과 같은 색으로 찍혀 있다\n'
+            '16. 받은 PDF 파일에서 표의 한 줄이나 카드 하나가 두 쪽에 나뉘어 찍힌 곳이 없다\n'
+            '17. 5단계에서 입찰 분석 영역에 캡처플랜 탭이 열려 있다\n'
+            '18. 5단계에서 브라우저 탭 제목이 2단계 전과 같다',
+     judge=['가상', '가상', '가상', '가상', '합동', '가상', '가상', '가상', '가상', '가상', '가상', '가상', '가상', '합동', '합동', '합동', '가상', '가상'],
+     req=['BID-DOC-006'], fc=['BID-DOC-006'], screen='관리자 /bid-requests/{id}', pri='High'),
+
+dict(id='IT-10-087', flow='입찰 분석', kind='예외', title='결정만이거나 회차가 없는 건에는 PDF 다운로드가 없고 분석 중인 건은 저장된 부분만 담긴다',
+     pre='관리자 계정, 입찰 분석이 결정만인 입찰 건 A, 입찰 분석 회차가 없는 ANALYZING 입찰 건 C, 입찰 분석이 분석 중이고 종합 분석 리포트만 저장된 입찰 건 B',
+     steps='1. A 의 입찰 상세 관리에서 입찰 분석 영역 머리를 본다\n'
+           '2. C 의 입찰 상세 관리에서 입찰 분석 영역 머리를 본다\n'
+           '3. B 의 입찰 상세 관리에서 종합 분석 리포트 탭을 연 채 [PDF 다운로드] 를 누르고 인쇄 창 미리보기를 본다\n'
+           '4. 인쇄 창을 취소하고 20초 동안 화면을 둔다',
+     expect='1. 1단계에서 A 의 입찰 분석 영역 머리에 [PDF 다운로드] 가 없다\n'
+            '2. 2단계에서 C 의 입찰 분석 영역 머리에 [PDF 다운로드] 가 없다\n'
+            '3. 3단계 미리보기의 종합 분석 리포트 부분에 B 의 리포트 사업명과 발주처가 있다\n'
+            '4. 3단계 미리보기의 캡처플랜 부분과 Bid/No-Bid 결정 부분에 저마다 "아직 저장되지 않았습니다" 가 있다\n'
+            '5. 4단계 뒤 입찰 분석 영역에 종합 분석 리포트 탭이 열려 있다\n'
+            '6. 4단계 20초 동안 입찰 분석 조회(/bid-analysis)가 10초 간격으로 두 번 이상 나간다',
+     judge=['가상', '가상', '가상', '가상', '가상', '가상'],
+     req=['BID-DOC-006'], fc=['BID-DOC-006'], screen='관리자 /bid-requests/{id}', pri='Medium'),
 
 ]

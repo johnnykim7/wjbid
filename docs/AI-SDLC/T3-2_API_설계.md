@@ -1,6 +1,6 @@
 # SAM.gov Bidding Agency Platform API 설계
 
-> 설계 버전: 1.28 | 최종 수정: 2026-10-26 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-144, CR-146, CR-147, CR-152, CR-153, CR-155, CR-157, CR-159, CR-160, CR-162, CR-168, CR-169, CR-170, CR-178, CR-179, CR-180, CR-182
+> 설계 버전: 1.29 | 최종 수정: 2026-10-26 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-144, CR-146, CR-147, CR-152, CR-153, CR-155, CR-157, CR-159, CR-160, CR-162, CR-168, CR-169, CR-170, CR-178, CR-179, CR-180, CR-182, CR-183
 
 > 단계: 3. Detail Design | 실행스펙 섹션 3에 포함
 >
@@ -52,7 +52,7 @@
 | GET | /auth/sns/signup/{ticket} | SNS 가입 화면 채울 값 `{provider, email, emailVerifiedByProvider}`. 쓴 표, 시간 지난 표 410 `SNS_TICKET_EXPIRED` (CR-146) | | BID-AUTH-006 |
 | POST | /auth/sns/register | SNS 가입 `{ticket, email, companyName, businessRegistrationNumber, contactPerson, phone, agreeTerms, agreePrivacy, agreeMarketing}`. 이메일이 SNS 확인 메일과 다르거나 SNS 확인이 없으면 확인을 마친 인증번호가 있어야 한다(없으면 400 `EMAIL_NOT_VERIFIED`). 이미 가입된 메일 409 `EMAIL_ALREADY_EXISTS`, 같은 SNS 계정이 먼저 가입을 마쳤으면 409 `SNS_ACCOUNT_IN_USE`, 표 410 `SNS_TICKET_EXPIRED`. 성공하면 회원, SNS 연결, 동의 이력을 남기고 토큰을 준다 (CR-146, BIZ-062, BIZ-063) | | BID-AUTH-006 |
 | GET | /members/me | 내 정보 조회. CR-157: `membership` `{ member, endsOn }` 를 싣는다. member 는 회원이면 true(관리자 포함), endsOn 은 오늘을 품은 기간 중 가장 늦은 끝일(YYYY-MM-DD, 관리자와 무료회원은 null) | 🔒 | BID-AUTH-004, BID-AUTH-008 |
-| PATCH | /members/me | 내 정보 수정 | 🔒 | BID-AUTH-004 |
+| PATCH | /members/me | 내 정보 수정. CR-183: `businessRegistrationNumber` 를 받는다. 보내지 않으면(null) 그대로 두고, 빈 글자면 지운다 | 🔒 | BID-AUTH-001, BID-AUTH-004 |
 
 ---
 
@@ -661,6 +661,8 @@ CR-137 전에 있던 `POST /opportunities/{id}/qualification-check`(AI 자격 �
 | 메서드 | 경로 | 설명 | 인증 | 기능 ID |
 |--------|------|------|------|---------|
 | GET | /admin/members | 회원 목록 (페이징). CR-157: 줄마다 `member`(회원 여부, 관리자 true), `membershipEndsOn`(지금 기간의 끝일, 없으면 null) | 🔒 ADMIN | BID-ADMIN-001, BID-ADMIN-002 |
+| GET | /admin/members/{memberId} | 회원 한 명의 가입 정보 `{ id, email, emailVerifiedAt, companyName, businessRegistrationNumber, contactPerson, phone, address, role, createdAt, lastLoginAt, member, membershipEndsOn }`. 시각은 목록과 같은 `yyyy-MM-dd HH:mm`, 빈 칸은 목록처럼 싣지 않는다. 없는 회원 404 `MEMBER_NOT_FOUND` (CR-183) | 🔒 ADMIN | BID-ADMIN-002 |
+| PATCH | /admin/members/{memberId} | 회원 정보 수정 `{ companyName, businessRegistrationNumber, contactPerson, phone, address }`. 다섯 칸을 통째로 바꾼다. companyName 은 비울 수 없고(400), 나머지는 비우면 지운다. 길이는 표 칸과 같다(회사명 255, 사업자등록번호 50, 담당자 100, 전화번호 50). 이메일과 역할은 받지 않는다. 응답은 GET 과 같은 회원 상세. 없는 회원 404 `MEMBER_NOT_FOUND` (CR-183) | 🔒 ADMIN | BID-ADMIN-002 |
 | GET | /admin/members/{memberId}/memberships | 그 고객의 회원 기간 이력, 시작일 늦은 순. 줄 `{ id, startsOn, endsOn, memo, createdByEmail, createdAt, current }`. current 는 오늘을 품은 기간이면 true (CR-157) | 🔒 ADMIN | BID-ADMIN-002 |
 | POST | /admin/members/{memberId}/memberships | 회원 기간 넣기 `{ startsOn, endsOn, memo }`. 201 과 넣은 줄. 끝일이 시작일보다 앞이면 400 `MEMBERSHIP_PERIOD_INVALID`, 없는 회원 404 `MEMBER_NOT_FOUND` (CR-157, BIZ-072) | 🔒 ADMIN | BID-ADMIN-002 |
 | DELETE | /admin/members/{memberId}/memberships/{membershipId} | 회원 기간 지우기. 204. 그 고객의 기간이 아니면 404 `MEMBERSHIP_NOT_FOUND` (CR-157) | 🔒 ADMIN | BID-ADMIN-002 |

@@ -31,9 +31,43 @@
   }
 }
 
+/* 입찰 분석 인쇄용 문서(CR-181)는 화면에 보이지 않고 인쇄 때만 그것 하나가 찍힌다 */
+.bid-analysis-print {
+  display: none;
+}
+
 @media print {
   @page {
     size: A4;
     margin: 14mm;
+  }
+
+  body:has(> .bid-analysis-print) > :not(.bid-analysis-print) {
+    display: none !important;
+  }
+
+  .bid-analysis-print {
+    display: block;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  /* 넓은 표를 감싼 가로 스크롤 틀이 쪽 밖을 잘라 먹지 않게 한다 */
+  .bid-analysis-print * {
+    overflow: visible !important;
+  }
+
+  /* 머리와 첫 부분은 첫 쪽에, 둘째 부분부터 새 쪽에서 시작한다 */
+  .bid-analysis-print .print-part + .print-part {
+    break-before: page;
+  }
+
+  .bid-analysis-print tr {
+    break-inside: avoid;
+  }
+
+  .bid-analysis-print h2,
+  .bid-analysis-print h3 {
+    break-after: avoid;
   }
 }
