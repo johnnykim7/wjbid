@@ -1,5 +1,7 @@
 // CR-170 입찰 분석 응답 타입과 표시 이름 (BE BidAnalysisDto 대응)
 
+import { createContext } from 'react'
+
 export type BidAnalysisStatus = 'RUNNING' | 'DONE' | 'FAILED' | 'DECISION_ONLY'
 export type BidVerdict = 'STRONG_GO' | 'CONDITIONAL_GO' | 'WEAK' | 'NO_GO'
 export type BidDecision = 'GO' | 'CONDITIONAL_GO' | 'NO_GO'
@@ -280,4 +282,24 @@ export function formatDateTime(local: string | null | undefined): string {
   if (!local) return ''
   const d = new Date(local)
   return Number.isNaN(d.getTime()) ? local : d.toLocaleString('ko-KR')
+}
+
+/** 인쇄용 문서 안에서는 접히는 내용을 펼친 채 그린다 (CR-181) */
+export const PrintMode = createContext(false)
+
+/** 종합 분석 리포트 과업 개요의 사업명. 근거 값이면 그 값 */
+export function projectNameOf(report: unknown): string {
+  const name = obj(obj(report).overview).projectName
+  const e = obj(name)
+  return str('value' in e ? e.value : name).trim()
+}
+
+const FILE_NAME_FORBIDDEN = /[\\/:*?"<>|]/g
+const FILE_NAME_PROJECT_MAX = 60
+
+/** 인쇄 창이 PDF 파일 이름 기본값으로 쓰는 문서 제목. 입찰분석_사업명_회차시작일 */
+export function printFileName(projectName: string, startedAt: string | null): string {
+  const name = projectName.replace(FILE_NAME_FORBIDDEN, '_').slice(0, FILE_NAME_PROJECT_MAX)
+  const day = (startedAt ?? '').slice(0, 10).replaceAll('-', '')
+  return ['입찰분석', name, day].filter(Boolean).join('_')
 }

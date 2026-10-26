@@ -1,4 +1,4 @@
-import { Fragment, useState } from 'react'
+import { Fragment, useContext, useState } from 'react'
 import type { ReactNode } from 'react'
 import {
   Badge,
@@ -24,6 +24,7 @@ import {
   LIKELIHOOD_LABEL,
   ORDER_VERDICT_LABEL,
   OUR_COMPANY,
+  PrintMode,
   RISK_AREA_LABEL,
   arr,
   companyLabel,
@@ -212,9 +213,10 @@ function Period({ value }: { value: unknown }) {
 /** REQ ID 와 그 요구 문장. 문장을 모르면 ID 만 보인다 */
 function ReqList({ ids, texts }: { ids: unknown; texts: Record<string, string> }) {
   const [open, setOpen] = useState(false)
+  const printing = useContext(PrintMode)
   const list = arr(ids).map(str).filter(Boolean)
   if (list.length === 0) return <span className="text-gray-400">-</span>
-  const shown = open ? list : list.slice(0, REQ_SHOWN)
+  const shown = open || printing ? list : list.slice(0, REQ_SHOWN)
   return (
     <div className="space-y-1">
       <ul className="space-y-1">
@@ -225,7 +227,7 @@ function ReqList({ ids, texts }: { ids: unknown; texts: Record<string, string> }
           </li>
         ))}
       </ul>
-      {list.length > REQ_SHOWN && (
+      {list.length > REQ_SHOWN && !printing && (
         <Button variant="dim" size="sm" className="h-auto px-0 text-blue-600 hover:text-blue-700" onClick={() => setOpen(!open)}>
           {open ? '접기' : `${list.length - REQ_SHOWN}건 더 보기`}
         </Button>
@@ -237,7 +239,7 @@ function ReqList({ ids, texts }: { ids: unknown; texts: Record<string, string> }
 function Card({ title, badges, rows }: { title: string; badges?: ReactNode; rows: [string, ReactNode][] }) {
   const shown = rows.filter(([, v]) => v !== null && v !== undefined && v !== '')
   return (
-    <div className="space-y-2.5 rounded-lg border border-gray-200 px-4 py-3.5">
+    <div className="space-y-2.5 rounded-lg border border-gray-200 px-4 py-3.5 break-inside-avoid">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm font-semibold text-gray-900">{title || '-'}</span>
         {badges}
@@ -612,6 +614,7 @@ function scoreTone(score: unknown): string {
 /** 팩터 줄에는 점수만 두고, 줄을 누르면 업체별 근거를 그 아래에 펼친다 */
 function Scorecard({ scorecard, percentOf }: { scorecard: Json[]; percentOf: Map<string, number | null> }) {
   const [open, setOpen] = useState<Set<string>>(new Set())
+  const printing = useContext(PrintMode)
   const toggle = (key: string) => setOpen((prev) => {
     const next = new Set(prev)
     if (next.has(key)) next.delete(key)
@@ -623,7 +626,7 @@ function Scorecard({ scorecard, percentOf }: { scorecard: Json[]; percentOf: Map
 
   return (
     <div className="space-y-1">
-      <p className="text-xs text-gray-500">점수는 1~5, 줄을 누르면 업체별 근거가 펼쳐집니다.</p>
+      <p className="text-xs text-gray-500">{printing ? '점수는 1~5.' : '점수는 1~5, 줄을 누르면 업체별 근거가 펼쳐집니다.'}</p>
       <Table className="text-sm">
         <TableHeader>
           <TableRow>
@@ -635,7 +638,7 @@ function Scorecard({ scorecard, percentOf }: { scorecard: Json[]; percentOf: Map
         </TableHeader>
         <TableBody>
           {FACTORS.map(({ key, label: factor }) => {
-            const isOpen = open.has(key)
+            const isOpen = printing || open.has(key)
             return (
               <Fragment key={key}>
                 <TableRow className="cursor-pointer" tabIndex={0} aria-expanded={isOpen}
@@ -647,7 +650,7 @@ function Scorecard({ scorecard, percentOf }: { scorecard: Json[]; percentOf: Map
                     }
                   }}>
                   <TableCell className="whitespace-nowrap">
-                    <span className="inline-block w-3.5 text-gray-400">{isOpen ? '-' : '+'}</span>{factor}
+                    {!printing && <span className="inline-block w-3.5 text-gray-400">{isOpen ? '-' : '+'}</span>}{factor}
                   </TableCell>
                   {scorecard.map((row, i) => {
                     const score = obj(obj(row.scores)[key]).score

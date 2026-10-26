@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { act } from '@testing-library/react'
 import { afterEach, beforeAll, test } from 'vitest'
 import { judge, noMaterial, reportTo } from '../report'
@@ -823,4 +826,321 @@ test('IT-10-077 관리자 결정이 없으면 문서 작성 중으로 전환되�
   const gate = await generationBlock()
   judge(ID, 1, gate.blocked ? 'pass' : 'fail',
     `상태 전환 창에서 문서 작성 중을 고르면 "${DECISION_REQUIRED}" 가 보이고 전환 단추가 눌리지 않는지`, gate.seen)
+})
+
+type Json = Record<string, unknown>
+
+interface PrintAnalysis extends Analysis {
+  startedAt: string | null
+  finishedAt: string | null
+  verdictReason: string | null
+  adminNote: string | null
+  decidedAt: string | null
+  report: Json | null
+  decision: Json | null
+  questions: { target: string }[] | null
+}
+
+const STATUS: Record<string, string> = { RUNNING: '분석 중', DONE: '분석 완료', FAILED: '분석 실패', DECISION_ONLY: '결정만' }
+const DECISION: Record<string, string> = { GO: 'Go', CONDITIONAL_GO: '조건부 Go', NO_GO: 'No-Go' }
+
+const rec = (v: unknown): Json => (v !== null && typeof v === 'object' && !Array.isArray(v) ? (v as Json) : {})
+const list = (v: unknown): unknown[] => (Array.isArray(v) ? v : [])
+/** 근거 값 {value, confidence, source} 의 값. 값만 온 칸은 그대로 */
+const valueOf = (v: unknown) => String(rec(v).value ?? (typeof v === 'string' ? v : ''))
+/** 화면과 같은 한국 시각 꼴. 서버 시각은 시간대 없는 한국 시각이다 */
+const localTime = (v: string | null) => (v ? new Date(v).toLocaleString('ko-KR') : '')
+
+const here = dirname(fileURLToPath(String(import.meta.url)))
+const appFile = (path: string) => readFileSync(resolve(here, '../..', path), 'utf-8')
+
+/** 인쇄용 문서. 화면 밖 body 에 바로 붙는다 */
+const printDoc = () => document.querySelector<HTMLElement>('body > .bid-analysis-print')
+
+/** 인쇄용 문서의 부분. 제목 "n. 이름" 의 이름으로 찾는다 */
+function printPart(name: string): HTMLElement | null {
+  const h = Array.from(printDoc()?.querySelectorAll('h2') ?? []).find((el) => text(el).replace(/^\d+\.\s*/, '').startsWith(name))
+  return h?.parentElement ?? null
+}
+
+/** jsdom 에는 인쇄 창이 없어 인쇄를 부르는 순간의 문서 제목과 인쇄용 문서가 있는지를 적어 둔다 */
+function catchPrint() {
+  const seen: { title: string; doc: boolean }[] = []
+  const real = window.print
+  window.print = () => {
+    seen.push({ title: document.title, doc: !!printDoc() })
+  }
+  return { seen, restore: () => { window.print = real } }
+}
+
+/** 인쇄 창을 닫는다. 브라우저는 저장하든 취소하든 afterprint 를 보낸다 */
+async function closePrint() {
+  await act(async () => {
+    window.dispatchEvent(new Event('afterprint'))
+  })
+  await settled()
+}
+
+const analysisCalls = (id: string) => traffic.calls.filter((c) => c.startsWith('GET ') && c.endsWith(`/bid-requests/${id}/bid-analysis`)).length
+
+/** 입찰 분석 영역의 세 탭 가운데 열린 것. 확인 필요 묶음 탭은 뒤의 탭 줄이다 */
+const activeAnalysisTab = () =>
+  text(analysisPanel()?.querySelector('[role="tablist"]')?.querySelector('[role="tab"][aria-selected="true"]'))
+
+/** 이름 칸 다음의 값 칸 */
+function fieldOf(root: ParentNode | null | undefined, name: string): string {
+  const dt = Array.from(root?.querySelectorAll('dt') ?? []).find((el) => text(el) === name)
+  return text(dt?.nextElementSibling)
+}
+
+/** 제목이 name 인 묶음 안 첫 표의 몸 줄 */
+function sectionRows(root: ParentNode | null | undefined, name: string): HTMLTableRowElement[] {
+  const h = Array.from(root?.querySelectorAll('h3') ?? []).find((el) => text(el) === name)
+  return Array.from(h?.parentElement?.querySelector('table')?.tBodies[0]?.rows ?? [])
+}
+
+const formHeads = (root: ParentNode | null | undefined) =>
+  Array.from(root?.querySelectorAll('h3') ?? []).map((h) => text(h)).filter((t) => /^\d\.\s/.test(t))
+
+/** 스코어카드의 팩터 줄(펼침 표시가 있는 줄)과 가중 점수 줄의 업체별 값 */
+function scorecardOf(root: ParentNode | null | undefined) {
+  const h = Array.from(root?.querySelectorAll('h3') ?? []).find((el) => text(el) === '스코어카드')
+  const rows = Array.from(h?.parentElement?.querySelectorAll('tbody tr') ?? []) as HTMLTableRowElement[]
+  const weighted = rows.find((tr) => text(tr.cells[0]) === '가중 점수(%)')
+  return {
+    factors: rows.filter((tr) => tr.hasAttribute('aria-expanded')),
+    weighted: weighted ? Array.from(weighted.cells).slice(1).map((c) => text(c)) : [],
+  }
+}
+
+/** 요구 항목 칸마다 보이는 줄의 [REQ ID, 요구 문장]. 요구 테마, 평가 항목, 질의 후보 표 차례다 */
+function requirementCells(root: ParentNode | null | undefined): string[][][] {
+  return (Array.from(root?.querySelectorAll('table') ?? []) as HTMLTableElement[]).flatMap((t) => {
+    const col = Array.from(t.tHead?.rows[0]?.cells ?? []).findIndex((c) => text(c) === '요구 항목')
+    if (col < 0) return []
+    return Array.from(t.tBodies[0]?.rows ?? []).map((tr) =>
+      Array.from(tr.cells[col]?.querySelectorAll('li') ?? []).map((li) => Array.from(li.querySelectorAll('span')).map((s) => text(s))))
+  })
+}
+
+const moreButtons = (root: ParentNode | null | undefined) =>
+  Array.from(root?.querySelectorAll('button') ?? []).filter((b) => /건 더 보기$/.test(text(b))).length
+
+const questionTabs = () =>
+  Array.from(analysisPanel()?.querySelectorAll('[role="tab"]') ?? []).map((t) => text(t)).filter((t) => /^(고객에게 물을 것|관리자가 볼 것) \d+$/.test(t))
+
+test('IT-10-086 PDF 다운로드를 누르면 지금 회차의 머리와 네 부분이 한 문서로 이어진 인쇄 창이 열리고 PDF 로 저장된다', async () => {
+  const ID = 'IT-10-086'
+  const LINES = [1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 17, 18]
+  const id = seedId('10.b086_virtual_bid')
+  const o = id ? await apiGet<{ analysis: PrintAnalysis | null }>(`/admin/bid-requests/${id}/bid-analysis`) : null
+  const a = o?.analysis
+  const detail = id ? await apiGet<{ noticeId?: string }>(`/admin/bid-requests/${id}`) : null
+  const matrix = detail?.noticeId
+    ? await apiGet<{ lines?: { reqId?: string; text?: string; translation?: string }[] }>(`/admin/notices/${detail.noticeId}/compliance-matrix`)
+    : null
+  const reqText = new Map((matrix?.lines ?? []).filter((l) => l.reqId).map((l) => [l.reqId as string, l.translation || l.text || '']))
+  const req = rec(a?.report?.requirements)
+  const wantCells = [
+    ...list(req.themes).map((t) => list(rec(t).reqIds).map(String)),
+    ...list(req.evaluation).map((e) => list(rec(e).reqIds).map(String)),
+    ...list(req.questionCandidates).map((q) => (rec(q).reqId ? [String(rec(q).reqId)] : [])),
+  ]
+  const targets = new Set((a?.questions ?? []).map((q) => q.target))
+  const missing = !id ? '시딩 10.b086_virtual_bid(관리자 결정이 조건부 Go 인 분석 완료 입찰 건)가 없다'
+    : a?.status !== 'DONE' || a.adminDecision !== 'CONDITIONAL_GO' ? `회차가 분석 완료, 조건부 Go 가 아니다(${a ? `${a.status} / ${a.adminDecision}` : '회차 없음'})`
+      : !targets.has('CUSTOMER') || !targets.has('ADMIN') ? '확인 필요가 두 묶음에 다 있지 않다'
+        : !wantCells.some((c) => c.length >= 3) ? 'REQ ID 가 셋 이상인 요구 항목 칸이 없다'
+          : wantCells.flat().some((r) => !reqText.get(r)) ? '요구 항목의 REQ ID 가 공고 컴플라이언스 매트릭스에 요구 문장과 함께 있지 않다'
+            : ''
+  if (missing || !id || !a) {
+    for (const n of LINES) noMaterial(ID, n, missing)
+    return
+  }
+
+  await openScreen(`/bid-requests/${id}`)
+  // 인쇄본과 견줄 화면 값을 먼저 읽고 1단계대로 캡처플랜 탭을 연 채 누른다
+  const reportTab = await openTab('종합 분석 리포트')
+  const screenReport = {
+    name: fieldOf(reportTab, '사업명'), agency: fieldOf(reportTab, '발주처'), history: sectionRows(reportTab, '발주 이력').length,
+    cells: requirementCells(reportTab).map((c) => c.length), more: moreButtons(reportTab),
+  }
+  const screenScore = scorecardOf(await openTab('Bid/No-Bid 결정'))
+  const screenQuestions = questionTabs()
+  const screenForms = formHeads(await openTab('캡처플랜'))
+  const index = appFile('index.html').match(/<title>([^<]*)<\/title>/)?.[1] ?? ''
+  // 가상 화면은 index.html 없이 그려 문서 제목이 비어 있다. 브라우저처럼 그 제목을 둔다
+  if (!document.title) document.title = index
+  const titleBefore = document.title
+  const callsBefore = analysisCalls(id)
+  const printing = catchPrint()
+  try {
+    const pdf = panelButton('PDF 다운로드')
+    if (pdf) await click(pdf)
+    await settled()
+    const job = printing.seen[0]
+    judge(ID, 1, printing.seen.length === 1 && job.doc ? 'pass' : 'fail',
+      '[PDF 다운로드] 를 누르면 인쇄용 문서가 붙은 채 브라우저 인쇄가 한 번 불리는지',
+      `PDF 다운로드 단추 ${pdf ? '있음' : '없음'} / 인쇄 ${printing.seen.length}회, 그때 인쇄용 문서 ${job?.doc ? '있음' : '없음'}`)
+    const calls = analysisCalls(id) - callsBefore
+    judge(ID, 2, calls === 0 ? 'pass' : 'fail', '누른 뒤 입찰 분석 조회(/bid-analysis)가 더 나가지 않는지', `누른 뒤 나간 조회 ${calls}회`)
+
+    const doc = printDoc()
+    const head = text(doc?.querySelector('header'))
+    const projectName = valueOf(rec(a.report?.overview).projectName)
+    const wantHead = [
+      '입찰 분석', projectName, STATUS[a.status], localTime(a.startedAt), localTime(a.finishedAt),
+      `Pwin ${a.pwinPercent}%`, `판정 ${VERDICT[a.aiVerdict ?? '']}`, a.verdictReason ?? '',
+      `관리자 결정 ${DECISION[a.adminDecision ?? '']}`, a.decidedBy?.name ?? '', localTime(a.decidedAt), `조건 ${a.adminNote ?? ''}`,
+    ]
+    const headMissing = wantHead.filter((w) => !w || !head.includes(w.replace(/\s+/g, ' ').trim()))
+    judge(ID, 3, head.startsWith('입찰 분석') && headMissing.length === 0 ? 'pass' : 'fail',
+      '머리에 입찰 분석, 리포트 사업명, 분석 완료와 시작, 끝 시각, Pwin 과 판정과 이유, 관리자 결정 조건부 Go 와 정한 사람, 시각, 조건이 있는지',
+      `빠진 것 ${headMissing.join(', ') || '없음'} / 머리 ${head.slice(0, 300)}`)
+
+    const parts = Array.from(doc?.querySelectorAll('h2') ?? []).map((h) => text(h))
+    const wantParts = ['1. 종합 분석 리포트', '2. 캡처플랜', '3. Bid/No-Bid 결정', `4. 확인 필요 ${a.questions?.length ?? 0}건`]
+    const headFirst = doc?.firstElementChild?.tagName === 'HEADER'
+    judge(ID, 4, headFirst && parts.join(' | ') === wantParts.join(' | ') ? 'pass' : 'fail',
+      '머리 다음에 종합 분석 리포트, 캡처플랜, Bid/No-Bid 결정, 확인 필요가 이 순서로 있는지', `머리 먼저 ${headFirst ? '맞음' : '아님'} / ${parts.join(' > ')}`)
+
+    const part1 = printPart('종합 분석 리포트')
+    const printReport = { name: fieldOf(part1, '사업명'), agency: fieldOf(part1, '발주처'), history: sectionRows(part1, '발주 이력').length }
+    judge(ID, 6, !!printReport.name && printReport.name === screenReport.name && printReport.agency === screenReport.agency &&
+      printReport.history === screenReport.history ? 'pass' : 'fail',
+      '종합 분석 리포트 부분의 사업명, 발주처, 발주 이력 표 줄 수가 화면 탭과 같은지',
+      `인쇄 ${printReport.name} / ${printReport.agency} / 발주 이력 ${printReport.history}줄, 화면 ${screenReport.name} / ${screenReport.agency} / ${screenReport.history}줄`)
+
+    const printForms = formHeads(printPart('캡처플랜'))
+    judge(ID, 7, printForms.map((f) => f[0]).join('') === '12345' && printForms.join('|') === screenForms.join('|') ? 'pass' : 'fail',
+      '캡처플랜 부분에 양식 1장부터 5장까지가 차례로 있는지', `인쇄 ${printForms.join(' > ')} / 화면 ${screenForms.join(' > ')}`)
+
+    const printScore = scorecardOf(printPart('Bid/No-Bid 결정'))
+    judge(ID, 8, printScore.factors.length > 0 && printScore.factors.length === screenScore.factors.length &&
+      printScore.weighted.length > 0 && printScore.weighted.join('|') === screenScore.weighted.join('|') ? 'pass' : 'fail',
+      'Bid/No-Bid 결정 부분의 스코어카드 팩터 줄 수와 가중 점수가 화면 탭과 같은지',
+      `인쇄 팩터 ${printScore.factors.length}줄, 가중 점수 ${printScore.weighted.join(', ')} / 화면 ${screenScore.factors.length}줄, ${screenScore.weighted.join(', ')}`)
+
+    const printCells = requirementCells(part1)
+    const cellOk = printCells.length === wantCells.length && printCells.every((cell, i) =>
+      cell.length === wantCells[i].length && cell.every(([r, t], j) => r === wantCells[i][j] && t === reqText.get(r)))
+    const more = moreButtons(doc)
+    judge(ID, 9, cellOk && more === 0 ? 'pass' : 'fail',
+      '요구 항목 칸마다 REQ ID 와 한글 요구 문장이 전부 있고 "건 더 보기" 단추가 하나도 없는지',
+      `인쇄 칸별 ${printCells.map((c) => c.map(([r, t]) => `${r} ${(t ?? '').slice(0, 12)}`).join(' / ') || '-').join(' | ')} / 회차 칸별 ${wantCells.map((c) => c.join(',') || '-').join(' | ')} / 더 보기 ${more}개 (화면은 칸별 ${screenReport.cells.join(',')}줄, 더 보기 ${screenReport.more}개)`)
+
+    const companies = list(rec(a.decision).scorecard).length
+    const opened = printScore.factors.map((tr) => {
+      const items = Array.from(tr.nextElementSibling?.querySelectorAll('li') ?? [])
+      return tr.getAttribute('aria-expanded') === 'true' && items.length === companies && items.every((li) => {
+        const [who, why] = Array.from(li.querySelectorAll('span')).map((s) => text(s))
+        return /\d점$/.test(who ?? '') && !!why && why !== '-'
+      })
+    })
+    judge(ID, 10, opened.length > 0 && opened.every(Boolean) ? 'pass' : 'fail',
+      '스코어카드 팩터마다 그 아래에 업체별 점수와 근거가 펼쳐져 있는지',
+      `팩터 ${opened.length}줄 가운데 펼친 줄 ${opened.filter(Boolean).length} / 업체 ${companies}곳 / 첫 펼침 ${text(printScore.factors[0]?.nextElementSibling).slice(0, 120)}`)
+
+    const printQuestions = Array.from(printPart('확인 필요')?.querySelectorAll('h3') ?? []).map((h) => text(h))
+    judge(ID, 11, screenQuestions.length === 2 && screenQuestions[0].startsWith('고객에게 물을 것') &&
+      printQuestions.join('|') === screenQuestions.join('|') ? 'pass' : 'fail',
+      '확인 필요 부분에 고객에게 물을 것, 관리자가 볼 것 묶음이 차례로 있고 건수가 화면 탭 이름의 건수와 같은지',
+      `인쇄 ${printQuestions.join(' > ') || '없음'} / 화면 탭 ${screenQuestions.join(' > ') || '없음'}`)
+
+    // 인쇄 때 body 아래 인쇄용 문서 말고는 다 숨기는 규칙이 있고, 화면 전체가 그 숨는 쪽에 있고, 인쇄용 문서 안에는 화면 요소가 없는지 본다
+    const css = appFile('src/index.css')
+    const rule = /body:has\(> \.bid-analysis-print\) > :not\(\.bid-analysis-print\)\s*\{\s*display: none/.test(css.slice(css.indexOf('@media print')))
+    const panel = analysisPanel()
+    const screenHidden = !!doc && doc.parentElement === document.body && Array.from(document.body.children)
+      .some((el) => el !== doc && !!panel && el.contains(panel))
+    const leaked = [
+      doc?.querySelector('nav, aside') ? '메뉴' : '',
+      text(doc).includes('고객 서류 읽기') ? '고객 서류 읽기' : '',
+      ...Array.from(doc?.querySelectorAll('button') ?? []).map((b) => text(b)).filter((t) => ['다시 분석', 'PDF 다운로드', '결정 저장'].includes(t)),
+      doc?.querySelector('[id^="bid-decision-"]') || Array.from(doc?.querySelectorAll('h3') ?? []).some((h) => text(h) === '관리자 결정') ? '관리자 결정 폼' : '',
+    ].filter(Boolean)
+    judge(ID, 12, rule && screenHidden && leaked.length === 0 ? 'pass' : 'fail',
+      '인쇄 때 화면(메뉴, 머리 막대, 고객 서류 읽기, 단추, 결정 폼)은 숨고 인쇄용 문서 안에도 그것들이 없는지',
+      `숨김 규칙 ${rule ? '있음' : '없음'} / 화면이 숨는 쪽 ${screenHidden ? '맞음' : '아님'} / 인쇄용 문서 안 화면 요소 ${leaked.join(', ') || '없음'}`)
+
+    const day = (a.startedAt ?? '').slice(0, 10).replaceAll('-', '')
+    const m = job?.title.match(/^입찰분석_(.+)_(\d{8})$/)
+    judge(ID, 13, !!m && m[1] === projectName.replace(/[\\/:*?"<>|]/g, '_').slice(0, 60) && m[2] === day ? 'pass' : 'fail',
+      '인쇄 때 문서 제목(PDF 파일 이름 기본값)이 입찰분석_사업명_회차시작일(YYYYMMDD) 인지',
+      `인쇄 때 제목 ${job?.title ?? '인쇄 안 됨'} / 사업명 ${projectName} / 회차 시작 ${a.startedAt}`)
+
+    await closePrint()
+    judge(ID, 17, activeAnalysisTab() === '캡처플랜' ? 'pass' : 'fail', '인쇄 창이 닫힌 뒤 입찰 분석 영역에 캡처플랜 탭이 열려 있는지',
+      `열린 탭 ${activeAnalysisTab() || '없음'} / 인쇄용 문서 ${printDoc() ? '남음' : '걷힘'}`)
+    judge(ID, 18, document.title === titleBefore ? 'pass' : 'fail', '인쇄 창이 닫힌 뒤 문서 제목이 누르기 전과 같은지',
+      `누르기 전 ${titleBefore} / 닫은 뒤 ${document.title}`)
+  } finally {
+    printing.restore()
+  }
+})
+
+test('IT-10-087 결정만이거나 회차가 없는 건에는 PDF 다운로드가 없고 분석 중인 건은 저장된 부분만 담긴다', async () => {
+  const ID = 'IT-10-087'
+  const aId = seedId('10.b087_a_bid')
+  if (!aId) noMaterial(ID, 1, '시딩 10.b087_a_bid(입찰 분석이 결정만인 입찰 건)가 없다')
+  else {
+    await openScreen(`/bid-requests/${aId}`)
+    judge(ID, 1, headBadge() === '결정만' && !panelButton('PDF 다운로드') ? 'pass' : 'fail',
+      '결정만인 건의 입찰 분석 영역 머리에 [PDF 다운로드] 가 없는지', panelShown())
+  }
+
+  const cId = seedId('10.b087_c_bid')
+  if (!cId) noMaterial(ID, 2, '시딩 10.b087_c_bid(회차가 없는 분석 단계 입찰 건)가 없다')
+  else {
+    await openScreen(`/bid-requests/${cId}`)
+    judge(ID, 2, text(analysisPanel()).includes('입찰 분석이 없습니다') && !panelButton('PDF 다운로드') ? 'pass' : 'fail',
+      '회차가 없는 건의 입찰 분석 영역 머리에 [PDF 다운로드] 가 없는지', panelShown())
+  }
+
+  const bId = seedId('10.b087_b_bid')
+  const o = bId ? await apiGet<{ analysis: PrintAnalysis | null }>(`/admin/bid-requests/${bId}/bid-analysis`) : null
+  const b = o?.analysis
+  const missing = !bId ? '시딩 10.b087_b_bid(종합 분석 리포트만 저장된 분석 중 입찰 건)가 없다'
+    : b?.status !== 'RUNNING' || !b.report || b.decision ? `회차가 리포트만 저장된 분석 중이 아니다(${b ? b.status : '회차 없음'})` : ''
+  if (missing || !bId || !b) {
+    for (const n of [3, 4, 5, 6]) noMaterial(ID, n, missing)
+    return
+  }
+  await openScreen(`/bid-requests/${bId}`)
+  await openTab('종합 분석 리포트')
+  const printing = catchPrint()
+  try {
+    const pdf = panelButton('PDF 다운로드')
+    if (pdf) await click(pdf)
+    await settled()
+    const overview = rec(b.report?.overview)
+    const name = valueOf(overview.projectName)
+    const agency = valueOf(overview.agency)
+    const part1 = printPart('종합 분석 리포트')
+    judge(ID, 3, printing.seen.length === 1 && !!name && fieldOf(part1, '사업명').startsWith(name) && fieldOf(part1, '발주처').startsWith(agency) ? 'pass' : 'fail',
+      '인쇄본의 종합 분석 리포트 부분에 그 건 리포트의 사업명과 발주처가 있는지',
+      `PDF 다운로드 단추 ${pdf ? '있음' : '없음'}, 인쇄 ${printing.seen.length}회 / 인쇄 사업명 ${fieldOf(part1, '사업명') || '없음'}, 발주처 ${fieldOf(part1, '발주처') || '없음'} / 리포트 ${name} / ${agency}`)
+    const notSaved = (part: string) => text(printPart(part)).includes('아직 저장되지 않았습니다')
+    judge(ID, 4, notSaved('캡처플랜') && notSaved('Bid/No-Bid 결정') ? 'pass' : 'fail',
+      '인쇄본의 캡처플랜 부분과 Bid/No-Bid 결정 부분에 저마다 "아직 저장되지 않았습니다" 가 있는지',
+      `캡처플랜 ${text(printPart('캡처플랜')).slice(0, 80) || '부분 없음'} / 결정 ${text(printPart('Bid/No-Bid 결정')).slice(0, 80) || '부분 없음'}`)
+
+    await closePrint()
+    // 4단계 20초 동안 조회가 나간 때를 0.5초 단위로 적는다
+    const start = Date.now()
+    const at: number[] = []
+    let counted = analysisCalls(bId)
+    while (Date.now() - start < 20_000) {
+      await wait(500)
+      for (const now = analysisCalls(bId); counted < now; counted++) at.push(Date.now() - start)
+    }
+    judge(ID, 5, activeAnalysisTab() === '종합 분석 리포트' ? 'pass' : 'fail', '인쇄 창을 취소한 뒤 종합 분석 리포트 탭이 열려 있는지',
+      `열린 탭 ${activeAnalysisTab() || '없음'}`)
+    const gaps = at.slice(1).map((t, i) => t - at[i])
+    judge(ID, 6, at.length >= 2 && gaps.every((g) => g >= 8_500 && g <= 11_500) ? 'pass' : 'fail',
+      '20초 동안 입찰 분석 조회(/bid-analysis)가 10초 간격으로 두 번 이상 나가는지',
+      `조회 ${at.length}회, 나간 때 ${at.map((t) => `${(t / 1000).toFixed(1)}초`).join(', ') || '없음'}`)
+  } finally {
+    printing.restore()
+  }
 })
