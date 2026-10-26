@@ -1,5 +1,31 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
+import { FileText, Paperclip, PencilLine, RotateCw } from 'lucide-react'
+import {
+  Alert,
+  AlertDescription,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  ConfirmDialog,
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  FieldError,
+  InfoGrid,
+  Label,
+  PageHeader,
+  RadioGroup,
+  RadioGroupItem,
+  Spinner,
+  Textarea,
+  toast,
+} from '@therecommerce-develop/ds-ui'
 import {
   getAdminBidRequestDetail,
   getBidDocumentsByBidRequest,
@@ -7,24 +33,11 @@ import {
   transitionBidRequest,
   regenerateBidDocument,
 } from '../api/client'
-import { STATE_LABELS } from '../utils/bidState'
-import { toast } from '@therecommerce-develop/ds-ui'
+import StateBadge from '../components/StateBadge'
+import { Loading } from '../components/LoadState'
+import { docTypeLabel } from '../utils/documentType'
 import DocumentReadingPanel from '../components/DocumentReadingPanel'
 import BidAnalysisPanel from '../components/BidAnalysisPanel'
-
-const STATE_COLORS: Record<string, string> = {
-  CREATED: 'bg-gray-100 text-gray-600',
-  DOCS_PENDING: 'bg-yellow-100 text-yellow-700',
-  DOCS_RECEIVED: 'bg-blue-100 text-blue-700',
-  ANALYZING: 'bg-purple-100 text-purple-700',
-  GENERATING: 'bg-indigo-100 text-indigo-700',
-  REVIEW: 'bg-orange-100 text-orange-700',
-  CONFIRMED: 'bg-teal-100 text-teal-700',
-  SUBMITTED: 'bg-emerald-100 text-emerald-700',
-  AWARDED: 'bg-green-100 text-green-700',
-  NOT_AWARDED: 'bg-rose-100 text-rose-700',
-  CLOSED: 'bg-gray-100 text-gray-400',
-}
 
 const NEXT_STATES: Record<string, string[]> = {
   CREATED: ['DOCS_PENDING', 'CLOSED'],
@@ -45,30 +58,25 @@ const DOC_STATUS_LABELS: Record<string, string> = {
   ARCHIVED: '보관',
 }
 
+// ServiceLevel 이름(T3-1)
+const SERVICE_LEVEL_LABELS: Record<string, string> = {
+  MONITORING: '모니터링',
+  ANALYSIS: '분석',
+  AI_PROPOSAL: 'AI 제안서',
+  FULL_PACKAGE: '풀패키지',
+}
+
+// GET /admin/bid-requests/{id} 는 공고와 회원을 펼친 칸으로 준다(T3-2, BL-003)
 interface BidRequest {
   id: string
   state: string
+  opportunityTitle?: string
+  solicitationNumber?: string
+  agencyName?: string
+  memberEmail?: string
+  memberCompanyName?: string
   serviceLevel?: string
-  closeReason?: string
-  closedAt?: string
-  assignedTo?: string
   createdAt?: string
-  updatedAt?: string
-  opportunity?: {
-    id: string
-    title: string
-    organizationName: string
-    noticeId: string
-    responseDeadline?: string
-    samUrl?: string
-  }
-  member?: {
-    id: string
-    email: string
-    companyName: string
-    contactPerson?: string
-    phone?: string
-  }
 }
 
 interface BidDocument {
@@ -81,10 +89,10 @@ interface BidDocument {
 
 interface ClientDocument {
   id: string
-  originalFileName: string
+  fileName: string
   fileSize: number
-  mimeType: string
-  uploadedAt?: string
+  contentType: string
+  createdAt?: string
 }
 
 export default function BidRequestDetailPage() {
@@ -93,6 +101,7 @@ export default function BidRequestDetailPage() {
   const [bidRequest, setBidRequest] = useState<BidRequest | null>(null)
   const [documents, setDocuments] = useState<BidDocument[]>([])
   const [clientDocs, setClientDocs] = useState<ClientDocument[]>([])
+  const [clientDocsFailed, setClientDocsFailed] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -100,8 +109,10 @@ export default function BidRequestDetailPage() {
   const [showTransition, setShowTransition] = useState(false)
   const [selectedState, setSelectedState] = useState('')
   const [notes, setNotes] = useState('')
+  const [transitionError, setTransitionError] = useState('')
+  const [notesError, setNotesError] = useState('')
   const [transitioning, setTransitioning] = useState(false)
-  const [regeneratingType, setRegeneratingType] = useState<string | null>(null)
+  const [regenerateType, setRegenerateType] = useState<string | null>(null)
 
   // CR-169: 고객 서류를 읽는 중이면 문서 작성 중 전환을 막는다(BIZ-087, 서버도 409 로 막는다)
   const [readingInProgress, setReadingInProgress] = useState(false)
@@ -125,10 +136,14 @@ export default function BidRequestDetailPage() {
         setDocuments(docRes.data.data ?? docRes.data.content ?? docRes.data ?? [])
       } catch { /* no documents yet */ }
 
+      // 실패를 빈 목록으로 보이면 서류가 없는 것처럼 보여 따로 띠로 알린다(BL-003)
       try {
         const clientRes = await getClientDocuments(id)
-        setClientDocs(clientRes.data.data ?? clientRes.data ?? [])
-      } catch { /* no client docs */ }
+        setClientDocs(clientRes.data ?? [])
+        setClientDocsFailed(false)
+      } catch {
+        setClientDocsFailed(true)
+      }
     } catch {
       setError('입찰 요청을 불러올 수 없습니다.')
     } finally {
@@ -138,24 +153,32 @@ export default function BidRequestDetailPage() {
 
   useEffect(() => { loadData() }, [id])
 
-  // DOCS_RECEIVED → DOCS_PENDING 은 "첨부 반려"(고객 재업로드 요청) — 사유 필수
+  // DOCS_RECEIVED 에서 DOCS_PENDING 으로 가는 것은 "첨부 반려"(고객 재업로드 요청)라 사유가 필요하다
   const isRejection = bidRequest?.state === 'DOCS_RECEIVED' && selectedState === 'DOCS_PENDING'
   const blockedByReading = bidRequest?.state === 'ANALYZING' && selectedState === 'GENERATING' && readingInProgress
   const blockedByDecision = bidRequest?.state === 'ANALYZING' && selectedState === 'GENERATING'
     && !readingInProgress && decisionAllowsGeneration === false
 
+  const openTransition = (first: string) => {
+    setSelectedState(first)
+    setNotes('')
+    setNotesError('')
+    setTransitionError('')
+    setShowTransition(true)
+  }
+
   const handleTransition = async () => {
     if (!id || !selectedState) return
     if (isRejection && !notes.trim()) {
-      setError('반려 사유를 입력하세요. 고객에게 전달됩니다.')
+      setNotesError('반려 사유를 입력하세요. 고객에게 전달됩니다.')
       return
     }
     setTransitioning(true)
+    setTransitionError('')
     try {
       await transitionBidRequest(id, selectedState, notes)
       setShowTransition(false)
       setNotes('')
-      setError('')
       loadData()
     } catch (err: unknown) {
       const res = (err as { response?: { status?: number; data?: { error?: string } } })?.response
@@ -166,43 +189,29 @@ export default function BidRequestDetailPage() {
         toast.error(DECISION_REQUIRED_MESSAGE)
         setAnalysisReloadKey((k) => k + 1)
       } else {
-        setError('상태 전환에 실패했습니다.')
+        setTransitionError('상태 전환에 실패했습니다.')
       }
     } finally {
       setTransitioning(false)
     }
   }
 
-  const handleRegenerate = async (documentType: string) => {
-    if (!id) return
-    if (!window.confirm(`${documentType} 문서를 재생성하시겠습니까? 새 버전으로 추가되며 완료 시 알림이 발송됩니다.`)) return
-    setRegeneratingType(documentType)
-    setError('')
-    try {
-      await regenerateBidDocument(id, documentType)
-      alert(`${documentType} 문서 재생성을 시작했습니다. 완료까지 잠시 걸립니다.`)
-    } catch {
-      setError('문서 재생성에 실패했습니다. REVIEW 상태에서만 가능하며, 잠긴 문서는 재생성할 수 없습니다.')
-    } finally {
-      setRegeneratingType(null)
-    }
+  const handleRegenerate = async () => {
+    if (!id || !regenerateType) return
+    await regenerateBidDocument(id, regenerateType)
+    toast.success(`${docTypeLabel(regenerateType)} 문서 재생성을 시작했습니다. 완료까지 잠시 걸립니다.`)
+    setRegenerateType(null)
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64 text-gray-400">
-        <i className="fa-solid fa-circle-notch fa-spin mr-2" /> 불러오는 중...
-      </div>
-    )
-  }
+  if (loading) return <Loading className="h-64" />
 
   if (error && !bidRequest) {
     return (
-      <div className="p-6">
-        <p className="text-red-500">{error}</p>
-        <button onClick={() => navigate('/bid-requests')} className="mt-4 text-sm text-secondary hover:underline">
-          목록으로 돌아가기
-        </button>
+      <div className="space-y-4">
+        <PageHeader variant="detail" back={{ onClick: () => navigate('/bid-requests') }} />
+        <Alert variant="destructive" appearance="light">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       </div>
     )
   }
@@ -210,181 +219,128 @@ export default function BidRequestDetailPage() {
   if (!bidRequest) return null
 
   const nextStates = NEXT_STATES[bidRequest.state] ?? []
-  const opp = bidRequest.opportunity
-  const member = bidRequest.member
 
   return (
-    <div className="p-6 space-y-6 max-w-5xl">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/bid-requests')} className="text-gray-400 hover:text-gray-600">
-            <i className="fa-solid fa-arrow-left" />
-          </button>
-          <div>
-            <h1 className="text-lg font-bold text-gray-900">입찰 요청 상세</h1>
-            <p className="text-xs text-gray-400 mt-0.5">ID: {bidRequest.id}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${STATE_COLORS[bidRequest.state] ?? 'bg-gray-100'}`}>
-            {STATE_LABELS[bidRequest.state] ?? bidRequest.state}
-          </span>
-          {nextStates.length > 0 && (
-            <button
-              onClick={() => { setShowTransition(true); setSelectedState(nextStates[0]) }}
-              className="px-4 py-2 bg-secondary text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition"
-            >
-              상태 전환
-            </button>
+    <div className="space-y-4">
+      <PageHeader
+        variant="detail"
+        back={{ onClick: () => navigate('/bid-requests') }}
+        title={bidRequest.opportunityTitle ?? '-'}
+        badge={<StateBadge state={bidRequest.state} />}
+        actions={nextStates.length > 0 && (
+          <Button variant="primary" onClick={() => openTransition(nextStates[0])}>
+            상태 전환
+          </Button>
+        )}
+      />
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>공고 정보</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <InfoGrid
+              cols={1}
+              items={[
+                { label: '제목', value: bidRequest.opportunityTitle ?? '-' },
+                { label: '기관', value: bidRequest.agencyName ?? '-' },
+                { label: '공고번호', value: bidRequest.solicitationNumber ?? '-' },
+              ]}
+            />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>고객 정보</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <InfoGrid
+              cols={1}
+              items={[
+                { label: '회사명', value: bidRequest.memberCompanyName ?? '-' },
+                { label: '이메일', value: bidRequest.memberEmail ?? '-' },
+              ]}
+            />
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>생성 문서</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {documents.length === 0 ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">아직 생성된 문서가 없습니다.</p>
+          ) : (
+            <div className="divide-y divide-border">
+              {documents.map(doc => (
+                <div key={doc.id} className="flex items-center justify-between py-3">
+                  <div className="flex items-center gap-3">
+                    <FileText className="size-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{docTypeLabel(doc.documentType)}</p>
+                      <p className="text-xs text-muted-foreground">v{doc.currentVersionNo} | {DOC_STATUS_LABELS[doc.status] ?? doc.status}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {bidRequest.state === 'REVIEW' && doc.status !== 'LOCKED' && (
+                      <Button size="sm" variant="outline" onClick={() => setRegenerateType(doc.documentType)}>
+                        <RotateCw />
+                        재생성
+                      </Button>
+                    )}
+                    <Button size="sm" variant="outline" asChild>
+                      <Link to={`/documents/${doc.id}/edit`}>
+                        <PencilLine />
+                        편집
+                      </Link>
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
-      {error && <p className="text-sm text-red-500 bg-red-50 px-4 py-2 rounded-lg">{error}</p>}
-
-      {/* Info Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Opportunity Info */}
-        <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
-          <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-            <i className="fa-solid fa-file-lines text-secondary" /> 공고 정보
-          </h2>
-          <div className="space-y-2 text-sm">
-            <div>
-              <span className="text-gray-500">제목:</span>
-              <p className="font-medium text-gray-900">{opp?.title ?? '-'}</p>
-            </div>
-            <div className="flex gap-6">
-              <div>
-                <span className="text-gray-500">기관:</span>
-                <p className="text-gray-700">{opp?.organizationName ?? '-'}</p>
-              </div>
-              <div>
-                <span className="text-gray-500">공고번호:</span>
-                <p className="text-gray-700">{opp?.noticeId ?? '-'}</p>
-              </div>
-            </div>
-            {opp?.responseDeadline && (
-              <div>
-                <span className="text-gray-500">마감일:</span>
-                <p className="text-gray-700">{new Date(opp.responseDeadline).toLocaleDateString('ko-KR')}</p>
-              </div>
-            )}
-            {opp?.samUrl && (
-              <a href={opp.samUrl} target="_blank" rel="noopener noreferrer"
-                className="text-xs text-secondary hover:underline">
-                SAM.gov 원문 보기 <i className="fa-solid fa-arrow-up-right-from-square ml-1" />
-              </a>
-            )}
-          </div>
-        </div>
-
-        {/* Member Info */}
-        <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
-          <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-            <i className="fa-solid fa-user text-secondary" /> 고객 정보
-          </h2>
-          <div className="space-y-2 text-sm">
-            <div>
-              <span className="text-gray-500">회사명:</span>
-              <p className="font-medium text-gray-700">{member?.companyName ?? '-'}</p>
-            </div>
-            <div>
-              <span className="text-gray-500">이메일:</span>
-              <p className="text-gray-700">{member?.email ?? '-'}</p>
-            </div>
-            {member?.contactPerson && (
-              <div>
-                <span className="text-gray-500">담당자:</span>
-                <p className="text-gray-700">{member.contactPerson}</p>
-              </div>
-            )}
-            {member?.phone && (
-              <div>
-                <span className="text-gray-500">연락처:</span>
-                <p className="text-gray-700">{member.phone}</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Bid Documents */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
-        <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-          <i className="fa-solid fa-file-word text-secondary" /> 생성 문서
-        </h2>
-        {documents.length === 0 ? (
-          <p className="text-sm text-gray-400 py-4 text-center">아직 생성된 문서가 없습니다.</p>
-        ) : (
-          <div className="divide-y divide-gray-100">
-            {documents.map(doc => (
-              <div key={doc.id} className="flex items-center justify-between py-3">
-                <div className="flex items-center gap-3">
-                  <i className="fa-solid fa-file-alt text-gray-300" />
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">{doc.documentType}</p>
-                    <p className="text-xs text-gray-400">v{doc.currentVersionNo} | {DOC_STATUS_LABELS[doc.status] ?? doc.status}</p>
+      <Card>
+        <CardHeader>
+          <CardTitle>고객 제출 문서</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {clientDocsFailed ? (
+            <Alert variant="destructive" appearance="light">
+              <AlertDescription>고객 제출 문서를 불러오지 못했습니다</AlertDescription>
+            </Alert>
+          ) : clientDocs.length === 0 ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">고객이 업로드한 문서가 없습니다.</p>
+          ) : (
+            <div className="divide-y divide-border">
+              {clientDocs.map(doc => (
+                <div key={doc.id} className="flex items-center justify-between py-3">
+                  <div className="flex items-center gap-3">
+                    <Paperclip className="size-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{doc.fileName}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {(doc.fileSize / 1024).toFixed(1)} KB | {doc.contentType}
+                      </p>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  {bidRequest?.state === 'REVIEW' && doc.status !== 'LOCKED' && (
-                    <button
-                      onClick={() => handleRegenerate(doc.documentType)}
-                      disabled={regeneratingType !== null}
-                      className="text-xs text-amber-600 hover:underline font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {regeneratingType === doc.documentType ? (
-                        <><i className="fa-solid fa-circle-notch fa-spin mr-1" /> 재생성 중</>
-                      ) : (
-                        <>재생성 <i className="fa-solid fa-rotate ml-1" /></>
-                      )}
-                    </button>
+                  {doc.createdAt && (
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(doc.createdAt).toLocaleDateString('ko-KR')}
+                    </span>
                   )}
-                  <Link
-                    to={`/documents/${doc.id}/edit`}
-                    className="text-xs text-secondary hover:underline font-medium"
-                  >
-                    편집 <i className="fa-solid fa-pen-to-square ml-1" />
-                  </Link>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Client Documents */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
-        <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-          <i className="fa-solid fa-cloud-arrow-up text-secondary" /> 고객 제출 문서
-        </h2>
-        {clientDocs.length === 0 ? (
-          <p className="text-sm text-gray-400 py-4 text-center">고객이 업로드한 문서가 없습니다.</p>
-        ) : (
-          <div className="divide-y divide-gray-100">
-            {clientDocs.map(doc => (
-              <div key={doc.id} className="flex items-center justify-between py-3">
-                <div className="flex items-center gap-3">
-                  <i className="fa-solid fa-paperclip text-gray-300" />
-                  <div>
-                    <p className="text-sm font-medium text-gray-700">{doc.originalFileName}</p>
-                    <p className="text-xs text-gray-400">
-                      {(doc.fileSize / 1024).toFixed(1)} KB | {doc.mimeType}
-                    </p>
-                  </div>
-                </div>
-                {doc.uploadedAt && (
-                  <span className="text-xs text-gray-400">
-                    {new Date(doc.uploadedAt).toLocaleDateString('ko-KR')}
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <DocumentReadingPanel
         bidRequestId={bidRequest.id}
@@ -403,95 +359,97 @@ export default function BidRequestDetailPage() {
         />
       )}
 
-      {/* Meta Info */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <h2 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-          <i className="fa-solid fa-circle-info text-secondary" /> 기타 정보
-        </h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-          <div>
-            <span className="text-gray-500">서비스 레벨</span>
-            <p className="text-gray-700 font-medium">{bidRequest.serviceLevel ?? '-'}</p>
-          </div>
-          <div>
-            <span className="text-gray-500">생성일</span>
-            <p className="text-gray-700">{bidRequest.createdAt ? new Date(bidRequest.createdAt).toLocaleDateString('ko-KR') : '-'}</p>
-          </div>
-          {bidRequest.closedAt && (
-            <div>
-              <span className="text-gray-500">종료일</span>
-              <p className="text-gray-700">{new Date(bidRequest.closedAt).toLocaleDateString('ko-KR')}</p>
-            </div>
-          )}
-          {bidRequest.closeReason && (
-            <div>
-              <span className="text-gray-500">종료 사유</span>
-              <p className="text-gray-700">{bidRequest.closeReason}</p>
-            </div>
-          )}
-        </div>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>기타 정보</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <InfoGrid
+            items={[
+              {
+                label: '서비스 레벨',
+                value: bidRequest.serviceLevel ? (SERVICE_LEVEL_LABELS[bidRequest.serviceLevel] ?? bidRequest.serviceLevel) : '-',
+              },
+              { label: '생성일', value: bidRequest.createdAt ? new Date(bidRequest.createdAt).toLocaleDateString('ko-KR') : '-' },
+            ]}
+          />
+        </CardContent>
+      </Card>
 
-      {/* Transition Modal */}
-      {showTransition && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-              <h2 className="text-base font-bold text-gray-900">상태 전환</h2>
-              <button onClick={() => setShowTransition(false)} className="text-gray-400 hover:text-gray-600">
-                <i className="fa-solid fa-xmark text-lg" />
-              </button>
+      <ConfirmDialog
+        open={regenerateType !== null}
+        onOpenChange={(open) => { if (!open) setRegenerateType(null) }}
+        title={`${regenerateType ? docTypeLabel(regenerateType) : ''} 문서 재생성`}
+        description="새 버전으로 추가되고 완료되면 알림이 발송됩니다."
+        confirmLabel="재생성"
+        onConfirm={handleRegenerate}
+        errorText={() => '문서 재생성에 실패했습니다. REVIEW 상태에서만 가능하며, 잠긴 문서는 재생성할 수 없습니다.'}
+      />
+
+      <Dialog open={showTransition} onOpenChange={setShowTransition}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>상태 전환</DialogTitle>
+          </DialogHeader>
+          <DialogBody className="space-y-4">
+            {transitionError && (
+              <Alert variant="destructive" appearance="light">
+                <AlertDescription>{transitionError}</AlertDescription>
+              </Alert>
+            )}
+            <div className="flex items-center gap-2 text-sm">
+              <StateBadge state={bidRequest.state} />
+              <span className="text-xs text-muted-foreground">다음 상태 선택</span>
             </div>
-            <div className="px-6 py-5 space-y-4">
-              <div className="flex items-center gap-2 text-sm">
-                <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${STATE_COLORS[bidRequest.state]}`}>
-                  {STATE_LABELS[bidRequest.state]}
-                </span>
-                <i className="fa-solid fa-arrow-right text-gray-400 text-xs" />
-              </div>
-              <div className="space-y-2">
-                {nextStates.map(s => (
-                  <label key={s} className="flex items-center gap-3 cursor-pointer">
-                    <input type="radio" name="nextState" value={s}
-                      checked={selectedState === s}
-                      onChange={() => setSelectedState(s)}
-                      className="text-secondary" />
-                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${STATE_COLORS[s]}`}>
-                      {STATE_LABELS[s]}
-                      {bidRequest.state === 'DOCS_RECEIVED' && s === 'DOCS_PENDING' && ' (첨부 반려)'}
-                    </span>
-                  </label>
-                ))}
-              </div>
-              {blockedByReading && (
-                <p className="text-sm text-amber-700 bg-amber-50 px-3 py-2 rounded-lg">고객 서류를 읽는 중입니다</p>
-              )}
-              {blockedByDecision && (
-                <p className="text-sm text-amber-700 bg-amber-50 px-3 py-2 rounded-lg">{DECISION_REQUIRED_MESSAGE}</p>
-              )}
-              <textarea
+            <RadioGroup value={selectedState} onValueChange={setSelectedState} className="space-y-2">
+              {nextStates.map(s => (
+                <div key={s} className="flex items-center gap-3">
+                  <RadioGroupItem value={s} id={`detail-next-${s}`} />
+                  <Label htmlFor={`detail-next-${s}`} className="cursor-pointer">
+                    <StateBadge
+                      state={s}
+                      label={bidRequest.state === 'DOCS_RECEIVED' && s === 'DOCS_PENDING' ? '문서 대기, 첨부 반려' : undefined}
+                    />
+                  </Label>
+                </div>
+              ))}
+            </RadioGroup>
+            {blockedByReading && (
+              <Alert variant="warning" appearance="light">
+                <AlertDescription>고객 서류를 읽는 중입니다</AlertDescription>
+              </Alert>
+            )}
+            {blockedByDecision && (
+              <Alert variant="warning" appearance="light">
+                <AlertDescription>{DECISION_REQUIRED_MESSAGE}</AlertDescription>
+              </Alert>
+            )}
+            <div>
+              <Textarea
                 value={notes}
-                onChange={e => setNotes(e.target.value)}
+                onChange={e => { setNotes(e.target.value); setNotesError('') }}
                 rows={3}
-                placeholder={isRejection ? '반려 사유 (필수 — 고객에게 전달됩니다)' : '전환 사유 (선택)'}
-                className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-secondary resize-none ${
-                  isRejection && !notes.trim() ? 'border-red-300' : 'border-gray-300'
-                }`}
+                placeholder={isRejection ? '반려 사유. 필수이며 고객에게 전달됩니다' : '전환 사유 (선택)'}
+                aria-invalid={!!notesError}
+                aria-describedby="transition-notes-error"
+                className="resize-none"
               />
+              <FieldError id="transition-notes-error">{notesError}</FieldError>
             </div>
-            <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-200">
-              <button onClick={() => setShowTransition(false)} className="px-4 py-2 text-sm text-gray-600">취소</button>
-              <button
-                onClick={handleTransition}
-                disabled={!selectedState || transitioning || blockedByReading || blockedByDecision}
-                className="px-5 py-2 bg-secondary text-white rounded-lg text-sm font-medium hover:bg-blue-600 disabled:opacity-50"
-              >
-                {transitioning ? '처리 중...' : '전환'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowTransition(false)}>취소</Button>
+            <Button
+              variant="primary"
+              onClick={handleTransition}
+              disabled={!selectedState || transitioning || blockedByReading || blockedByDecision}
+            >
+              {transitioning && <Spinner />}
+              전환
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

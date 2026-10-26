@@ -1,20 +1,34 @@
 @import "tailwindcss";
 
+/* ds-ui 부품이 쓰는 클래스가 이 앱 CSS 에도 생겨 이 앱 @theme(글자 크기)을 따르게 한다 */
+@source "../node_modules/@therecommerce-develop/ds-ui/src/**/*.{ts,tsx}";
+
 /*
  * 색 값은 디자인시스템 테마 파일(ds-ui dist/themes/wjbid-admin.css) 한 곳에 있고 여기서는 잇기만 한다(CR-176).
  * ds-ui 의 bg-primary, bg-secondary 같은 이름이 관리자 클래스와 겹치므로 테마 파일이 같은 이름을 같은 색에 둔다(CR-132).
+ * accent 는 잇지 않는다. 디자인시스템이 선택 줄, 메뉴 강조 바탕에 쓰는 색이라 관리자 초록으로 덮으면 안 된다(CR-182).
  */
 @theme {
   --color-primary: var(--wj-admin-primary);
   --color-secondary: var(--wj-admin-secondary);
-  --color-accent: var(--wj-admin-accent);
   --color-sidebar: var(--wj-admin-sidebar);
   --color-danger: var(--wj-admin-danger);
   --color-warning: var(--wj-admin-warning);
+
+  --font-sans: "Pretendard Variable", Pretendard, system-ui, -apple-system, sans-serif;
+
+  /* 화면마다 이 두 크기로 글자를 써 와서 이 둘만 1px 씩 올린다(CR-182) */
+  --text-xs: 13px;
+  --text-sm: 15px;
 }
 
-* {
-  font-family: 'Inter', sans-serif;
+/* Tailwind 기본 초기화가 ds-ui CSS 뒤에 와서 선 색이 글자색으로 돌아가는 것을 디자인시스템 선 색으로 되돌린다 */
+@layer base {
+  *,
+  ::after,
+  ::before {
+    border-color: var(--color-border);
+  }
 }
 
 @media print {

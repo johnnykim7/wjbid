@@ -1,12 +1,12 @@
 /**
- * OpportunityMetaPanel — CR-021 2차
+ * OpportunityMetaPanel, CR-021 2차
  *
  * SAM.gov 원본 페이지 수준의 메타 정보를 패널로 표시.
- * 공고문 본문(NoticeDocumentView) 위에 위치 — 사용자가 "어디서 온 공고인지" 먼저 파악.
+ * 공고문 본문(NoticeDocumentView) 위에 위치해 사용자가 "어디서 온 공고인지" 먼저 파악하게 한다.
  *
  * 정보 분류 (없는 항목은 그 행 자체를 스킵):
  *  - Header: 영문 제목 + 한글 제목 + Active 배지 + SAM.gov 원본 링크
- *  - General Information: Type / Posted / Deadline / Set Aside
+ *  - General Information: Solicitation / Type / Posted / Deadline / Set Aside
  *  - Classification: NAICS / PSC (Classification Code)
  *  - Place of Performance
  *  - Office (Organization)
@@ -16,6 +16,9 @@
  */
 
 import type { ReactNode } from 'react'
+import { Link as LinkIcon, Mail, Phone, Printer, SquareArrowOutUpRight } from 'lucide-react'
+import { Badge, Card, CardContent, CardHeader, InfoGrid, type InfoGridItem } from '@therecommerce-develop/ds-ui'
+import { ToneBadge } from './StateBadge'
 
 interface POC {
   type?: string
@@ -48,6 +51,8 @@ interface Props {
   hideHeader?: boolean
 }
 
+const LINK_CLASS = 'inline-flex items-center gap-1 text-secondary hover:underline'
+
 export default function OpportunityMetaPanel({ data, hideHeader = false }: Props) {
   const daysLeft = data.responseDeadline
     ? Math.ceil((new Date(data.responseDeadline).getTime() - Date.now()) / 86400000)
@@ -57,134 +62,119 @@ export default function OpportunityMetaPanel({ data, hideHeader = false }: Props
   const description = data.description?.trim()
   const isDescUrl = !!description && /^https?:\/\//.test(description)
 
+  const general = items([
+    // 헤더가 숨겨지면 공고번호가 보일 곳이 없어 일반 정보에 둔다
+    hideHeader && data.solicitationNumber
+      ? { label: '공고번호', value: <span className="font-mono">{data.solicitationNumber}</span> }
+      : null,
+    data.type ? { label: '공고 유형', value: data.type } : null,
+    data.postedDate ? { label: '게시일', value: formatDate(data.postedDate) } : null,
+    data.responseDeadline
+      ? {
+          label: '마감일',
+          value: (
+            <span className="inline-flex flex-wrap items-center gap-2">
+              {formatDateTime(data.responseDeadline)}
+              {daysLeft != null && daysLeft >= 0 && <DaysLeftBadge days={daysLeft} />}
+            </span>
+          ),
+        }
+      : null,
+    data.setAside ? { label: '우선조달', value: data.setAside } : null,
+  ])
+
+  const classification = items([
+    data.naicsCode ? { label: 'NAICS 코드', value: <span className="font-mono">{data.naicsCode}</span> } : null,
+    data.classificationCode
+      ? { label: 'PSC 코드', value: <span className="font-mono">{data.classificationCode}</span> }
+      : null,
+  ])
+
   return (
-    <section className="bg-white border border-slate-200 rounded-lg overflow-hidden mb-4">
+    <Card>
       {/* 헤더 (페이지가 자체 헤더 있으면 hideHeader=true) */}
       {!hideHeader && (
-        <div className="bg-slate-900 text-white px-5 py-4">
-          <div className="flex items-start justify-between gap-3 mb-2">
-            <div className="flex-1 min-w-0">
-              {data.koreanTitle && (
-                <h2 className="text-base font-semibold leading-snug mb-1">{data.koreanTitle}</h2>
-              )}
-              {data.title && (
-                <p className="text-sm text-slate-300 leading-snug">{data.title}</p>
-              )}
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              {data.active ? (
-                <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 rounded text-xs font-semibold uppercase">
-                  Active
+        <CardHeader className="items-start py-3">
+          <div className="min-w-0 flex-1 space-y-1">
+            {data.koreanTitle && (
+              <h2 className="text-base font-semibold leading-snug text-foreground">{data.koreanTitle}</h2>
+            )}
+            {data.title && <p className="text-sm leading-snug text-muted-foreground">{data.title}</p>}
+            <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
+              {data.solicitationNumber && (
+                <span>
+                  <span className="mr-1">Solicitation</span>
+                  <span className="font-mono text-foreground">{data.solicitationNumber}</span>
                 </span>
-              ) : (
-                <span className="px-2 py-0.5 bg-slate-500/20 text-slate-300 border border-slate-400/40 rounded text-xs font-semibold uppercase">
-                  Inactive
-                </span>
+              )}
+              {data.uiLink && (
+                <a href={data.uiLink} target="_blank" rel="noreferrer" className={LINK_CLASS}>
+                  <SquareArrowOutUpRight className="size-4" />
+                  SAM.gov 원본
+                </a>
               )}
             </div>
           </div>
-          <div className="flex flex-wrap gap-4 text-xs text-slate-300 mt-2">
-            {data.solicitationNumber && (
-              <span>
-                <span className="text-slate-400 mr-1">Solicitation</span>
-                <span className="font-mono text-white">{data.solicitationNumber}</span>
-              </span>
-            )}
-            {data.uiLink && (
-              <a
-                href={data.uiLink}
-                target="_blank"
-                rel="noreferrer"
-                className="text-sky-300 hover:text-sky-200 underline"
-              >
-                <i className="fa-solid fa-up-right-from-square mr-1" />
-                SAM.gov 원본
-              </a>
-            )}
-          </div>
-        </div>
+          {data.active ? (
+            <Badge variant="success" appearance="light" className="whitespace-nowrap">
+              ACTIVE
+            </Badge>
+          ) : (
+            <ToneBadge tone="gray">INACTIVE</ToneBadge>
+          )}
+        </CardHeader>
       )}
 
-      {/* 메타 그룹들 */}
-      <div className="divide-y divide-slate-200">
-        {/* General Information */}
-        <MetaGroup title="일반 정보">
-          {data.type && <Field label="공고 유형" value={data.type} />}
-          {data.postedDate && <Field label="게시일" value={formatDate(data.postedDate)} />}
-          {data.responseDeadline && (
-            <Field
-              label="마감일"
-              value={
-                <span>
-                  {formatDateTime(data.responseDeadline)}
-                  {daysLeft != null && daysLeft >= 0 && (
-                    <span
-                      className={`ml-2 font-bold ${daysLeft <= 7 ? 'text-red-500' : daysLeft <= 14 ? 'text-amber-500' : 'text-slate-500'}`}
-                    >
-                      D-{daysLeft}
-                    </span>
-                  )}
-                </span>
-              }
-            />
-          )}
-          {data.setAside && <Field label="우선조달" value={data.setAside} />}
-        </MetaGroup>
-
-        {/* Classification */}
-        {(data.naicsCode || data.classificationCode) && (
-          <MetaGroup title="분류 코드">
-            {data.naicsCode && <Field label="NAICS 코드" value={<span className="font-mono">{data.naicsCode}</span>} />}
-            {data.classificationCode && (
-              <Field label="PSC 코드" value={<span className="font-mono">{data.classificationCode}</span>} />
-            )}
+      <CardContent className="space-y-5 py-4">
+        {general.length > 0 && (
+          <MetaGroup title="일반 정보">
+            <InfoGrid items={general} />
           </MetaGroup>
         )}
 
-        {/* Place of Performance */}
+        {classification.length > 0 && (
+          <MetaGroup title="분류 코드">
+            <InfoGrid items={classification} />
+          </MetaGroup>
+        )}
+
         {place && (
           <MetaGroup title="수행 장소">
-            <Field label="장소" value={place} />
+            <InfoGrid cols={1} items={[{ label: '장소', value: place }]} />
           </MetaGroup>
         )}
 
-        {/* Office */}
         {data.organizationName && (
           <MetaGroup title="발주 기관">
-            <Field label="기관명" value={<span className="break-all">{data.organizationName}</span>} />
+            <InfoGrid cols={1} items={[{ label: '기관명', value: <span className="break-all">{data.organizationName}</span> }]} />
           </MetaGroup>
         )}
 
-        {/* Contact (POC) */}
         {data.pointOfContact && data.pointOfContact.length > 0 && (
           <MetaGroup title="담당자">
             <div className="space-y-3">
               {data.pointOfContact.map((p, i) => (
-                <div key={i} className="border-l-2 border-slate-300 pl-3">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    {p.fullName && <span className="font-semibold text-slate-900 text-sm">{p.fullName}</span>}
-                    {p.type && (
-                      <span className="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded uppercase">
-                        {p.type}
-                      </span>
-                    )}
+                <div key={i} className="border-l-2 border-border pl-3">
+                  <div className="mb-0.5 flex items-center gap-2">
+                    {p.fullName && <span className="text-sm font-semibold text-foreground">{p.fullName}</span>}
+                    {p.type && <ToneBadge tone="gray">{p.type.toUpperCase()}</ToneBadge>}
                   </div>
-                  <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-slate-600">
+                  <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
                     {p.email && (
-                      <a href={`mailto:${p.email}`} className="text-sky-600 hover:underline">
-                        <i className="fa-solid fa-envelope mr-1" />
+                      <a href={`mailto:${p.email}`} className={LINK_CLASS}>
+                        <Mail className="size-4" />
                         {p.email}
                       </a>
                     )}
                     {p.phone && (
-                      <span>
-                        <i className="fa-solid fa-phone mr-1" />
+                      <span className="inline-flex items-center gap-1">
+                        <Phone className="size-4" />
                         {p.phone}
                       </span>
                     )}
                     {p.fax && (
-                      <span>
-                        <i className="fa-solid fa-fax mr-1" />
+                      <span className="inline-flex items-center gap-1">
+                        <Printer className="size-4" />
                         Fax: {p.fax}
                       </span>
                     )}
@@ -195,44 +185,33 @@ export default function OpportunityMetaPanel({ data, hideHeader = false }: Props
           </MetaGroup>
         )}
 
-        {/* Description — CR-035: 본문 텍스트(있으면) + SAM 원문 링크(번역·본문 유무와 무관하게 항상) */}
+        {/* Description, CR-035: 본문 텍스트(있으면) + SAM 원문 링크(번역·본문 유무와 무관하게 항상) */}
         <MetaGroup title="본문">
           {description && !isDescUrl ? (
-            <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap mb-2">{description}</p>
+            <p className="mb-2 whitespace-pre-wrap text-sm leading-relaxed text-foreground">{description}</p>
           ) : (
             // description이 noticedesc API URL(api_key 없어 404)이거나 비어있는 본문 미수집 상태.
             // 깨진 API 링크는 노출하지 않고 안내만. 본문은 "한글 번역하기"로 받는다.
-            <p className="text-sm text-slate-500 mb-2">
-              본문 미수집 — "한글 번역하기"를 누르면 원문 본문을 가져옵니다.
+            <p className="mb-2 text-sm text-muted-foreground">
+              본문 미수집, "한글 번역하기"를 누르면 원문 본문을 가져옵니다.
             </p>
           )}
-          {/* 원문(SAM 공개 공고 페이지)으로 가는 링크 — 항상 노출 */}
+          {/* 원문(SAM 공개 공고 페이지)으로 가는 링크, 항상 노출 */}
           {data.uiLink && (
-            <a
-              href={data.uiLink}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center text-sky-600 hover:underline text-sm break-all"
-            >
-              <i className="fa-solid fa-up-right-from-square mr-1" />
+            <a href={data.uiLink} target="_blank" rel="noreferrer" className={`${LINK_CLASS} break-all text-sm`}>
+              <SquareArrowOutUpRight className="size-4" />
               SAM.gov에서 원문 보기
             </a>
           )}
         </MetaGroup>
 
-        {/* Resource Links */}
         {data.resourceLinks && data.resourceLinks.length > 0 && (
           <MetaGroup title="첨부 링크">
             <ul className="space-y-1">
               {data.resourceLinks.map((url, i) => (
                 <li key={i}>
-                  <a
-                    href={url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-sky-600 hover:underline text-sm break-all"
-                  >
-                    <i className="fa-solid fa-link mr-1" />
+                  <a href={url} target="_blank" rel="noreferrer" className={`${LINK_CLASS} break-all text-sm`}>
+                    <LinkIcon className="size-4 shrink-0" />
                     {url}
                   </a>
                 </li>
@@ -240,27 +219,26 @@ export default function OpportunityMetaPanel({ data, hideHeader = false }: Props
             </ul>
           </MetaGroup>
         )}
-      </div>
-    </section>
+      </CardContent>
+    </Card>
   )
+}
+
+function items(list: (InfoGridItem | null)[]): InfoGridItem[] {
+  return list.filter((i): i is InfoGridItem => i !== null)
 }
 
 function MetaGroup({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="px-5 py-3">
-      <h3 className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-2">{title}</h3>
-      <dl className="space-y-1.5">{children}</dl>
+    <div className="space-y-2">
+      <h3 className="text-xs font-semibold text-muted-foreground">{title}</h3>
+      {children}
     </div>
   )
 }
 
-function Field({ label, value }: { label: string; value: ReactNode }) {
-  return (
-    <div className="grid grid-cols-12 gap-2 text-sm">
-      <dt className="col-span-4 md:col-span-3 text-slate-500">{label}</dt>
-      <dd className="col-span-8 md:col-span-9 text-slate-800">{value}</dd>
-    </div>
-  )
+function DaysLeftBadge({ days }: { days: number }) {
+  return <ToneBadge tone={days <= 7 ? 'destructive' : days <= 14 ? 'warning' : 'gray'}>D-{days}</ToneBadge>
 }
 
 function formatDate(s: string): string {

@@ -1,4 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
+import { MessagesSquare } from 'lucide-react'
+import {
+  Alert,
+  AlertDescription,
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  CardToolbar,
+  Spinner,
+} from '@therecommerce-develop/ds-ui'
 import { issueWidgetToken } from '../api/client'
 
 /**
@@ -6,7 +19,7 @@ import { issueWidgetToken } from '../api/client'
  *
  * 관리자가 COMPLETED 공고 분석 결과를 자연어로 부분 교정하는 채팅. Aimbase 위젯(UMD)을
  * <script> 동적 로드하여 마운트한다. 위젯이 chat/completions 를 호출하면 Aimbase LLM 이
- * 우리 MCP 도구(get_opportunity_analysis → 수정 → save_opportunity_analysis)를 직접 부른다.
+ * 우리 MCP 도구를 get_opportunity_analysis, 수정, save_opportunity_analysis 차례로 직접 부른다.
  */
 
 // CR-148: 운영 웹 서버가 /aimbase 아래로 위젯 파일과 채팅 경로만 Aimbase 에 넘긴다.
@@ -94,7 +107,7 @@ function buildCorrectionInstruction(noticeId: string): Record<string, unknown> {
       `사용자가 수정을 요청하면 (1) get_opportunity_analysis 로 현재 분석 결과를 읽고 ` +
       `(2) 사용자가 지시한 부분만 수정하고 나머지는 그대로 보존한 뒤 ` +
       `(3) save_opportunity_analysis 로 저장하세요. ` +
-      `⚠️ save 는 전체 치환이므로, 읽어들인 facts 배열도 반드시 함께 다시 실어야 합니다(빠지면 근거가 소멸). ` +
+      `주의: save 는 전체 치환이므로, 읽어들인 facts 배열도 반드시 함께 다시 실어야 합니다(빠지면 근거가 소멸). ` +
       `트럭·인력·과거실적처럼 고객이 보유/제출하는 항목의 fulfillmentParty 는 CLIENT_UPLOAD 입니다.`,
     noticeId,
   }
@@ -157,40 +170,40 @@ export default function NoticeCorrectionChat({ noticeId }: Props) {
   }, [open, noticeId])
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-sm font-semibold text-gray-700">
-            <i className="fa-solid fa-comments mr-1.5 text-purple-500" />교정 채팅
-          </h3>
-          <p className="text-xs text-gray-400 mt-0.5">
+    <Card>
+      <CardHeader className={`py-3 ${open ? '' : 'border-b-0'}`}>
+        <div className="space-y-1">
+          <CardTitle className="flex items-center gap-1.5">
+            <MessagesSquare className="size-4 text-muted-foreground" />
+            교정 채팅
+          </CardTitle>
+          <CardDescription>
             분석 결과를 자연어로 수정합니다. 예: "트럭 보유 요건은 고객 업로드로 바꿔줘"
-          </p>
+          </CardDescription>
         </div>
-        <button
-          onClick={() => setOpen((v) => !v)}
-          className="px-4 py-2 text-sm rounded-lg bg-purple-50 text-purple-700 hover:bg-purple-100"
-        >
-          {open ? '닫기' : '교정 채팅 열기'}
-        </button>
-      </div>
+        <CardToolbar>
+          <Button variant="outline" onClick={() => setOpen((v) => !v)}>
+            {open ? '닫기' : '교정 채팅 열기'}
+          </Button>
+        </CardToolbar>
+      </CardHeader>
 
       {open && (
-        <div className="mt-4">
+        <CardContent className="space-y-3">
           {loading && (
-            <div className="flex items-center gap-2 text-sm text-gray-400 py-4">
-              <div className="w-4 h-4 border-2 border-gray-200 border-t-purple-500 rounded-full animate-spin" />
+            <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
+              <Spinner />
               채팅을 불러오는 중...
             </div>
           )}
           {error && (
-            <div className="bg-red-50 rounded-lg p-3 text-sm text-red-700 mb-3">
-              채팅 로드 실패: {error}
-            </div>
+            <Alert variant="destructive" appearance="light">
+              <AlertDescription>채팅 로드 실패: {error}</AlertDescription>
+            </Alert>
           )}
-          <div ref={containerRef} className="min-h-[420px] border border-gray-100 rounded-lg" />
-        </div>
+          <div ref={containerRef} className="min-h-[420px] rounded-lg border border-border" />
+        </CardContent>
       )}
-    </div>
+    </Card>
   )
 }

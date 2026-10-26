@@ -21,6 +21,10 @@ public record BidRequestDto(
         String solicitationNumber,
         String agencyName,
         String memberEmail,
+        /** CR-182: 신청한 회원의 회사명. 고객 응답이면 그 고객 자신의 회사명이다 */
+        String memberCompanyName,
+        /** CR-182: ServiceLevel 값(T3-1) */
+        String serviceLevel,
         String state,
         String stateDisplay,
         String createdAt,
@@ -61,6 +65,8 @@ public record BidRequestDto(
                 br.getOpportunity() != null ? br.getOpportunity().getSolicitationNumber() : null,
                 br.getOpportunity() != null ? br.getOpportunity().getOrganizationName() : null,
                 br.getMember() != null ? br.getMember().getEmail() : null,
+                br.getMember() != null ? br.getMember().getCompanyName() : null,
+                br.getServiceLevel() != null ? br.getServiceLevel().name() : null,
                 br.getState() != null ? br.getState().name() : null,
                 br.getStateDisplay(),
                 br.getCreatedAt() != null ? br.getCreatedAt().format(FMT) : null,

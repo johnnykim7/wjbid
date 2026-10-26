@@ -1,8 +1,25 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { FileIcon, FileText, ScrollText, Trash2, Upload, X } from 'lucide-react'
+import {
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  CardToolbar,
+  ConfirmDialog,
+  InfoGrid,
+  Input,
+  PageHeader,
+} from '@therecommerce-develop/ds-ui'
 import {
   getRfpSampleDetail, uploadRfpSampleFile, deleteRfpSampleFile, deleteRfpSample,
 } from '../api/client'
+import { ToneBadge } from '../components/StateBadge'
+import { Loading } from '../components/LoadState'
+import type { StateTone } from '../utils/bidState'
 
 interface RfpFile {
   id: string
@@ -25,10 +42,10 @@ interface RfpSampleDetail {
   files: RfpFile[]
 }
 
-const OUTCOME_COLORS: Record<string, string> = {
-  WON: 'bg-green-100 text-green-700',
-  SUBMITTED: 'bg-blue-100 text-blue-700',
-  OTHER: 'bg-gray-100 text-gray-600',
+const OUTCOME_TONE: Record<string, StateTone> = {
+  WON: 'success',
+  SUBMITTED: 'info',
+  OTHER: 'gray',
 }
 
 export default function RfpSampleDetailPage() {
@@ -38,6 +55,9 @@ export default function RfpSampleDetailPage() {
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [actionBusy, setActionBusy] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const proposalInput = useRef<HTMLInputElement>(null)
+  const pwsInput = useRef<HTMLInputElement>(null)
 
   const fetchData = useCallback(async () => {
     if (!id) return
@@ -80,89 +100,114 @@ export default function RfpSampleDetailPage() {
   }
 
   const handleDeleteSample = async () => {
-    if (!id || !confirm('이 성공 제안서를 삭제하시겠습니까? (파일 모두 삭제)')) return
+    if (!id) return
     await deleteRfpSample(id)
+    setConfirmDelete(false)
     navigate('/rfp-samples')
   }
 
-  if (loading) {
+  if (loading) return <Loading className="h-64" />
+
+  if (!detail) {
     return (
-      <div className="flex items-center justify-center py-32">
-        <div className="w-8 h-8 border-2 border-gray-200 border-t-secondary rounded-full animate-spin" />
+      <div className="space-y-4">
+        <PageHeader variant="detail" back={{ onClick: () => navigate('/rfp-samples') }} />
+        <p className="text-sm text-muted-foreground">제안서를 찾을 수 없습니다.</p>
       </div>
     )
   }
-  if (!detail) {
-    return <div className="p-6 text-gray-400 text-sm">제안서를 찾을 수 없습니다.</div>
-  }
 
   return (
-    <div className="p-6 space-y-5">
-      <button onClick={() => navigate('/rfp-samples')} className="text-sm text-gray-500 hover:text-gray-700">
-        <i className="fa-solid fa-arrow-left mr-2" />목록으로
-      </button>
+    <div className="space-y-4">
+      <PageHeader
+        variant="detail"
+        back={{ onClick: () => navigate('/rfp-samples') }}
+        title={detail.opportunityNo}
+        badge={<ToneBadge tone={OUTCOME_TONE[detail.outcome] ?? 'gray'}>{detail.outcome}</ToneBadge>}
+        actions={
+          <Button variant="outline" className="text-destructive" onClick={() => setConfirmDelete(true)}>
+            <Trash2 />
+            삭제
+          </Button>
+        }
+      />
 
-      {/* 메타 */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <div className="flex items-start justify-between">
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-lg font-bold text-gray-900 font-mono">{detail.opportunityNo}</h1>
-              <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${OUTCOME_COLORS[detail.outcome] || ''}`}>
-                {detail.outcome}
-              </span>
-            </div>
-            <div className="text-sm text-gray-500 mt-2 space-x-4">
-              <span>{detail.industryType}</span>
-              {detail.company && <span>업체: {detail.company}</span>}
-              {detail.agency && <span>발주처: {detail.agency}</span>}
-              {detail.awardAmount != null && <span>낙찰액: {detail.awardAmount.toLocaleString()}원</span>}
-            </div>
-          </div>
-          <button onClick={handleDeleteSample} className="px-3 py-1.5 text-xs rounded-lg bg-red-50 text-red-600 hover:bg-red-100">
-            <i className="fa-solid fa-trash mr-1" />삭제
-          </button>
-        </div>
-      </div>
+      <Card>
+        <CardContent>
+          <InfoGrid
+            cols={2}
+            items={[
+              { label: '사업유형', value: detail.industryType },
+              { label: '업체', value: detail.company ?? '-' },
+              { label: '발주처', value: detail.agency ?? '-' },
+              { label: '낙찰액', value: detail.awardAmount != null ? `${detail.awardAmount.toLocaleString()}원` : '-' },
+            ]}
+          />
+        </CardContent>
+      </Card>
 
-      {/* 원본 파일 (FACTOR별로 나뉜 그대로 보관 — 슬롯 분류 없음) */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h2 className="text-sm font-bold text-gray-900">원본 파일</h2>
-            <p className="text-xs text-gray-400 mt-0.5">제출 시 나뉜 파일(FACTOR/섹션)을 그대로 업로드하세요. 파일명이 곧 섹션 태그입니다.</p>
+      {/* 원본 파일 (FACTOR별로 나뉜 그대로 보관하고 슬롯으로 나누지 않는다) */}
+      <Card>
+        <CardHeader className="py-3">
+          <div className="space-y-1">
+            <CardTitle>원본 파일</CardTitle>
+            <CardDescription>제출 시 나뉜 파일(FACTOR/섹션)을 그대로 업로드하세요. 파일명이 곧 섹션 태그입니다.</CardDescription>
           </div>
-          <div className="flex gap-2">
-            <label className="px-3 py-1.5 text-xs rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 cursor-pointer">
-              <i className="fa-solid fa-upload mr-1" />{uploading ? '업로드 중...' : '제안서 파일'}
-              <input type="file" className="hidden" disabled={uploading} onChange={(e) => handleUpload(e, false)} />
-            </label>
-            <label className="px-3 py-1.5 text-xs rounded-lg bg-gray-50 text-gray-700 hover:bg-gray-100 cursor-pointer">
-              <i className="fa-solid fa-file-lines mr-1" />PWS 공고문
-              <input type="file" className="hidden" disabled={uploading} onChange={(e) => handleUpload(e, true)} />
-            </label>
-          </div>
-        </div>
-        {detail.files.length === 0 ? (
-          <p className="text-sm text-gray-400">업로드된 파일이 없습니다.</p>
-        ) : (
-          <div className="space-y-1.5">
-            {detail.files.map((f) => (
-              <div key={f.id} className="flex items-center justify-between px-3 py-2 rounded-lg bg-gray-50">
-                <div className="flex items-center gap-2 min-w-0">
-                  <i className={`fa-solid ${f.isPws ? 'fa-file-contract text-gray-400' : 'fa-file text-blue-500'}`} />
-                  <span className="text-sm text-gray-700 truncate">{f.fileName}</span>
-                  {f.isPws && <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-200 text-gray-600">PWS</span>}
+          <CardToolbar>
+            <Button size="sm" variant="outline" disabled={uploading} onClick={() => proposalInput.current?.click()}>
+              <Upload />
+              {uploading ? '업로드 중...' : '제안서 파일'}
+            </Button>
+            <Input ref={proposalInput} type="file" className="hidden" onChange={(e) => handleUpload(e, false)} />
+            <Button size="sm" variant="outline" disabled={uploading} onClick={() => pwsInput.current?.click()}>
+              <FileText />
+              PWS 공고문
+            </Button>
+            <Input ref={pwsInput} type="file" className="hidden" onChange={(e) => handleUpload(e, true)} />
+          </CardToolbar>
+        </CardHeader>
+        <CardContent>
+          {detail.files.length === 0 ? (
+            <p className="text-sm text-muted-foreground">업로드된 파일이 없습니다.</p>
+          ) : (
+            <div className="space-y-1.5">
+              {detail.files.map((f) => (
+                <div key={f.id} className="flex items-center justify-between rounded-lg bg-muted px-3 py-2">
+                  <div className="flex min-w-0 items-center gap-2">
+                    {f.isPws
+                      ? <ScrollText className="size-4 shrink-0 text-muted-foreground" />
+                      : <FileIcon className="size-4 shrink-0 text-secondary" />}
+                    <span className="truncate text-sm text-foreground">{f.fileName}</span>
+                    {f.isPws && <ToneBadge tone="gray">PWS</ToneBadge>}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    mode="icon"
+                    size="icon-xs"
+                    aria-label="삭제"
+                    className="text-muted-foreground hover:text-destructive"
+                    onClick={() => handleDeleteFile(f.id)}
+                    disabled={actionBusy}
+                  >
+                    <X />
+                  </Button>
                 </div>
-                <button onClick={() => handleDeleteFile(f.id)} disabled={actionBusy}
-                  className="text-gray-400 hover:text-red-500 disabled:opacity-40">
-                  <i className="fa-solid fa-xmark" />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title="성공 제안서 삭제"
+        description="올린 파일도 모두 삭제됩니다."
+        confirmLabel="삭제"
+        confirmVariant="destructive"
+        onConfirm={handleDeleteSample}
+        errorText={() => '삭제에 실패했습니다.'}
+      />
     </div>
   )
 }

@@ -1,8 +1,44 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Plus } from 'lucide-react'
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTable,
+  CardTitle,
+  CardToolbar,
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Spinner,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  Textarea,
+  toast,
+} from '@therecommerce-develop/ds-ui'
 import {
   getRfpSamples, createRfpSample, getPatternGuides, extractPatternGuide, updatePatternGuide,
 } from '../api/client'
+import { ToneBadge } from '../components/StateBadge'
+import { TableMessageRow } from '../components/LoadState'
+import type { StateTone } from '../utils/bidState'
 
 interface RfpSample {
   id: string
@@ -31,23 +67,23 @@ const INDUSTRY_TYPES = [
 ]
 const OUTCOMES = ['WON', 'SUBMITTED', 'OTHER']
 
-const OUTCOME_COLORS: Record<string, string> = {
-  WON: 'bg-green-100 text-green-700',
-  SUBMITTED: 'bg-blue-100 text-blue-700',
-  OTHER: 'bg-gray-100 text-gray-600',
+const OUTCOME_TONE: Record<string, StateTone> = {
+  WON: 'success',
+  SUBMITTED: 'info',
+  OTHER: 'gray',
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  PENDING: 'bg-gray-100 text-gray-500',
-  EXTRACTING: 'bg-purple-100 text-purple-700',
-  COMPLETED: 'bg-green-100 text-green-700',
-  FAILED: 'bg-red-100 text-red-700',
+const STATUS_TONE: Record<string, StateTone> = {
+  PENDING: 'gray',
+  EXTRACTING: 'info',
+  COMPLETED: 'success',
+  FAILED: 'destructive',
 }
 
-const SOURCE_COLORS: Record<string, string> = {
-  AI_EXTRACTED: 'bg-blue-50 text-blue-700',
-  HUMAN_EDITED: 'bg-green-50 text-green-700',
-  HUMAN_ADDED: 'bg-green-50 text-green-700',
+const SOURCE_TONE: Record<string, StateTone> = {
+  AI_EXTRACTED: 'info',
+  HUMAN_EDITED: 'success',
+  HUMAN_ADDED: 'success',
 }
 
 const EMPTY_FORM = {
@@ -112,7 +148,7 @@ export default function RfpSamplePage() {
       fetchData()
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
-      alert(msg || '패턴 추출 실패 (해당 유형 성공 제안서 1건 이상 필요)')
+      toast.error(msg || '패턴 추출에 실패했습니다. 그 유형의 성공 제안서가 1건 이상 있어야 합니다.')
     } finally {
       setExtracting(null)
     }
@@ -136,215 +172,213 @@ export default function RfpSamplePage() {
   const guideByType = new Map(guides.map((g) => [g.industryType, g]))
 
   return (
-    <div className="p-6 space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">성공 제안서 패턴</h1>
-          <p className="text-sm text-gray-500 mt-1">과거 성공/낙찰 제안서 등록(원본 통째) → 공고유형별 패턴 가이드 추출·편집</p>
-        </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="px-4 py-2 bg-secondary text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition"
-        >
-          <i className="fa-solid fa-plus mr-2" />신규 등록
-        </button>
-      </div>
-
-      {/* 공고유형별 가이드 */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <h2 className="text-sm font-bold text-gray-900 mb-3">공고유형별 패턴 가이드</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {INDUSTRY_TYPES.map((type) => {
-            const g = guideByType.get(type)
-            return (
-              <div key={type} className="border border-gray-200 rounded-lg p-3">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-gray-800">{type}</span>
-                  {g && (
-                    <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium ${STATUS_COLORS[g.status] || ''}`}>
-                      {g.status}
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center justify-between gap-1">
-                  {g ? (
-                    <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-medium ${SOURCE_COLORS[g.source] || ''}`}>
-                      {g.source === 'AI_EXTRACTED' ? 'AI' : '사람편집'}
-                    </span>
-                  ) : (
-                    <span className="text-[10px] text-gray-400">미생성</span>
-                  )}
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => setEditGuide({ industryType: type, markdown: g?.guideMarkdown || '' })}
-                      className="px-2 py-0.5 text-[10px] rounded bg-gray-50 text-gray-600 hover:bg-gray-100"
-                      title="사람이 직접 편집"
-                    >
-                      편집
-                    </button>
-                    <button
-                      onClick={() => handleExtract(type)}
-                      disabled={extracting === type}
-                      className="px-2 py-0.5 text-[10px] rounded bg-purple-50 text-purple-700 hover:bg-purple-100 disabled:opacity-40"
-                    >
-                      {extracting === type ? '추출중...' : (g ? '재추출' : '추출')}
-                    </button>
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>공고유형별 패턴 가이드</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            {INDUSTRY_TYPES.map((type) => {
+              const g = guideByType.get(type)
+              return (
+                <div key={type} className="rounded-lg border border-border p-3">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <span className="truncate text-sm font-medium text-foreground">{type}</span>
+                    {g && <ToneBadge tone={STATUS_TONE[g.status] ?? 'gray'}>{g.status}</ToneBadge>}
                   </div>
+                  <div className="flex items-center justify-between gap-1">
+                    {g ? (
+                      <ToneBadge tone={SOURCE_TONE[g.source] ?? 'gray'}>
+                        {g.source === 'AI_EXTRACTED' ? 'AI' : '사람편집'}
+                      </ToneBadge>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">미생성</span>
+                    )}
+                    <div className="flex items-center gap-1">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setEditGuide({ industryType: type, markdown: g?.guideMarkdown || '' })}
+                        title="사람이 직접 편집"
+                      >
+                        편집
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleExtract(type)}
+                        disabled={extracting === type}
+                      >
+                        {extracting === type ? '추출중...' : (g ? '재추출' : '추출')}
+                      </Button>
+                    </div>
+                  </div>
+                  {g?.sampleCount != null && (
+                    <div className="mt-1 text-xs text-muted-foreground">{g.sampleCount}건 기반</div>
+                  )}
                 </div>
-                {g?.sampleCount != null && (
-                  <div className="text-[10px] text-gray-400 mt-1">{g.sampleCount}건 기반</div>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* 등록 목록 */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="w-8 h-8 border-2 border-gray-200 border-t-secondary rounded-full animate-spin" />
+              )
+            })}
           </div>
-        ) : samples.length === 0 ? (
-          <div className="text-center py-20 text-gray-400 text-sm">등록된 성공 제안서가 없습니다.</div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">공고번호</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">사업유형</th>
-                <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase">결과</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">업체</th>
-                <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase">파일</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {samples.map((s) => (
-                <tr key={s.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`/rfp-samples/${s.id}`)}>
-                  <td className="px-4 py-3 font-mono text-gray-900">{s.opportunityNo}</td>
-                  <td className="px-4 py-3 text-gray-600">{s.industryType}</td>
-                  <td className="px-4 py-3 text-center">
-                    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${OUTCOME_COLORS[s.outcome] || ''}`}>
-                      {s.outcome}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">{s.company || '-'}</td>
-                  <td className="px-4 py-3 text-center text-gray-600">{s.fileCount}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+        </CardContent>
+      </Card>
 
-      {/* 등록 모달 */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 flex flex-col max-h-[90vh]">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-              <h2 className="text-base font-bold text-gray-900">성공 제안서 등록</h2>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
-                <i className="fa-solid fa-xmark text-lg" />
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">공고번호 <span className="text-red-500">*</span></label>
-                <input type="text" value={form.opportunityNo}
-                  onChange={(e) => setForm({ ...form, opportunityNo: e.target.value })}
-                  placeholder="예: W90VN725RA012"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-secondary" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">사업유형 <span className="text-red-500">*</span></label>
-                  <select value={form.industryType}
-                    onChange={(e) => setForm({ ...form, industryType: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-secondary bg-white">
-                    {INDUSTRY_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">결과 <span className="text-red-500">*</span></label>
-                  <select value={form.outcome}
-                    onChange={(e) => setForm({ ...form, outcome: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-secondary bg-white">
-                    {OUTCOMES.map((o) => <option key={o} value={o}>{o}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">업체</label>
-                  <input type="text" value={form.company}
-                    onChange={(e) => setForm({ ...form, company: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-secondary" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">발주처</label>
-                  <input type="text" value={form.agency}
-                    onChange={(e) => setForm({ ...form, agency: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-secondary" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">낙찰액 (원)</label>
-                  <input type="number" value={form.awardAmount}
-                    onChange={(e) => setForm({ ...form, awardAmount: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-secondary" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">회계연도</label>
-                  <input type="number" value={form.fiscalYear}
-                    onChange={(e) => setForm({ ...form, fiscalYear: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-secondary" />
-                </div>
-              </div>
-            </div>
-            <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-200">
-              <button onClick={() => setShowModal(false)} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition">취소</button>
-              <button onClick={handleSave} disabled={saving || !form.opportunityNo.trim()}
-                className="px-5 py-2 bg-secondary text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition disabled:opacity-50">
-                {saving ? <><i className="fa-solid fa-circle-notch fa-spin mr-2" />저장 중...</> : '등록'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Card>
+        <CardHeader className="py-2.5">
+          <CardToolbar className="ms-auto">
+            <Button variant="primary" onClick={() => setShowModal(true)}>
+              <Plus />
+              신규 등록
+            </Button>
+          </CardToolbar>
+        </CardHeader>
+        <CardTable>
+          <Table>
+            <TableHeader className="bg-muted">
+              <TableRow>
+                <TableHead>공고번호</TableHead>
+                <TableHead>사업유형</TableHead>
+                <TableHead className="text-center">결과</TableHead>
+                <TableHead>업체</TableHead>
+                <TableHead className="text-center">파일</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableMessageRow colSpan={5} loading />
+              ) : samples.length === 0 ? (
+                <TableMessageRow colSpan={5}>등록된 성공 제안서가 없습니다.</TableMessageRow>
+              ) : (
+                samples.map((s) => (
+                  <TableRow key={s.id} className="cursor-pointer" onClick={() => navigate(`/rfp-samples/${s.id}`)}>
+                    <TableCell className="font-mono text-foreground">{s.opportunityNo}</TableCell>
+                    <TableCell className="text-muted-foreground">{s.industryType}</TableCell>
+                    <TableCell className="text-center">
+                      <ToneBadge tone={OUTCOME_TONE[s.outcome] ?? 'gray'}>{s.outcome}</ToneBadge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{s.company || '-'}</TableCell>
+                    <TableCell className="text-center text-muted-foreground">{s.fileCount}</TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardTable>
+      </Card>
 
-      {/* 가이드 편집 모달 (사람이 직접 인사이트 반영) */}
-      {editGuide && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 flex flex-col max-h-[90vh]">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-              <div>
-                <h2 className="text-base font-bold text-gray-900">가이드 편집 — {editGuide.industryType}</h2>
-                <p className="text-xs text-gray-400 mt-0.5">저장 시 출처가 '사람편집'으로 바뀌어 이후 AI 자동추출이 덮어쓰지 않습니다.</p>
-              </div>
-              <button onClick={() => setEditGuide(null)} className="text-gray-400 hover:text-gray-600">
-                <i className="fa-solid fa-xmark text-lg" />
-              </button>
+      <Dialog open={showModal} onOpenChange={setShowModal}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>성공 제안서 등록</DialogTitle>
+          </DialogHeader>
+          <DialogBody className="space-y-4">
+            <div className="space-y-1">
+              <Label htmlFor="rfp-opportunity-no">공고번호 <span className="text-destructive">*</span></Label>
+              <Input
+                id="rfp-opportunity-no"
+                value={form.opportunityNo}
+                onChange={(e) => setForm({ ...form, opportunityNo: e.target.value })}
+                placeholder="예: W90VN725RA012"
+              />
             </div>
-            <div className="flex-1 overflow-y-auto px-6 py-5">
-              <textarea
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label htmlFor="rfp-industry-type">사업유형 <span className="text-destructive">*</span></Label>
+                <Select value={form.industryType} onValueChange={(v) => setForm({ ...form, industryType: v })}>
+                  <SelectTrigger id="rfp-industry-type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {INDUSTRY_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="rfp-outcome">결과 <span className="text-destructive">*</span></Label>
+                <Select value={form.outcome} onValueChange={(v) => setForm({ ...form, outcome: v })}>
+                  <SelectTrigger id="rfp-outcome">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {OUTCOMES.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label htmlFor="rfp-company">업체</Label>
+                <Input
+                  id="rfp-company"
+                  value={form.company}
+                  onChange={(e) => setForm({ ...form, company: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="rfp-agency">발주처</Label>
+                <Input
+                  id="rfp-agency"
+                  value={form.agency}
+                  onChange={(e) => setForm({ ...form, agency: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label htmlFor="rfp-award-amount">낙찰액 (원)</Label>
+                <Input
+                  id="rfp-award-amount"
+                  type="number"
+                  value={form.awardAmount}
+                  onChange={(e) => setForm({ ...form, awardAmount: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="rfp-fiscal-year">회계연도</Label>
+                <Input
+                  id="rfp-fiscal-year"
+                  type="number"
+                  value={form.fiscalYear}
+                  onChange={(e) => setForm({ ...form, fiscalYear: e.target.value })}
+                />
+              </div>
+            </div>
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowModal(false)}>취소</Button>
+            <Button variant="primary" onClick={handleSave} disabled={saving || !form.opportunityNo.trim()}>
+              {saving ? <><Spinner />저장 중...</> : '등록'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 가이드 편집 창 (사람이 직접 인사이트 반영) */}
+      <Dialog open={editGuide !== null} onOpenChange={(open) => { if (!open) setEditGuide(null) }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{`가이드 편집, ${editGuide?.industryType ?? ''}`}</DialogTitle>
+            <DialogDescription>저장 시 출처가 '사람편집'으로 바뀌어 이후 AI 자동추출이 덮어쓰지 않습니다.</DialogDescription>
+          </DialogHeader>
+          {editGuide && (
+            <DialogBody>
+              <Textarea
                 value={editGuide.markdown}
                 onChange={(e) => setEditGuide({ ...editGuide, markdown: e.target.value })}
                 placeholder="이 공고유형 제안서를 잘 쓰는 법(전략·구조·금기 등)을 자유롭게 작성하세요."
-                className="w-full h-80 px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-secondary resize-none"
+                className="h-80 resize-none font-mono"
               />
-            </div>
-            <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-200">
-              <button onClick={() => setEditGuide(null)} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition">취소</button>
-              <button onClick={handleSaveGuide} disabled={savingGuide}
-                className="px-5 py-2 bg-secondary text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition disabled:opacity-50">
-                {savingGuide ? <><i className="fa-solid fa-circle-notch fa-spin mr-2" />저장 중...</> : '저장'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+            </DialogBody>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditGuide(null)}>취소</Button>
+            <Button variant="primary" onClick={handleSaveGuide} disabled={savingGuide}>
+              {savingGuide ? <><Spinner />저장 중...</> : '저장'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

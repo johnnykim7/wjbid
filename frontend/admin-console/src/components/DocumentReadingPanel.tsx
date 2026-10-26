@@ -1,7 +1,15 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import {
+  Alert,
+  AlertDescription,
   Badge,
   Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTable,
+  CardTitle,
+  CardToolbar,
   Table,
   TableBody,
   TableCell,
@@ -12,6 +20,7 @@ import {
 } from '@therecommerce-develop/ds-ui'
 import { getDocumentReadings, rerunDocumentReadings } from '../api/client'
 import DocumentReadingFacts from './DocumentReadingFacts'
+import { Loading } from './LoadState'
 import { ORIGIN_LABEL, isReadingInFlight, readingStatusLabel } from './documentReading'
 import type { ReadingItem, ReadingOverview } from './documentReading'
 
@@ -99,36 +108,46 @@ export default function DocumentReadingPanel({ bidRequestId, bidState, reloadKey
   const doneCount = items.filter((i) => i.status === 'DONE').length
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2 mr-2">
-          <i className="fa-solid fa-magnifying-glass text-secondary" /> 고객 서류 읽기
-        </h2>
-        {started && items.length > 0 && (
-          <span className="text-xs text-gray-500">{items.length}개 중 읽음 {doneCount}개</span>
-        )}
-        {inProgress && <Badge variant="info" size="sm">읽는 중</Badge>}
+    <Card>
+      <CardHeader>
+        <div className="flex flex-wrap items-center gap-2">
+          <CardTitle className="mr-2">고객 서류 읽기</CardTitle>
+          {started && items.length > 0 && (
+            <span className="text-xs text-muted-foreground">{items.length}개 중 읽음 {doneCount}개</span>
+          )}
+          {inProgress && <Badge variant="info" appearance="light" className="whitespace-nowrap">읽는 중</Badge>}
+        </div>
         {canRerun && items.some(rerunnable) && (
-          <Button variant="outline" size="sm" className="ml-auto" disabled={running} onClick={() => rerun()}>
-            다시 읽기
-          </Button>
+          <CardToolbar>
+            <Button variant="outline" size="sm" disabled={running} onClick={() => rerun()}>
+              다시 읽기
+            </Button>
+          </CardToolbar>
         )}
-      </div>
+      </CardHeader>
 
       {loading ? (
-        <p className="text-sm text-gray-400">불러오는 중</p>
+        <CardContent>
+          <Loading className="h-16" />
+        </CardContent>
       ) : failed ? (
-        <div className="flex items-center gap-3">
-          <p className="text-sm text-red-600">불러오지 못했습니다.</p>
-          <Button variant="outline" size="sm" onClick={() => load()}>다시 시도</Button>
-        </div>
+        <CardContent>
+          <Alert variant="destructive" appearance="light">
+            <AlertDescription className="flex items-center justify-between gap-3">
+              불러오지 못했습니다.
+              <Button variant="outline" size="sm" onClick={() => load()}>다시 시도</Button>
+            </AlertDescription>
+          </Alert>
+        </CardContent>
       ) : items.length === 0 ? (
-        <p className="text-sm text-gray-500">읽을 고객 서류가 없습니다.</p>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">읽을 고객 서류가 없습니다.</p>
+        </CardContent>
       ) : (
-        <>
-          {!started && <p className="text-sm text-gray-500">분석 단계로 전환하면 읽습니다.</p>}
-          <Table className="text-sm">
-            <TableHeader>
+        <CardTable>
+          {!started && <p className="px-4 pt-3 text-sm text-muted-foreground">분석 단계로 전환하면 읽습니다.</p>}
+          <Table>
+            <TableHeader className="bg-muted">
               <TableRow>
                 <TableHead>파일 이름</TableHead>
                 <TableHead className="w-28">출처</TableHead>
@@ -149,16 +168,16 @@ export default function DocumentReadingPanel({ bidRequestId, bidState, reloadKey
                       onClick={() => item.readingId && setOpenReadingId(open ? null : item.readingId)}
                     >
                       <TableCell className="break-all">{item.fileName}</TableCell>
-                      <TableCell className="whitespace-nowrap text-gray-600">{ORIGIN_LABEL[item.origin]}</TableCell>
-                      <TableCell className="text-gray-600">{fulfillsText(item)}</TableCell>
+                      <TableCell className="whitespace-nowrap text-muted-foreground">{ORIGIN_LABEL[item.origin]}</TableCell>
+                      <TableCell className="text-muted-foreground">{fulfillsText(item)}</TableCell>
                       <TableCell>
                         {started && (
                           <>
-                            <span className={item.status === 'FAILED' ? 'text-red-700' : isReadingInFlight(item.status) ? 'text-blue-700' : ''}>
+                            <span className={item.status === 'FAILED' ? 'text-destructive' : isReadingInFlight(item.status) ? 'text-blue-700' : ''}>
                               {readingStatusLabel(item.status, item.visionUsed)}
                             </span>
                             {item.status === 'FAILED' && item.failureReason && (
-                              <p className="text-xs text-red-600">{item.failureReason}</p>
+                              <p className="text-xs text-destructive">{item.failureReason}</p>
                             )}
                           </>
                         )}
@@ -176,7 +195,7 @@ export default function DocumentReadingPanel({ bidRequestId, bidState, reloadKey
                       )}
                     </TableRow>
                     {open && item.readingId && (
-                      <TableRow className="bg-gray-50">
+                      <TableRow className="bg-muted">
                         <TableCell colSpan={canRerun ? 6 : 5}>
                           <DocumentReadingFacts readingId={item.readingId} />
                         </TableCell>
@@ -187,8 +206,8 @@ export default function DocumentReadingPanel({ bidRequestId, bidState, reloadKey
               })}
             </TableBody>
           </Table>
-        </>
+        </CardTable>
       )}
-    </div>
+    </Card>
   )
 }

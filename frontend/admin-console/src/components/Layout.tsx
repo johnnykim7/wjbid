@@ -1,21 +1,44 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import {
+  ChartLine,
+  FilePenLine,
+  FileText,
+  Headset,
+  Images,
+  Inbox,
+  LogOut,
+  MapPin,
+  Megaphone,
+  SatelliteDish,
+  Trophy,
+  Users,
+  type LucideIcon,
+} from 'lucide-react'
+import { Button } from '@therecommerce-develop/ds-ui'
 import { getAdminInquiryCounts } from '../api/client'
 import { INQUIRY_COUNTS_CHANGED } from './inquiryCounts'
 
-const NAV = [
-  { to: '/', icon: 'fa-solid fa-chart-line', label: '대시보드', exact: true },
-  { to: '/members', icon: 'fa-solid fa-users', label: '회원 관리' },
-  { to: '/bid-requests', icon: 'fa-solid fa-file-contract', label: '입찰 요청 관리' },
-  { to: '/opportunities', icon: 'fa-solid fa-inbox', label: '원본 공고' },
-  { to: '/notices', icon: 'fa-solid fa-bullhorn', label: '공고문 관리' },
-  { to: '/collection', icon: 'fa-solid fa-satellite-dish', label: 'SAM.gov 수집' },
-  { to: '/bases', icon: 'fa-solid fa-location-dot', label: '기지 관리' },
-  { to: '/site-photos', icon: 'fa-solid fa-images', label: '고객 화면 사진' },
-  { to: '/templates', icon: 'fa-solid fa-file-lines', label: '문서 템플릿' },
-  { to: '/rfp-samples', icon: 'fa-solid fa-trophy', label: '성공 제안서 패턴' },
-  { to: '/inquiries', icon: 'fa-solid fa-headset', label: '1:1 문의' },
+const NAV: { to: string; icon: LucideIcon; label: string; exact?: boolean }[] = [
+  { to: '/', icon: ChartLine, label: '대시보드', exact: true },
+  { to: '/members', icon: Users, label: '회원 관리' },
+  { to: '/bid-requests', icon: FilePenLine, label: '입찰 요청 관리' },
+  { to: '/opportunities', icon: Inbox, label: '원본 공고' },
+  { to: '/notices', icon: Megaphone, label: '공고문 관리' },
+  { to: '/collection', icon: SatelliteDish, label: 'SAM.gov 수집' },
+  { to: '/bases', icon: MapPin, label: '기지 관리' },
+  { to: '/site-photos', icon: Images, label: '고객 화면 사진' },
+  { to: '/templates', icon: FileText, label: '문서 템플릿' },
+  { to: '/rfp-samples', icon: Trophy, label: '성공 제안서 패턴' },
+  { to: '/inquiries', icon: Headset, label: '1:1 문의' },
 ]
+
+// 문서 편집과 제안서 Section 화면은 입찰 상세에서 들어가므로 입찰 요청 관리에 속한다
+function currentMenuLabel(pathname: string) {
+  if (pathname.startsWith('/documents/')) return '입찰 요청 관리'
+  const menu = NAV.find(({ to, exact }) => (exact ? pathname === to : pathname === to || pathname.startsWith(`${to}/`)))
+  return menu?.label ?? ''
+}
 
 export default function Layout() {
   const navigate = useNavigate()
@@ -39,8 +62,7 @@ export default function Layout() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-100 overflow-hidden">
-      {/* Sidebar */}
+    <div className="flex h-screen bg-muted overflow-hidden">
       <aside className="w-60 bg-sidebar flex-shrink-0 flex flex-col">
         <div className="px-6 py-5 border-b border-white/10">
           <div className="text-white font-bold text-lg">Bidding Agency</div>
@@ -48,7 +70,7 @@ export default function Layout() {
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-          {NAV.map(({ to, icon, label, exact }) => (
+          {NAV.map(({ to, icon: Icon, label, exact }) => (
             <NavLink
               key={to}
               to={to}
@@ -61,7 +83,7 @@ export default function Layout() {
                 }`
               }
             >
-              <i className={`${icon} w-4 text-center`} />
+              <Icon className="size-4 shrink-0" />
               {label}
               {to === '/inquiries' && !!unanswered && (
                 <span className="ml-auto bg-danger text-white text-[11px] font-bold rounded-full px-[7px] py-px">
@@ -73,26 +95,25 @@ export default function Layout() {
         </nav>
 
         <div className="px-3 py-4 border-t border-white/10">
-          <button
+          <Button
+            variant="ghost"
             onClick={handleLogout}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-white/70 hover:bg-white/10 hover:text-white transition-colors w-full"
+            className="w-full justify-start gap-3 px-3 py-2.5 h-auto rounded-lg text-sm font-normal text-white/70 hover:bg-white/10 hover:text-white"
           >
-            <i className="fa-solid fa-right-from-bracket w-4 text-center" />
+            <LogOut className="size-4 shrink-0" />
             로그아웃
-          </button>
+          </Button>
         </div>
       </aside>
 
-      {/* Main */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="h-14 bg-white border-b border-gray-200 flex items-center px-6 flex-shrink-0">
-          <span className="text-sm text-gray-500">
-            <i className="fa-solid fa-shield-halved mr-2 text-secondary" />
-            Admin Console
-          </span>
+        <header className="h-14 bg-white border-b border-border flex items-center px-6 flex-shrink-0">
+          <h1 className="text-base font-semibold text-foreground">{currentMenuLabel(location.pathname)}</h1>
         </header>
         <main className="flex-1 overflow-y-auto">
-          <Outlet />
+          <div className="space-y-4 px-6 pt-3 pb-6">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>

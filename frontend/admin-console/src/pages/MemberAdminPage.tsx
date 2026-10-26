@@ -5,13 +5,20 @@
 import { useCallback, useEffect, useState } from 'react'
 import { isAxiosError } from 'axios'
 import {
+  Alert,
+  AlertDescription,
   Button,
+  Card,
+  CardFooter,
+  CardTable,
+  ConfirmDialog,
   Dialog,
   DialogBody,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  FieldError,
   Input,
   Label,
   Table,
@@ -23,6 +30,9 @@ import {
 } from '@therecommerce-develop/ds-ui'
 import { deleteMembership, getMembers, getMemberships, grantMembership, type MembershipLine } from '../api/client'
 import DateField from '../components/DateField'
+import ListPagination from '../components/ListPagination'
+import { Loading, TableMessageRow } from '../components/LoadState'
+import { ToneBadge } from '../components/StateBadge'
 
 const ROLE_LABELS: Record<string, string> = {
   ADMIN: '관리자',
@@ -30,13 +40,8 @@ const ROLE_LABELS: Record<string, string> = {
 }
 
 const T = {
-  title: '회원 관리',
-  desc: '가입된 회원 목록을 조회합니다. 결제 연동 전까지 회원 기간은 여기서 넣습니다.',
   cols: ['이메일', '회사명', '담당자', '역할', '회원', '가입일', '최근 로그인', ''],
-  loading: '불러오는 중...',
   empty: '회원이 없습니다.',
-  prev: '이전',
-  next: '다음',
   memberUntil: (ymd: string) => `회원, ${dot(ymd)} 까지`,
   admin: '관리자',
   free: '무료회원',
@@ -57,7 +62,6 @@ const T = {
   remove: '지우기',
   confirmTitle: '회원 기간 지우기',
   confirm: (line: MembershipLine) => `${dot(line.startsOn)} ~ ${dot(line.endsOn)} 기간을 지웁니다. 지운 기간은 되살리지 않습니다.`,
-  cancel: '취소',
   close: '닫기',
   loadError: '불러오지 못했습니다',
   retry: '다시 시도',
@@ -121,43 +125,34 @@ export default function MemberAdminPage() {
   useEffect(() => { load(page) }, [load, page])
 
   return (
-    <div className="p-6 space-y-5">
-      <div>
-        <h1 className="text-xl font-bold text-gray-900">{T.title}</h1>
-        <p className="text-sm text-gray-500 mt-0.5">{T.desc}</p>
-      </div>
-
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        {loading ? (
-          <div className="flex items-center justify-center h-48 text-gray-400">
-            <i className="fa-solid fa-circle-notch fa-spin mr-2" /> {T.loading}
-          </div>
-        ) : members.length === 0 ? (
-          <div className="flex items-center justify-center h-48 text-sm text-gray-400">{T.empty}</div>
-        ) : (
-          <>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  {T.cols.map((h, i) => <TableHead key={i}>{h}</TableHead>)}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {members.map((m) => (
+    <div className="space-y-4">
+      <Card>
+        <CardTable>
+          <Table>
+            <TableHeader className="bg-muted">
+              <TableRow>
+                {T.cols.map((h, i) => <TableHead key={i}>{h}</TableHead>)}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableMessageRow colSpan={T.cols.length} loading />
+              ) : members.length === 0 ? (
+                <TableMessageRow colSpan={T.cols.length}>{T.empty}</TableMessageRow>
+              ) : (
+                members.map((m) => (
                   <TableRow key={m.id}>
-                    <TableCell className="font-medium text-gray-900">{m.email}</TableCell>
-                    <TableCell className="text-gray-600">{m.companyName ?? '-'}</TableCell>
-                    <TableCell className="text-gray-600">{m.contactPerson ?? '-'}</TableCell>
+                    <TableCell className="font-medium text-foreground">{m.email}</TableCell>
+                    <TableCell className="text-muted-foreground">{m.companyName ?? '-'}</TableCell>
+                    <TableCell className="text-muted-foreground">{m.contactPerson ?? '-'}</TableCell>
                     <TableCell>
-                      <span className="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-                        {ROLE_LABELS[m.role] ?? m.role}
-                      </span>
+                      <ToneBadge tone="info">{ROLE_LABELS[m.role] ?? m.role}</ToneBadge>
                     </TableCell>
-                    <TableCell className={m.member ? 'text-gray-900' : 'text-gray-400'}>{membershipLabel(m)}</TableCell>
-                    <TableCell className="text-gray-500 text-xs">
+                    <TableCell className={m.member ? 'text-foreground' : 'text-muted-foreground'}>{membershipLabel(m)}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
                       {m.createdAt ? new Date(m.createdAt).toLocaleDateString('ko-KR') : '-'}
                     </TableCell>
-                    <TableCell className="text-gray-500 text-xs">
+                    <TableCell className="text-xs text-muted-foreground">
                       {m.lastLoginAt ? new Date(m.lastLoginAt).toLocaleDateString('ko-KR') : '-'}
                     </TableCell>
                     <TableCell className="text-right">
@@ -166,24 +161,17 @@ export default function MemberAdminPage() {
                       )}
                     </TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-
-            {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-2 px-5 py-4 border-t border-gray-100">
-                <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}>
-                  {T.prev}
-                </Button>
-                <span className="text-xs text-gray-500">{page + 1} / {totalPages}</span>
-                <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}>
-                  {T.next}
-                </Button>
-              </div>
-            )}
-          </>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardTable>
+        {totalPages > 1 && (
+          <CardFooter className="justify-center py-2">
+            <ListPagination page={page} totalPages={totalPages} onChange={setPage} />
+          </CardFooter>
         )}
-      </div>
+      </Card>
 
       {target && (
         <MembershipDialog
@@ -204,9 +192,10 @@ function MembershipDialog({ member, onClose, onChanged }: { member: Member; onCl
   const [endsOn, setEndsOn] = useState<string | null>(null)
   const [memo, setMemo] = useState('')
   const [saving, setSaving] = useState(false)
+  // 고른 날짜가 모자라거나 틀린 것은 칸 아래, 서버가 받지 않은 것은 창 맨 위 띠로 보인다
   const [formError, setFormError] = useState<string | null>(null)
+  const [grantError, setGrantError] = useState<string | null>(null)
   const [removing, setRemoving] = useState<MembershipLine | null>(null)
-  const [removeError, setRemoveError] = useState<string | null>(null)
 
   const fetchHistory = useCallback(() => {
     getMemberships(member.id)
@@ -222,6 +211,7 @@ function MembershipDialog({ member, onClose, onChanged }: { member: Member; onCl
   }
 
   const grant = async () => {
+    setGrantError(null)
     if (!startsOn || !endsOn) {
       setFormError(T.needDates)
       return
@@ -241,7 +231,7 @@ function MembershipDialog({ member, onClose, onChanged }: { member: Member; onCl
       fetchHistory()
       onChanged()
     } catch (e) {
-      setFormError(errorText(e))
+      setGrantError(errorText(e))
     } finally {
       setSaving(false)
     }
@@ -249,18 +239,10 @@ function MembershipDialog({ member, onClose, onChanged }: { member: Member; onCl
 
   const remove = async () => {
     if (!removing) return
-    setSaving(true)
-    setRemoveError(null)
-    try {
-      await deleteMembership(member.id, removing.id)
-      setRemoving(null)
-      fetchHistory()
-      onChanged()
-    } catch (e) {
-      setRemoveError(errorText(e))
-    } finally {
-      setSaving(false)
-    }
+    await deleteMembership(member.id, removing.id)
+    setRemoving(null)
+    fetchHistory()
+    onChanged()
   }
 
   return (
@@ -271,6 +253,11 @@ function MembershipDialog({ member, onClose, onChanged }: { member: Member; onCl
             <DialogTitle>{T.dialogTitle(member.email)}</DialogTitle>
           </DialogHeader>
           <DialogBody className="space-y-5">
+            {grantError && (
+              <Alert variant="destructive" appearance="light">
+                <AlertDescription>{grantError}</AlertDescription>
+              </Alert>
+            )}
             <div className="space-y-3">
               <div className="flex flex-wrap items-end gap-3">
                 <div className="flex flex-col gap-1">
@@ -294,23 +281,23 @@ function MembershipDialog({ member, onClose, onChanged }: { member: Member; onCl
                 </div>
                 <Button variant="primary" onClick={grant} disabled={saving}>{saving ? T.granting : T.grant}</Button>
               </div>
-              {formError && <p className="text-sm text-red-600">{formError}</p>}
+              <FieldError>{formError}</FieldError>
             </div>
 
             <div className="space-y-2">
-              <h3 className="text-sm font-semibold text-gray-700">{T.history}</h3>
+              <h3 className="text-sm font-semibold text-foreground">{T.history}</h3>
               {history.status === 'loading' ? (
-                <p className="text-sm text-gray-400"><i className="fa-solid fa-circle-notch fa-spin mr-2" />{T.loading}</p>
+                <Loading className="h-16" />
               ) : history.status === 'error' ? (
-                <div className="flex items-center gap-2 text-sm text-gray-500">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   {T.loadError}
                   <Button variant="outline" size="sm" onClick={retry}>{T.retry}</Button>
                 </div>
               ) : history.lines.length === 0 ? (
-                <p className="text-sm text-gray-400">{T.noHistory}</p>
+                <p className="text-sm text-muted-foreground">{T.noHistory}</p>
               ) : (
                 <Table>
-                  <TableHeader>
+                  <TableHeader className="bg-muted">
                     <TableRow>
                       {T.historyCols.map((h, i) => <TableHead key={i}>{h}</TableHead>)}
                     </TableRow>
@@ -319,21 +306,21 @@ function MembershipDialog({ member, onClose, onChanged }: { member: Member; onCl
                     {history.lines.map((line) => (
                       <TableRow key={line.id}>
                         <TableCell>
-                          {dot(line.startsOn)}
-                          {line.current && (
-                            <span className="ml-2 inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">{T.current}</span>
-                          )}
+                          <div className="flex items-center gap-2">
+                            {dot(line.startsOn)}
+                            {line.current && <ToneBadge tone="success">{T.current}</ToneBadge>}
+                          </div>
                         </TableCell>
                         <TableCell>{dot(line.endsOn)}</TableCell>
-                        <TableCell className="text-gray-600">{line.memo ?? '-'}</TableCell>
-                        <TableCell className="text-gray-600">{line.createdByEmail ?? '-'}</TableCell>
-                        <TableCell className="text-gray-500 text-xs">{new Date(line.createdAt).toLocaleString('ko-KR')}</TableCell>
+                        <TableCell className="text-muted-foreground">{line.memo ?? '-'}</TableCell>
+                        <TableCell className="text-muted-foreground">{line.createdByEmail ?? '-'}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{new Date(line.createdAt).toLocaleString('ko-KR')}</TableCell>
                         <TableCell className="text-right">
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="text-red-600"
-                            onClick={() => { setRemoveError(null); setRemoving(line) }}
+                            className="text-destructive"
+                            onClick={() => setRemoving(line)}
                             disabled={saving}
                           >
                             {T.remove}
@@ -352,21 +339,16 @@ function MembershipDialog({ member, onClose, onChanged }: { member: Member; onCl
         </DialogContent>
       </Dialog>
 
-      <Dialog open={removing !== null} onOpenChange={(o) => !saving && !o && setRemoving(null)}>
-        <DialogContent showCloseButton={!saving}>
-          <DialogHeader>
-            <DialogTitle>{T.confirmTitle}</DialogTitle>
-          </DialogHeader>
-          <DialogBody className="space-y-2">
-            <p className="text-sm text-gray-700">{removing && T.confirm(removing)}</p>
-            {removeError && <p className="text-sm text-red-600">{removeError}</p>}
-          </DialogBody>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setRemoving(null)} disabled={saving}>{T.cancel}</Button>
-            <Button variant="destructive" onClick={remove} disabled={saving}>{T.remove}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={removing !== null}
+        onOpenChange={(o) => { if (!o) setRemoving(null) }}
+        title={T.confirmTitle}
+        description={removing ? T.confirm(removing) : undefined}
+        confirmLabel={T.remove}
+        confirmVariant="destructive"
+        onConfirm={remove}
+        errorText={errorText}
+      />
     </>
   )
 }

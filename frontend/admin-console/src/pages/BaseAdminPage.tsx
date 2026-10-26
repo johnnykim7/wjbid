@@ -1,16 +1,28 @@
 /**
- * CR-136 — 기지 관리 (T3-3 「기지 관리」, T3-4 시나리오 5).
+ * CR-136: 기지 관리 (T3-3 「기지 관리」, T3-4 시나리오 5).
  * 고객 화면 기지별 지도가 이 목록을 읽는다. 목록이 비어 있으면 고객 화면은 빈 상태다.
  */
 import { useCallback, useEffect, useState } from 'react'
+import { Plus } from 'lucide-react'
 import {
+  Alert,
+  AlertDescription,
   Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTable,
+  CardTitle,
+  CardToolbar,
+  ConfirmDialog,
   Dialog,
   DialogBody,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  FieldError,
   Input,
   Label,
   Table,
@@ -30,12 +42,11 @@ import {
   type BaseInput,
   type UnmatchedRow,
 } from '../api/client'
+import { TableMessageRow } from '../components/LoadState'
 
 const TERM_SEPARATOR = ','
 
 const T = {
-  title: '기지 관리',
-  desc: '고객 화면 기지별 지도에 쓰는 기지 목록입니다. 공고 영문 제목에 찾을 낱말이 낱말 단위로 들어 있으면 그 기지 공고로 셉니다.',
   add: '기지 추가',
   edit: '고치기',
   remove: '지우기',
@@ -118,7 +129,6 @@ export default function BaseAdminPage() {
   const [saving, setSaving] = useState(false)
 
   const [removing, setRemoving] = useState<AdminBase | null>(null)
-  const [removeError, setRemoveError] = useState<string | null>(null)
 
   const load = useCallback(() => {
     Promise.all([getAdminBases(), getUnmatchedOpportunities()])
@@ -186,119 +196,122 @@ export default function BaseAdminPage() {
 
   const remove = async () => {
     if (!removing) return
-    setSaving(true)
-    try {
-      await deleteAdminBase(removing.id)
-      setRemoving(null)
-      load()
-    } catch (e) {
-      setRemoveError(serverMessage(e).message ?? T.deleteFail)
-    } finally {
-      setSaving(false)
-    }
+    await deleteAdminBase(removing.id)
+    setRemoving(null)
+    load()
   }
 
   const field = (key: keyof FormState, label: string, opts?: { required?: boolean; hint?: string; inputMode?: 'decimal' | 'numeric' }) => (
     <div className="space-y-1">
       <Label htmlFor={`base-${key}`}>
-        {label}{opts?.required && <span className="text-red-500 ml-0.5">*</span>}
+        {label}{opts?.required && <span className="ml-0.5 text-destructive">*</span>}
       </Label>
-      <Input id={`base-${key}`} value={form[key]} onChange={set(key)} inputMode={opts?.inputMode} aria-invalid={!!fieldError[key]} />
+      <Input
+        id={`base-${key}`}
+        value={form[key]}
+        onChange={set(key)}
+        inputMode={opts?.inputMode}
+        aria-invalid={!!fieldError[key]}
+        aria-describedby={fieldError[key] ? `base-${key}-error` : undefined}
+      />
       {fieldError[key] ? (
-        <p className="text-xs text-red-600">{fieldError[key]}</p>
+        <FieldError id={`base-${key}-error`}>{fieldError[key]}</FieldError>
       ) : (
-        opts?.hint && <p className="text-xs text-gray-400">{opts.hint}</p>
+        opts?.hint && <p className="text-xs text-muted-foreground">{opts.hint}</p>
       )}
     </div>
   )
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-end justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">{T.title}</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{T.desc}</p>
-        </div>
-        <Button variant="primary" onClick={() => openForm('new')}>
-          <i className="fa-solid fa-plus" /> {T.add}
-        </Button>
-      </div>
-
+    <div className="space-y-4">
       {failed && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-600 flex items-center gap-3">
-          <i className="fa-solid fa-triangle-exclamation" /> {T.loadFail}
-          <Button variant="outline" size="sm" onClick={load}>{T.retry}</Button>
-        </div>
+        <Alert variant="destructive" appearance="light" className="items-center">
+          <AlertDescription>{T.loadFail}</AlertDescription>
+          <Button variant="outline" size="sm" className="ms-auto" onClick={load}>{T.retry}</Button>
+        </Alert>
       )}
 
-      <div className="bg-white rounded-xl border border-gray-200">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              {T.cols.map((c, i) => <TableHead key={i} className="whitespace-nowrap">{c}</TableHead>)}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {bases?.length === 0 && (
+      <Card>
+        <CardHeader className="py-2.5">
+          <CardToolbar className="ms-auto">
+            <Button variant="primary" onClick={() => openForm('new')}>
+              <Plus />
+              {T.add}
+            </Button>
+          </CardToolbar>
+        </CardHeader>
+        <CardTable>
+          <Table>
+            <TableHeader className="bg-muted">
               <TableRow>
-                <TableCell colSpan={T.cols.length} className="py-10 text-center text-sm text-gray-500">{T.empty}</TableCell>
+                {T.cols.map((c, i) => <TableHead key={i} className="whitespace-nowrap">{c}</TableHead>)}
               </TableRow>
-            )}
-            {bases?.map((b) => (
-              <TableRow key={b.id}>
-                <TableCell className="w-14 text-gray-500">{b.sortOrder}</TableCell>
-                <TableCell className="font-semibold">{b.nameKo}</TableCell>
-                <TableCell>{b.nameEn}</TableCell>
-                <TableCell className="text-gray-600">{b.matchTerms.join(`${TERM_SEPARATOR} `)}</TableCell>
-                <TableCell>{b.region ?? '-'}</TableCell>
-                <TableCell className="whitespace-nowrap">
-                  {b.latitude !== null && b.longitude !== null
-                    ? <span className="font-mono text-xs">{b.latitude}, {b.longitude}</span>
-                    : <span className="text-xs text-gray-400">{T.noPosition}</span>}
-                </TableCell>
-                <TableCell className="text-right font-semibold">{b.matchedCount}</TableCell>
-                <TableCell className="whitespace-nowrap text-right">
-                  <Button variant="ghost" size="sm" onClick={() => openForm(b)}>{T.edit}</Button>
-                  <Button variant="ghost" size="sm" className="text-red-600" onClick={() => { setRemoveError(null); setRemoving(b) }}>
-                    {T.remove}
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+            </TableHeader>
+            <TableBody>
+              {bases === null && !failed && <TableMessageRow colSpan={T.cols.length} loading />}
+              {bases?.length === 0 && <TableMessageRow colSpan={T.cols.length}>{T.empty}</TableMessageRow>}
+              {bases?.map((b) => (
+                <TableRow key={b.id}>
+                  <TableCell className="w-14 text-muted-foreground">{b.sortOrder}</TableCell>
+                  <TableCell className="font-semibold">{b.nameKo}</TableCell>
+                  <TableCell>{b.nameEn}</TableCell>
+                  <TableCell className="text-muted-foreground">{b.matchTerms.join(`${TERM_SEPARATOR} `)}</TableCell>
+                  <TableCell>{b.region ?? '-'}</TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    {b.latitude !== null && b.longitude !== null
+                      ? <span className="font-mono text-xs">{b.latitude}, {b.longitude}</span>
+                      : <span className="text-xs text-muted-foreground">{T.noPosition}</span>}
+                  </TableCell>
+                  <TableCell className="text-right font-semibold">{b.matchedCount}</TableCell>
+                  <TableCell className="whitespace-nowrap text-right">
+                    <Button variant="ghost" size="sm" onClick={() => openForm(b)}>{T.edit}</Button>
+                    <Button variant="ghost" size="sm" className="text-destructive" onClick={() => setRemoving(b)}>
+                      {T.remove}
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardTable>
+      </Card>
 
       {unmatched && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
-          <div>
-            <h2 className="text-base font-bold text-gray-900">{T.unmatchedTitle(unmatched.count)}</h2>
-            <p className="text-xs text-gray-500 mt-0.5">{T.unmatchedDesc}</p>
-          </div>
+        <Card>
+          <CardHeader className="py-3">
+            <div className="space-y-1">
+              <CardTitle>{T.unmatchedTitle(unmatched.count)}</CardTitle>
+              <CardDescription>{T.unmatchedDesc}</CardDescription>
+            </div>
+          </CardHeader>
           {unmatched.count === 0 ? (
-            <p className="text-sm text-gray-500">{T.unmatchedNone}</p>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">{T.unmatchedNone}</p>
+            </CardContent>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  {T.unmatchedCols.map((c) => <TableHead key={c}>{c}</TableHead>)}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {unmatched.rows.map((r) => (
-                  <TableRow key={r.id}>
-                    <TableCell className="w-28 whitespace-nowrap text-gray-500">{r.postedDate ?? '-'}</TableCell>
-                    <TableCell className="w-40 font-mono text-xs">{r.solicitationNumber ?? r.noticeId}</TableCell>
-                    <TableCell>
-                      <div className="font-medium">{r.title}</div>
-                      {r.titleKo && <div className="text-xs text-gray-500">{r.titleKo}</div>}
-                    </TableCell>
+            <CardTable>
+              <Table>
+                <TableHeader className="bg-muted">
+                  <TableRow>
+                    {T.unmatchedCols.map((c) => <TableHead key={c}>{c}</TableHead>)}
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {unmatched.rows.map((r) => (
+                    <TableRow key={r.id}>
+                      <TableCell className="w-28 whitespace-nowrap text-muted-foreground">{r.postedDate ?? '-'}</TableCell>
+                      <TableCell className="w-40 font-mono text-xs">{r.solicitationNumber ?? r.noticeId}</TableCell>
+                      <TableCell>
+                        <div className="font-medium">{r.title}</div>
+                        {r.titleKo && <div className="text-xs text-muted-foreground">{r.titleKo}</div>}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardTable>
           )}
-        </div>
+        </Card>
       )}
 
       <Dialog open={editing !== null} onOpenChange={(o) => !saving && !o && setEditing(null)}>
@@ -307,6 +320,11 @@ export default function BaseAdminPage() {
             <DialogTitle>{editing === 'new' ? T.formAdd : T.formEdit}</DialogTitle>
           </DialogHeader>
           <DialogBody className="space-y-3">
+            {formError && (
+              <Alert variant="destructive" appearance="light">
+                <AlertDescription>{formError}</AlertDescription>
+              </Alert>
+            )}
             <div className="grid grid-cols-2 gap-3">
               {field('nameKo', T.fields.nameKo, { required: true })}
               {field('nameEn', T.fields.nameEn, { required: true })}
@@ -320,8 +338,7 @@ export default function BaseAdminPage() {
               {field('latitude', T.fields.latitude, { inputMode: 'decimal' })}
               {field('longitude', T.fields.longitude, { inputMode: 'decimal' })}
             </div>
-            <p className="text-xs text-gray-400">{T.fields.positionHint}</p>
-            {formError && <p className="text-sm text-red-600">{formError}</p>}
+            <p className="text-xs text-muted-foreground">{T.fields.positionHint}</p>
           </DialogBody>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setEditing(null)} disabled={saving}>{T.cancel}</Button>
@@ -330,21 +347,16 @@ export default function BaseAdminPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={removing !== null} onOpenChange={(o) => !saving && !o && setRemoving(null)}>
-        <DialogContent showCloseButton={!saving}>
-          <DialogHeader>
-            <DialogTitle>{T.confirmTitle}</DialogTitle>
-          </DialogHeader>
-          <DialogBody className="space-y-2">
-            <p className="text-sm text-gray-700">{removing && T.confirm(removing.nameKo)}</p>
-            {removeError && <p className="text-sm text-red-600">{removeError}</p>}
-          </DialogBody>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setRemoving(null)} disabled={saving}>{T.cancel}</Button>
-            <Button variant="destructive" onClick={remove} disabled={saving}>{T.remove}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={removing !== null}
+        onOpenChange={(o) => { if (!o) setRemoving(null) }}
+        title={T.confirmTitle}
+        description={removing ? T.confirm(removing.nameKo) : undefined}
+        confirmLabel={T.remove}
+        confirmVariant="destructive"
+        onConfirm={remove}
+        errorText={(e: unknown) => serverMessage(e).message ?? T.deleteFail}
+      />
     </div>
   )
 }
