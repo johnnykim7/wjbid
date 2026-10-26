@@ -1,6 +1,6 @@
 # 실행 지시서: SAM.gov Bidding Agency Platform
 
-> 설계 버전: 1.21 | 최종 수정: 2026-10-26 | 관련 CR: CR-003, CR-132, CR-133, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-146, CR-147, CR-153, CR-155, CR-157, CR-159, CR-160, CR-162, CR-169, CR-170, CR-178, CR-180, CR-181, CR-182
+> 설계 버전: 1.22 | 최종 수정: 2026-10-26 | 관련 CR: CR-003, CR-132, CR-133, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-146, CR-147, CR-153, CR-155, CR-157, CR-159, CR-160, CR-162, CR-169, CR-170, CR-178, CR-180, CR-181, CR-182, CR-183
 
 > **프로젝트:** bidding-agency-platform (미군 조달 입찰 AI 대행 서비스)
 > **프로젝트 유형:** 풀스택 (BE: Java 17 + Spring Boot 3.2 / FE: React 19 × 2)
@@ -539,7 +539,7 @@ sequenceDiagram
 | 공고 상세 | `GET /opportunities/{id}`, `/requirements`, `/attachments` | 관심 공고는 응답의 `opportunityId` 로(CR-155) |
 | 원본 공고 상세 | `GET /opportunities/origin/{opportunityId}` | 한글 본문(`descriptionKo`) 먼저, 원문 본문은 접어 둔다(CR-152, CR-155) |
 | 회원 구분 (CR-157) | `GET /members/me` 의 `membership` | 원본 공고 상세의 공고문 이동과 회원 전용 안내, 공고 상세 회원 안내, 판정 칸, 적격성 진단, 공고별 판정, 요금 안내 지금 단계, 내 프로필이 이 값으로 가른다. 서버는 공고문 조회, 적격성, 입찰 신청을 BIZ-071 로 다시 막는다 |
-| 관리자 회원 관리 (CR-157) | `GET /admin/members`, `GET /admin/members/{memberId}/memberships`, `POST /admin/members/{memberId}/memberships`, `DELETE /admin/members/{memberId}/memberships/{membershipId}` | 회원 여부와 끝일, 회원 기간 넣기, 지우기, 이력(BIZ-072) |
+| 관리자 회원 관리 (CR-157, CR-183) | `GET /admin/members`, `GET /admin/members/{memberId}`(회원 상세, CR-183), `GET /admin/members/{memberId}/memberships`, `POST /admin/members/{memberId}/memberships`, `DELETE /admin/members/{memberId}/memberships/{membershipId}` | 회원 여부와 끝일, 회원 기간 넣기, 지우기, 이력(BIZ-072) |
 | 입찰 신청 | `POST /bid-requests` | 서비스 레벨 선택 |
 | 내 입찰 현황 | `GET /bid-requests/my`, `/{id}`, `/{id}/history` | 자기 입찰 건만, 남의 건 404 (BIZ-060) |
 | 문서 업로드 | `POST /bid-requests/{id}/client-documents` | multipart, 자기 입찰 건만 (BIZ-060) |

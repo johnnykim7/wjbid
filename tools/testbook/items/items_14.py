@@ -5,6 +5,13 @@ MCP_KEY = {'X-API-Key': '$TESTBOOK_MCP_API_KEY'}
 THIS_BID = "UNHEX('{val:0:hex}')"
 
 
+def hist_ts(col, pos):
+    """상태 이력 한 줄의 시각. 앱이 [년, 월, 일, 시, 분, 초, 나노초] 배열로 적어 DB 시각 값으로 바꾼다"""
+    t = f"JSON_EXTRACT({col}, '$[{pos}].timestamp"
+    return (f"(TIMESTAMP(CONCAT_WS('-', {t}[0]'), {t}[1]'), {t}[2]')), CONCAT_WS(':', {t}[3]'), {t}[4]'), {t}[5]'))) "
+            f"+ INTERVAL FLOOR({t}[6]') / 1000) MICROSECOND)")
+
+
 def mcp(tool, args):
     return ('api', 'guest', 'POST', '/api/mcp',
             {'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call', 'params': {'name': tool, 'arguments': args}}, MCP_KEY)
@@ -255,6 +262,20 @@ dict(id='IT-14-028', flow='워크플로우 실행', kind='정상', title='GENERA
             '5. 플랫폼의 실행 요청과 결과 묻기 요청에 X-API-Key 머리글이 실린다',
      judge=['합동', '합동', '서버', '단위', '단위'],
      req=['BID-MCP-005'], fc=['BID-MCP-005'], screen='관리자 /bid-requests/{id}', pri='High',
+     probe={3: dict(steps=[('key', '10.b001_bid'),
+                           ('sql', f"SELECT state, JSON_UNQUOTE(JSON_EXTRACT(state_history, '$[last-1].toState')) AS prev_state, "
+                                   f"JSON_UNQUOTE(JSON_EXTRACT(state_history, '$[last].toState')) AS to_state, "
+                                   f"DATE_FORMAT({hist_ts('state_history', 'last-1')}, '%Y-%m-%d %H:%i:%s.%f') AS gen_at, "
+                                   f"DATE_FORMAT({hist_ts('state_history', 'last')}, '%Y-%m-%d %H:%i:%s.%f') AS review_at "
+                                   f"FROM bid_requests WHERE id = {THIS_BID}"),
+                           ('sql', f"SELECT bd.document_type, bd.current_version_no AS ver, "
+                                   f"DATE_FORMAT(v.created_at, '%Y-%m-%d %H:%i:%s.%f') AS saved_at FROM bid_documents bd "
+                                   f"LEFT JOIN bid_document_versions v ON v.document_id = bd.id AND v.version_no = bd.current_version_no "
+                                   f"WHERE bd.bid_request_id = {THIS_BID}")],
+                    need="r[0][0]['state'] != 'ANALYZING'",
+                    check="r[1][0]['state'] == 'REVIEW' and r[1][0]['prev_state'] == 'GENERATING' and r[1][0]['to_state'] == 'REVIEW' "
+                          "and len(r[2]) > 0 and all(x['document_type'] and int(x['ver'] or 0) >= 2 and x['saved_at'] "
+                          "and r[1][0]['gen_at'] <= x['saved_at'] <= r[1][0]['review_at'] for x in r[2])")},
      issue='BID-MCP-005 는 REQUIREMENT_ANALYSIS, DOCUMENT_DRAFTING 전이 때 실행한다고 적지만 그런 상태가 BidRequestState 에 없다. T1-5 CR-141 은 ANALYZING 진입 때 AI 작업이 없다고 적는다'),
 
 dict(id='IT-14-029', flow='워크플로우 실행', kind='예외', title='워크플로우 결과 묻기는 60회에서 멈춘다',
