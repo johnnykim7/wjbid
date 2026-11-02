@@ -1,6 +1,6 @@
 # 실행 지시서: SAM.gov Bidding Agency Platform
 
-> 설계 버전: 1.22 | 최종 수정: 2026-10-26 | 관련 CR: CR-003, CR-132, CR-133, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-146, CR-147, CR-153, CR-155, CR-157, CR-159, CR-160, CR-162, CR-169, CR-170, CR-178, CR-180, CR-181, CR-182, CR-183
+> 설계 버전: 1.23 | 최종 수정: 2026-11-03 | 관련 CR: CR-003, CR-132, CR-133, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-146, CR-147, CR-153, CR-155, CR-157, CR-159, CR-160, CR-162, CR-169, CR-170, CR-178, CR-180, CR-181, CR-182, CR-183, CR-186
 
 > **프로젝트:** bidding-agency-platform (미군 조달 입찰 AI 대행 서비스)
 > **프로젝트 유형:** 풀스택 (BE: Java 17 + Spring Boot 3.2 / FE: React 19 × 2)
@@ -96,7 +96,7 @@ SAM.gov에 올라오는 미군(USFK) 조달 입찰 공고를 자동 수집하고
 
 | 모듈 | 기능 수 | 책임 | 외부 연동 |
 |------|---------|------|----------|
-| A. 인증 | 7 | 회원가입(이메일 인증번호), 로그인, JWT 관리, SNS 가입·로그인 (CR-146) | 네이버, 카카오 로그인(구글 보류), 알림 서버 메일 틀 (CR-146) |
+| A. 인증 | 9 | 회원가입(이메일 인증번호), 로그인, JWT 관리, SNS 가입·로그인 (CR-146), 회원 구분 (CR-157), 비밀번호 재설정 (CR-186) | 네이버, 카카오 로그인(구글 보류), 알림 서버 메일 틀 (CR-146) |
 | B. 공고 수집 | 8 | SAM.gov 수집 + **사전 분석 + 노출 관리** (CR-003) | SAM.gov API, **Aimbase** |
 | C. 공고 열람 | 4 | 검색, 상세, 필요 문서, 북마크 | — |
 | D. 입찰 접수 | 4 | 신청, 문서 업로드, 현황 조회 | MinIO |
@@ -534,6 +534,7 @@ sequenceDiagram
 |------|---------|------|
 | 홈 | `GET /site-photos`, `GET /opportunities/collected`, `GET /opportunities/stats/site` (CR-162) | 문구는 정적 콘텐츠. 사진 자리 넷은 사진 목록에서 방문마다 한 장(CR-153). 마감 전 공고 목록과 건수는 모은 공고에서 `openOnly`, `latestOnly`, `sort`, `dueWithinDays` 로(CR-155) |
 | 회원가입 | `POST /auth/email-codes`, `/auth/email-codes/verify`, `/auth/register` | 이메일 인증번호 확인을 마친 주소만 가입 (BIZ-062, CR-146) |
+| 비밀번호 재설정 | `POST /auth/email-codes`(purpose PASSWORD_RESET), `/auth/email-codes/verify`, `/auth/password-reset` | 재설정 번호 확인을 마친 사람만 비밀번호를 바꾼다 (BIZ-097, CR-186) |
 | SNS 가입·로그인 | `GET /auth/sns/providers`, `/oauth2/authorization/{provider}`, `/auth/sns/signup/{ticket}`, `POST /auth/sns/register`, `/auth/sns/login` | 네이버, 카카오(구글 보류). 키가 있는 곳만 (CR-146) |
 | 공고 검색 | ~~`GET /opportunities`, `/search`, `/near-deadline`~~ `GET /opportunities/collected` (CR-155) | 필터, 페이징. CR-155: 모은 공고 중 마감 전인 것 전부(BIZ-069), 검색어 `q`, 줄을 누르면 공고문 상세 또는 원본 공고 상세. CR-147: 화면 이름 마감 전 공고, 속페이지 틀, 숫자 칸은 검색어와 상관없는 마감 전 공고 전체 건수, 빈 상태 두 가지 |
 | 공고 상세 | `GET /opportunities/{id}`, `/requirements`, `/attachments` | 관심 공고는 응답의 `opportunityId` 로(CR-155) |

@@ -1508,3 +1508,17 @@
 - **영향 설계서**: 없음(설계서에 이 문구 기록 없음)
 - **규모**: 소(문구 하나 빼기, 화면 구조와 API 그대로)
 - **상태**: 구현, 형 검사와 린트 통과, 상용 자료로 로컬 확인(회원으로 홈 공고 3줄에 문구 없음)(11/3)
+
+### CR-186: 비밀번호 재설정 (2026-11-03)
+
+- **배경(사용자)**: 11/03 06:58 가입해서 써 볼 때 미완으로 느낄 곳을 물음. 07:07 "회원가입부터. 안되는곳 다 넣어주세요", 07:09 결제는 계좌이체만, 카카오톡 알림은 추후, "되는것부터 하세요"(원문 `docs/origins/원본_CR-186_비밀번호_재설정_20261103.md`). 백로그 BL-001
+- **현황(실측 11/3 develop 소스)**: 로그인 화면의 비밀번호 찾기는 고객센터 메일 안내뿐이고 재설정 화면과 API 가 없다. 인증번호 보내기는 가입된 메일을 막는 가입 전용이고, 인증번호 표에 쓰임 칸이 없다. 알림 서버 틀 BID_EMAIL_CODE 본문은 회원가입 화면용이다
+- **대상 기능 ID**: BID-AUTH-009(신설), BID-AUTH-002, BID-AUTH-005
+- **변경 타입**: 신규
+- **대상**: (1) 인증번호에 쓰임(SIGNUP, PASSWORD_RESET)을 단다. (2) `POST /auth/email-codes`, `/verify` 가 purpose 를 받는다. 재설정 번호는 가입된 메일에만, 아니면 404 `EMAIL_NOT_REGISTERED`, 메일 틀 BID_PASSWORD_RESET_CODE. (3) `POST /auth/password-reset` 이 확인된 재설정 번호를 쓰고 비밀번호를 바꾼다. (4) 고객 화면 `/password-reset` 비밀번호 재설정과 로그인 화면 링크, 재설정 완료 안내
+- **영향 범위**: BID-AUTH-002, BID-AUTH-005, BID-AUTH-009
+- **영향 모듈**: BE EmailCodeService, EmailCodeController, EmailVerificationCode, EmailVerificationCodeRepository, MemberService, AuthError, Flyway 마이그레이션 / 고객 포털 LoginPage, 새 PasswordResetPage, EmailCodeField, `src/api/client.ts`, App 라우트 / 알림 서버(bp-notification) 틀 BID_PASSWORD_RESET_CODE
+- **영향 설계서**: T1-1 1.33, T1-2 1.11, T1-3 1.20(BIZ-097), T1-4 1.11(POL-037), T1-7 1.13, T1-10 1.9, T3-1 1.21, T3-2 1.30, T3-3 1.30, T3-4 1.25, T3-5 1.28(TC-AUTH-031 ~ 039), execution-spec 1.23. 영향 없음 확인: T1-5, T1-6, T2-1, T2-2. CR 문서 [CR-186_비밀번호_재설정.md](CR-186_비밀번호_재설정.md)
+- **다른 곳**: 알림 서버 레포에 틀 BID_PASSWORD_RESET_CODE 요청(원본 `docs/templates/mail/BID_PASSWORD_RESET_CODE.json`). 상용은 틀이 먼저 들어간 뒤 BE 배포. 다른 기기 로그인 끊기는 백로그 BL-008
+- **규모**: 중 (고객 화면 1개 신설, API 1개 신설과 1개 확장, 표에 칸 1개)
+- **상태**: 설계(11/3)

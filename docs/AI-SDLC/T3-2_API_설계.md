@@ -1,6 +1,6 @@
 # SAM.gov Bidding Agency Platform API 설계
 
-> 설계 버전: 1.29 | 최종 수정: 2026-10-26 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-144, CR-146, CR-147, CR-152, CR-153, CR-155, CR-157, CR-159, CR-160, CR-162, CR-168, CR-169, CR-170, CR-178, CR-179, CR-180, CR-182, CR-183
+> 설계 버전: 1.30 | 최종 수정: 2026-11-03 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-144, CR-146, CR-147, CR-152, CR-153, CR-155, CR-157, CR-159, CR-160, CR-162, CR-168, CR-169, CR-170, CR-178, CR-179, CR-180, CR-182, CR-183, CR-186
 
 > 단계: 3. Detail Design | 실행스펙 섹션 3에 포함
 >
@@ -43,8 +43,9 @@
 | POST | /auth/register | 이메일 회원가입 (CUSTOMER 역할). 이미 가입된 이메일은 409, `error: EMAIL_ALREADY_EXISTS` (CR-131, BIZ-008). 확인을 마친 인증번호가 없으면 400 `EMAIL_NOT_VERIFIED`, 가입하면 그 번호를 다 쓴 것으로 하고 이메일 확인 시각을 채운다 (CR-146, BIZ-062) | | BID-AUTH-001 |
 | POST | /auth/login | 로그인 (JWT Access+Refresh 발급) | | BID-AUTH-002 |
 | POST | /auth/refresh | Refresh 토큰으로 Access 토큰 갱신 | | BID-AUTH-003 |
-| POST | /auth/email-codes | 인증번호 보내기 `{email}`. 200 `{expiresInSeconds, resendAfterSeconds}`. 이미 가입된 메일 409 `EMAIL_ALREADY_EXISTS`, 간격 전 429 `EMAIL_CODE_TOO_SOON`(`retryAfterSeconds`), 하루 한도 429 `EMAIL_CODE_DAILY_LIMIT`, 메일 실패 502 `EMAIL_SEND_FAILED` (CR-146, POL-037) | | BID-AUTH-005 |
-| POST | /auth/email-codes/verify | 인증번호 확인 `{email, code}`. 200. 틀림 400 `EMAIL_CODE_MISMATCH`(`remainingAttempts`), 시간 지남 410 `EMAIL_CODE_EXPIRED`, 횟수 넘음 429 `EMAIL_CODE_LOCKED` (CR-146) | | BID-AUTH-005 |
+| POST | /auth/email-codes | 인증번호 보내기 `{email, purpose}`. purpose 는 `SIGNUP`(없으면 이것) 또는 `PASSWORD_RESET`(CR-186). 200 `{expiresInSeconds, resendAfterSeconds}`. 가입 번호를 이미 가입된 메일로 요청하면 409 `EMAIL_ALREADY_EXISTS`, 재설정 번호를 가입되지 않은 메일로 요청하면 404 `EMAIL_NOT_REGISTERED`(CR-186, BIZ-097), 간격 전 429 `EMAIL_CODE_TOO_SOON`(`retryAfterSeconds`), 하루 한도 429 `EMAIL_CODE_DAILY_LIMIT`, 메일 실패 502 `EMAIL_SEND_FAILED` (CR-146, POL-037) | | BID-AUTH-005 |
+| POST | /auth/email-codes/verify | 인증번호 확인 `{email, code, purpose}`. 그 쓰임의 마지막 번호를 본다(purpose 없으면 SIGNUP, CR-186). 200. 틀림 400 `EMAIL_CODE_MISMATCH`(`remainingAttempts`), 시간 지남 410 `EMAIL_CODE_EXPIRED`, 횟수 넘음 429 `EMAIL_CODE_LOCKED` (CR-146) | | BID-AUTH-005 |
+| POST | /auth/password-reset | 비밀번호 재설정 `{email, newPassword}`. 200 `{reset: true}`. 그 이메일의 재설정 번호 확인을 마친 지 POL-037 시간 안이어야 하고, 바꾸면 그 번호를 다 쓴 것으로 한다. 확인이 없거나 시간이 지났으면 400 `EMAIL_NOT_VERIFIED`, 새 비밀번호 8자 미만 400, 회원이 없으면 404 `EMAIL_NOT_REGISTERED` (CR-186, BIZ-097) | | BID-AUTH-009 |
 | GET | /auth/sns/providers | 키가 설정된 SNS 목록 `[NAVER, KAKAO]` 중 일부(GOOGLE 은 보류) (CR-146) | | BID-AUTH-006 |
 | GET | /oauth2/authorization/{provider} | SNS 로그인 시작. 스프링 기본 주소, SNS 로그인 화면으로 보낸다 (CR-146) | | BID-AUTH-006, BID-AUTH-007 |
 | GET | /login/oauth2/code/{provider} | SNS 가 돌려보내는 주소(SNS 앱에 등록). 이어진 회원이면 LOGIN 표를 만들어 화면 `/auth/sns/done?ticket=`, 처음이면 SIGNUP 표로 `/register/sns?ticket=`, SNS 이메일로 가입된 회원이 있으면 `/login?sns=EMAIL_IN_USE`, 취소 `/login?sns=CANCELLED`, 실패 `/login?sns=FAILED` 로 보낸다 (CR-146, BIZ-063) | | BID-AUTH-006, BID-AUTH-007 |
