@@ -73,7 +73,7 @@ function todayMd() {
 /** 마감 전 공고 화면과 같은 기준의 모은 공고 (CR-155, BIZ-069) */
 const OPEN_QUERY: CollectedQuery = { openOnly: true, latestOnly: true, size: LIST_ROWS }
 
-function BidRow({ o, member }: { o: MarketRow; member: boolean }) {
+function BidRow({ o }: { o: MarketRow }) {
   const deadline = o.responseDeadline?.slice(0, 10)
   const days = daysUntil(deadline)
   const dl = deadlineParts(deadline)
@@ -84,7 +84,6 @@ function BidRow({ o, member }: { o: MarketRow; member: boolean }) {
         <b>{o.titleKo || o.title}</b>
         <span>
           <i className="mono">{o.solicitationNumber}</i>
-          {member && <em className="fit no">자격 진단 준비 중</em>}
         </span>
       </Link>
       <span>{(o.typeKo || o.type) && <span className="bd r">{o.typeKo || o.type}</span>}</span>
@@ -209,7 +208,7 @@ export default function HomePage() {
           )}
         </div>
         <ul className="bids">
-          {rows.map((o) => <BidRow key={o.id} o={o} member={isAuthenticated} />)}
+          {rows.map((o) => <BidRow key={o.id} o={o} />)}
           {loaded && rows.length === 0 && (
             <li className="none">
               {failed ? '공고를 불러오지 못했습니다. 잠시 뒤 다시 열어 주세요.' : `${SOON_DAYS}일 안에 마감하는 공고가 없습니다. 최신 공고를 보세요.`}
