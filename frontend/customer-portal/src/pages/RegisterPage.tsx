@@ -8,7 +8,7 @@ import { SnsButtons } from '../components/auth/SnsButtons'
 import { EmailCodeField } from '../components/auth/EmailCodeField'
 import { Fld, CompanyPart, AgreePart, EmailTaken } from '../components/auth/AuthFields'
 import {
-  REQUIRED, EMAIL_PATTERN, COUNT_WORD, COMPANY_KEYS, AGREE_REQUIRED,
+  REQUIRED, EMAIL_PATTERN, PASSWORD_MIN, COUNT_WORD, COMPANY_KEYS, AGREE_REQUIRED,
   type Agree, type CompanyKey,
 } from '../components/auth/authRules'
 import { IMAGES } from '../data/homeContent'
@@ -17,8 +17,6 @@ import '../wjbid-auth.css'
 type FieldKey = 'email' | 'password' | 'passwordConfirm' | CompanyKey
 type ErrorKey = FieldKey | 'agree'
 
-// 서버 가입 검증(RegisterRequest)과 같은 값이다
-const PASSWORD_MIN = 8
 // 화면에서 위에서 아래로 놓인 순서. 첫 오류 칸으로 옮길 때 쓴다
 const ERROR_ORDER: ErrorKey[] = ['email', 'password', 'passwordConfirm', ...COMPANY_KEYS, 'agree']
 

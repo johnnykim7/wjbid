@@ -2,6 +2,7 @@ package com.biddingagency.domain.member.service;
 
 import com.biddingagency.domain.member.AuthError;
 import com.biddingagency.domain.member.AuthFlowException;
+import com.biddingagency.domain.member.entity.EmailCodePurpose;
 import com.biddingagency.domain.member.entity.Member;
 import com.biddingagency.domain.member.entity.MemberSocialAccount;
 import com.biddingagency.domain.member.entity.SnsProvider;
@@ -125,7 +126,7 @@ class SnsAuthServiceTest {
 
         service.register(command(KAKAO_EMAIL));
 
-        then(emailCodeService).should(never()).consumeVerified(any());
+        then(emailCodeService).should(never()).consumeVerified(any(), any());
         ArgumentCaptor<MemberSocialAccount> link = ArgumentCaptor.forClass(MemberSocialAccount.class);
         then(socialAccountRepository).should().save(link.capture());
         assertThat(link.getValue().getProviderUserId()).isEqualTo(KAKAO_ID);
@@ -140,7 +141,7 @@ class SnsAuthServiceTest {
         given(ticketRepository.findByTokenHash(SnsAuthService.hash(TICKET))).willReturn(Optional.of(signup));
         given(memberRepository.existsByEmail("kim@naver.com")).willReturn(false);
         given(socialAccountRepository.findByProviderAndProviderUserId(SnsProvider.NAVER, KAKAO_ID)).willReturn(Optional.empty());
-        willThrow(new AuthFlowException(AuthError.EMAIL_NOT_VERIFIED)).given(emailCodeService).consumeVerified("kim@naver.com");
+        willThrow(new AuthFlowException(AuthError.EMAIL_NOT_VERIFIED)).given(emailCodeService).consumeVerified("kim@naver.com", EmailCodePurpose.SIGNUP);
 
         assertThatThrownBy(() -> service.register(command("kim@naver.com")))
                 .isInstanceOfSatisfying(AuthFlowException.class,
@@ -162,7 +163,7 @@ class SnsAuthServiceTest {
 
         service.register(command("work@company.com"));
 
-        then(emailCodeService).should().consumeVerified("work@company.com");
+        then(emailCodeService).should().consumeVerified("work@company.com", EmailCodePurpose.SIGNUP);
     }
 
     // TC-AUTH-024

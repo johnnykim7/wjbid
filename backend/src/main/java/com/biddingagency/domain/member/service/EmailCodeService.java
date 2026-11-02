@@ -3,6 +3,7 @@ package com.biddingagency.domain.member.service;
 import com.biddingagency.domain.member.AuthError;
 import com.biddingagency.domain.member.AuthFlowException;
 import com.biddingagency.domain.member.EmailAlreadyExistsException;
+import com.biddingagency.domain.member.entity.EmailCodePurpose;
 import com.biddingagency.domain.member.entity.EmailVerificationCode;
 import com.biddingagency.domain.member.repository.EmailVerificationCodeRepository;
 import com.biddingagency.domain.member.repository.MemberRepository;
@@ -27,14 +28,14 @@ import java.util.Map;
 
 /**
  * 이메일 인증번호 보내기와 확인 (CR-146, BID-AUTH-005, BIZ-062).
- * 메일은 알림 서버 틀 BID_EMAIL_CODE 로 요청 안에서 보낸다. 보내지 못하면 번호도 남기지 않는다.
+ * 메일은 쓰임마다 정한 알림 서버 틀로 요청 안에서 보낸다. 보내지 못하면 번호도 남기지 않는다.
+ * 확인과 쓰기는 같은 쓰임의 번호만 본다 (CR-186, BIZ-097).
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class EmailCodeService {
 
-    static final String TEMPLATE_CODE = "BID_EMAIL_CODE";
     private static final int CODE_BOUND = 1_000_000;
     // 하루 한도의 날짜는 서울 날짜다(POL-037). 저장 시각은 시계 시간대라 그날 0시를 그 시간대로 옮겨 센다
     private static final ZoneId DAILY_LIMIT_ZONE = ZoneId.of("Asia/Seoul");
@@ -50,10 +51,20 @@ public class EmailCodeService {
     }
 
     @Transactional
-    public Sent send(String rawEmail) {
+    public Sent send(String rawEmail, EmailCodePurpose purpose) {
         String email = normalize(rawEmail);
-        if (memberRepository.existsByEmail(email)) {
-            throw new EmailAlreadyExistsException();
+        boolean registered = memberRepository.existsByEmail(email);
+        switch (purpose) {
+            case SIGNUP -> {
+                if (registered) {
+                    throw new EmailAlreadyExistsException();
+                }
+            }
+            case PASSWORD_RESET -> {
+                if (!registered) {
+                    throw new AuthFlowException(AuthError.EMAIL_NOT_REGISTERED);
+                }
+            }
         }
         LocalDateTime now = LocalDateTime.now(clock);
         Duration resend = policy.resendInterval();
@@ -73,12 +84,13 @@ public class EmailCodeService {
         Duration ttl = policy.codeTtl();
         codeRepository.save(EmailVerificationCode.builder()
                 .email(email)
+                .purpose(purpose)
                 .codeHash(hash(email, code))
                 .expiresAt(now.plus(ttl))
                 .createdAt(now)
                 .build());
 
-        BpNotificationClient.SendResult result = notificationClient.sendEmail(email, TEMPLATE_CODE,
+        BpNotificationClient.SendResult result = notificationClient.sendEmail(email, purpose.templateCode(),
                 Map.of("code", code, "validMinutes", ttl.toMinutes()));
         if (!result.success()) {
             throw new AuthFlowException(AuthError.EMAIL_SEND_FAILED);
@@ -88,9 +100,9 @@ public class EmailCodeService {
 
     /** 틀린 횟수는 오류로 끝나도 남아야 하므로 이 트랜잭션은 AuthFlowException 에 되돌리지 않는다 */
     @Transactional(noRollbackFor = AuthFlowException.class)
-    public void verify(String rawEmail, String code) {
+    public void verify(String rawEmail, String code, EmailCodePurpose purpose) {
         String email = normalize(rawEmail);
-        EmailVerificationCode latest = codeRepository.findFirstByEmailOrderByCreatedAtDesc(email)
+        EmailVerificationCode latest = codeRepository.findFirstByEmailAndPurposeOrderByCreatedAtDesc(email, purpose)
                 .orElseThrow(() -> new AuthFlowException(AuthError.EMAIL_CODE_EXPIRED));
         if (latest.getConsumedAt() != null) {
             throw new AuthFlowException(AuthError.EMAIL_CODE_EXPIRED);
@@ -118,16 +130,16 @@ public class EmailCodeService {
     }
 
     /**
-     * 가입 때 부른다. 확인을 마친 지 정해진 시간 안의 번호를 가입 한 번에 쓰고 끝낸다.
-     * 없으면 EMAIL_NOT_VERIFIED 로 가입을 막는다.
+     * 가입과 비밀번호 재설정 때 부른다. 그 쓰임에서 확인을 마친 지 정해진 시간 안의 번호를 한 번에 쓰고 끝낸다.
+     * 없으면 EMAIL_NOT_VERIFIED 로 막는다.
      */
     @Transactional
-    public void consumeVerified(String rawEmail) {
+    public void consumeVerified(String rawEmail, EmailCodePurpose purpose) {
         String email = normalize(rawEmail);
         LocalDateTime now = LocalDateTime.now(clock);
         Duration window = policy.verifiedWindow();
         EmailVerificationCode verified = codeRepository
-                .findFirstByEmailAndVerifiedAtIsNotNullAndConsumedAtIsNullOrderByVerifiedAtDesc(email)
+                .findFirstByEmailAndPurposeAndVerifiedAtIsNotNullAndConsumedAtIsNullOrderByVerifiedAtDesc(email, purpose)
                 .filter(c -> !now.isAfter(c.getVerifiedAt().plus(window)))
                 .orElseThrow(() -> new AuthFlowException(AuthError.EMAIL_NOT_VERIFIED));
         verified.markConsumed(now);

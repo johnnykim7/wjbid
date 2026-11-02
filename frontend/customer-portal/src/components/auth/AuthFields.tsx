@@ -10,6 +10,10 @@ export function EmailTaken() {
   return <>이미 가입된 이메일입니다.<Link to="/login">로그인하기</Link></>
 }
 
+export function EmailNotRegistered() {
+  return <>가입되지 않은 이메일입니다.<Link to="/register">회원가입</Link></>
+}
+
 export function Fld({ id, label, error, hint, ...input }: ComponentProps<typeof Input> & { id: string; label: string; error?: ReactNode; hint?: string }) {
   const hintId = `${id}-hint`
   return (

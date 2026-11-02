@@ -10,6 +10,8 @@
 .wj .au { display: grid; gap: 24px; align-items: start; }
 .wj .au.l { grid-template-columns: 1fr 1fr; align-items: stretch; }
 .wj .au.r { grid-template-columns: 1fr 400px; }
+/* 상자 하나만 두는 화면(CR-186 비밀번호 재설정). 로그인 상자와 같은 너비로 가운데 둔다 */
+.wj .au.one { grid-template-columns: minmax(0px, 1fr); max-width: calc((100% - 24px) / 2); margin: 0px auto; }
 .wj .au .card { background: white; border: 1px solid var(--color-line); border-radius: 14px; }
 .wj .au .card h1 { margin: 0px; font-size: 32px; font-weight: 800; letter-spacing: -0.04em; color: var(--color-ink); line-height: 1.2; }
 .wj .au .card .lead { margin: 10px 0px 0px; font-size: 17px; color: var(--color-ink-sub); line-height: 1.55; }
@@ -40,6 +42,7 @@
 .wj .au .bigb.w:disabled { opacity: 0.6; cursor: default; }
 .wj .au .forgot { margin-top: auto; padding-top: 26px; }
 .wj .au .forgot .bx2 { border-top: 1px solid var(--color-line-soft); padding-top: 20px; font-size: 15.5px; color: var(--color-ink-sub); line-height: 1.6; }
+.wj .au .forgot a { color: var(--color-brand); font-weight: 700; }
 .wj .au .forgot b { display: block; font-size: 16.5px; color: var(--color-ink); margin-bottom: 3px; }
 .wj .au .forgot a { color: var(--color-brand); font-weight: 700; }
 

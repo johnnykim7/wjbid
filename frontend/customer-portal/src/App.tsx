@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 import { AppLayout } from './components/layout/AppLayout'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
+import PasswordResetPage from './pages/PasswordResetPage'
 import SnsRegisterPage from './pages/SnsRegisterPage'
 import SnsDonePage from './pages/SnsDonePage'
 import HomePage from './pages/HomePage'
@@ -101,6 +102,7 @@ function AppRoutes() {
         {/* 로그인 / 회원가입도 공통 틀 안에 (CR-131) */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/password-reset" element={<PasswordResetPage />} />
         {/* SNS 에서 돌아오는 화면 (CR-146) */}
         <Route path="/register/sns" element={<SnsRegisterPage />} />
         <Route path="/auth/sns/done" element={<SnsDonePage />} />

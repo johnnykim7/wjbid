@@ -3,6 +3,7 @@ package com.biddingagency.domain.member.service;
 import com.biddingagency.domain.member.AuthError;
 import com.biddingagency.domain.member.AuthFlowException;
 import com.biddingagency.domain.member.EmailAlreadyExistsException;
+import com.biddingagency.domain.member.entity.EmailCodePurpose;
 import com.biddingagency.domain.member.entity.Member;
 import com.biddingagency.domain.member.entity.MemberSocialAccount;
 import com.biddingagency.domain.member.entity.SnsProvider;
@@ -125,7 +126,7 @@ public class SnsAuthService {
                 && ticket.getProviderEmail() != null
                 && ticket.getProviderEmail().equalsIgnoreCase(email);
         if (!verifiedByProvider) {
-            emailCodeService.consumeVerified(email);
+            emailCodeService.consumeVerified(email, EmailCodePurpose.SIGNUP);
         }
 
         Member member = memberService.registerSnsMember(email, now, command.companyName(),
