@@ -4,7 +4,6 @@ import { Input, Label, Button } from '@therecommerce-develop/ds-ui'
 import { useAuth } from '../context/AuthContext'
 import { login } from '../api/client'
 import { Icon } from '../components/layout/Icon'
-import { COMPANY } from '../components/layout/siteContent'
 import { JoinIntro } from '../components/auth/JoinIntro'
 import { SnsButtons } from '../components/auth/SnsButtons'
 import { IMAGES } from '../data/homeContent'
@@ -17,20 +16,25 @@ const SNS_NOTICE: Record<string, { tone: 'err' | 'info'; text: string }> = {
   FAILED: { tone: 'err', text: 'SNS 로그인을 마치지 못했습니다. 잠시 뒤 다시 시도해 주세요.' },
 }
 
+type LoginState = { registered?: boolean; from?: string; passwordReset?: boolean; email?: string } | null
+
 /** 로그인 (CR-131). 화면 정본은 docs/기록/토론_WJbid홈페이지방향/자료/시안/AIDA_색상/로그인_회원가입_시안.html #login */
 export default function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const { signIn } = useAuth()
-  const [email, setEmail] = useState('')
+  const state = location.state as LoginState
+  // 비밀번호를 바꾸고 넘어오면 그 이메일을 채워 둔다(CR-186)
+  const [email, setEmail] = useState(state?.passwordReset ? state.email ?? '' : '')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const passwordRef = useRef<HTMLInputElement>(null)
   // 회원가입을 마치고 넘어오면 가입 완료 안내를 띄운다
-  const registered = (location.state as { registered?: boolean } | null)?.registered === true
+  const registered = state?.registered === true
+  const passwordReset = state?.passwordReset === true
   // 로그인해야 쓰는 화면에서 넘어오면 로그인 뒤 그 화면으로 돌려보낸다(CR-137)
-  const from = (location.state as { from?: string } | null)?.from
+  const from = state?.from
   const [params] = useSearchParams()
   const snsNotice = SNS_NOTICE[params.get('sns') ?? '']
 
@@ -70,6 +74,9 @@ export default function LoginPage() {
           {registered && !error && (
             <div className="msg good" role="status"><Icon name="okc" />가입이 끝났습니다. 가입한 이메일로 로그인해 주세요.</div>
           )}
+          {passwordReset && !error && (
+            <div className="msg good" role="status"><Icon name="okc" />비밀번호를 바꿨습니다. 새 비밀번호로 로그인해 주세요.</div>
+          )}
           <div className="fld">
             <Label htmlFor="login-email" className="wj-reset fl">이메일</Label>
             <Input
@@ -105,7 +112,7 @@ export default function LoginPage() {
           <div className="forgot">
             <div className="bx2">
               <b>비밀번호를 잊으셨나요?</b>
-              가입한 이메일을 적어 <a href={`mailto:${COMPANY.email}`}>{COMPANY.email}</a> 으로 보내 주시면 확인 뒤 다시 설정해 드립니다.
+              <Link to="/password-reset">비밀번호 재설정</Link>
             </div>
           </div>
         </form>

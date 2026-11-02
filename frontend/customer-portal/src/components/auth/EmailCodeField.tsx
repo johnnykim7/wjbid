@@ -1,20 +1,22 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Input, Label, Button } from '@therecommerce-develop/ds-ui'
-import { sendEmailCode, verifyEmailCode, authErrorOf, AUTH_ERROR, EMAIL_ALREADY_EXISTS } from '../../api/client'
+import { sendEmailCode, verifyEmailCode, authErrorOf, AUTH_ERROR, EMAIL_ALREADY_EXISTS, type EmailCodePurpose } from '../../api/client'
 import { Icon } from '../layout/Icon'
 import { EMAIL_PATTERN, REQUIRED } from './authRules'
-import { EmailTaken } from './AuthFields'
+import { EmailTaken, EmailNotRegistered } from './AuthFields'
 
 const CODE_PATTERN = /^\d{6}$/
 
 const clock = (seconds: number) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
 
 /**
- * 이메일 칸과 인증번호 받기, 확인 (CR-146 T3-4 시나리오 5).
+ * 이메일 칸과 인증번호 받기, 확인 (CR-146 T3-4 시나리오 5, CR-186 시나리오 9).
  * 남은 시간과 다시 받기 간격은 서버가 준 초에서 줄여 보인다. 정책값을 화면에 두지 않는다.
  */
-export function EmailCodeField({ id, email, onEmailChange, verified, onVerifiedChange, onSent, error, inputRef }: {
+export function EmailCodeField({ id, purpose = 'SIGNUP', email, onEmailChange, verified, onVerifiedChange, onSent, error, inputRef }: {
   id: string
+  /** 가입 화면은 SIGNUP, 비밀번호 재설정 화면은 PASSWORD_RESET */
+  purpose?: EmailCodePurpose
   email: string
   onEmailChange: (value: string) => void
   verified: boolean
@@ -66,7 +68,7 @@ export function EmailCodeField({ id, email, onEmailChange, verified, onVerifiedC
     setSending(true)
     setSendError(null)
     try {
-      const { data } = await sendEmailCode(target)
+      const { data } = await sendEmailCode(target, purpose)
       const at = Date.now()
       setSentTo(target)
       setExpiresAt(at + data.expiresInSeconds * 1000)
@@ -79,6 +81,7 @@ export function EmailCodeField({ id, email, onEmailChange, verified, onVerifiedC
     } catch (err) {
       const { status, body } = authErrorOf(err)
       if (status === 409 && body.error === EMAIL_ALREADY_EXISTS) setSendError(<EmailTaken />)
+      else if (status === 404 && body.error === AUTH_ERROR.EMAIL_NOT_REGISTERED) setSendError(<EmailNotRegistered />)
       else if (body.error === AUTH_ERROR.EMAIL_CODE_TOO_SOON) {
         setSendError('잠시 뒤 다시 받을 수 있습니다')
         const at = Date.now()
@@ -99,7 +102,7 @@ export function EmailCodeField({ id, email, onEmailChange, verified, onVerifiedC
     setChecking(true)
     setCodeError('')
     try {
-      await verifyEmailCode(sentTo, code)
+      await verifyEmailCode(sentTo, code, purpose)
       onVerifiedChange(true)
     } catch (err) {
       const { body } = authErrorOf(err)

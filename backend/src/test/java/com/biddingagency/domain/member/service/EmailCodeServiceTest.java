@@ -3,6 +3,7 @@ package com.biddingagency.domain.member.service;
 import com.biddingagency.domain.member.AuthError;
 import com.biddingagency.domain.member.AuthFlowException;
 import com.biddingagency.domain.member.EmailAlreadyExistsException;
+import com.biddingagency.domain.member.entity.EmailCodePurpose;
 import com.biddingagency.domain.member.entity.EmailVerificationCode;
 import com.biddingagency.domain.member.repository.EmailVerificationCodeRepository;
 import com.biddingagency.domain.member.repository.MemberRepository;
@@ -32,6 +33,7 @@ import static org.mockito.Mockito.never;
 
 /**
  * TC-AUTH-009 ~ TC-AUTH-016: 이메일 인증번호 보내기와 확인 (CR-146, BID-AUTH-005)
+ * TC-AUTH-031, 032, 038: 비밀번호 재설정 번호 보내기와 확인 (CR-186, BID-AUTH-009)
  */
 @ExtendWith(MockitoExtension.class)
 class EmailCodeServiceTest {
@@ -66,6 +68,7 @@ class EmailCodeServiceTest {
     private EmailVerificationCode code(String plain, LocalDateTime createdAt, int attempts) {
         return EmailVerificationCode.builder()
                 .email(EMAIL)
+                .purpose(EmailCodePurpose.SIGNUP)
                 .codeHash(EmailCodeService.hash(EMAIL, plain))
                 .createdAt(createdAt)
                 .expiresAt(createdAt.plusMinutes(10))
@@ -83,7 +86,7 @@ class EmailCodeServiceTest {
         given(notificationClient.sendEmail(eq(EMAIL), eq("BID_EMAIL_CODE"), anyMap()))
                 .willReturn(new BpNotificationClient.SendResult(true, "r1", null));
 
-        EmailCodeService.Sent sent = service.send(EMAIL);
+        EmailCodeService.Sent sent = service.send(EMAIL, EmailCodePurpose.SIGNUP);
 
         assertThat(sent.expiresInSeconds()).isEqualTo(600);
         ArgumentCaptor<EmailVerificationCode> saved = ArgumentCaptor.forClass(EmailVerificationCode.class);
@@ -101,7 +104,7 @@ class EmailCodeServiceTest {
     void 가입된메일_인증번호요청_거절() {
         given(memberRepository.existsByEmail(EMAIL)).willReturn(true);
 
-        assertThatThrownBy(() -> service.send(EMAIL)).isInstanceOf(EmailAlreadyExistsException.class);
+        assertThatThrownBy(() -> service.send(EMAIL, EmailCodePurpose.SIGNUP)).isInstanceOf(EmailAlreadyExistsException.class);
         then(notificationClient).should(never()).sendEmail(any(), any(), any());
     }
 
@@ -114,7 +117,7 @@ class EmailCodeServiceTest {
         given(codeRepository.findFirstByEmailOrderByCreatedAtDesc(EMAIL))
                 .willReturn(Optional.of(code("111111", NOW.minusSeconds(30), 0)));
 
-        assertThatThrownBy(() -> service.send(EMAIL))
+        assertThatThrownBy(() -> service.send(EMAIL, EmailCodePurpose.SIGNUP))
                 .isInstanceOfSatisfying(AuthFlowException.class, e -> {
                     assertThat(e.getError()).isEqualTo(AuthError.EMAIL_CODE_TOO_SOON);
                     assertThat(e.getDetails()).containsEntry("retryAfterSeconds", 30L);
@@ -132,7 +135,7 @@ class EmailCodeServiceTest {
                 .willReturn(Optional.of(code("111111", NOW.minusMinutes(5), 0)));
         given(codeRepository.countByEmailAndCreatedAtGreaterThanEqual(EMAIL, LocalDateTime.of(2026, 10, 12, 0, 0))).willReturn(10L);
 
-        assertThatThrownBy(() -> service.send(EMAIL))
+        assertThatThrownBy(() -> service.send(EMAIL, EmailCodePurpose.SIGNUP))
                 .isInstanceOfSatisfying(AuthFlowException.class,
                         e -> assertThat(e.getError()).isEqualTo(AuthError.EMAIL_CODE_DAILY_LIMIT));
     }
@@ -146,7 +149,7 @@ class EmailCodeServiceTest {
         given(notificationClient.sendEmail(any(), any(), any()))
                 .willReturn(new BpNotificationClient.SendResult(false, null, "no template"));
 
-        assertThatThrownBy(() -> service.send(EMAIL))
+        assertThatThrownBy(() -> service.send(EMAIL, EmailCodePurpose.SIGNUP))
                 .isInstanceOfSatisfying(AuthFlowException.class,
                         e -> assertThat(e.getError()).isEqualTo(AuthError.EMAIL_SEND_FAILED));
     }
@@ -157,9 +160,9 @@ class EmailCodeServiceTest {
     void 맞는번호_확인됨() {
         EmailVerificationCode latest = code("123456", NOW.minusMinutes(1), 0);
         given(policy.maxAttempts()).willReturn(5);
-        given(codeRepository.findFirstByEmailOrderByCreatedAtDesc(EMAIL)).willReturn(Optional.of(latest));
+        given(codeRepository.findFirstByEmailAndPurposeOrderByCreatedAtDesc(EMAIL, EmailCodePurpose.SIGNUP)).willReturn(Optional.of(latest));
 
-        service.verify(EMAIL, "123456");
+        service.verify(EMAIL, "123456", EmailCodePurpose.SIGNUP);
 
         assertThat(latest.getVerifiedAt()).isEqualTo(NOW);
     }
@@ -170,9 +173,9 @@ class EmailCodeServiceTest {
     void 틀린번호_MISMATCH() {
         EmailVerificationCode latest = code("123456", NOW.minusMinutes(1), 0);
         given(policy.maxAttempts()).willReturn(5);
-        given(codeRepository.findFirstByEmailOrderByCreatedAtDesc(EMAIL)).willReturn(Optional.of(latest));
+        given(codeRepository.findFirstByEmailAndPurposeOrderByCreatedAtDesc(EMAIL, EmailCodePurpose.SIGNUP)).willReturn(Optional.of(latest));
 
-        assertThatThrownBy(() -> service.verify(EMAIL, "000000"))
+        assertThatThrownBy(() -> service.verify(EMAIL, "000000", EmailCodePurpose.SIGNUP))
                 .isInstanceOfSatisfying(AuthFlowException.class, e -> {
                     assertThat(e.getError()).isEqualTo(AuthError.EMAIL_CODE_MISMATCH);
                     assertThat(e.getDetails()).containsEntry("remainingAttempts", 4);
@@ -185,9 +188,9 @@ class EmailCodeServiceTest {
     void 다섯번틀린뒤_LOCKED() {
         EmailVerificationCode latest = code("123456", NOW.minusMinutes(1), 5);
         given(policy.maxAttempts()).willReturn(5);
-        given(codeRepository.findFirstByEmailOrderByCreatedAtDesc(EMAIL)).willReturn(Optional.of(latest));
+        given(codeRepository.findFirstByEmailAndPurposeOrderByCreatedAtDesc(EMAIL, EmailCodePurpose.SIGNUP)).willReturn(Optional.of(latest));
 
-        assertThatThrownBy(() -> service.verify(EMAIL, "123456"))
+        assertThatThrownBy(() -> service.verify(EMAIL, "123456", EmailCodePurpose.SIGNUP))
                 .isInstanceOfSatisfying(AuthFlowException.class,
                         e -> assertThat(e.getError()).isEqualTo(AuthError.EMAIL_CODE_LOCKED));
         assertThat(latest.getVerifiedAt()).isNull();
@@ -199,9 +202,9 @@ class EmailCodeServiceTest {
     void 시간지난번호_EXPIRED() {
         EmailVerificationCode latest = code("123456", NOW.minusMinutes(11), 0);
         given(policy.maxAttempts()).willReturn(5);
-        given(codeRepository.findFirstByEmailOrderByCreatedAtDesc(EMAIL)).willReturn(Optional.of(latest));
+        given(codeRepository.findFirstByEmailAndPurposeOrderByCreatedAtDesc(EMAIL, EmailCodePurpose.SIGNUP)).willReturn(Optional.of(latest));
 
-        assertThatThrownBy(() -> service.verify(EMAIL, "123456"))
+        assertThatThrownBy(() -> service.verify(EMAIL, "123456", EmailCodePurpose.SIGNUP))
                 .isInstanceOfSatisfying(AuthFlowException.class,
                         e -> assertThat(e.getError()).isEqualTo(AuthError.EMAIL_CODE_EXPIRED));
     }
@@ -212,10 +215,10 @@ class EmailCodeServiceTest {
         EmailVerificationCode verified = code("123456", NOW.minusMinutes(5), 0);
         verified.markVerified(NOW.minusMinutes(4));
         given(policy.verifiedWindow()).willReturn(Duration.ofMinutes(30));
-        given(codeRepository.findFirstByEmailAndVerifiedAtIsNotNullAndConsumedAtIsNullOrderByVerifiedAtDesc(EMAIL))
+        given(codeRepository.findFirstByEmailAndPurposeAndVerifiedAtIsNotNullAndConsumedAtIsNullOrderByVerifiedAtDesc(EMAIL, EmailCodePurpose.SIGNUP))
                 .willReturn(Optional.of(verified));
 
-        service.consumeVerified(EMAIL);
+        service.consumeVerified(EMAIL, EmailCodePurpose.SIGNUP);
 
         assertThat(verified.getConsumedAt()).isEqualTo(NOW);
     }
@@ -224,11 +227,68 @@ class EmailCodeServiceTest {
     @DisplayName("확인한번호없음_가입_EMAIL_NOT_VERIFIED")
     void 확인없음_가입_막힘() {
         given(policy.verifiedWindow()).willReturn(Duration.ofMinutes(30));
-        given(codeRepository.findFirstByEmailAndVerifiedAtIsNotNullAndConsumedAtIsNullOrderByVerifiedAtDesc(EMAIL))
+        given(codeRepository.findFirstByEmailAndPurposeAndVerifiedAtIsNotNullAndConsumedAtIsNullOrderByVerifiedAtDesc(EMAIL, EmailCodePurpose.SIGNUP))
                 .willReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.consumeVerified(EMAIL))
+        assertThatThrownBy(() -> service.consumeVerified(EMAIL, EmailCodePurpose.SIGNUP))
                 .isInstanceOfSatisfying(AuthFlowException.class,
                         e -> assertThat(e.getError()).isEqualTo(AuthError.EMAIL_NOT_VERIFIED));
+    }
+
+    // TC-AUTH-031
+    @Test
+    @DisplayName("가입된메일_재설정번호요청_재설정틀로메일보내고_쓰임저장")
+    void 가입된메일_재설정번호요청_메일발송() {
+        defaultPolicy();
+        given(memberRepository.existsByEmail(EMAIL)).willReturn(true);
+        given(codeRepository.findFirstByEmailOrderByCreatedAtDesc(EMAIL)).willReturn(Optional.empty());
+        given(notificationClient.sendEmail(eq(EMAIL), eq("BID_PASSWORD_RESET_CODE"), anyMap()))
+                .willReturn(new BpNotificationClient.SendResult(true, "r1", null));
+
+        service.send(EMAIL, EmailCodePurpose.PASSWORD_RESET);
+
+        ArgumentCaptor<EmailVerificationCode> saved = ArgumentCaptor.forClass(EmailVerificationCode.class);
+        then(codeRepository).should().save(saved.capture());
+        assertThat(saved.getValue().getPurpose()).isEqualTo(EmailCodePurpose.PASSWORD_RESET);
+    }
+
+    // TC-AUTH-032
+    @Test
+    @DisplayName("가입안된메일_재설정번호요청_404이고_메일보내지않음")
+    void 가입안된메일_재설정번호요청_거절() {
+        given(memberRepository.existsByEmail(EMAIL)).willReturn(false);
+
+        assertThatThrownBy(() -> service.send(EMAIL, EmailCodePurpose.PASSWORD_RESET))
+                .isInstanceOfSatisfying(AuthFlowException.class,
+                        e -> assertThat(e.getError()).isEqualTo(AuthError.EMAIL_NOT_REGISTERED));
+        then(notificationClient).should(never()).sendEmail(any(), any(), any());
+    }
+
+    // TC-AUTH-038
+    @Test
+    @DisplayName("재설정번호없음_재설정쓰임으로확인_410이고_다른쓰임번호를보지않음")
+    void 다른쓰임번호만있음_확인_EXPIRED() {
+        given(codeRepository.findFirstByEmailAndPurposeOrderByCreatedAtDesc(EMAIL, EmailCodePurpose.PASSWORD_RESET))
+                .willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.verify(EMAIL, "123456", EmailCodePurpose.PASSWORD_RESET))
+                .isInstanceOfSatisfying(AuthFlowException.class,
+                        e -> assertThat(e.getError()).isEqualTo(AuthError.EMAIL_CODE_EXPIRED));
+        then(codeRepository).should(never()).findFirstByEmailOrderByCreatedAtDesc(any());
+    }
+
+    // TC-AUTH-033 의 번호 쪽
+    @Test
+    @DisplayName("재설정번호확인뒤_재설정에쓰면_consumed")
+    void 확인한재설정번호_쓰면_consumed() {
+        EmailVerificationCode verified = code("123456", NOW.minusMinutes(5), 0);
+        verified.markVerified(NOW.minusMinutes(4));
+        given(policy.verifiedWindow()).willReturn(Duration.ofMinutes(30));
+        given(codeRepository.findFirstByEmailAndPurposeAndVerifiedAtIsNotNullAndConsumedAtIsNullOrderByVerifiedAtDesc(
+                EMAIL, EmailCodePurpose.PASSWORD_RESET)).willReturn(Optional.of(verified));
+
+        service.consumeVerified(EMAIL, EmailCodePurpose.PASSWORD_RESET);
+
+        assertThat(verified.getConsumedAt()).isEqualTo(NOW);
     }
 }

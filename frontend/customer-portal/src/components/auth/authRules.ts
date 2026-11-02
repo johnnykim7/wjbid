@@ -2,6 +2,8 @@
 
 export const REQUIRED = '필수 입력 항목입니다'
 export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+// 서버 가입 검증(RegisterRequest)과 재설정 검증(ResetPassword)과 같은 값이다
+export const PASSWORD_MIN = 8
 export const COUNT_WORD = ['', '한', '두', '세', '네', '다섯', '여섯', '일곱', '여덟']
 
 export type CompanyKey = 'companyName' | 'businessRegistrationNumber' | 'contactPerson' | 'phone'

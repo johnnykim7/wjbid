@@ -26,14 +26,14 @@ public class EmailCodeController {
     @PostMapping
     @Operation(summary = "인증번호 보내기")
     public AuthFlowResponses.EmailCodeSent send(@Valid @RequestBody AuthFlowRequests.SendEmailCode request) {
-        EmailCodeService.Sent sent = emailCodeService.send(request.email());
+        EmailCodeService.Sent sent = emailCodeService.send(request.email(), request.purposeOrSignup());
         return new AuthFlowResponses.EmailCodeSent(sent.expiresInSeconds(), sent.resendAfterSeconds());
     }
 
     @PostMapping("/verify")
     @Operation(summary = "인증번호 확인")
     public AuthFlowResponses.EmailCodeVerified verify(@Valid @RequestBody AuthFlowRequests.VerifyEmailCode request) {
-        emailCodeService.verify(request.email(), request.code());
+        emailCodeService.verify(request.email(), request.code(), request.purposeOrSignup());
         return new AuthFlowResponses.EmailCodeVerified(true);
     }
 }

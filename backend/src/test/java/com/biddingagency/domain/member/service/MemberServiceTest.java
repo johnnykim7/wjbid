@@ -5,6 +5,7 @@ import com.biddingagency.domain.member.AuthFlowException;
 import com.biddingagency.domain.member.EmailAlreadyExistsException;
 import com.biddingagency.domain.member.MembershipError;
 import com.biddingagency.domain.member.MembershipException;
+import com.biddingagency.domain.member.entity.EmailCodePurpose;
 import com.biddingagency.domain.member.entity.Member;
 import com.biddingagency.domain.member.entity.MemberConsent;
 import com.biddingagency.domain.member.repository.MemberConsentRepository;
@@ -30,6 +31,7 @@ import static org.mockito.BDDMockito.*;
 /**
  * TC-AUTH-001 ~ TC-AUTH-003, TC-AUTH-018 ~ TC-AUTH-019: MemberService 단위 테스트
  * TC-MEM-017 ~ TC-MEM-020 (CR-183): 관리자 회원 정보 수정, 내 프로필 사업자등록번호
+ * TC-AUTH-033, 034 (CR-186): 비밀번호 재설정
  */
 @ExtendWith(MockitoExtension.class)
 class MemberServiceTest {
@@ -116,7 +118,7 @@ class MemberServiceTest {
                 .isInstanceOf(EmailAlreadyExistsException.class);
 
         then(memberRepository).should(never()).save(any());
-        then(emailCodeService).should(never()).consumeVerified(any());
+        then(emailCodeService).should(never()).consumeVerified(any(), any());
     }
 
     // TC-AUTH-018: 인증번호 확인 없이 가입
@@ -124,7 +126,7 @@ class MemberServiceTest {
     @DisplayName("확인한번호없음_가입_EMAIL_NOT_VERIFIED_BIZ062")
     void 확인없는이메일_회원가입_막힘() {
         given(memberRepository.existsByEmail(TEST_EMAIL)).willReturn(false);
-        willThrow(new AuthFlowException(AuthError.EMAIL_NOT_VERIFIED)).given(emailCodeService).consumeVerified(TEST_EMAIL);
+        willThrow(new AuthFlowException(AuthError.EMAIL_NOT_VERIFIED)).given(emailCodeService).consumeVerified(TEST_EMAIL, EmailCodePurpose.SIGNUP);
 
         assertThatThrownBy(() -> memberService.register(TEST_EMAIL, TEST_PASSWORD, TEST_COMPANY, TEST_CONTACT, TEST_PHONE,
                 TEST_BRN, true, true, false))
@@ -145,7 +147,7 @@ class MemberServiceTest {
                 TEST_BRN, true, true, false);
 
         assertThat(result.getEmailVerifiedAt()).isEqualTo(NOW);
-        then(emailCodeService).should().consumeVerified(TEST_EMAIL);
+        then(emailCodeService).should().consumeVerified(TEST_EMAIL, EmailCodePurpose.SIGNUP);
     }
 
     // TC-AUTH-006: 존재하지 않는 이메일로 조회
@@ -242,5 +244,50 @@ class MemberServiceTest {
         memberService.updateProfile(memberId, TEST_COMPANY, null, TEST_CONTACT, TEST_PHONE, null);
 
         assertThat(member.getBusinessRegistrationNumber()).isEqualTo(TEST_BRN);
+    }
+
+    // TC-AUTH-033
+    @Test
+    @DisplayName("재설정번호확인한회원_재설정_새비밀번호로바뀜")
+    void 확인한회원_비밀번호재설정_바뀜() {
+        Member member = customer();
+        given(memberRepository.findByEmail(TEST_EMAIL)).willReturn(Optional.of(member));
+        given(passwordEncoder.encode("newPassword123")).willReturn("encoded_new");
+
+        memberService.resetPassword(TEST_EMAIL, "newPassword123");
+
+        assertThat(member.getPasswordHash()).isEqualTo("encoded_new");
+        then(emailCodeService).should().consumeVerified(TEST_EMAIL, EmailCodePurpose.PASSWORD_RESET);
+    }
+
+    // TC-AUTH-034
+    @Test
+    @DisplayName("재설정번호확인없음_재설정_EMAIL_NOT_VERIFIED이고_비밀번호그대로")
+    void 확인없는회원_비밀번호재설정_막힘() {
+        Member member = Member.builder()
+                .email(TEST_EMAIL)
+                .passwordHash("encoded_old")
+                .companyName(TEST_COMPANY)
+                .role(Member.Role.CUSTOMER)
+                .build();
+        given(memberRepository.findByEmail(TEST_EMAIL)).willReturn(Optional.of(member));
+        willThrow(new AuthFlowException(AuthError.EMAIL_NOT_VERIFIED))
+                .given(emailCodeService).consumeVerified(TEST_EMAIL, EmailCodePurpose.PASSWORD_RESET);
+
+        assertThatThrownBy(() -> memberService.resetPassword(TEST_EMAIL, "newPassword123"))
+                .isInstanceOfSatisfying(AuthFlowException.class,
+                        e -> assertThat(e.getError()).isEqualTo(AuthError.EMAIL_NOT_VERIFIED));
+        assertThat(member.getPasswordHash()).isEqualTo("encoded_old");
+    }
+
+    @Test
+    @DisplayName("가입안된메일_재설정_EMAIL_NOT_REGISTERED이고_번호를쓰지않음")
+    void 가입안된메일_비밀번호재설정_404() {
+        given(memberRepository.findByEmail(TEST_EMAIL)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> memberService.resetPassword(TEST_EMAIL, "newPassword123"))
+                .isInstanceOfSatisfying(AuthFlowException.class,
+                        e -> assertThat(e.getError()).isEqualTo(AuthError.EMAIL_NOT_REGISTERED));
+        then(emailCodeService).should(never()).consumeVerified(any(), any());
     }
 }

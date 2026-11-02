@@ -9,7 +9,7 @@ import java.util.UUID;
 
 /**
  * 이메일 인증번호 (CR-146, BIZ-062). 번호는 해시로만 둔다.
- * 확인(verified_at)을 마친 번호는 가입 한 번에 쓰고(consumed_at) 끝난다.
+ * 확인(verified_at)을 마친 번호는 그 쓰임(purpose)의 일 한 번에 쓰고(consumed_at) 끝난다 (CR-186, BIZ-097).
  */
 @Entity
 @Table(name = "email_verification_codes")
@@ -26,6 +26,10 @@ public class EmailVerificationCode {
 
     @Column(name = "email", nullable = false)
     private String email;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "purpose", nullable = false, length = 20)
+    private EmailCodePurpose purpose;
 
     @Column(name = "code_hash", nullable = false, length = 64)
     private String codeHash;

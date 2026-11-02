@@ -1,21 +1,34 @@
 package com.biddingagency.dto;
 
+import com.biddingagency.domain.member.entity.EmailCodePurpose;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 /**
- * 인증번호와 SNS 가입 요청 모양 (CR-146, T3-2)
+ * 인증번호, 비밀번호 재설정, SNS 가입 요청 모양 (CR-146, CR-186, T3-2)
  */
 public final class AuthFlowRequests {
 
     private AuthFlowRequests() {
     }
 
-    public record SendEmailCode(@Email @NotBlank String email) {
+    /** purpose 를 보내지 않으면 가입 번호다 (CR-186) */
+    public record SendEmailCode(@Email @NotBlank String email, EmailCodePurpose purpose) {
+        public EmailCodePurpose purposeOrSignup() {
+            return purpose == null ? EmailCodePurpose.SIGNUP : purpose;
+        }
     }
 
-    public record VerifyEmailCode(@Email @NotBlank String email, @NotBlank String code) {
+    public record VerifyEmailCode(@Email @NotBlank String email, @NotBlank String code, EmailCodePurpose purpose) {
+        public EmailCodePurpose purposeOrSignup() {
+            return purpose == null ? EmailCodePurpose.SIGNUP : purpose;
+        }
+    }
+
+    /** 새 비밀번호 길이는 가입(RegisterRequest)과 같다 (CR-186) */
+    public record ResetPassword(@Email @NotBlank String email, @NotBlank @Size(min = 8) String newPassword) {
     }
 
     public record SnsLogin(@NotBlank String ticket) {

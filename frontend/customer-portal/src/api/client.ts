@@ -56,7 +56,7 @@ export const register = (data: {
   agreeTerms: boolean; agreePrivacy: boolean; agreeMarketing: boolean
 }) => api.post('/auth/register', data)
 
-/** 인증번호와 SNS 가입에서 서버가 주는 오류 코드 (CR-146) */
+/** 인증번호, 비밀번호 재설정, SNS 가입에서 서버가 주는 오류 코드 (CR-146, CR-186) */
 export const AUTH_ERROR = {
   EMAIL_CODE_TOO_SOON: 'EMAIL_CODE_TOO_SOON',
   EMAIL_CODE_DAILY_LIMIT: 'EMAIL_CODE_DAILY_LIMIT',
@@ -65,6 +65,7 @@ export const AUTH_ERROR = {
   EMAIL_CODE_EXPIRED: 'EMAIL_CODE_EXPIRED',
   EMAIL_CODE_LOCKED: 'EMAIL_CODE_LOCKED',
   EMAIL_NOT_VERIFIED: 'EMAIL_NOT_VERIFIED',
+  EMAIL_NOT_REGISTERED: 'EMAIL_NOT_REGISTERED',
   SNS_TICKET_EXPIRED: 'SNS_TICKET_EXPIRED',
   SNS_ACCOUNT_IN_USE: 'SNS_ACCOUNT_IN_USE',
 } as const
@@ -77,11 +78,18 @@ export const authErrorOf = (err: unknown) => {
   return { status: res?.status, body: res?.data ?? {} }
 }
 
-export const sendEmailCode = (email: string) =>
-  api.post<{ expiresInSeconds: number; resendAfterSeconds: number }>('/auth/email-codes', { email })
+/** 인증번호의 쓰임. 가입 번호와 재설정 번호는 서로 쓰지 못한다 (CR-186, BIZ-097) */
+export type EmailCodePurpose = 'SIGNUP' | 'PASSWORD_RESET'
 
-export const verifyEmailCode = (email: string, code: string) =>
-  api.post<{ verified: boolean }>('/auth/email-codes/verify', { email, code })
+export const sendEmailCode = (email: string, purpose: EmailCodePurpose = 'SIGNUP') =>
+  api.post<{ expiresInSeconds: number; resendAfterSeconds: number }>('/auth/email-codes', { email, purpose })
+
+export const verifyEmailCode = (email: string, code: string, purpose: EmailCodePurpose = 'SIGNUP') =>
+  api.post<{ verified: boolean }>('/auth/email-codes/verify', { email, code, purpose })
+
+/** 재설정 번호 확인을 마친 이메일만 바뀐다 (CR-186) */
+export const resetPassword = (email: string, newPassword: string) =>
+  api.post<{ reset: boolean }>('/auth/password-reset', { email, newPassword })
 
 export type SnsProviderItem = { provider: string; startPath: string }
 

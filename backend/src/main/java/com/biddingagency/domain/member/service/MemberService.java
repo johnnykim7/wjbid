@@ -1,8 +1,11 @@
 package com.biddingagency.domain.member.service;
 
+import com.biddingagency.domain.member.AuthError;
+import com.biddingagency.domain.member.AuthFlowException;
 import com.biddingagency.domain.member.EmailAlreadyExistsException;
 import com.biddingagency.domain.member.MembershipError;
 import com.biddingagency.domain.member.MembershipException;
+import com.biddingagency.domain.member.entity.EmailCodePurpose;
 import com.biddingagency.domain.member.entity.Member;
 import com.biddingagency.domain.member.entity.MemberConsent;
 import com.biddingagency.domain.member.repository.MemberConsentRepository;
@@ -47,7 +50,7 @@ public class MemberService {
         if (memberRepository.existsByEmail(email)) {
             throw new EmailAlreadyExistsException();
         }
-        emailCodeService.consumeVerified(email);
+        emailCodeService.consumeVerified(email, EmailCodePurpose.SIGNUP);
         return createCustomer(email, passwordEncoder.encode(password), LocalDateTime.now(clock), companyName,
                 contactPerson, phone, businessRegistrationNumber, agreeTerms, agreePrivacy, agreeMarketing);
     }
@@ -145,6 +148,20 @@ public class MemberService {
         }
         member.updatePassword(passwordEncoder.encode(newPassword));
         log.info("Password changed for member: {}", member.getEmail());
+    }
+
+    /**
+     * 비밀번호 재설정 (CR-186, BID-AUTH-009). 재설정 번호 확인을 마친 이메일만 바꾸고 그 번호는 여기서 쓰고 끝낸다(BIZ-097).
+     * SNS 로만 가입해 비밀번호가 없던 회원도 이것으로 비밀번호를 만든다.
+     */
+    @Transactional
+    public void resetPassword(String rawEmail, String newPassword) {
+        String email = EmailCodeService.normalize(rawEmail);
+        Member member = memberRepository.findByEmail(email)
+                .orElseThrow(() -> new AuthFlowException(AuthError.EMAIL_NOT_REGISTERED));
+        emailCodeService.consumeVerified(email, EmailCodePurpose.PASSWORD_RESET);
+        member.updatePassword(passwordEncoder.encode(newPassword));
+        log.info("Password reset for member: {}", member.getEmail());
     }
 
     @Transactional
