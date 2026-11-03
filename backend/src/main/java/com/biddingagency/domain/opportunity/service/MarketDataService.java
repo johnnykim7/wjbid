@@ -1,5 +1,7 @@
 package com.biddingagency.domain.opportunity.service;
 
+import com.biddingagency.common.SearchText;
+import com.biddingagency.domain.base.service.MilitaryBaseService;
 import com.biddingagency.domain.notice.entity.Notice;
 import com.biddingagency.domain.notice.service.NoticeService;
 import com.biddingagency.domain.opportunity.MarketGroup;
@@ -40,7 +42,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -76,13 +77,14 @@ public class MarketDataService {
 
     public enum AwardSort { LATEST, AMOUNT }
 
-    public enum CollectedSort { LATEST, DEADLINE }
+    /** OPEN_FIRST 는 마감 전 공고 먼저, 그다음 나머지. 둘 다 게시일 최신순 (CR-187) */
+    public enum CollectedSort { LATEST, DEADLINE, OPEN_FIRST }
 
     /**
      * 모은 공고 목록 거르기 (T3-2 C-2 collected).
      *
      * @param latestOnly    같은 공고번호는 마지막 판만 (업종별 발주의 최근 공고, 마감 전 공고)
-     * @param q             한글 제목, 원문 제목, 공고번호에서 찾는 검색어 (CR-155)
+     * @param q             한글 제목, 원문 제목, 공고번호와 기지 이름, 지역에서 찾는 검색어 (CR-155, CR-187)
      * @param sort          null 이면 게시일 최신순 (CR-155)
      * @param dueWithinDays 마감이 지금부터 이 날 수 안인 것만 (CR-155)
      */
@@ -96,6 +98,7 @@ public class MarketDataService {
     private final NaicsTopLevelKoMapper naicsMapper;
     private final SystemSettingService settingService;
     private final NoticeService noticeService;
+    private final MilitaryBaseService baseService;
     private final Clock clock;
 
     /**
@@ -118,12 +121,16 @@ public class MarketDataService {
                 .filter(s -> f.dueWithinDays() == null || dueWithin(s, now, f.dueWithinDays()))
                 .toList();
         if (f.latestOnly()) narrowed = latestPerSolicitation(narrowed);
-        if (f.q() != null) narrowed = narrowed.stream().filter(s -> matches(s, f.q())).toList();
+        if (f.q() != null) {
+            String needle = SearchText.key(f.q());
+            Set<UUID> baseIds = baseService.opportunityIdsNamed(f.q());
+            narrowed = narrowed.stream().filter(s -> matches(s, needle) || baseIds.contains(s.id())).toList();
+        }
 
         List<TypeCount> typeCounts = typeCounts(narrowed);
         List<MarketSource> filtered = narrowed.stream()
                 .filter(s -> f.type() == null || f.type().equals(s.type()))
-                .sorted(f.sort() == CollectedSort.DEADLINE ? DEADLINE_FIRST : LATEST_FIRST)
+                .sorted(order(f.sort(), now))
                 .toList();
 
         MarketRowAssembler.Context ctx = rowAssembler.context(all);
@@ -328,14 +335,18 @@ public class MarketDataService {
         return MarketRowAssembler.isOpen(s, now) && !s.responseDeadline().isAfter(now.plusDays(days));
     }
 
-    private static boolean matches(MarketSource s, String q) {
-        String needle = q.toLowerCase(Locale.ROOT);
-        return containsIgnoreCase(s.titleKo(), needle) || containsIgnoreCase(s.title(), needle)
-                || containsIgnoreCase(s.solicitationNumber(), needle);
+    private static Comparator<MarketSource> order(CollectedSort sort, LocalDateTime now) {
+        if (sort == CollectedSort.DEADLINE) return DEADLINE_FIRST;
+        if (sort == CollectedSort.OPEN_FIRST) {
+            return Comparator.<MarketSource, Boolean>comparing(s -> !MarketRowAssembler.isOpen(s, now))
+                    .thenComparing(LATEST_FIRST);
+        }
+        return LATEST_FIRST;
     }
 
-    private static boolean containsIgnoreCase(String value, String lowerNeedle) {
-        return value != null && value.toLowerCase(Locale.ROOT).contains(lowerNeedle);
+    private static boolean matches(MarketSource s, String needleKey) {
+        return SearchText.contains(s.titleKo(), needleKey) || SearchText.contains(s.title(), needleKey)
+                || SearchText.contains(s.solicitationNumber(), needleKey);
     }
 
     /** 같은 공고번호는 게시가 가장 늦은 판 하나만 남긴다. 사이트 자료 규모도 같은 계산을 쓴다(CR-162) */

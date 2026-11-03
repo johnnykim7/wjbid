@@ -9,7 +9,8 @@ export const searchHref = (keyword?: string) =>
 /** 검색 구분. 공고 검색은 지금 제목으로만 찾으므로 공고번호·기지명은 검색이 그 항목을 지원할 때 넣는다 */
 export const SEARCH_FIELDS = [{ value: 'title', label: '공고명' }]
 export const SEARCH_PLACEHOLDER = '공고명, 공고번호, 기지명을 입력하세요'
-export const RECOMMENDED_KEYWORDS = ['미화 용역', '시설 유지관리', '오산', '험프리스', '차량 정비']
+/** 머리말 추천 검색어로 보이는 기지 수 (CR-187) */
+export const RECOMMENDED_BASE_COUNT = 5
 
 export const FOOTER_LINKS = [
   { label: '이용약관', to: '/terms' },

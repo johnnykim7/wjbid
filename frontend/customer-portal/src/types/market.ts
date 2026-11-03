@@ -144,10 +144,10 @@ export interface CollectedQuery {
   sector?: string
   openOnly?: boolean
   latestOnly?: boolean
-  /** 한글 제목, 원문 제목, 공고번호에서 찾는다 (CR-155) */
+  /** 한글 제목, 원문 제목, 공고번호, 기지 이름과 지역에서 찾는다 (CR-155, CR-187) */
   q?: string
-  /** 기본 LATEST 게시일 최신순, DEADLINE 마감이 가까운 순 (CR-155) */
-  sort?: 'LATEST' | 'DEADLINE'
+  /** 기본 LATEST 게시일 최신순, DEADLINE 마감이 가까운 순, OPEN_FIRST 마감 전 공고 먼저 (CR-155, CR-187) */
+  sort?: 'LATEST' | 'DEADLINE' | 'OPEN_FIRST'
   /** 마감이 지금부터 이 날 수 안인 것만 (CR-155) */
   dueWithinDays?: number
   page?: number

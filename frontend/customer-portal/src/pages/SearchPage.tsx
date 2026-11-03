@@ -5,15 +5,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '.
 import { Pagination } from '../components/ui/pagination'
 import { LoadingSpinner } from '../components/ui/loading-spinner'
 import { EmptyState } from '../components/ui/empty-state'
-import {
-  Button,
-  Input,
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from '@therecommerce-develop/ds-ui'
+import { Button, Input } from '@therecommerce-develop/ds-ui'
 import {
   addBookmark,
   removeBookmark,
@@ -40,6 +32,8 @@ const PLACE = findMenuItem('bids', 'open')
 
 /** 모은 공고 중 마감 전인 것, 같은 공고번호는 마지막 판 하나 (CR-155, BIZ-069) */
 const OPEN_QUERY: CollectedQuery = { openOnly: true, latestOnly: true }
+/** 검색어가 있으면 마감 지난 공고와 낙찰 공지까지, 마감 전 공고 먼저 (CR-187, BIZ-098) */
+const SEARCH_QUERY: CollectedQuery = { latestOnly: true, sort: 'OPEN_FIRST' }
 const PAGE_SIZE = 20
 
 /** 판정할 수 없는 공고(분석 전, 참가 자격 0개)는 - 로 둔다 */
@@ -54,16 +48,6 @@ function MemberTagCell({ hasNotice }: { hasNotice: boolean }) {
     : <span className="vd-dash">{VERDICT_NONE}</span>
 }
 
-const AGENCIES = [
-  '모든 발주처',
-  'Dept. of Defense (DoD)',
-  'Dept. of Veterans Affairs (VA)',
-  'General Services Admin (GSA)',
-  'Dept. of the Army',
-  'Dept. of the Navy',
-  'Dept. of Air Force',
-]
-
 export default function SearchPage() {
   const navigate = useNavigate()
   // CR-127 — 홈 검색바가 /search?keyword=... 로 넘겨준 키워드를 초기값으로 사용
@@ -75,6 +59,13 @@ export default function SearchPage() {
   const [totalPages, setTotalPages] = useState(1)
   const [totalElements, setTotalElements] = useState(0)
   const [keyword, setKeyword] = useState(initialKeyword)
+  // 이 화면에 있는 채로 머리말 검색이나 추천 검색어를 누르면 주소의 검색어만 바뀐다(CR-187)
+  const [urlKeyword, setUrlKeyword] = useState(initialKeyword)
+  if (urlKeyword !== initialKeyword) {
+    setUrlKeyword(initialKeyword)
+    setKeyword(initialKeyword)
+    setPage(0)
+  }
   const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set())
   const [stats, setStats] = useState({ bookmarks: 0, proposals: 0 })
   // 검색어와 상관없이 마감 전 공고 전체 건수. 불러오기 전에는 null
@@ -121,7 +112,8 @@ export default function SearchPage() {
     setLoadError(null)
     try {
       const q = kw.trim()
-      const data = await marketApi.collected({ ...OPEN_QUERY, q: q || undefined, page: p, size: PAGE_SIZE })
+      const query = q ? { ...SEARCH_QUERY, q } : OPEN_QUERY
+      const data = await marketApi.collected({ ...query, page: p, size: PAGE_SIZE })
       setItems(data.content ?? [])
       setTotalPages(data.totalPages ?? 1)
       setTotalElements(data.totalElements ?? 0)
@@ -144,7 +136,7 @@ export default function SearchPage() {
         .then((data) => setOpenTotal(data.totalElements ?? 0))
         .catch(() => setOpenTotal(null))
     }
-  }, [])
+  }, [initialKeyword])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -178,7 +170,10 @@ export default function SearchPage() {
 
   return (
     <SubPageFrame group={PLACE.group} item={PLACE.item}>
-      <PageHead title={T.title} desc={T.desc} />
+      <PageHead
+        title={searchedKeyword ? T.searchTitle : T.title}
+        desc={searchedKeyword ? T.searchDesc : T.desc}
+      />
       <div className="space-y-6">
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
@@ -223,32 +218,13 @@ export default function SearchPage() {
               <i className="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-ink-mute text-sm z-10" />
               <Input
                 type="text"
-                placeholder="공고번호, 키워드(예: IT Support), 발주처 검색"
+                placeholder={T.placeholder}
                 value={keyword}
                 onChange={(e) => setKeyword(e.target.value)}
                 className="w-full pl-10"
               />
             </div>
             <div className="flex gap-2 w-full md:w-auto flex-wrap">
-              <Select defaultValue={AGENCIES[0]}>
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="발주처 선택" />
-                </SelectTrigger>
-                <SelectContent>
-                  {AGENCIES.map((a) => (
-                    <SelectItem key={a} value={a}>{a}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select defaultValue="active">
-                <SelectTrigger className="w-[160px]">
-                  <SelectValue placeholder="상태 선택" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">진행 중</SelectItem>
-                  <SelectItem value="updated">수정됨</SelectItem>
-                </SelectContent>
-              </Select>
               <Button type="submit">
                 <i className="fa-solid fa-search mr-1" /> 검색
               </Button>
@@ -320,7 +296,7 @@ export default function SearchPage() {
                         </TableCell>
                         <TableCell className="whitespace-nowrap align-top">
                           <div className="flex items-center gap-1.5">
-                            <span className="text-sm text-ink-sub">{bid.responseDeadline?.slice(0, 10)}</span>
+                            <span className="text-sm text-ink-sub">{bid.responseDeadline?.slice(0, 10) || '-'}</span>
                             <DdayBadge deadline={bid.responseDeadline?.slice(0, 10)} />
                           </div>
                         </TableCell>

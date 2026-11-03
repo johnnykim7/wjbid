@@ -7,13 +7,13 @@ import { CiLogo, Icon } from './Icon'
 import { MENU, menuHref } from './menu'
 import {
   LOGO_LABEL,
-  RECOMMENDED_KEYWORDS,
   SEARCH_FIELDS,
   SEARCH_PLACEHOLDER,
   SERVICE_LINE,
   searchHref,
 } from './siteContent'
 import type { MemberSummary } from './useMemberSummary'
+import { useRecommendedKeywords } from './useRecommendedKeywords'
 
 /**
  * 공통 틀 위쪽: 유틸 띠, 머리말(로고·검색·아이콘), 메뉴 띠, 전체메뉴 (CR-127).
@@ -26,6 +26,7 @@ export function AppHeader({ member }: { member: MemberSummary }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [field, setField] = useState(SEARCH_FIELDS[0].value)
   const [keyword, setKeyword] = useState('')
+  const recommended = useRecommendedKeywords()
   const rootRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => setMenuOpen(false), [pathname, search])
@@ -106,10 +107,14 @@ export function AppHeader({ member }: { member: MemberSummary }) {
               <Button type="submit" className="wj-reset go" aria-label="검색"><Icon name="search" /></Button>
             </form>
             <div className="kw">
-              <span>추천 검색어</span>
-              {RECOMMENDED_KEYWORDS.map((k) => (
-                <Link key={k} to={searchHref(k)}>{k}</Link>
-              ))}
+              {recommended.length > 0 && (
+                <>
+                  <span>추천 검색어</span>
+                  {recommended.map((k) => (
+                    <Link key={k} to={searchHref(k)}>{k}</Link>
+                  ))}
+                </>
+              )}
               <Link className="adv" to={searchHref()}>상세검색</Link>
             </div>
           </div>
