@@ -1,6 +1,6 @@
 # 실행 지시서: SAM.gov Bidding Agency Platform
 
-> 설계 버전: 1.23 | 최종 수정: 2026-11-03 | 관련 CR: CR-003, CR-132, CR-133, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-146, CR-147, CR-153, CR-155, CR-157, CR-159, CR-160, CR-162, CR-169, CR-170, CR-178, CR-180, CR-181, CR-182, CR-183, CR-186
+> 설계 버전: 1.24 | 최종 수정: 2026-11-03 | 관련 CR: CR-003, CR-132, CR-133, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-146, CR-147, CR-153, CR-155, CR-157, CR-159, CR-160, CR-162, CR-169, CR-170, CR-178, CR-180, CR-181, CR-182, CR-183, CR-186, CR-187
 
 > **프로젝트:** bidding-agency-platform (미군 조달 입찰 AI 대행 서비스)
 > **프로젝트 유형:** 풀스택 (BE: Java 17 + Spring Boot 3.2 / FE: React 19 × 2)
@@ -536,7 +536,7 @@ sequenceDiagram
 | 회원가입 | `POST /auth/email-codes`, `/auth/email-codes/verify`, `/auth/register` | 이메일 인증번호 확인을 마친 주소만 가입 (BIZ-062, CR-146) |
 | 비밀번호 재설정 | `POST /auth/email-codes`(purpose PASSWORD_RESET), `/auth/email-codes/verify`, `/auth/password-reset` | 재설정 번호 확인을 마친 사람만 비밀번호를 바꾼다 (BIZ-097, CR-186) |
 | SNS 가입·로그인 | `GET /auth/sns/providers`, `/oauth2/authorization/{provider}`, `/auth/sns/signup/{ticket}`, `POST /auth/sns/register`, `/auth/sns/login` | 네이버, 카카오(구글 보류). 키가 있는 곳만 (CR-146) |
-| 공고 검색 | ~~`GET /opportunities`, `/search`, `/near-deadline`~~ `GET /opportunities/collected` (CR-155) | 필터, 페이징. CR-155: 모은 공고 중 마감 전인 것 전부(BIZ-069), 검색어 `q`, 줄을 누르면 공고문 상세 또는 원본 공고 상세. CR-147: 화면 이름 마감 전 공고, 속페이지 틀, 숫자 칸은 검색어와 상관없는 마감 전 공고 전체 건수, 빈 상태 두 가지 |
+| 공고 검색 | ~~`GET /opportunities`, `/search`, `/near-deadline`~~ `GET /opportunities/collected` (CR-155) | 필터, 페이징. CR-155: 모은 공고 중 마감 전인 것 전부(BIZ-069), 검색어 `q`, 줄을 누르면 공고문 상세 또는 원본 공고 상세. CR-147: 화면 이름 마감 전 공고, 속페이지 틀, 숫자 칸은 검색어와 상관없는 마감 전 공고 전체 건수, 빈 상태 두 가지. CR-187: 검색어가 있으면 `latestOnly=true&sort=OPEN_FIRST&q=` 로 모은 공고 전부(BIZ-098), 제목 검색 결과, 발주처 칸과 상태 칸을 뺌. 머리말 추천 검색어는 `GET /opportunities/stats/bases` 의 공고 많은 기지 5곳 |
 | 공고 상세 | `GET /opportunities/{id}`, `/requirements`, `/attachments` | 관심 공고는 응답의 `opportunityId` 로(CR-155) |
 | 원본 공고 상세 | `GET /opportunities/origin/{opportunityId}` | 한글 본문(`descriptionKo`) 먼저, 원문 본문은 접어 둔다(CR-152, CR-155) |
 | 회원 구분 (CR-157) | `GET /members/me` 의 `membership` | 원본 공고 상세의 공고문 이동과 회원 전용 안내, 공고 상세 회원 안내, 판정 칸, 적격성 진단, 공고별 판정, 요금 안내 지금 단계, 내 프로필이 이 값으로 가른다. 서버는 공고문 조회, 적격성, 입찰 신청을 BIZ-071 로 다시 막는다 |

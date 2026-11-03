@@ -1,6 +1,6 @@
 # SAM.gov Bidding Agency Platform API 설계
 
-> 설계 버전: 1.30 | 최종 수정: 2026-11-03 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-144, CR-146, CR-147, CR-152, CR-153, CR-155, CR-157, CR-159, CR-160, CR-162, CR-168, CR-169, CR-170, CR-178, CR-179, CR-180, CR-182, CR-183, CR-186
+> 설계 버전: 1.31 | 최종 수정: 2026-11-03 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-144, CR-146, CR-147, CR-152, CR-153, CR-155, CR-157, CR-159, CR-160, CR-162, CR-168, CR-169, CR-170, CR-178, CR-179, CR-180, CR-182, CR-183, CR-186, CR-187
 
 > 단계: 3. Detail Design | 실행스펙 섹션 3에 포함
 >
@@ -196,7 +196,7 @@
 
 | 메서드 | 경로 | 설명 | 인증 | 기능 ID |
 |--------|------|------|------|---------|
-| GET | /opportunities/collected | 모은 공고 목록, 게시일 최신순, 쪽. 거르기: `group`(PRE 사전, BID 입찰, AWARD 낙찰, OTHER 그 밖), `type`(SAM 공고 유형), `month`(게시 달 YYYY-MM), `sector`(업종 대분류, 예 23, 31-33, NONE), `openOnly`(답변 기한 남은 것만), `latestOnly`(같은 공고번호는 마지막 판 하나만, 업종별 최근 공고에 씀). 같은 거르기에서 유형별 건수를 함께 준다. CR-155 에서 더한 것: `q`(검색어. 한글 제목, 원문 제목, 공고번호에 대소문자 없이 들어 있는 것), `sort`(LATEST 게시일 최신순이 기본, DEADLINE 마감이 가까운 순이고 마감이 같으면 게시일 최신순), `dueWithinDays`(마감이 지금부터 N일 안인 것만, 1 이상). `openOnly` 는 낙찰 공지를 늘 뺀다(BIZ-069). 마감 전 공고 화면과 첫 화면은 `openOnly=true&latestOnly=true` 로 부른다 | | BID-MKT-001, 005, 006, BID-BROWSE-001, 005 |
+| GET | /opportunities/collected | 모은 공고 목록, 게시일 최신순, 쪽. 거르기: `group`(PRE 사전, BID 입찰, AWARD 낙찰, OTHER 그 밖), `type`(SAM 공고 유형), `month`(게시 달 YYYY-MM), `sector`(업종 대분류, 예 23, 31-33, NONE), `openOnly`(답변 기한 남은 것만), `latestOnly`(같은 공고번호는 마지막 판 하나만, 업종별 최근 공고에 씀). 같은 거르기에서 유형별 건수를 함께 준다. CR-155 에서 더한 것: `q`(검색어. 한글 제목, 원문 제목, 공고번호에 대소문자 없이 들어 있는 것), `sort`(LATEST 게시일 최신순이 기본, DEADLINE 마감이 가까운 순이고 마감이 같으면 게시일 최신순), `dueWithinDays`(마감이 지금부터 N일 안인 것만, 1 이상). `openOnly` 는 낙찰 공지를 늘 뺀다(BIZ-069). 마감 전 공고 화면과 첫 화면은 `openOnly=true&latestOnly=true` 로 부른다. CR-187 에서 바꾼 것: `q` 는 띄어쓰기도 무시하고, 기지의 한글 이름, 영문 이름, 지역에 들어 있으면 그 기지 공고(BIZ-031, 같은 공고번호의 모든 차수와 낙찰 공지)도 찾는다(BIZ-098). `sort=OPEN_FIRST` 를 더한다. 공고 검색 화면은 검색어가 있으면 `latestOnly=true&sort=OPEN_FIRST&q=` 로 불러 마감 지난 공고와 낙찰 공지까지 받는다 | | BID-MKT-001, 005, 006, BID-BROWSE-001, 005 |
 | GET | /opportunities/amendments | 같은 공고번호로 두 번 이상 올라온 공고 묶음(낙찰 공지 제외), 마지막 게시일 최신순, 쪽. `openOnly`(마지막 판 마감 전만), `solicitationNumber`(그 공고번호 묶음만, 사전 공고의 "본 공고 나옴" 에서 씀). 묶음마다 판 목록. `openCount`(진행 중 묶음 수), `versionCount`(묶음에 든 판 수)를 함께 준다 | | BID-MKT-002 |
 | GET | /opportunities/sample | 설정 `NOTICE_SAMPLE_ID` 의 공개 공고문. 응답 `notice`(공고 상세와 같은 공고문), `originalTitle`(원문 제목), `samUrl`(SAM.gov 공개 주소), `firstPostedDate`(같은 공고번호의 첫 게시일, 낙찰 공지 제외). 없으면 204 | | BID-MKT-003 |
 | GET | /opportunities/awards | 낙찰 공지 목록, 쪽. `month`(공지 달), `sort`(LATEST 최신순, AMOUNT 금액순). 요약(건수, 금액 공개 건수, 합계, 최대)을 함께 준다 | | BID-MKT-004 |
@@ -226,7 +226,7 @@
 
 **자료 기간**: 응답마다 `dataFrom`, `dataTo`(대상 공고의 첫·마지막 게시일)와 `total` 을 준다.
 
-**순서**: 목록은 게시 시각 최신순이고, 같은 시각이면 DB 의 id 순(바이트 순)이다. collected 의 `sort=DEADLINE` 은 마감 시각이 이른 순이고, 마감이 같으면 게시 시각 최신순, 그다음 id 순이다(CR-155).
+**순서**: 목록은 게시 시각 최신순이고, 같은 시각이면 DB 의 id 순(바이트 순)이다. collected 의 `sort=DEADLINE` 은 마감 시각이 이른 순이고, 마감이 같으면 게시 시각 최신순, 그다음 id 순이다(CR-155). collected 의 `sort=OPEN_FIRST` 는 마감 전 공고(BIZ-069 의 마감 기준) 먼저, 그다음 나머지이고 둘 다 게시 시각 최신순, 그다음 id 순이다(CR-187).
 
 **낙찰 요약**: `total`, `amountKnownCount`, `amountSum`, `amountMax`, `awardeeKnownCount`(업체 이름 있는 공지 수, CR-136 전에는 0). 화면은 `awardeeKnownCount` 가 0 이면 업체 이름을 모으지 않는다고 밝히고, 1 이상이면 업체 칸을 보인다(CR-136 과 계약, 10/11).
 
@@ -243,7 +243,7 @@
 | 메서드 | 경로 | 설명 | 인증 | 기능 ID |
 |--------|------|------|------|---------|
 | GET | /opportunities/awardees | 낙찰 업체 목록. `q`(업체 이름 일부, 대소문자 무시), `sort`(COUNT 건수순 기본, AMOUNT 금액순). 업체마다 낙찰 공지 목록을 함께 준다 | | BID-MKT-009 |
-| GET | /opportunities/stats/bases | 기지별 공고 수·낙찰 수·마감 전 공고 수, 기지를 알 수 없는 공고 수, 자료 기간 | | BID-MKT-011 |
+| GET | /opportunities/stats/bases | 기지별 공고 수·낙찰 수·마감 전 공고 수, 기지를 알 수 없는 공고 수, 자료 기간. 고객 머리말 추천 검색어도 이것을 쓴다(CR-187) | | BID-MKT-011 |
 | GET | /opportunities/stats/bases/{baseId}/opportunities | 그 기지 공고 최근 게시순 `size`건(기본 10, 최대 50). 낙찰 공지 제외 | | BID-MKT-011 |
 
 **낙찰 업체 응답**
