@@ -1,5 +1,6 @@
 package com.biddingagency.domain.base.service;
 
+import com.biddingagency.common.SearchText;
 import com.biddingagency.domain.base.entity.MilitaryBase;
 import com.biddingagency.domain.base.repository.MilitaryBaseRepository;
 import com.biddingagency.domain.base.repository.OpportunityTitleRepository;
@@ -23,8 +24,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -150,6 +153,34 @@ public class MilitaryBaseService {
         return rowAssembler.toRows(ids.stream().map(byId::get).filter(Objects::nonNull).toList());
     }
 
+    // ── 공고 검색 ───────────────────────────────────────────
+
+    /**
+     * 검색어가 한글 이름, 영문 이름, 지역 안에 들어 있는 기지의 공고 id (CR-187, BIZ-098).
+     * 기지별 지도와 같은 계산(BIZ-031)이고, 같은 공고번호의 모든 판과 그 기지로 센 낙찰 공지를 넣는다.
+     */
+    @Transactional(readOnly = true)
+    public Set<UUID> opportunityIdsNamed(String q) {
+        String needle = SearchText.key(q);
+        List<MilitaryBase> bases = baseRepository.findAllByOrderBySortOrderAscNameKoAsc();
+        Set<UUID> named = bases.stream()
+                .filter(b -> SearchText.contains(b.getNameKo(), needle) || SearchText.contains(b.getNameEn(), needle)
+                        || SearchText.contains(b.getRegion(), needle))
+                .map(MilitaryBase::getId)
+                .collect(Collectors.toSet());
+        // 기지에 걸리지 않는 검색어마다 공고 전부를 읽지 않는다
+        if (named.isEmpty()) return Set.of();
+        Index idx = index(bases);
+        Set<UUID> ids = new HashSet<>();
+        idx.basesByKey.forEach((key, hit) -> {
+            if (!Collections.disjoint(hit, named)) ids.addAll(idx.idsByKey.get(key));
+        });
+        idx.basesByAward.forEach((id, hit) -> {
+            if (!Collections.disjoint(hit, named)) ids.add(id);
+        });
+        return ids;
+    }
+
     // ── 내부 ────────────────────────────────────────────────
 
     private static final Comparator<OpportunityTitleView> LATEST_FIRST = Comparator.comparing(
@@ -170,6 +201,10 @@ public class MilitaryBaseService {
         final Map<String, OpportunityTitleView> latestByKey = new LinkedHashMap<>();
         /** 묶음 키마다 걸린 기지 */
         final Map<String, Set<UUID>> basesByKey = new HashMap<>();
+        /** 묶음 키마다 모든 판의 공고 id(낙찰 공지 제외) */
+        final Map<String, List<UUID>> idsByKey = new HashMap<>();
+        /** 낙찰 공지마다 센 기지 */
+        final Map<UUID, Set<UUID>> basesByAward = new HashMap<>();
         /** 기지마다 낙찰 공지 수 */
         final Map<UUID, Integer> awardsByBase = new HashMap<>();
         LocalDate dataFrom;
@@ -202,6 +237,7 @@ public class MilitaryBaseService {
             String key = o.numberKey();
             idx.latestByKey.merge(key, o, (a, b) -> LATEST_FIRST.compare(a, b) <= 0 ? a : b);
             idx.basesByKey.computeIfAbsent(key, k -> new LinkedHashSet<>()).addAll(matcher.match(o.title()));
+            idx.idsByKey.computeIfAbsent(key, k -> new ArrayList<>()).add(o.id());
         }
         for (OpportunityTitleView a : awards) {
             Set<UUID> hit = matcher.match(a.title());
@@ -209,6 +245,7 @@ public class MilitaryBaseService {
                 hit = idx.basesByKey.getOrDefault(a.numberKey(), Set.of());
             }
             hit.forEach(id -> idx.awardsByBase.merge(id, 1, Integer::sum));
+            if (!hit.isEmpty()) idx.basesByAward.put(a.id(), hit);
         }
         return idx;
     }

@@ -1,5 +1,6 @@
 package com.biddingagency.domain.opportunity.service;
 
+import com.biddingagency.domain.base.service.MilitaryBaseService;
 import com.biddingagency.domain.federal.repository.FederalContractRepository;
 import com.biddingagency.domain.notice.repository.NoticeRepository;
 import com.biddingagency.domain.notice.service.NoticeService;
@@ -45,6 +46,8 @@ class SiteStatsServiceTest {
     private SystemSettingService settingService;
     @Mock
     private NoticeService noticeService;
+    @Mock
+    private MilitaryBaseService baseService;
 
     private SiteStatsService service() {
         return new SiteStatsService(opportunityRepository, federalContractRepository, NOW);
@@ -109,7 +112,7 @@ class SiteStatsServiceTest {
         MarketRowAssembler rowAssembler = new MarketRowAssembler(opportunityRepository, noticeRepository);
         ReflectionTestUtils.setField(rowAssembler, "publicOpportunityUrl", "https://sam.gov/opp/{noticeId}/view");
         MarketDataService market = new MarketDataService(opportunityRepository, rowAssembler,
-                new NaicsTopLevelKoMapper(), settingService, noticeService, NOW);
+                new NaicsTopLevelKoMapper(), settingService, noticeService, baseService, NOW);
 
         long homeTotal = market.collected(
                 new CollectedFilter(null, null, null, null, true, true, null, null, null), 0, 10).totalElements();

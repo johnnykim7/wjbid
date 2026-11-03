@@ -1,6 +1,7 @@
 package com.biddingagency.domain.opportunity.service;
 
 import com.biddingagency.domain.notice.repository.NoticeRepository;
+import com.biddingagency.domain.base.service.MilitaryBaseService;
 import com.biddingagency.domain.notice.service.NoticeService;
 import com.biddingagency.domain.opportunity.MarketGroup;
 import com.biddingagency.domain.opportunity.dto.MarketResponses.AmendmentGroup;
@@ -35,6 +36,7 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 
@@ -45,6 +47,7 @@ import static org.mockito.BDDMockito.given;
 /**
  * TC-MKT-001 ~ TC-MKT-017 (CR-135): 메뉴 속 화면 2묶음의 모은 공고 목록과 집계.
  * TC-MKT-018(지운 공고 빠짐)은 조회 쿼리가 거르므로 OpportunityRepositoryTest 에 있다.
+ * TC-BROWSE-022 ~ TC-BROWSE-024 (CR-187): 검색어 띄어쓰기, 기지 공고, 마감 전 먼저.
  */
 @ExtendWith(MockitoExtension.class)
 class MarketDataServiceTest {
@@ -62,6 +65,8 @@ class MarketDataServiceTest {
     private SystemSettingService settingService;
     @Mock
     private NoticeService noticeService;
+    @Mock
+    private MilitaryBaseService baseService;
 
     private MarketRowAssembler rowAssembler;
 
@@ -73,7 +78,7 @@ class MarketDataServiceTest {
 
     private MarketDataService service(Clock clock) {
         return new MarketDataService(opportunityRepository, rowAssembler, new NaicsTopLevelKoMapper(),
-                settingService, noticeService, clock);
+                settingService, noticeService, baseService, clock);
     }
 
     private MarketDataService service() {
@@ -427,5 +432,47 @@ class MarketDataServiceTest {
 
         assertThat(row).extracting(MarketRowDto::agencyName, MarketRowDto::naicsCode, MarketRowDto::placeOfPerformance)
                 .containsExactly("DEPT OF THE ARMY", "236220", "APO, AP");
+    }
+
+    // TC-BROWSE-022
+    @Test
+    @DisplayName("띄어쓰기다름_q_띄어쓰기무시")
+    void 띄어쓰기다름_q_띄어쓰기무시() {
+        given모은공고(titled("S1", "Vehicle repair", "차량 정비", NOW_KST.plusDays(5)),
+                titled("S2", "Vehicle service", "차량정비", NOW_KST.plusDays(5)));
+
+        List<Long> totals = Stream.of("차량정비", "차량 정비")
+                .map(q -> service().collected(open(q, null, null), 0, 20).totalElements())
+                .toList();
+
+        assertThat(totals).containsExactly(2L, 2L);
+    }
+
+    // TC-BROWSE-023
+    @Test
+    @DisplayName("기지공고_q_제목에글자없어도찾음")
+    void 기지공고_q_제목에글자없어도찾음() {
+        MarketSource grounds = titled("S1", "Grounds Maintenance", "그라운드 정비", NOW_KST.plusDays(5));
+        given모은공고(grounds, titled("S2", "Laundry", "세탁", NOW_KST.plusDays(5)));
+        given(baseService.opportunityIdsNamed("험프리스")).willReturn(Set.of(grounds.id()));
+
+        List<MarketRowDto> rows = service().collected(open("험프리스", null, null), 0, 20).content();
+
+        assertThat(rows).extracting(MarketRowDto::id).containsExactly(grounds.id());
+    }
+
+    // TC-BROWSE-024
+    @Test
+    @DisplayName("마감전먼저_sort_OPEN_FIRST")
+    void 마감전먼저_sort_OPEN_FIRST() {
+        MarketSource closed = source("C1", "Solicitation", NOW_KST.minusDays(1), NOW_KST.minusHours(1));
+        MarketSource open = source("O1", "Solicitation", NOW_KST.minusDays(10), NOW_KST.plusDays(5));
+        MarketSource award = source("A1", "Award Notice", NOW_KST.minusDays(5), null);
+        given모은공고(closed, open, award);
+
+        List<MarketRowDto> rows = service().collected(new CollectedFilter(null, null, null, null, false, true, null,
+                CollectedSort.OPEN_FIRST, null), 0, 20).content();
+
+        assertThat(rows).extracting(MarketRowDto::id).containsExactly(open.id(), closed.id(), award.id());
     }
 }

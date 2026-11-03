@@ -25,15 +25,19 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.never;
 
 /**
  * TC-MKT-032 ~ TC-MKT-040 (CR-136): 기지 목록과 기지별 집계(BID-MKT-010, BID-MKT-011, BIZ-031).
+ * TC-MKT-051 ~ TC-MKT-053 (CR-187): 공고 검색의 기지 이름과 지역(BIZ-098).
  */
 @ExtendWith(MockitoExtension.class)
 class MilitaryBaseServiceTest {
@@ -161,5 +165,46 @@ class MilitaryBaseServiceTest {
                 bid("S1", "OSAN AB repair"), bid("S2", "Generator service"), bid("S3", "Fence work")));
 
         assertThat(service.unmatched().count()).isEqualTo(2);
+    }
+
+    private static MilitaryBase humphreys() {
+        MilitaryBase b = MilitaryBase.builder().nameKo("캠프 험프리스").nameEn("Camp Humphreys").region("경기 평택")
+                .matchTerms("HUMPHREYS").sortOrder(0).build();
+        ReflectionTestUtils.setField(b, "id", UUID.randomUUID());
+        return b;
+    }
+
+    @Test
+    @DisplayName("TC-MKT-051 지역으로 찾으면 그 기지 공고번호의 모든 판과 낙찰 공지를 낸다")
+    void 지역_기지공고id_모든차수와낙찰공지() {
+        OpportunityTitleView first = bid("S1", "Vehicle maintenance");
+        OpportunityTitleView amended = bid("S1", "Vehicle maintenance at USAG HUMPHREYS");
+        OpportunityTitleView award = notice("S1", "Award for vehicle maintenance", "Award Notice");
+        OpportunityTitleView other = bid("S2", "OSAN AB repair");
+        given(baseRepository.findAllByOrderBySortOrderAscNameKoAsc())
+                .willReturn(List.of(humphreys(), base("Osan AB", "OSAN")));
+        given(titleRepository.findAllLive()).willReturn(List.of(first, amended, award, other));
+
+        assertThat(service.opportunityIdsNamed("평택")).containsExactlyInAnyOrder(first.id(), amended.id(), award.id());
+    }
+
+    @Test
+    @DisplayName("TC-MKT-052 기지 이름은 띄어쓰기와 대소문자를 무시하고 맞춘다")
+    void 띄어쓰기와대소문자_기지이름_걸림() {
+        OpportunityTitleView o = bid("S1", "USAG HUMPHREYS fence");
+        given(baseRepository.findAllByOrderBySortOrderAscNameKoAsc()).willReturn(List.of(humphreys()));
+        given(titleRepository.findAllLive()).willReturn(List.of(o));
+
+        assertThat(List.of(service.opportunityIdsNamed("캠프험프리스"), service.opportunityIdsNamed("camp humphreys")))
+                .containsOnly(Set.of(o.id()));
+    }
+
+    @Test
+    @DisplayName("TC-MKT-053 걸리는 기지가 없으면 빈 집합이고 공고 제목을 읽지 않는다")
+    void 걸리는기지없음_빈집합_제목안읽음() {
+        given(baseRepository.findAllByOrderBySortOrderAscNameKoAsc()).willReturn(List.of(humphreys()));
+
+        assertThat(service.opportunityIdsNamed("정비")).isEmpty();
+        then(titleRepository).should(never()).findAllLive();
     }
 }
