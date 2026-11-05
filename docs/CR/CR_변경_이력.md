@@ -1547,4 +1547,4 @@
 - **영향 모듈**: BE Opportunity, OpportunityService.createManual, OpportunityRepository(MARKET_SOURCE_SELECT), NoticeRepository(findVisible, findVisibleRecentlyPosted), NotificationEventListener.onOpportunityApproved, 마이그레이션 V61. 화면 변경 없음
 - **영향 설계서**: T1-1 1.35(BID-OPP-011), T1-2 1.12(B 모듈 11기능, 합계 111), T1-3 1.22(BIZ-099), T1-6 1.9(OpportunityApproved), T1-10 1.11(테스트 공고), T3-1 1.22(test_notice, V61), T3-2 1.32(collected, recent), T3-5 1.30(TC-OPP-022 ~ 026, TC-NOTI-009), execution-spec 1.25. 영향 없음 확인: T1-4(정책 수치 없음), T1-5(입찰 상태 그대로), T1-7(기능은 CR-120 때 들어간 것을 기록만), T2-1, T2-2, T3-3, T3-4(화면 그대로). CR 문서 [CR-188_테스트_공고_고객_제외.md](CR-188_테스트_공고_고객_제외.md)
 - **규모**: 중 (공고 표 칸 하나와 마이그레이션, 고객이 읽는 조회 넷, 신규 공고 알림 하나)
-- **상태**: 설계 (11/6)
+- **상태**: 구현과 로컬 확인 끝, 상용 배포 대기 (11/6). 단위시험 전체 676건 통과(1건 건너뜀). V61 은 Flyway 9.22.3 로 MariaDB 10.11.10 에 V60 위로 적용해 MANUAL_TEST 줄만 TRUE 로 채워진 것을 확인. 로컬 기동에서 테스트 공고가 첫 화면 숫자와 공고 검색에서 빠지고, 표시를 끄면 다시 나오는 것을 확인
