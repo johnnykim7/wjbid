@@ -1,6 +1,6 @@
 # SAM.gov Bidding Agency Platform API 설계
 
-> 설계 버전: 1.31 | 최종 수정: 2026-11-03 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-144, CR-146, CR-147, CR-152, CR-153, CR-155, CR-157, CR-159, CR-160, CR-162, CR-168, CR-169, CR-170, CR-178, CR-179, CR-180, CR-182, CR-183, CR-186, CR-187
+> 설계 버전: 1.32 | 최종 수정: 2026-11-06 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-144, CR-146, CR-147, CR-152, CR-153, CR-155, CR-157, CR-159, CR-160, CR-162, CR-168, CR-169, CR-170, CR-178, CR-179, CR-180, CR-182, CR-183, CR-186, CR-187, CR-188
 
 > 단계: 3. Detail Design | 실행스펙 섹션 3에 포함
 >
@@ -186,7 +186,7 @@
 | ~~GET~~ | ~~/opportunities/search~~ | ~~키워드 검색~~ (CR-155 폐기. 마감 전 공고 검색은 C-2 의 collected `q`) | | BID-BROWSE-001 |
 | GET | /opportunities/search/organization | 기관명 검색 | | BID-BROWSE-001 |
 | ~~GET~~ | ~~/opportunities/near-deadline~~ | ~~마감 임박 공고~~ (CR-155 폐기. 첫 화면 마감 임박은 C-2 의 collected `sort=DEADLINE`, `dueWithinDays`) | | BID-BROWSE-001 |
-| GET | /opportunities/recent | 최근 등록 공고 CR-157: 회원만(BIZ-071). | 🔒 회원 | BID-BROWSE-001 |
+| GET | /opportunities/recent | 최근 등록 공고 CR-157: 회원만(BIZ-071). CR-188: 테스트 공고의 공고문은 뺀다(BIZ-099). | 🔒 회원 | BID-BROWSE-001 |
 
 ---
 
@@ -196,7 +196,7 @@
 
 | 메서드 | 경로 | 설명 | 인증 | 기능 ID |
 |--------|------|------|------|---------|
-| GET | /opportunities/collected | 모은 공고 목록, 게시일 최신순, 쪽. 거르기: `group`(PRE 사전, BID 입찰, AWARD 낙찰, OTHER 그 밖), `type`(SAM 공고 유형), `month`(게시 달 YYYY-MM), `sector`(업종 대분류, 예 23, 31-33, NONE), `openOnly`(답변 기한 남은 것만), `latestOnly`(같은 공고번호는 마지막 판 하나만, 업종별 최근 공고에 씀). 같은 거르기에서 유형별 건수를 함께 준다. CR-155 에서 더한 것: `q`(검색어. 한글 제목, 원문 제목, 공고번호에 대소문자 없이 들어 있는 것), `sort`(LATEST 게시일 최신순이 기본, DEADLINE 마감이 가까운 순이고 마감이 같으면 게시일 최신순), `dueWithinDays`(마감이 지금부터 N일 안인 것만, 1 이상). `openOnly` 는 낙찰 공지를 늘 뺀다(BIZ-069). 마감 전 공고 화면과 첫 화면은 `openOnly=true&latestOnly=true` 로 부른다. CR-187 에서 바꾼 것: `q` 는 띄어쓰기도 무시하고, 기지의 한글 이름, 영문 이름, 지역에 들어 있으면 그 기지 공고(BIZ-031, 같은 공고번호의 모든 차수와 낙찰 공지)도 찾는다(BIZ-098). `sort=OPEN_FIRST` 를 더한다. 공고 검색 화면은 검색어가 있으면 `latestOnly=true&sort=OPEN_FIRST&q=` 로 불러 마감 지난 공고와 낙찰 공지까지 받는다 | | BID-MKT-001, 005, 006, BID-BROWSE-001, 005 |
+| GET | /opportunities/collected | 모은 공고 목록, 게시일 최신순, 쪽. 거르기: `group`(PRE 사전, BID 입찰, AWARD 낙찰, OTHER 그 밖), `type`(SAM 공고 유형), `month`(게시 달 YYYY-MM), `sector`(업종 대분류, 예 23, 31-33, NONE), `openOnly`(답변 기한 남은 것만), `latestOnly`(같은 공고번호는 마지막 판 하나만, 업종별 최근 공고에 씀). 같은 거르기에서 유형별 건수를 함께 준다. CR-155 에서 더한 것: `q`(검색어. 한글 제목, 원문 제목, 공고번호에 대소문자 없이 들어 있는 것), `sort`(LATEST 게시일 최신순이 기본, DEADLINE 마감이 가까운 순이고 마감이 같으면 게시일 최신순), `dueWithinDays`(마감이 지금부터 N일 안인 것만, 1 이상). `openOnly` 는 낙찰 공지를 늘 뺀다(BIZ-069). 마감 전 공고 화면과 첫 화면은 `openOnly=true&latestOnly=true` 로 부른다. CR-187 에서 바꾼 것: `q` 는 띄어쓰기도 무시하고, 기지의 한글 이름, 영문 이름, 지역에 들어 있으면 그 기지 공고(BIZ-031, 같은 공고번호의 모든 차수와 낙찰 공지)도 찾는다(BIZ-098). `sort=OPEN_FIRST` 를 더한다. 공고 검색 화면은 검색어가 있으면 `latestOnly=true&sort=OPEN_FIRST&q=` 로 불러 마감 지난 공고와 낙찰 공지까지 받는다. CR-188: 테스트 공고는 목록과 건수 어디에도 넣지 않는다(BIZ-099). 모은 공고를 읽는 다른 조회(첫 화면 건수, 메뉴 속 화면, 낙찰 업체)도 같다 | | BID-MKT-001, 005, 006, BID-BROWSE-001, 005 |
 | GET | /opportunities/amendments | 같은 공고번호로 두 번 이상 올라온 공고 묶음(낙찰 공지 제외), 마지막 게시일 최신순, 쪽. `openOnly`(마지막 판 마감 전만), `solicitationNumber`(그 공고번호 묶음만, 사전 공고의 "본 공고 나옴" 에서 씀). 묶음마다 판 목록. `openCount`(진행 중 묶음 수), `versionCount`(묶음에 든 판 수)를 함께 준다 | | BID-MKT-002 |
 | GET | /opportunities/sample | 설정 `NOTICE_SAMPLE_ID` 의 공개 공고문. 응답 `notice`(공고 상세와 같은 공고문), `originalTitle`(원문 제목), `samUrl`(SAM.gov 공개 주소), `firstPostedDate`(같은 공고번호의 첫 게시일, 낙찰 공지 제외). 없으면 204 | | BID-MKT-003 |
 | GET | /opportunities/awards | 낙찰 공지 목록, 쪽. `month`(공지 달), `sort`(LATEST 최신순, AMOUNT 금액순). 요약(건수, 금액 공개 건수, 합계, 최대)을 함께 준다 | | BID-MKT-004 |
