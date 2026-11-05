@@ -168,6 +168,7 @@ public class OpportunityService {
                 .firstSeenAt(now)
                 .lastModifiedAt(now)
                 .rawJson(Map.of("source", "MANUAL_TEST"))
+                .testNotice(true)
                 .build();
         Opportunity saved = opportunityRepository.save(opportunity);
         log.info("[CR-120] 테스트용 수동 공고 생성: noticeId={}, title={}", resolvedNoticeId, title);

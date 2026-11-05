@@ -555,4 +555,21 @@ class NotificationEventListenerTest {
 
         then(notificationService).shouldHaveNoInteractions();
     }
+
+    // TC-NOTI-009 (CR-188): 테스트 공고를 공개해도 고객 신규 공고 알림은 없다 (BIZ-099)
+    @Test
+    @DisplayName("테스트공고공개_고객알림안보냄_CR188")
+    void 테스트공고공개_고객알림안보냄() {
+        UUID opportunityId = UUID.randomUUID();
+        Opportunity opp = Opportunity.builder().title("Test Grounds").noticeId("TEST-CR188").testNotice(true).build();
+        ReflectionTestUtils.setField(opp, "id", opportunityId);
+        given(opportunityRepository.findById(opportunityId)).willReturn(Optional.of(opp));
+        Member paid = withId(createCustomer());
+        lenient().when(memberRepository.findByRole(Member.Role.CUSTOMER)).thenReturn(List.of(paid));
+        lenient().when(membershipService.currentEndsOn(any())).thenReturn(Map.of(paid.getId(), LocalDate.of(2026, 12, 31)));
+
+        listener.onOpportunityApproved(new OpportunityApprovedEvent(opportunityId, UUID.randomUUID()));
+
+        then(notificationService).shouldHaveNoInteractions();
+    }
 }

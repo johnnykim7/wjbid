@@ -310,4 +310,15 @@ class OpportunityServiceTest {
         // when & then
         assertThat(opportunityService.existsLiveByContentHash("h1")).isTrue();
     }
+
+    // TC-OPP-022 (CR-188): 테스트 공고 추가는 테스트 공고 표시를 켠다 (BIZ-099)
+    @Test
+    @DisplayName("테스트공고추가_테스트공고표시켜짐")
+    void 테스트공고추가_테스트공고표시켜짐() {
+        given(opportunityRepository.save(any(Opportunity.class))).willAnswer(inv -> inv.getArgument(0));
+
+        Opportunity saved = opportunityService.createManual("TEST-CR188", "테스트 공고");
+
+        assertThat(saved.isTestNotice()).isTrue();
+    }
 }

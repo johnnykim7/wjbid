@@ -307,6 +307,10 @@ public class NotificationEventListener {
             log.warn("OpportunityApproved: opportunity not found, id={}", event.getEntityId());
             return;
         }
+        if (opp.isTestNotice()) {
+            log.info("OpportunityApproved: 테스트 공고라 고객 알림을 보내지 않음, opp={}", opp.getId());
+            return;
+        }
         String oppTitle = opp.getTitle();
         String noticeId = opp.getNoticeId() != null ? opp.getNoticeId() : "-";
         String deadline = opp.getResponseDeadline() != null

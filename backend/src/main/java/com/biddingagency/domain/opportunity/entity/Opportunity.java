@@ -147,6 +147,14 @@ public class Opportunity extends BaseEntity {
     @Builder.Default
     private Boolean pieeLinkBroken = false;
 
+    /**
+     * CR-188: 관리자 「테스트 공고 추가」로 만든 공고. 공고문을 공개해도 고객 목록과 신규 공고 알림에서 빠진다(BIZ-099).
+     * 공고문 번호로 연 상세, 입찰 신청, 제안서 작성 입력은 수집 공고와 같아야 시험이 실제 흐름을 탄다.
+     */
+    @Column(name = "test_notice", nullable = false)
+    @Builder.Default
+    private boolean testNotice = false;
+
     /** CR-159: 이 공고에서 마지막으로 준 REQ ID 의 숫자. 지운 번호를 다시 쓰지 않으려고 둔다(BIZ-074) */
     @Column(name = "last_req_no", nullable = false)
     @Builder.Default

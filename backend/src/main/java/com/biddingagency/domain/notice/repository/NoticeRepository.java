@@ -53,6 +53,7 @@ public interface NoticeRepository extends JpaRepository<Notice, UUID> {
      * CR-009: includeExpired=false면 마감 지난 공고 제외(마감일 NULL은 유지). 정렬은 Pageable.
      */
     @Query("SELECT n FROM Notice n JOIN FETCH n.opportunity o WHERE n.visibility = :visibility "
+            + "AND o.testNotice = false "
             + "AND (:includeExpired = true OR o.responseDeadline IS NULL OR o.responseDeadline >= :now) "
             + "ORDER BY o.postedDate DESC, n.createdAt DESC")
     Page<Notice> findVisible(@Param("visibility") OpportunityVisibility visibility,
@@ -71,7 +72,7 @@ public interface NoticeRepository extends JpaRepository<Notice, UUID> {
 
     /** 최근 게시 노출 공고문 (posted >= since) */
     @Query("SELECT n FROM Notice n JOIN FETCH n.opportunity o WHERE n.visibility = :visibility "
-            + "AND o.postedDate >= :since ORDER BY o.postedDate DESC")
+            + "AND o.testNotice = false AND o.postedDate >= :since ORDER BY o.postedDate DESC")
     List<Notice> findVisibleRecentlyPosted(@Param("since") java.time.LocalDateTime since,
                                            @Param("visibility") OpportunityVisibility visibility);
 

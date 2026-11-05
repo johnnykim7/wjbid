@@ -39,6 +39,10 @@ class OpportunityRepositoryTest {
     }
 
     private static Opportunity opportunity(String noticeId) {
+        return opportunity(noticeId, false);
+    }
+
+    private static Opportunity opportunity(String noticeId, boolean testNotice) {
         LocalDateTime at = LocalDateTime.of(2026, 10, 1, 9, 0);
         return Opportunity.builder()
                 .noticeId(noticeId)
@@ -49,6 +53,7 @@ class OpportunityRepositoryTest {
                 .active(true)
                 .firstSeenAt(at)
                 .lastModifiedAt(at)
+                .testNotice(testNotice)
                 .build();
     }
 
@@ -66,6 +71,17 @@ class OpportunityRepositoryTest {
     @DisplayName("지운공고_공고번호조회_빠짐")
     void 지운공고_공고번호조회_빠짐() {
         List<MarketSource> sources = opportunityRepository.findMarketSourcesBySolicitationNumbers(Set.of("W1"));
+
+        assertThat(sources).extracting(MarketSource::id).containsExactly(kept.getId());
+    }
+
+    // TC-OPP-023 (CR-188): 테스트 공고는 모은 공고 조회에서 빠진다 (BIZ-099)
+    @Test
+    @DisplayName("모은공고조회_테스트공고_빠짐")
+    void 모은공고조회_테스트공고_빠짐() {
+        opportunityRepository.saveAndFlush(opportunity("N-TEST", true));
+
+        List<MarketSource> sources = opportunityRepository.findMarketSources();
 
         assertThat(sources).extracting(MarketSource::id).containsExactly(kept.getId());
     }
