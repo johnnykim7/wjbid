@@ -1548,3 +1548,16 @@
 - **영향 설계서**: T1-1 1.35(BID-OPP-011), T1-2 1.12(B 모듈 11기능, 합계 111), T1-3 1.22(BIZ-099), T1-6 1.9(OpportunityApproved), T1-10 1.11(테스트 공고), T3-1 1.22(test_notice, V61), T3-2 1.32(collected, recent), T3-5 1.30(TC-OPP-022 ~ 026, TC-NOTI-009), execution-spec 1.25. 영향 없음 확인: T1-4(정책 수치 없음), T1-5(입찰 상태 그대로), T1-7(기능은 CR-120 때 들어간 것을 기록만), T2-1, T2-2, T3-3, T3-4(화면 그대로). CR 문서 [CR-188_테스트_공고_고객_제외.md](CR-188_테스트_공고_고객_제외.md)
 - **규모**: 중 (공고 표 칸 하나와 마이그레이션, 고객이 읽는 조회 넷, 신규 공고 알림 하나)
 - **상태**: 상용 배포와 확인 끝 (11/6 05:15, 33c5270 = 상용 1248ba6 위 CR-188 코드, be, Flyway V61). 기존 테스트 공고 4건 표시 채워짐, TEST-SMOKE-AI-0001 이 고객 공고 검색에서 빠짐. 새 테스트 공고 W90VN825R0006-SIM 의 공고문을 공개해도 공개 공고문 목록, 최근 공고문, 공고 검색, 첫 화면 숫자(공고문 310 그대로)에 나오지 않고 신규 공고 알림 기록 0건, 시험 고객이 공고문 주소로 상세를 열고 신청함
+
+### CR-189: AI 작성이 공고 내용, 가격 항목, 정부 양식을 받는다 (2026-11-06)
+
+- **배경(사용자)**: 11/5 04:34 낙찰 건 W90VN825R0006 으로 서류 등록, 작성 요청, AI 제안서 작성을 시뮬레이션하자 함. 11/6 07:22 "누구 결함인가요?", 07:27 "그럼 수정하세요"(우리 결함 셋을 고치고 같은 건을 다시 돌려 실제 낙찰 제안서와 견준다)(원문 `docs/origins/원본_CR-189_AI_작성_공고내용_가격항목_정부양식_20261106.md`)
+- **현황(실측 11/6, develop 소스, 상용 자료)**: 시뮬레이션 제안서에서 (1) 가격 절이 비었다. 공고 분석이 가격 항목을 내지 않고 저장이 그 칸을 비워 둔다(공고 사실에는 CLIN 수량이 있다). (2) 7절 중 4절이 검증에 떨어졌고 그중 3절은 공고 내용을 받지 못해서다. 절 작성과 검증 입력의 공고 본문이 테스트 공고에서는 제목뿐이다. (3) 정부 양식(FAR 52.212-3, 52.204-24/26, 회사 정보, 면세 신고, 연락처)이 만들어지지 않는다. 문서 구성이 정부 양식 요구 항목을 보지 않는다
+- **대상 기능 ID**: BID-OPP-006, BID-DOC-001
+- **변경 타입**: 변경
+- **대상**: (1) 공고 분석 build_compliance_matrix 가 priceItems 를 내고 save_opportunity_analysis 가 price_items_json 에 담는다(BIZ-100). (2) 절 작성, 절 검증 입력에 documentType, noticeFacts, priceItems(가격 문서만), company 를 더 주고 지시문이 공고 사실은 거기서만 쓰게 한다(BIZ-101). (3) 정부 양식 요구 항목이 있으면 문서 구성 맨 끝에 GOVERNMENT_FORMS 를 두고 설계 입력에 formRequirements, company 를 준다(BIZ-102). (4) 문서 이름표 Government Forms
+- **영향 범위**: BID-OPP-006, BID-DOC-001
+- **영향 모듈**: BE OpportunityAnalysisMcpTool, NoticeService.saveResult, ProposalMcpTool(get_proposal_design_input, get_section_context, get_section_verify_input), DocumentComposition, DocumentCompositionService, DocumentType, ComplianceService. 작업 흐름 정의 opportunity-analysis.steps.v3, proposal-design, proposal-write-section, proposal-verify-fidelity. FE 문서 이름표 3곳(관리자 콘솔 documentType, 고객 포털 ProposalsPage, ProposalDetailPage). 마이그레이션 없음
+- **영향 설계서**: T1-1 1.36(BID-OPP-006, BID-DOC-001), T1-3 1.23(BIZ-100 ~ 102), T1-10 1.12(정부 양식), T3-1 1.23(DocumentType GOVERNMENT_FORMS, price_items_json), T3-2 1.33(MCP 도구 넷), T3-5 1.31(TC-OPP-027, 028, TC-DOC-303 ~ 309), execution-spec 1.26. 영향 없음 확인: T1-2(기능 수 그대로), T1-4(정책 수치 없음), T1-5(입찰 상태 그대로), T1-6(이벤트 그대로), T1-7(기존 기능 보강), T2-1, T2-2, T3-3, T3-4(화면은 이름표만). CR 문서 [CR-189_AI_작성_공고내용_가격항목_정부양식.md](CR-189_AI_작성_공고내용_가격항목_정부양식.md)
+- **규모**: 중 (공고 분석 저장 칸 하나, AI 작성 입력 셋, 문서 종류 하나, 작업 흐름 정의 넷)
+- **상태**: 설계
