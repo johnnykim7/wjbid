@@ -108,6 +108,9 @@ public class OpportunityAnalysisMcpTool {
                         "factors:[{factorId, title, relativeImportance, documentType('TECHNICAL_PROPOSAL'|'PAST_PERFORMANCE'|'PRICING_SUMMARY'), subfactors:[{subfactorId, title}]}]}. " +
                         "CR-180: documentType 은 Section L 이 그 평가 항목을 담으라고 한 문서(볼륨)이고 볼륨 구분이 없으면 TECHNICAL_PROPOSAL, " +
                         "coverLetterRequired 는 Section L 이 cover letter 나 transmittal letter 를 요구할 때만 true"),
+                    "priceItems", Map.of("type", "object", "description",
+                        "가격 항목 (CR-189, BIZ-100). {items:[{clin, description, quantity, unit, period, sourceRef}]}. " +
+                        "공고 가격 표(Schedule, CLIN)를 옵션 연도까지 줄마다 담고 단가와 금액은 담지 않는다. 가격 표가 없으면 빈 배열"),
                     "llmPromptPreset", Map.of("type", "object", "description", "LLM 프롬프트 프리셋 (내부용)"),
                     "contentJson", Map.of("type", "object", "description", "TipTap JSON 본문 — NOTICE_VIEW 템플릿 골격을 채워서 반환 (PDF 풍부도). 노드 타입: noticeHeader/metaGrid/kvTable/dataTable/groupedList/calloutList 등 커스텀 + heading/paragraph/bulletList 표준")
                 ),
@@ -173,6 +176,7 @@ public class OpportunityAnalysisMcpTool {
         List<Map<String, Object>> facts = coerceToList(args.get("facts"));
         Map<String, Object> complianceMatrix = coerceToMap(args.get("complianceMatrix"));
         Map<String, Object> factorTree = coerceToMap(args.get("factorTree"));
+        Map<String, Object> priceItems = coerceToMap(args.get("priceItems"));
         List<String> unknownTypes = DocumentComposition.unknownDocumentTypes(factorTree);
         if (!unknownTypes.isEmpty()) {
             // BIZ-096: 저장은 하고 그 평가 항목은 구성의 첫 평가받는 문서가 받는다
@@ -181,7 +185,7 @@ public class OpportunityAnalysisMcpTool {
 
         Notice notice = noticeService.saveResult(
                 noticeId, koreanTitle, summary, documentFormats, requiredDocuments, llmPromptPreset, contentJson, facts,
-                complianceMatrix, factorTree);
+                complianceMatrix, factorTree, priceItems);
 
         log.info("MCP save_opportunity_analysis: noticeId={}, status={}", noticeId, notice.getGenerationStatus());
 

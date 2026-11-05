@@ -6,6 +6,7 @@ import com.biddingagency.domain.compliance.service.ComplianceService;
 import com.biddingagency.domain.document.entity.BidDocument;
 import com.biddingagency.domain.document.entity.DocumentType;
 import com.biddingagency.domain.document.service.BidDocumentService;
+import com.biddingagency.domain.member.entity.Member;
 import com.biddingagency.domain.notice.entity.Notice;
 import com.biddingagency.domain.notice.repository.NoticeRepository;
 import com.biddingagency.domain.opportunity.entity.Opportunity;
@@ -73,7 +74,9 @@ public class ProposalMcpTool {
                     "CR-169: clientDocuments(고객 서류 [{readingId, fileName, origin, category, fulfills, status, factCount, facts[{category, key, value}]}])를 보고 " +
                     "section 마다 쓸 근거 서류의 readingId 를 sourceReadingIds 로 정하세요. status=DONE 인 서류만 쓸 수 있습니다. " +
                     "CR-180: factorTree, complianceMatrix, priceItems 는 이 문서가 담을 평가 항목의 것만 옵니다. " +
-                    "factorTree.factors 에 없는 평가 항목은 다른 문서가 담으므로 공고 본문에서 찾아 chapter 로 더하지 마세요.",
+                    "factorTree.factors 에 없는 평가 항목은 다른 문서가 담으므로 공고 본문에서 찾아 chapter 로 더하지 마세요. " +
+                    "CR-189: company(회원 회사 칸 {companyName, businessRegistrationNumber, address, uei, cageCode, contactPerson, phone, email})를 줍니다. " +
+                    "documentType=GOVERNMENT_FORMS 이면 formRequirements(정부 양식 요구 [{reqId, title, text, translation, clause, sourceRef}])마다 chapter 하나, section 하나로 짜세요.",
             "inputSchema", Map.of(
                 "type", "object",
                 "properties", Map.of(
@@ -122,7 +125,10 @@ public class ProposalMcpTool {
                     "CR-159: requirements 에 대응 REQ ID 마다 원문(text), 번역, 요구 동사(verb), 구분(level), 평가항목을 줍니다. 요구 동사가 정하는 형태로 답하세요. " +
                     "referenceSamples 의 downloadUrl 을 parse_document(url=...)로 읽어 few-shot 으로 참조하되, 사실(회사명·실적·수치)은 복붙하지 마세요. " +
                     "CR-169: sourceDocuments(이 section 의 근거 고객 서류 [{readingId, fileName, category, facts[{category, key, value, page, anchor, confidence, readMode}]}])가 있으면 " +
-                    "회사명·실적·인력·면허·수치는 이 facts 에서만 가져오고, 쓴 사실의 readingId 와 page 를 block 의 sourceEvidence 에 남기세요.",
+                    "회사명·실적·인력·면허·수치는 이 facts 에서만 가져오고, 쓴 사실의 readingId 와 page 를 block 의 sourceEvidence 에 남기세요. " +
+                    "CR-189: documentType, noticeFacts(공고 분석 사실 [{key, value, sourceFile, anchor, page, confidence}]), " +
+                    "priceItems(이 문서가 가격 항목을 받는 문서일 때만, 아니면 null), company(회원 회사 칸)를 줍니다. " +
+                    "공고에 관한 수치, 장소, 기간, 가격 줄은 noticeFacts 와 priceItems 에서만 쓰고, 회사 칸은 company 와 sourceDocuments 에서만 쓰세요.",
             "inputSchema", Map.of(
                 "type", "object",
                 "properties", Map.of(
@@ -163,7 +169,8 @@ public class ProposalMcpTool {
                     "공고 본문 텍스트(opportunityText)·참조 샘플 목록을 반환합니다. " +
                     "생성된 본문의 각 문장이 공고 본문/첨부에 근거하는지 검증하세요 — 근거 없는 문장은 환각입니다. " +
                     "CR-159: requirements 의 reqId 마다 본문이 그 요구에 답했는지 보고 save_verification_result 의 requirementChecks 로 보내세요. " +
-                    "CR-169: sourceDocuments(get_section_context 와 같은 꼴)도 근거입니다. 고객 회사에 관한 사실이 sourceDocuments 의 facts 에 없으면 환각입니다.",
+                    "CR-169: sourceDocuments(get_section_context 와 같은 꼴)도 근거입니다. 고객 회사에 관한 사실이 sourceDocuments 의 facts 에 없으면 환각입니다. " +
+                    "CR-189: noticeFacts, priceItems, company(get_section_context 와 같은 꼴)도 근거입니다. 공고에 관한 문장이 noticeFacts 나 priceItems 에 있으면 환각이 아닙니다.",
             "inputSchema", Map.of(
                 "type", "object",
                 "properties", Map.of(
@@ -253,6 +260,10 @@ public class ProposalMcpTool {
                 .filter(line -> composition.owns(documentType, (String) line.get("factorId")))
                 .toList() : List.of());
         result.put("clientDocuments", documentReadingService.designInputDocuments(bidRequest.getId()));
+        result.put("company", company(bidRequest.getMember()));
+        // BIZ-102: 정부 양식 문서는 양식 요구 항목마다 장을 짜고, 다른 문서는 양식을 담지 않는다
+        result.put("formRequirements", documentType == DocumentType.GOVERNMENT_FORMS
+                ? complianceService.formRequirements(opp.getId()) : List.of());
         return toJson(result);
     }
 
@@ -332,6 +343,8 @@ public class ProposalMcpTool {
 
         // section → chapter → document → bidRequest → opportunity (industryType)
         ProposalChapter chapter = proposalService.getChapter(section.getChapterId());
+        BidDocument doc = bidDocumentService.findById(chapter.getDocumentId());
+        BidRequest bidRequest = bidRequestService.findByIdWithDetails(doc.getBidRequest().getId());
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("sectionId", sectionId.toString());
@@ -346,13 +359,13 @@ public class ProposalMcpTool {
         result.put("requirements", complianceService.sectionRequirements(chapter.getDocumentId(), section.getRequirementRefs()));
 
         // 참조 샘플 — section 이 속한 문서의 공고유형 매칭
-        IndustryType industryType = industryTypeOf(chapter);
+        IndustryType industryType = bidRequest.getOpportunity().getIndustryType();
         List<Map<String, Object>> samples = industryType != null
                 ? referenceSampleService.collect(industryType) : List.of();
         result.put("industryType", industryType != null ? industryType.name() : null);
         result.put("referenceSamples", samples);
-        UUID bidRequestId = bidDocumentService.findById(chapter.getDocumentId()).getBidRequest().getId();
-        result.put("sourceDocuments", documentReadingService.sourceDocuments(bidRequestId, section.getSourceReadingIds()));
+        result.put("sourceDocuments", documentReadingService.sourceDocuments(bidRequest.getId(), section.getSourceReadingIds()));
+        putSectionGrounds(result, doc.getDocumentType(), bidRequest);
         return toJson(result);
     }
 
@@ -417,6 +430,7 @@ public class ProposalMcpTool {
         result.put("opportunityText", buildOpportunityText(opp));
         result.put("referenceSamples", samples);
         result.put("sourceDocuments", documentReadingService.sourceDocuments(bidRequest.getId(), section.getSourceReadingIds()));
+        putSectionGrounds(result, doc.getDocumentType(), bidRequest);
         return toJson(result);
     }
 
@@ -504,10 +518,32 @@ public class ProposalMcpTool {
 
     // ─── 내부 조회 헬퍼 ────────────────────────────────────────────────────
 
-    private IndustryType industryTypeOf(ProposalChapter chapter) {
-        BidDocument doc = bidDocumentService.findById(chapter.getDocumentId());
-        BidRequest bidRequest = bidRequestService.findByIdWithDetails(doc.getBidRequest().getId());
-        return bidRequest.getOpportunity().getIndustryType();
+    /**
+     * BIZ-101: 절 작성과 검증이 같은 공고 사실, 가격 항목, 회사 칸을 근거로 본다.
+     * 공고 본문 텍스트는 제목과 설명뿐인 공고가 있어 공고에 관한 수치와 장소는 공고 분석 사실에서 가져온다
+     */
+    private void putSectionGrounds(Map<String, Object> result, DocumentType documentType, BidRequest bidRequest) {
+        Notice notice = documentCompositionService.designNotice(bidRequest.getOpportunity().getId()).orElse(null);
+        DocumentComposition composition = documentCompositionService.compose(notice);
+        result.put("documentType", documentType.name());
+        result.put("noticeFacts", notice != null && notice.getExtractedFactsJson() != null
+                ? notice.getExtractedFactsJson() : List.of());
+        result.put("priceItems", notice != null && composition.priceOwner() == documentType
+                ? notice.getPriceItemsJson() : null);
+        result.put("company", company(bidRequest.getMember()));
+    }
+
+    private static Map<String, Object> company(Member member) {
+        Map<String, Object> company = new LinkedHashMap<>();
+        company.put("companyName", member.getCompanyName());
+        company.put("businessRegistrationNumber", member.getBusinessRegistrationNumber());
+        company.put("address", member.getAddress());
+        company.put("uei", member.getUei());
+        company.put("cageCode", member.getCageCode());
+        company.put("contactPerson", member.getContactPerson());
+        company.put("phone", member.getPhone());
+        company.put("email", member.getEmail());
+        return company;
     }
 
     private String buildOpportunityText(Opportunity opp) {

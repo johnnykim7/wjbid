@@ -288,6 +288,26 @@ public class ComplianceService {
         return new ComplianceMatrixView(lines, questions, notice.getFactorTreeJson());
     }
 
+    /** 정부 양식 문서 설계 입력. 맡는 쪽이 시스템 양식인 요구 서류와 매트릭스 줄, REQ ID 는 매트릭스 줄만 있다 (BIZ-102) */
+    public List<Map<String, Object>> formRequirements(UUID opportunityId) {
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (OpportunityRequirementItem item : requirementRepository.findByOpportunityIdOrderBySortOrderAsc(opportunityId)) {
+            if (FulfillmentParty.fromAnalysis(json(item, RequirementSyncService.KEY_FULFILLMENT_PARTY)) != FulfillmentParty.SYSTEM_FORM) {
+                continue;
+            }
+            String text = json(item, RequirementSyncService.KEY_TEXT);
+            Map<String, Object> form = new LinkedHashMap<>();
+            form.put("reqId", item.getReqId());
+            form.put("title", item.getTitle());
+            form.put("text", text != null ? text : item.getDescription());
+            form.put("translation", json(item, RequirementSyncService.KEY_TRANSLATION));
+            form.put("clause", json(item, RequirementSyncService.KEY_CLAUSE));
+            form.put("sourceRef", json(item, RequirementSyncService.KEY_SOURCE_REF));
+            result.add(form);
+        }
+        return result;
+    }
+
     /** 제안서 설계 입력에 싣는 매트릭스 줄 */
     public List<Map<String, Object>> designInputLines(UUID opportunityId) {
         List<Map<String, Object>> result = new ArrayList<>();

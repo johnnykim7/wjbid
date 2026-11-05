@@ -42,6 +42,11 @@ public enum DocumentType {
     OTHER("Other", "Additional supporting documents", false),
 
     /**
+     * 공고가 요구하는 정부 양식(FAR 표명, 회사 정보, 면세 신고, 연락처 등)을 양식마다 장 하나로 담는 문서 (CR-189, BIZ-102)
+     */
+    GOVERNMENT_FORMS("Government Forms", "Government forms required by the solicitation", false),
+
+    /**
      * 공고문 표시 양식 (CR-021).
      * 제안서 생성용이 아닌, 공고문(Notice) 상세 화면을 그릴 때 사용하는 TipTap JSON 골격.
      * Aimbase 한글화 워크플로우에 함께 입력되어 LLM이 이 골격을 채워 반환.
