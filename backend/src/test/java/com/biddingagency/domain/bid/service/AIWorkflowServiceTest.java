@@ -167,7 +167,7 @@ class AIWorkflowServiceTest {
 
     private void givenComposition(BidRequest br, DocumentType... documents) {
         lenient().when(documentCompositionService.compose(br.getOpportunity().getId()))
-                .thenReturn(DocumentComposition.of(null, List.of(documents)));
+                .thenReturn(DocumentComposition.of(null, List.of(documents), false));
     }
 
     private UUID givenDocument(BidRequest br, DocumentType type, List<ProposalSection> sections) {
@@ -278,7 +278,7 @@ class AIWorkflowServiceTest {
                 Map.of("factorId", "F2", "documentType", "PAST_PERFORMANCE"),
                 Map.of("factorId", "F3", "documentType", "PRICING_SUMMARY")));
         given(documentCompositionService.compose(br.getOpportunity().getId()))
-                .willReturn(DocumentComposition.of(tree, List.of(DocumentType.COVER_LETTER, DocumentType.TECHNICAL_PROPOSAL)));
+                .willReturn(DocumentComposition.of(tree, List.of(DocumentType.COVER_LETTER, DocumentType.TECHNICAL_PROPOSAL), false));
         given(bidDocumentService.findByBidRequestAndType(eq(br.getId()), any()))
                 .willAnswer(call -> TestHelper.withId(BidDocument.builder().build()));
         List<Object> designed = new ArrayList<>();

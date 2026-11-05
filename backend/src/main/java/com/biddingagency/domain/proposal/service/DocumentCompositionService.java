@@ -40,7 +40,9 @@ public class DocumentCompositionService {
     }
 
     public DocumentComposition compose(Notice notice) {
-        return DocumentComposition.of(notice == null ? null : notice.getFactorTreeJson(), fallbackDocumentTypes);
+        if (notice == null) return DocumentComposition.of(null, fallbackDocumentTypes, false);
+        return DocumentComposition.of(notice.getFactorTreeJson(), fallbackDocumentTypes,
+                DocumentComposition.requiresForms(notice.getRequiredDocumentsJson(), notice.getComplianceMatrixJson()));
     }
 
     private static List<DocumentType> parseDocumentTypes(String typesConfig) {

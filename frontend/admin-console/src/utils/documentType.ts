@@ -6,6 +6,7 @@ export const DOC_TYPE_LABELS: Record<string, string> = {
   COMPANY_PROFILE: 'Company Profile',
   COMPLIANCE_MATRIX: 'Compliance Matrix',
   PRICING_SUMMARY: 'Pricing Summary',
+  GOVERNMENT_FORMS: 'Government Forms',
   OTHER: 'Other',
 }
 

@@ -44,14 +44,40 @@ class OpportunityAnalysisMcpToolTest {
         Map<String, Object> factorTree = Map.of("method", "LPTA", "coverLetterRequired", false, "factors", List.of(
                 Map.of("factorId", "F1", "documentType", "TECHNICAL_PROPOSAL"),
                 Map.of("factorId", "F2", "documentType", "PAST_PERFORMANCE")));
-        given(noticeService.saveResult(eq(noticeId), any(), any(), any(), any(), any(), any(), any(), any(), any()))
+        given(noticeService.saveResult(eq(noticeId), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .willReturn(TestHelper.withId(Notice.builder().generationStatus(NoticeGenerationStatus.COMPLETED).build()));
 
         tool.saveOpportunityAnalysis(Map.of("noticeId", noticeId.toString(), "koreanTitle", "제목", "factorTree", factorTree));
 
         ArgumentCaptor<Map<String, Object>> saved = ArgumentCaptor.forClass(Map.class);
         then(noticeService).should().saveResult(eq(noticeId), any(), any(), any(), any(), any(), any(), any(), any(),
-                saved.capture());
+                saved.capture(), any());
         assertThat(saved.getValue()).isEqualTo(factorTree);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    @DisplayName("TC-OPP-027 공고분석저장_가격항목_그대로담김")
+    void 공고분석저장_가격항목_그대로담김() {
+        OpportunityAnalysisMcpTool tool = new OpportunityAnalysisMcpTool(noticeService, bidRequestRepository,
+                bidDocumentRepository, new ObjectMapper());
+        UUID noticeId = UUID.randomUUID();
+        // Aimbase 변수 치환은 객체를 JSON 문자열로 보내기도 해 문자열로 넣는다
+        String priceItems = "{\"items\":["
+                + "{\"clin\":\"0001AA\",\"description\":\"Grounds Maintenance\",\"quantity\":843.5,\"unit\":\"Acre\",\"period\":\"Base Year\",\"sourceRef\":\"Section B\"},"
+                + "{\"clin\":\"1001AA\",\"description\":\"Grounds Maintenance\",\"quantity\":843.5,\"unit\":\"Acre\",\"period\":\"Option Year 1\",\"sourceRef\":\"Section B\"}]}";
+        given(noticeService.saveResult(eq(noticeId), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                .willReturn(TestHelper.withId(Notice.builder().generationStatus(NoticeGenerationStatus.COMPLETED).build()));
+
+        tool.saveOpportunityAnalysis(Map.of("noticeId", noticeId.toString(), "koreanTitle", "제목", "priceItems", priceItems));
+
+        ArgumentCaptor<Map<String, Object>> saved = ArgumentCaptor.forClass(Map.class);
+        then(noticeService).should().saveResult(eq(noticeId), any(), any(), any(), any(), any(), any(), any(), any(),
+                any(), saved.capture());
+        assertThat((List<Map<String, Object>>) saved.getValue().get("items"))
+                .extracting(item -> item.get("clin"), item -> item.get("period"))
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple("0001AA", "Base Year"),
+                        org.assertj.core.groups.Tuple.tuple("1001AA", "Option Year 1"));
     }
 }

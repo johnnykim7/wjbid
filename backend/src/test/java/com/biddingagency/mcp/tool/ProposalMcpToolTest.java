@@ -3,12 +3,14 @@ package com.biddingagency.mcp.tool;
 import com.biddingagency.TestHelper;
 import com.biddingagency.domain.bid.repository.BidRequestRepository;
 import com.biddingagency.domain.bid.service.BidRequestService;
+import com.biddingagency.domain.compliance.entity.FulfillmentParty;
 import com.biddingagency.domain.compliance.entity.FulfillmentStatus;
 import com.biddingagency.domain.compliance.entity.FulfillmentType;
 import com.biddingagency.domain.compliance.entity.RequirementFulfillmentMap;
 import com.biddingagency.domain.compliance.repository.RequirementFulfillmentMapRepository;
 import com.biddingagency.domain.compliance.service.ComplianceFixture;
 import com.biddingagency.domain.compliance.service.ComplianceService;
+import com.biddingagency.domain.compliance.service.RequirementSyncService;
 import com.biddingagency.domain.document.entity.BidDocument;
 import com.biddingagency.domain.document.entity.DocumentType;
 import com.biddingagency.domain.document.repository.BidDocumentRepository;
@@ -18,7 +20,10 @@ import com.biddingagency.domain.notice.entity.NoticeGenerationStatus;
 import com.biddingagency.domain.notice.repository.NoticeRepository;
 import com.biddingagency.domain.opportunity.entity.OpportunityRequirementItem;
 import com.biddingagency.domain.opportunity.entity.OpportunityVisibility;
+import com.biddingagency.domain.opportunity.entity.RequirementCategory;
+import com.biddingagency.domain.opportunity.entity.RequirementLevel;
 import com.biddingagency.domain.opportunity.repository.OpportunityRequirementItemRepository;
+import com.biddingagency.domain.proposal.entity.ProposalChapter;
 import com.biddingagency.domain.proposal.entity.ProposalSection;
 import com.biddingagency.domain.proposal.service.DocumentCompositionService;
 import com.biddingagency.domain.proposal.service.ProposalService;
@@ -37,6 +42,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Clock;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -461,5 +468,94 @@ class ProposalMcpToolTest {
         JsonNode result = objectMapper.readTree(tool.saveProposalStructure(args));
 
         assertThat(result.get("unassignedReqIds").size()).isZero();
+    }
+    private static final String FACTS = "[{\"key\":\"Location\",\"value\":\"Camp Casey\"},"
+            + "{\"key\":\"Area\",\"value\":\"843.50 Acre\"},{\"key\":\"Period\",\"value\":\"Base + 4 Option Years\"}]";
+
+    private void givenGroundsNotice(String factorTreeJson) {
+        Notice notice = Notice.builder().opportunity(f.opportunity).generationStatus(NoticeGenerationStatus.COMPLETED)
+                .factorTreeJsonRaw(factorTreeJson).extractedFactsJsonRaw(FACTS)
+                .priceItemsJsonRaw("{\"items\":[{\"clin\":\"0001AA\",\"quantity\":843.5,\"unit\":\"Acre\"}]}").build();
+        lenient().when(bidRequestService.findByIdWithDetails(f.bidRequest.getId())).thenReturn(f.bidRequest);
+        lenient().when(noticeRepository.findFirstByOpportunityIdAndVisibilityOrderByAnalyzedAtDesc(f.opportunityId(),
+                OpportunityVisibility.VISIBLE)).thenReturn(Optional.of(notice));
+    }
+
+    private ProposalSection sectionOf(BidDocument document) {
+        ProposalChapter chapter = TestHelper.withId(ProposalChapter.builder()
+                .documentId(document.getId()).factorLabel("1").factorTitle("Technical").build());
+        ProposalSection section = TestHelper.withId(ProposalSection.builder()
+                .chapterId(chapter.getId()).title("Approach").requirementRefs(List.of()).build());
+        given(proposalService.getSection(section.getId())).willReturn(section);
+        given(proposalService.getChapter(chapter.getId())).willReturn(chapter);
+        return section;
+    }
+
+    @Test
+    @DisplayName("TC-DOC-303 절작성입력_공고사실과회사칸_실림")
+    void 절작성입력_공고사실과회사칸_실림() throws Exception {
+        givenGroundsNotice(ComplianceFixture.COMPOSED_TREE);
+        ProposalSection section = sectionOf(f.document);
+
+        JsonNode context = objectMapper.readTree(tool.getSectionContext(Map.of("sectionId", section.getId().toString())));
+
+        assertThat(List.<Object>of(context.get("noticeFacts").size(), context.get("company").get("companyName").asText(),
+                context.get("company").get("uei").asText(), context.get("company").get("cageCode").asText()))
+                .containsExactly(3, "Woojin E&C", "XBY4J73A66M4", "438PF");
+    }
+
+    @Test
+    @DisplayName("TC-DOC-304 절작성입력_가격항목_가격받는문서절만")
+    void 절작성입력_가격항목_가격받는문서절만() throws Exception {
+        givenGroundsNotice("{\"coverLetterRequired\":false,\"factors\":["
+                + "{\"factorId\":\"F1\",\"documentType\":\"TECHNICAL_PROPOSAL\"},"
+                + "{\"factorId\":\"F3\",\"documentType\":\"PRICING_SUMMARY\"}]}");
+        ProposalSection pricing = sectionOf(documentOf(DocumentType.PRICING_SUMMARY));
+        ProposalSection technical = sectionOf(f.document);
+
+        JsonNode pricingItems = objectMapper.readTree(tool.getSectionContext(Map.of("sectionId", pricing.getId().toString())))
+                .get("priceItems");
+        JsonNode technicalItems = objectMapper.readTree(tool.getSectionContext(Map.of("sectionId", technical.getId().toString())))
+                .get("priceItems");
+
+        assertThat(List.<Object>of(pricingItems.get("items").get(0).get("clin").asText(), technicalItems.isNull()))
+                .containsExactly("0001AA", true);
+    }
+
+    @Test
+    @DisplayName("TC-DOC-305 절검증입력_공고사실가격항목회사칸_실림")
+    void 절검증입력_공고사실가격항목회사칸_실림() throws Exception {
+        givenGroundsNotice("{\"coverLetterRequired\":false,\"factors\":[{\"factorId\":\"F1\",\"documentType\":\"TECHNICAL_PROPOSAL\"}]}");
+        ProposalSection section = sectionOf(f.document);
+        Map<String, Object> args = Map.of("sectionId", section.getId().toString());
+
+        JsonNode context = objectMapper.readTree(tool.getSectionContext(args));
+        JsonNode verify = objectMapper.readTree(tool.getSectionVerifyInput(args));
+
+        assertThat(List.of(verify.get("noticeFacts"), verify.get("priceItems"), verify.get("company")))
+                .containsExactly(context.get("noticeFacts"), context.get("priceItems"), context.get("company"));
+    }
+
+    @Test
+    @DisplayName("TC-DOC-309 정부양식설계입력_양식요구와회사칸_평가항목없음")
+    void 정부양식설계입력_양식요구와회사칸_평가항목없음() throws Exception {
+        givenGroundsNotice(ComplianceFixture.COMPOSED_TREE);
+        OpportunityRequirementItem formDocument = TestHelper.withId(OpportunityRequirementItem.builder()
+                .opportunity(f.opportunity).category(RequirementCategory.SUBMISSION).title("52.212-3 Representations")
+                .description("Complete the offeror representations.")
+                .requirementJson(new HashMap<>(Map.of(RequirementSyncService.KEY_FULFILLMENT_PARTY, "SYSTEM_FORM")))
+                .build());
+        OpportunityRequirementItem formLine = f.line("REQ-050", RequirementLevel.SHALL, FulfillmentParty.SYSTEM_FORM,
+                "The offeror shall complete 52.204-24.");
+        OpportunityRequirementItem upload = f.line("REQ-051", RequirementLevel.SHALL, FulfillmentParty.CLIENT_UPLOAD,
+                "The offeror shall provide a business license.");
+        lenient().when(requirementRepository.findByOpportunityIdOrderBySortOrderAsc(f.opportunityId()))
+                .thenReturn(List.of(formDocument, formLine, upload));
+
+        JsonNode input = composedInput(documentOf(DocumentType.GOVERNMENT_FORMS));
+
+        assertThat(List.<Object>of(texts(input.get("formRequirements"), "reqId"), input.get("company").get("companyName").asText(),
+                input.get("evaluatedDocument").asBoolean(), input.get("factorTree").isNull(), input.get("complianceMatrix").size()))
+                .containsExactly(Arrays.asList(null, "REQ-050"), "Woojin E&C", false, true, 0);
     }
 }

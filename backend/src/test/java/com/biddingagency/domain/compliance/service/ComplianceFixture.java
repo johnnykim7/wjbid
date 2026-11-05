@@ -5,6 +5,7 @@ import com.biddingagency.domain.bid.entity.BidRequest;
 import com.biddingagency.domain.compliance.entity.FulfillmentParty;
 import com.biddingagency.domain.document.entity.BidDocument;
 import com.biddingagency.domain.document.entity.DocumentType;
+import com.biddingagency.domain.member.entity.Member;
 import com.biddingagency.domain.notice.entity.Notice;
 import com.biddingagency.domain.notice.entity.NoticeGenerationStatus;
 import com.biddingagency.domain.opportunity.entity.Opportunity;
@@ -36,7 +37,9 @@ public final class ComplianceFixture {
             + "{\"factorId\":\"F1\",\"title\":\"FACTOR A. TECHNICAL\"},{\"factorId\":\"F2\",\"title\":\"FACTOR B. PAST PERFORMANCE\"}]}";
 
     public final Opportunity opportunity = TestHelper.withId(Opportunity.builder().build());
-    public final BidRequest bidRequest = TestHelper.withId(BidRequest.builder().opportunity(opportunity).build());
+    public final Member member = TestHelper.withId(Member.builder().email("qa@example.com").companyName("Woojin E&C")
+            .uei("XBY4J73A66M4").cageCode("438PF").address("Seoul").build());
+    public final BidRequest bidRequest = TestHelper.withId(BidRequest.builder().opportunity(opportunity).member(member).build());
     public final BidDocument document = TestHelper.withId(BidDocument.builder()
             .bidRequest(bidRequest).documentType(DocumentType.TECHNICAL_PROPOSAL).build());
     public final ProposalChapter chapter = TestHelper.withId(ProposalChapter.builder()

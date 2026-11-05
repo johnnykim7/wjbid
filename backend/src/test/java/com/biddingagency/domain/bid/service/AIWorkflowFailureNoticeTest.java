@@ -52,7 +52,7 @@ class AIWorkflowFailureNoticeTest {
         BidRequest br = TestHelper.withId(BidRequest.builder().opportunity(opp).build());
         br.transitionTo(BidRequestState.GENERATING, UUID.randomUUID(), "admin@example.com", null);
         given(documentCompositionService.compose(opp.getId()))
-                .willReturn(DocumentComposition.of(null, List.of(DocumentType.TECHNICAL_PROPOSAL)));
+                .willReturn(DocumentComposition.of(null, List.of(DocumentType.TECHNICAL_PROPOSAL), false));
         given(bidDocumentService.findByBidRequestAndType(br.getId(), DocumentType.TECHNICAL_PROPOSAL))
                 .willReturn(TestHelper.withId(BidDocument.builder().build()));
         given(llmPlatformClient.runProposalDesign(any())).willThrow(new LLMPlatformException("워크플로우 실행 실패: runId=r-1"));
