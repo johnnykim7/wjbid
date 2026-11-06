@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>WJbid AI 작업 흐름</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* 세로 한 줄기 흐름. 워크플로우는 카드, 그 안의 단계는 가로 줄, 스킬 파일은 주황 꼬리표 하나로만 강조 */
+:root {
+  --bg: #f3f4f1;
+  --surface: #ffffff;
+  --ink: #1b2124;
+  --muted: #5a6468;
+  --line: #d3d8d4;
+  --line-strong: #98a19d;
+  --wf: #275f53;
+  --wf-soft: #e2eee9;
+  --skill: #a3450f;
+  --skill-soft: #fbe8da;
+  --gate: #683c80;
+  --gate-soft: #f1e8f5;
+  --server-soft: #e9ebe8;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #131618; --surface: #1b1f22; --ink: #e3e7e5; --muted: #9aa4a7; --line: #2f3639; --line-strong: #5a6462;
+    --wf: #82c7b4; --wf-soft: #1b2c28; --skill: #f2a46e; --skill-soft: #3a2518; --gate: #cba5de; --gate-soft: #2a2131; --server-soft: #22272a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #131618; --surface: #1b1f22; --ink: #e3e7e5; --muted: #9aa4a7; --line: #2f3639; --line-strong: #5a6462;
+  --wf: #82c7b4; --wf-soft: #1b2c28; --skill: #f2a46e; --skill-soft: #3a2518; --gate: #cba5de; --gate-soft: #2a2131; --server-soft: #22272a;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.6;
+}
+.page {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding-block: 40px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+}
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+h1 { font-size: 30px; line-height: 1.25; font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 21px; font-weight: 700; }
+p { margin: 0; }
+.lede { color: var(--muted); max-width: 64ch; }
+header { display: flex; flex-direction: column; gap: 14px; }
+.basis { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+
+.legend { display: flex; flex-wrap: wrap; gap: 10px 22px; font-size: 13px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 8px; }
+.sw { width: 16px; height: 16px; border-radius: 4px; display: inline-block; flex: none; }
+.sw.wf { background: var(--wf-soft); border: 2px solid var(--wf); }
+.sw.server { background: var(--server-soft); border: 1px solid var(--line-strong); }
+.sw.gate { background: var(--gate-soft); border: 2px solid var(--gate); }
+.sw.skill { background: var(--skill-soft); border: 1px solid var(--skill); }
+
+section { display: flex; flex-direction: column; gap: 18px; }
+.section-head { display: flex; flex-direction: column; gap: 6px; }
+.section-head p { color: var(--muted); max-width: 70ch; }
+
+/* 흐름 줄기 */
+.flow { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 28px; }
+.flow > li { position: relative; min-width: 0; }
+.flow > li + li::before {
+  content: ""; position: absolute; left: 23px; top: -28px; height: 26px;
+  border-left: 2px solid var(--line-strong);
+}
+.flow > li + li::after {
+  content: ""; position: absolute; left: 18px; top: -9px;
+  border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 8px solid var(--line-strong);
+}
+
+.node {
+  background: var(--server-soft);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 16px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px;
+}
+.node .who { font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: 0.04em; }
+.node .what { font-weight: 600; }
+.node .sub { width: 100%; font-size: 13px; color: var(--muted); }
+.state {
+  font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 999px;
+  border: 1px solid var(--line-strong); color: var(--ink); background: var(--surface);
+}
+
+.gate {
+  background: var(--gate-soft);
+  border: 2px solid var(--gate);
+  border-radius: 10px;
+  padding: 12px 16px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.gate .who { font-size: 12px; font-weight: 700; color: var(--gate); letter-spacing: 0.04em; }
+.gate .what { font-weight: 600; }
+.branches { display: flex; flex-wrap: wrap; gap: 8px; }
+.branch { font-size: 13px; padding: 3px 10px; border-radius: 6px; background: var(--surface); border: 1px solid var(--line); }
+.branch b { color: var(--gate); }
+
+/* 워크플로우 카드 */
+.wf {
+  background: var(--surface);
+  border: 2px solid var(--wf);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.wf-head {
+  background: var(--wf-soft);
+  padding: 10px 16px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.wf-head .tag { font-size: 11px; font-weight: 700; color: var(--wf); letter-spacing: 0.08em; }
+.wf-head h3 { font-size: 17px; font-weight: 700; }
+.wf-head code { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.wf-body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 12px; }
+.wf-note { font-size: 13px; color: var(--muted); }
+.wf-note b { color: var(--ink); font-weight: 600; }
+
+.steps { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 26px; }
+.steps > * { position: relative; min-width: 0; max-width: 100%; }
+.steps > * + *::before {
+  content: ""; position: absolute; left: -17px; top: 50%;
+  width: 8px; height: 8px;
+  border-top: 2px solid var(--line-strong); border-right: 2px solid var(--line-strong);
+  transform: translateY(-50%) rotate(45deg);
+}
+.par { display: flex; flex-direction: column; gap: 8px; }
+.step {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: var(--surface);
+  display: flex; flex-direction: column; gap: 6px;
+}
+.step .name { font-weight: 600; font-size: 14px; line-height: 1.4; }
+.kinds { display: flex; gap: 4px; flex-wrap: wrap; }
+.kind { font-size: 11px; font-weight: 600; padding: 0 6px; border-radius: 4px; border: 1px solid var(--line); color: var(--muted); }
+.kind.ai { color: var(--wf); border-color: var(--wf); }
+.skills { display: flex; flex-wrap: wrap; gap: 4px; }
+.skill {
+  font-size: 12px; font-weight: 600; line-height: 1.5;
+  padding: 1px 8px; border-radius: 4px;
+  background: var(--skill-soft); color: var(--skill); border: 1px solid var(--skill);
+  white-space: nowrap;
+}
+.skill .num { font-family: var(--font-mono); font-weight: 500; margin-right: 4px; }
+
+/* 반복 묶음 */
+.loop {
+  border: 2px dashed var(--line-strong);
+  border-radius: 14px;
+  padding: 30px 14px 16px;
+  position: relative;
+}
+.loop > .loop-label {
+  position: absolute; top: -12px; left: 14px;
+  background: var(--bg); padding: 0 8px;
+  font-size: 13px; font-weight: 700; color: var(--ink);
+}
+.loop .loop .loop-label { background: var(--bg); }
+.retry {
+  margin-top: 4px; font-size: 13px; color: var(--ink);
+  padding: 8px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface);
+}
+
+/* 아직 안 들어간 것 */
+.pending { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.pend {
+  border: 1px solid var(--line); border-radius: 10px; background: var(--surface);
+  padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; min-width: 0;
+}
+.pend .cr { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.pend .t { font-weight: 600; }
+.pend .d { font-size: 13px; color: var(--muted); }
+
+/* 파일 표 */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 620px; font-size: 13.5px; }
+th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 12px; color: var(--muted); font-weight: 600; letter-spacing: 0.03em; background: var(--server-soft); }
+tr:last-child td { border-bottom: 0; }
+td.file { font-family: var(--font-mono); font-size: 12px; color: var(--muted); white-space: nowrap; }
+td.group { font-weight: 700; background: var(--bg); font-size: 12.5px; }
+.use { color: var(--wf); font-weight: 600; }
+.nouse { color: var(--muted); }
+.count { font-variant-numeric: tabular-nums; }
+
+footer { font-size: 12.5px; color: var(--muted); display: flex; flex-direction: column; gap: 4px; }
+
+@media (max-width: 640px) {
+  h1 { font-size: 24px; }
+  .steps { flex-direction: column; align-items: stretch; gap: 20px; }
+  .steps > * + *::before { left: 18px; top: -15px; transform: rotate(135deg); }
+  .loop { padding: 28px 10px 12px; }
+}
+</style>
+</head>
+<body>
+
+<div class="page">
+  <header>
+    <h1>WJbid AI 작업 흐름과 제안 스킬</h1>
+    <p class="lede">공고문을 만들 때와 고객의 입찰 요청을 처리할 때 우리 서버가 Aimbase 워크플로우를 언제 부르는지, 각 워크플로우 안에서 sam-proposal 스킬 파일이 어느 단계에 들어가는지를 한 장으로 그렸습니다.</p>
+    <p class="basis">기준: 상용 Aimbase 워크플로우 정의 2026-11-06 08:20 조회, 우리 서버 소스 develop</p>
+    <div class="legend" aria-label="범례">
+      <span><i class="sw server"></i>우리 서버나 사람이 하는 일</span>
+      <span><i class="sw wf"></i>Aimbase 워크플로우</span>
+      <span><i class="sw gate"></i>관리자 결정 관문</span>
+      <span><i class="sw skill"></i>그 단계가 읽는 스킬 파일</span>
+    </div>
+  </header>
+
+  <section aria-labelledby="s1">
+    <div class="section-head">
+      <h2 id="s1">1. 공고문을 만들 때</h2>
+      <p>모은 SAM 공고 하나를 고객에게 보일 공고문으로 만드는 흐름입니다. 여기서 만든 컴플라이언스 매트릭스(요구 하나에 한 줄)가 뒤의 제안서 설계와 절 검증의 기준이 됩니다.</p>
+    </div>
+    <ol class="flow">
+      <li class="node">
+        <span class="who">관리자</span>
+        <span class="what">모은 공고에서 공고문 만들기를 누름</span>
+      </li>
+      <li class="wf">
+        <div class="wf-head"><span class="tag">AIMBASE</span><h3>공고 분석</h3><code>opportunity-analysis</code></div>
+        <div class="wf-body">
+          <div class="steps">
+            <div class="step"><div class="kinds"><span class="kind">도구</span></div><span class="name">공고 정보 불러오기</span></div>
+            <div class="par">
+              <div class="step"><div class="kinds"><span class="kind">도구</span></div><span class="name">공고 본문 준비</span></div>
+              <div class="step"><div class="kinds"><span class="kind">도구</span><span class="kind">파일마다</span></div><span class="name">첨부파일 받기</span></div>
+            </div>
+            <div class="step"><div class="kinds"><span class="kind ai">AI</span><span class="kind">파일마다</span></div><span class="name">공고 내용 분석</span></div>
+            <div class="par">
+              <div class="step"><div class="kinds"><span class="kind ai">AI</span></div><span class="name">분석 결과를 원문과 대조 검증</span></div>
+              <div class="step"><div class="kinds"><span class="kind ai">AI</span></div><span class="name">컴플라이언스 매트릭스 만들기</span>
+                <div class="skills">
+                  <span class="skill" title="references/01-rfp-analysis.md"><span class="num">01</span>공고 분석</span>
+                  <span class="skill" title="assets/templates/compliance-matrix.md"><span class="num">양식</span>매트릭스</span>
+                </div>
+              </div>
+            </div>
+            <div class="step"><div class="kinds"><span class="kind">도구</span></div><span class="name">우리 서버에 저장</span></div>
+          </div>
+          <p class="wf-note">요약 검증과 매트릭스 만들기는 같은 분석 결과를 받아 나란히 돕니다. 스킬은 <b>매트릭스 단계에만</b> 들어갑니다.</p>
+        </div>
+      </li>
+      <li class="wf">
+        <div class="wf-head"><span class="tag">AIMBASE</span><h3>공고문 충실성 검증</h3><code>proposal-verify-fidelity</code></div>
+        <div class="wf-body">
+          <div class="steps">
+            <div class="step"><div class="kinds"><span class="kind ai">AI</span></div><span class="name">공고문 문장마다 원문 근거 대조</span>
+              <div class="skills"><span class="skill" title="references/07-review.md"><span class="num">07</span>리뷰</span></div>
+            </div>
+          </div>
+          <p class="wf-note">제안서 절 검증과 같은 워크플로우를 공고문용으로 한 번 부릅니다.</p>
+        </div>
+      </li>
+      <li class="node">
+        <span class="who">우리 서버</span>
+        <span class="what">공고문과 요구 항목(매트릭스 줄) 저장</span>
+      </li>
+    </ol>
+  </section>
+
+  <section aria-labelledby="s2">
+    <div class="section-head">
+      <h2 id="s2">2. 고객이 입찰을 요청했을 때</h2>
+      <p>입찰 요청 건이 분석 단계에 들어가면 서버가 워크플로우를 차례로 부릅니다. 관리자가 진행으로 정하기 전에는 제안서를 쓰지 않습니다.</p>
+    </div>
+    <ol class="flow">
+      <li class="node">
+        <span class="who">고객</span>
+        <span class="what">입찰 요청, 서류 올림</span>
+        <span class="state">서류 접수</span>
+      </li>
+      <li class="node">
+        <span class="who">우리 서버</span>
+        <span class="what">분석 단계로 넘어가면 고객 서류 읽기를 시작</span>
+        <span class="state">분석 중</span>
+        <span class="sub">읽을 서류가 없으면 이 칸을 건너뛰고 바로 입찰 분석으로 갑니다.</span>
+      </li>
+      <li class="wf">
+        <div class="wf-head"><span class="tag">AIMBASE</span><h3>고객 서류 읽기</h3><code>client-document-read</code></div>
+        <div class="wf-body">
+          <div class="steps">
+            <div class="step"><div class="kinds"><span class="kind">도구</span><span class="kind">파일마다</span></div><span class="name">고객 서류 받기</span></div>
+            <div class="step"><div class="kinds"><span class="kind ai">AI</span><span class="kind">파일마다</span></div><span class="name">HWP 서류를 글로 바꾸기</span>
+              <div class="skills"><span class="skill" title="scripts/convert_hwp.py"><span class="num">도구</span>HWP 변환</span></div>
+            </div>
+            <div class="step"><div class="kinds"><span class="kind ai">AI</span><span class="kind">파일마다</span></div><span class="name">서류 내용을 사실 목록으로 읽기</span></div>
+            <div class="step"><div class="kinds"><span class="kind">도구</span></div><span class="name">읽은 내용 저장</span></div>
+          </div>
+          <p class="wf-note">스킬 묶음의 <b>변환 스크립트</b>를 그대로 실행합니다. 읽는 중에는 문서 작성으로 넘어갈 수 없습니다.</p>
+        </div>
+      </li>
+      <li class="wf">
+        <div class="wf-head"><span class="tag">AIMBASE</span><h3>입찰 분석</h3><code>bid-analysis</code></div>
+        <div class="wf-body">
+          <div class="steps">
+            <div class="step"><div class="kinds"><span class="kind ai">AI</span></div><span class="name">종합 분석 리포트</span>
+              <div class="skills">
+                <span class="skill" title="references/01-rfp-analysis.md"><span class="num">01</span>공고 분석</span>
+                <span class="skill" title="references/00-writing-style.md"><span class="num">00</span>작성 문체</span>
+              </div>
+            </div>
+            <div class="step"><div class="kinds"><span class="kind ai">AI</span></div><span class="name">캡처플랜</span>
+              <div class="skills">
+                <span class="skill" title="references/11-capture-plan.md"><span class="num">11</span>캡처플랜</span>
+                <span class="skill" title="assets/templates/capture-plan.md"><span class="num">양식</span>캡처플랜</span>
+                <span class="skill" title="references/00-writing-style.md"><span class="num">00</span>작성 문체</span>
+              </div>
+            </div>
+            <div class="step"><div class="kinds"><span class="kind ai">AI</span></div><span class="name">입찰 여부 판단 자료</span>
+              <div class="skills">
+                <span class="skill" title="references/02-bid-decision.md"><span class="num">02</span>입찰 여부</span>
+                <span class="skill" title="references/00-writing-style.md"><span class="num">00</span>작성 문체</span>
+              </div>
+            </div>
+          </div>
+          <p class="wf-note">재료는 공고 분석, 같은 기관의 다른 공고, 낙찰 이력(미 연방 계약), 고객 서류입니다. <b>Pwin 과 판정은 AI 가 아니라 우리 서버가 계산</b>합니다.</p>
+        </div>
+      </li>
+      <li class="gate">
+        <span class="who">관리자 결정</span>
+        <span class="what">입찰 분석을 보고 진행 여부를 정함</span>
+        <div class="branches">
+          <span class="branch"><b>Go, 조건부 Go</b> 문서 작성 중으로 넘어감</span>
+          <span class="branch"><b>No-Go</b> 종료</span>
+        </div>
+      </li>
+      <li class="node">
+        <span class="who">우리 서버</span>
+        <span class="what">공고가 요구하는 문서 종류를 정함</span>
+        <span class="state">문서 작성 중</span>
+        <span class="sub">기술 제안서, 가격 제안서처럼 공고가 요구하는 문서마다 아래 묶음을 한 번씩 돕니다.</span>
+      </li>
+      <li class="loop">
+        <span class="loop-label">문서 종류마다 반복</span>
+        <ol class="flow">
+          <li class="wf">
+            <div class="wf-head"><span class="tag">AIMBASE</span><h3>제안서 설계</h3><code>proposal-design</code></div>
+            <div class="wf-body">
+              <div class="steps">
+                <div class="step"><div class="kinds"><span class="kind ai">AI</span></div><span class="name">장과 절 목차를 설계해 저장</span>
+                  <div class="skills">
+                    <span class="skill" title="references/04-outline-story.md"><span class="num">04</span>목차와 스토리</span>
+                    <span class="skill" title="references/05-section-plan.md"><span class="num">05</span>절 기획</span>
+                    <span class="skill" title="references/00-writing-style.md"><span class="num">00</span>작성 문체</span>
+                  </div>
+                </div>
+              </div>
+              <p class="wf-note">공고 평가 항목과 매트릭스 요구 번호로 목차를 짭니다. 본문은 쓰지 않습니다.</p>
+            </div>
+          </li>
+          <li class="loop">
+            <span class="loop-label">절마다 반복</span>
+            <ol class="flow">
+              <li class="wf">
+                <div class="wf-head"><span class="tag">AIMBASE</span><h3>절 작성</h3><code>proposal-write-section</code></div>
+                <div class="wf-body">
+                  <div class="steps">
+                    <div class="step"><div class="kinds"><span class="kind ai">AI</span></div><span class="name">참조 샘플과 고객 사실로 본문 쓰기</span>
+                      <div class="skills">
+                        <span class="skill" title="references/06-writing.md"><span class="num">06</span>본문 작성</span>
+                        <span class="skill" title="references/00-writing-style.md"><span class="num">00</span>작성 문체</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="wf">
+                <div class="wf-head"><span class="tag">AIMBASE</span><h3>절 검증</h3><code>proposal-verify-fidelity</code></div>
+                <div class="wf-body">
+                  <div class="steps">
+                    <div class="step"><div class="kinds"><span class="kind ai">AI</span></div><span class="name">문장마다 근거 대조, 답한 요구 번호 기록</span>
+                      <div class="skills"><span class="skill" title="references/07-review.md"><span class="num">07</span>리뷰</span></div>
+                    </div>
+                  </div>
+                  <p class="retry">근거 없는 문장이 하나라도 나오면 그 문장을 피하라고 알려 주고 한 번 다시 쓴 뒤 다시 검증합니다.</p>
+                </div>
+              </li>
+            </ol>
+          </li>
+          <li class="node">
+            <span class="who">우리 서버</span>
+            <span class="what">장, 절 순서로 묶어 새 판으로 저장</span>
+          </li>
+        </ol>
+      </li>
+      <li class="node">
+        <span class="who">관리자</span>
+        <span class="what">완성된 제안서 검토</span>
+        <span class="state">관리자 검토</span>
+      </li>
+    </ol>
+  </section>
+
+  <section aria-labelledby="s3">
+    <div class="section-head">
+      <h2 id="s3">3. 아직 흐름에 없는 스킬 단계</h2>
+      <p>10/24 에 스킬 전체를 차용하기로 하고 나눠 둔 건 중 다섯 건이 계획 상태입니다. 위 그림에 이 단계들은 없습니다.</p>
+    </div>
+    <div class="pending">
+      <div class="pend"><span class="cr">CR-171</span><span class="t">수주 전략과 관리자 승인</span><span class="d">스킬 03. Hot Button, Winning Theme 를 관리자가 승인한 뒤 본문을 씁니다.</span></div>
+      <div class="pend"><span class="cr">CR-172</span><span class="t">목차와 절 기획서 저장, 표시</span><span class="d">스킬 04, 05. 설계가 읽기는 하지만 기획서를 따로 남기고 보여주지는 않습니다.</span></div>
+      <div class="pend"><span class="cr">CR-173</span><span class="t">요약문, 도식, 장 표지, 워드 서식</span><span class="d">스킬 10, 도식 모음, 워드 양식.</span></div>
+      <div class="pend"><span class="cr">CR-174</span><span class="t">제안서 전체 리뷰</span><span class="d">스킬 07 의 7기준 평가와 모의 채점. 지금 절 검증은 근거 대조만 합니다.</span></div>
+      <div class="pend"><span class="cr">CR-175</span><span class="t">회사소개서, 사전 의향조사 회신, 첫 연락 메일</span><span class="d">스킬 08, 09.</span></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="s4">
+    <div class="section-head">
+      <h2 id="s4">4. 스킬 파일별 쓰임</h2>
+      <p>sam-proposal 1판의 파일 30개(소개 파일 SKILL.md 제외) 중 <span class="count">11</span>개를 워크플로우가 읽습니다.</p>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>파일</th><th>내용</th><th>쓰는 워크플로우 단계</th></tr></thead>
+        <tbody>
+          <tr><td class="group" colspan="3">방법 설명 references 12개 중 8개 사용</td></tr>
+          <tr><td class="file">00-writing-style.md</td><td>작성 문체</td><td class="use">입찰 분석 3단계, 제안서 설계, 절 작성</td></tr>
+          <tr><td class="file">01-rfp-analysis.md</td><td>공고 분석</td><td class="use">공고 분석 매트릭스, 입찰 분석 리포트</td></tr>
+          <tr><td class="file">02-bid-decision.md</td><td>입찰 여부 결정</td><td class="use">입찰 분석 판단 자료</td></tr>
+          <tr><td class="file">03-win-strategy.md</td><td>수주 전략</td><td class="nouse">안 씀 (CR-171)</td></tr>
+          <tr><td class="file">04-outline-story.md</td><td>목차와 스토리</td><td class="use">제안서 설계</td></tr>
+          <tr><td class="file">05-section-plan.md</td><td>절 기획</td><td class="use">제안서 설계</td></tr>
+          <tr><td class="file">06-writing.md</td><td>본문 작성</td><td class="use">절 작성</td></tr>
+          <tr><td class="file">07-review.md</td><td>리뷰</td><td class="use">절 검증, 공고문 충실성 검증</td></tr>
+          <tr><td class="file">08-cold-email.md</td><td>첫 연락 메일</td><td class="nouse">안 씀 (CR-175)</td></tr>
+          <tr><td class="file">09-meeting-proposal.md</td><td>미팅 제안서, 회사소개서</td><td class="nouse">안 씀 (CR-175)</td></tr>
+          <tr><td class="file">10-executive-summary.md</td><td>요약문</td><td class="nouse">안 씀 (CR-173)</td></tr>
+          <tr><td class="file">11-capture-plan.md</td><td>캡처플랜</td><td class="use">입찰 분석 캡처플랜</td></tr>
+          <tr><td class="group" colspan="3">양식 templates 8개 중 2개 사용</td></tr>
+          <tr><td class="file">compliance-matrix.md</td><td>매트릭스 양식</td><td class="use">공고 분석 매트릭스</td></tr>
+          <tr><td class="file">capture-plan.md</td><td>캡처플랜 양식</td><td class="use">입찰 분석 캡처플랜</td></tr>
+          <tr><td class="file">outline-strategy.md, section-plan.md</td><td>목차, 절 기획서 양식</td><td class="nouse">안 씀 (CR-172)</td></tr>
+          <tr><td class="file">es-4box.md, docx-style.js, docx-build-reference.js</td><td>요약문, 워드 양식</td><td class="nouse">안 씀 (CR-173)</td></tr>
+          <tr><td class="file">project-status.md</td><td>진행 현황 양식</td><td class="nouse">안 씀</td></tr>
+          <tr><td class="group" colspan="3">도구 scripts 3개 중 1개 사용</td></tr>
+          <tr><td class="file">convert_hwp.py</td><td>HWP 를 글로 변환</td><td class="use">고객 서류 읽기</td></tr>
+          <tr><td class="file">check_coverage.py</td><td>요구 누락 검사</td><td class="nouse">안 씀, 같은 계산을 우리 서버가 함 (CR-159)</td></tr>
+          <tr><td class="file">capture_diagram.py</td><td>도식 이미지 만들기</td><td class="nouse">안 씀 (CR-173)</td></tr>
+          <tr><td class="group" colspan="3">도식 모음 diagram-library 7개, 사용 안 함</td></tr>
+          <tr><td class="file">architecture.html 외 6개</td><td>구성도, 비교, 단계, 연표 도식</td><td class="nouse">안 씀 (CR-173)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    <p>스킬을 쓰지 않는 상용 워크플로우 8개(공고 제목과 본문 번역, 옛 단일 문서 생성 등)는 그림에서 뺐습니다.</p>
+    <p>AI 단계는 Aimbase 가 맡고, 도구 단계는 Aimbase 가 우리 서버를 불러 자료를 가져오거나 저장하는 단계입니다.</p>
+  </footer>
+</div>
+</body>
+</html>
