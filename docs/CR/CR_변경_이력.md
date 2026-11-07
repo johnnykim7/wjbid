@@ -1560,4 +1560,4 @@
 - **영향 모듈**: BE OpportunityAnalysisMcpTool, NoticeService.saveResult, ProposalMcpTool(get_proposal_design_input, get_section_context, get_section_verify_input), DocumentComposition, DocumentCompositionService, DocumentType, ComplianceService. 작업 흐름 정의 opportunity-analysis.steps.v3, proposal-design, proposal-write-section, proposal-verify-fidelity. FE 문서 이름표 3곳(관리자 콘솔 documentType, 고객 포털 ProposalsPage, ProposalDetailPage). 마이그레이션 없음
 - **영향 설계서**: T1-1 1.36(BID-OPP-006, BID-DOC-001), T1-3 1.23(BIZ-100 ~ 102), T1-10 1.12(정부 양식), T3-1 1.23(DocumentType GOVERNMENT_FORMS, price_items_json), T3-2 1.33(MCP 도구 넷), T3-5 1.31(TC-OPP-027, 028, TC-DOC-303 ~ 309), execution-spec 1.26. 영향 없음 확인: T1-2(기능 수 그대로), T1-4(정책 수치 없음), T1-5(입찰 상태 그대로), T1-6(이벤트 그대로), T1-7(기존 기능 보강), T2-1, T2-2, T3-3, T3-4(화면은 이름표만). CR 문서 [CR-189_AI_작성_공고내용_가격항목_정부양식.md](CR-189_AI_작성_공고내용_가격항목_정부양식.md)
 - **규모**: 중 (공고 분석 저장 칸 하나, AI 작성 입력 셋, 문서 종류 하나, 작업 흐름 정의 넷)
-- **상태**: 설계
+- **상태**: 상용 배포 끝 (11/8 08:39, 7d463f9 = 상용 33c5270 위 CR-189 코드, all, 마이그레이션 없음). 같은 때 Aimbase 작업 흐름 넷 교체, 다시 연결 도구 23개. 상용 재시험은 하지 않음(사용자 11/8 08:42 개편 설계로 바로 감)
