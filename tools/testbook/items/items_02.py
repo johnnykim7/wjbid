@@ -896,4 +896,15 @@ dict(id='IT-02-081', flow='공고 검색', kind='예외', title='기지별 통�
      judge=['가상', '가상', '가상'],
      req=['BID-BROWSE-006'], fc=['BID-BROWSE-006'], screen='/', pri='Medium'),
 
+dict(id='IT-02-082', flow='마감 전 공고 목록', kind='정상', title='첫 화면 목록의 기지 칸에 계약 사무소 주소 APO, AP 가 아니라 제목의 기지 이름이 보인다',
+     pre='비로그인, 마감 전 공고 중 SAM 수행 장소가 비어 있고 영문 제목에 기지 목록 낱말(예: HUMPHREYS)이 있는 공고 1건, 제목에 기지 낱말이 없는 공고 1건',
+     steps='1. GET /opportunities/collected?openOnly=true&latestOnly=true 를 불러 두 공고의 placeOfPerformance 를 적는다\n'
+           '2. 홈(/)을 열어 두 공고 줄의 기지 칸을 본다',
+     expect='1. 제목에 기지 낱말이 있는 공고의 placeOfPerformance 가 그 기지의 한글 이름(예: "캠프 험프리스")이다\n'
+            '2. 제목에 기지 낱말이 없는 공고의 placeOfPerformance 가 null 이다\n'
+            '3. 응답 어느 줄에도 placeOfPerformance "APO, AP" 가 없다\n'
+            '4. 첫 화면 기지 칸에 1번 공고는 기지 한글 이름이 보이고 2번 공고는 칸이 비어 있다',
+     judge=['서버', '서버', '서버', '가상'],
+     req=['BID-BROWSE-001', 'BIZ-103'], fc=['BID-BROWSE-001', 'BID-BROWSE-005'], screen='/', pri='Medium'),
+
 ]

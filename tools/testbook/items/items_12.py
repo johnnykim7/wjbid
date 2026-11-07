@@ -748,4 +748,15 @@ dict(id='IT-12-079', flow='관리자 확인과 알림', kind='예외', title='�
      judge=['가상', '가상', '서버'],
      req=['BID-ADMIN-004'], fc=['BID-ADMIN-004'], screen='관리자 /opportunities', pri='Low'),
 
+dict(id='IT-12-080', flow='공고 관리', kind='정상', title='원본 공고 상세의 수행 장소는 계약 사무소 주소가 아니라 제목의 기지 이름이거나 숨는다',
+     pre='관리자 계정, SAM 수행 장소가 비어 있고 영문 제목에 기지 목록 낱말이 있는 원본 공고 1건, 제목에 기지 낱말도 없는 원본 공고 1건',
+     steps='1. 관리자 토큰으로 GET /api/admin/opportunities/{두 공고 id} 를 부른다\n'
+           '2. 관리자 화면 [원본 공고] 에서 두 공고의 상세를 차례로 연다',
+     expect='1. 첫 공고 응답의 placeOfPerformance 가 그 기지의 한글 이름이고 둘째 공고는 null 이다\n'
+            '2. 두 응답 모두 placeOfPerformanceShort 가 "APO, AP" 가 아니다\n'
+            '3. 첫 공고 상세의 "수행 장소" 묶음 장소 칸에 기지 한글 이름이 보인다\n'
+            '4. 둘째 공고 상세에는 "수행 장소" 묶음이 없다',
+     judge=['서버', '서버', '가상', '가상'],
+     req=['BID-ADMIN-004', 'BIZ-103'], fc=['BID-ADMIN-004'], screen='관리자 /opportunities', pri='Medium'),
+
 ]

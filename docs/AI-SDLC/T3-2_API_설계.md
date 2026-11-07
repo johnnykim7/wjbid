@@ -1,6 +1,6 @@
 # SAM.gov Bidding Agency Platform API 설계
 
-> 설계 버전: 1.33 | 최종 수정: 2026-11-06 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-144, CR-146, CR-147, CR-152, CR-153, CR-155, CR-157, CR-159, CR-160, CR-162, CR-168, CR-169, CR-170, CR-178, CR-179, CR-180, CR-182, CR-183, CR-186, CR-187, CR-188, CR-189
+> 설계 버전: 1.34 | 최종 수정: 2026-11-08 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-144, CR-146, CR-147, CR-152, CR-153, CR-155, CR-157, CR-159, CR-160, CR-162, CR-168, CR-169, CR-170, CR-178, CR-179, CR-180, CR-182, CR-183, CR-186, CR-187, CR-188, CR-189, CR-191
 
 > 단계: 3. Detail Design | 실행스펙 섹션 3에 포함
 >
@@ -86,6 +86,7 @@
 > 승인(approve)은 OpportunityAnalysis 상태가 COMPLETED일 때만 가능.
 > **CR-019 첨부 보강**: 관리자 원본 목록/상세 응답(OpportunityAdminDto)에 `manualFetchRequiredCount`(외부서 가져와야 할 첨부 수)를 포함해 "가져와야 함" 표식을 노출한다. 첨부 목록(`GET /admin/opportunities/{id}/attachments` 신규)은 각 첨부의 downloadStatus(SUCCESS/MANUAL_FETCH_REQUIRED 등)와 sourceUrl(외부 다운로드 링크)을 반환.
 > **CR-160 PIEE 받기 결과**: 관리자 원본 목록/상세 응답(OpportunityAdminDto)에 `pieeFetchStatus`(WAITING, FETCHING, DONE, NOT_FOUND, FAILED, 받지 않는 공고는 null), `pieeFetchStatusAt`, `pieeFileCount`, `pieeFetchMessage`, `pieeUrl`(POL-040 `PIEE_NOTICE_URL` 에 공고번호를 넣은 주소, 공고번호가 비면 null)을 더한다. 새 엔드포인트는 없다.
+> **CR-191 수행 장소**: 관리자 원본 상세 응답의 `placeOfPerformance` 는 원본 JSON 값이 아니라 목록 줄(C-2)과 같은 계산의 글이다. 짧은 수행 장소, 없으면 영문 제목에서 찾은 기지의 한글 이름, 둘 다 없으면 null (BIZ-103). `placeOfPerformanceShort` 는 짧은 수행 장소 그대로다. 고객 공고 상세 응답(OpportunityDto)의 `placeOfPerformance` 는 짧은 수행 장소다.
 
 ---
 
@@ -213,7 +214,7 @@
 | title, titleKo | 원문 제목, 한글 제목(없으면 null) |
 | agencyName | 발주처(모은 공고의 기관 이름, 없으면 null) (CR-155) |
 | naicsCode | 업종 코드(원본 JSON 의 naicsCode, 없으면 null) (CR-155) |
-| placeOfPerformance | 이행 장소. 짧은 이름이 있으면 그것, 없으면 원본 JSON 의 이행 장소, 둘 다 없으면 null (CR-155) |
+| placeOfPerformance | 이행 장소. ~~짧은 이름이 있으면 그것, 없으면 원본 JSON 의 이행 장소, 둘 다 없으면 null (CR-155)~~ 짧은 수행 장소, 없으면 영문 제목에서 찾은 기지의 한글 이름(기지 목록 순서, ", " 로 잇는다), 둘 다 없으면 null. 원본 JSON 은 읽지 않는다 (BIZ-103, CR-191) |
 | type, typeKo, group | SAM 공고 유형, 한글 유형 이름, 묶음 유형 |
 | postedDate, responseDeadline | 게시일, 답변 기한(없으면 null) |
 | awardAmount | 낙찰 금액 표시 문자열(낙찰 공지만, 없으면 null) |
