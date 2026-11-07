@@ -10,7 +10,9 @@ export function AppFooter() {
     filled(COMPANY.name) && `상호 ${COMPANY.name}`,
     filled(COMPANY.ceo) && `대표 ${COMPANY.ceo}`,
     filled(COMPANY.businessNumber) && `사업자등록번호 ${COMPANY.businessNumber}`,
+    filled(COMPANY.mailOrderNumber) && `통신판매업신고 ${COMPANY.mailOrderNumber}`,
     filled(COMPANY.address) && `주소 ${COMPANY.address}`,
+    filled(COMPANY.branchAddress) && `서울지사 ${COMPANY.branchAddress}`,
   ].filter(Boolean) as string[]
   const contactItems = [
     filled(COMPANY.tel) && `전화 ${COMPANY.tel}`,
