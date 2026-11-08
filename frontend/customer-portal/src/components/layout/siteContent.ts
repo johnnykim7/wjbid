@@ -28,7 +28,7 @@ export const FOOTER_LINKS = [
 export const COMPANY = {
   name: '(주)우진이엔씨',
   ceo: '한용일',
-  businessNumber: '(사업자등록번호)',
+  businessNumber: '141-81-27181',
   mailOrderNumber: '제2018-경기평택-0288호',
   address: '경기도 평택시 팽성읍 안정순환로 153-16',
   branchAddress: '서울 강서구 화곡로68길 82, 402호(강서IT밸리)',
