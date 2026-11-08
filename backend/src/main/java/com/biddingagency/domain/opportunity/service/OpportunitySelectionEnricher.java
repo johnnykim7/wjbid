@@ -10,8 +10,12 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 /**
  * CR-022 2차: 원본공고 선별용 정보 풍부화.
@@ -21,7 +25,7 @@ import java.util.UUID;
  *  - setAside → set_aside_ko
  *  - NAICS → naics_label_ko
  *  - award.amount → award_amount
- *  - officeAddress / placeOfPerformance → place_of_performance_short
+ *  - placeOfPerformance → place_of_performance_short (계약 사무소 주소는 쓰지 않는다, BIZ-103)
  *
  * 비동기 (별도 LLM 큐):
  *  - title → titleKo (CR-022 1차 OpportunityTranslationService)
@@ -33,6 +37,11 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class OpportunitySelectionEnricher {
+
+    // 미 우정청이 정한 군사우편 표기라 정책 값이 아니다. AP 는 태평양, AE 는 유럽, AA 는 미주
+    private static final Set<String> MILITARY_MAIL_CITIES = Set.of("APO", "FPO", "DPO");
+    private static final Set<String> MILITARY_MAIL_STATES = Set.of("AA", "AE", "AP", "ARMED FORCES PACIFIC",
+            "ARMED FORCES EUROPE", "ARMED FORCES AMERICAS");
 
     private final OpportunityRepository opportunityRepository;
     private final SamSetAsideKoMapper setAsideMapper;
@@ -52,7 +61,7 @@ public class OpportunitySelectionEnricher {
         String setAsideKo = setAsideMapper.toKo(data.getTypeOfSetAsideDescription());
         String naicsLabelKo = naicsMapper.toKo(data.getNaicsCode());
         String awardAmount = extractAwardAmount(data.getAward());
-        String placeShort = extractPlaceShort(data.getPlaceOfPerformance(), data.getOfficeAddress());
+        String placeShort = extractPlaceShort(data.getPlaceOfPerformance());
 
         opp.applySelectionMeta(awardAmount, placeShort, setAsideKo, naicsLabelKo);
     }
@@ -128,26 +137,37 @@ public class OpportunitySelectionEnricher {
         }
     }
 
-    /** placeOfPerformance.city.name / .state.name 또는 officeAddress.city/state */
-    private String extractPlaceShort(Map<String, Object> pop, Map<String, Object> office) {
-        String city = null;
-        String state = null;
-        if (pop != null) {
-            city = mapName(pop.get("city"));
-            state = mapName(pop.get("state"));
-        }
-        if ((city == null || city.isBlank()) && office != null) {
-            Object oc = office.get("city");
-            Object os = office.get("state");
-            if (oc instanceof String s) city = s;
-            if (os instanceof String s) state = s;
-        }
+    /**
+     * SAM 수행 장소의 "도시, 주" (BIZ-103). 계약 사무소 주소는 공고를 낸 곳이라 쓰지 않고,
+     * 군사우편 주소는 우편번호 없이는 어느 기지인지 알려 주지 못해 비운다.
+     */
+    private String extractPlaceShort(Map<String, Object> pop) {
+        if (pop == null || isMilitaryMail(pop)) return null;
+        String city = mapName(pop.get("city"));
+        String state = mapName(pop.get("state"));
         boolean hasCity = city != null && !city.isBlank();
         boolean hasState = state != null && !state.isBlank();
         if (hasCity && hasState) return city + ", " + state;
         if (hasCity) return city;
         if (hasState) return state;
         return null;
+    }
+
+    private boolean isMilitaryMail(Map<String, Object> pop) {
+        return namesOf(pop.get("city")).stream().anyMatch(MILITARY_MAIL_CITIES::contains)
+                || namesOf(pop.get("state")).stream().anyMatch(MILITARY_MAIL_STATES::contains);
+    }
+
+    /** {code, name} 이면 둘 다, 글이면 그 글. 대문자로 맞춘다 */
+    private List<String> namesOf(Object node) {
+        if (node instanceof String s) return List.of(s.trim().toUpperCase(Locale.ROOT));
+        if (node instanceof Map<?, ?> m) {
+            return Stream.of(m.get("code"), m.get("name"))
+                    .filter(String.class::isInstance)
+                    .map(v -> ((String) v).trim().toUpperCase(Locale.ROOT))
+                    .toList();
+        }
+        return List.of();
     }
 
     /** SAM 응답이 {city: {name: "..."}} 형태 vs city: "..." 양쪽 모두 대응 */

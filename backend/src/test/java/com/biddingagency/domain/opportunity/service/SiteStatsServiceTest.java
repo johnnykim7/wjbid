@@ -1,6 +1,8 @@
 package com.biddingagency.domain.opportunity.service;
 
+import com.biddingagency.domain.base.repository.MilitaryBaseRepository;
 import com.biddingagency.domain.base.service.MilitaryBaseService;
+import com.biddingagency.domain.base.service.PerformancePlaceService;
 import com.biddingagency.domain.federal.repository.FederalContractRepository;
 import com.biddingagency.domain.notice.repository.NoticeRepository;
 import com.biddingagency.domain.notice.service.NoticeService;
@@ -48,6 +50,8 @@ class SiteStatsServiceTest {
     private NoticeService noticeService;
     @Mock
     private MilitaryBaseService baseService;
+    @Mock
+    private MilitaryBaseRepository militaryBaseRepository;
 
     private SiteStatsService service() {
         return new SiteStatsService(opportunityRepository, federalContractRepository, NOW);
@@ -109,7 +113,8 @@ class SiteStatsServiceTest {
     @DisplayName("마감전공고수_첫화면건수와같음")
     void 마감전공고수_첫화면건수와같음() {
         given마감섞인공고();
-        MarketRowAssembler rowAssembler = new MarketRowAssembler(opportunityRepository, noticeRepository);
+        MarketRowAssembler rowAssembler = new MarketRowAssembler(opportunityRepository, noticeRepository,
+                new PerformancePlaceService(militaryBaseRepository));
         ReflectionTestUtils.setField(rowAssembler, "publicOpportunityUrl", "https://sam.gov/opp/{noticeId}/view");
         MarketDataService market = new MarketDataService(opportunityRepository, rowAssembler,
                 new NaicsTopLevelKoMapper(), settingService, noticeService, baseService, NOW);

@@ -39,7 +39,7 @@ public record MarketSource(
                         Map<String, Object> rawJson) {
         this(id, noticeId, solicitationNumber, title, titleKo, type, typeKo, postedDate, responseDeadline,
                 awardAmount, awardAmountUsd, awardeeName, awardeeUei, textOf(rawJson, "naicsCode"),
-                organizationName, placeOf(placeOfPerformanceShort, rawJson));
+                organizationName, textOrNull(placeOfPerformanceShort));
     }
 
     public MarketGroup group() {
@@ -53,18 +53,14 @@ public record MarketSource(
         return s.isEmpty() ? null : s;
     }
 
-    private static String placeOf(String placeShort, Map<String, Object> rawJson) {
-        if (placeShort != null && !placeShort.isBlank()) return placeShort.trim();
-        // 원본 JSON 의 이행 장소가 묶음 값이면 화면에 보일 글이 아니라 쓰지 않는다
-        if (rawJson == null || !(rawJson.get("placeOfPerformance") instanceof String)) return null;
-        return textOf(rawJson, "placeOfPerformance");
+    // 원본 JSON 의 placeOfPerformance 는 CR-191 전에 계약 사무소 주소를 담았으므로 장소로 읽지 않는다(BIZ-103)
+    private static String textOrNull(String s) {
+        return s == null || s.isBlank() ? null : s.trim();
     }
 
     private static String textOf(Map<String, Object> rawJson, String key) {
         if (rawJson == null) return null;
         Object v = rawJson.get(key);
-        if (v == null) return null;
-        String s = v.toString().trim();
-        return s.isEmpty() ? null : s;
+        return v == null ? null : textOrNull(v.toString());
     }
 }

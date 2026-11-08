@@ -41,8 +41,8 @@ public class OpportunityAdminDto {
     private String naicsCode;
     /** Classification Code (PSC) */
     private String classificationCode;
-    /** 수행 장소 — SAM 원본 placeOfPerformance(문자열 또는 객체) */
-    private Object placeOfPerformance;
+    /** 보이는 수행 장소. 고객 목록 줄과 같은 계산(BIZ-103). null 이면 상세에서 수행 장소 묶음을 숨긴다 */
+    private String placeOfPerformance;
     /** Description — SAM API 외부 링크 URL 또는 본문(긴 텍스트일 수 있음) */
     private String description;
     /** 담당자 (Points of Contact) — [{type, email, phone, fullName, fax}] 형태 */
@@ -86,12 +86,12 @@ public class OpportunityAdminDto {
 
     @SuppressWarnings("unchecked")
     public static OpportunityAdminDto from(Opportunity opp, long attachmentCount,
-                                           long manualFetchRequiredCount, int noticeCount, String pieeUrl) {
+                                           long manualFetchRequiredCount, int noticeCount, String pieeUrl,
+                                           String place) {
         Map<String, Object> raw = opp.getRawJson();
         String setAside = null;
         String naics = null;
         String psc = null;
-        Object pop = null;
         String desc = null;
         List<Map<String, Object>> pocs = null;
         List<String> resourceLinks = null;
@@ -99,7 +99,6 @@ public class OpportunityAdminDto {
             setAside = strOrNull(raw.get("setAside"));
             naics = strOrNull(raw.get("naicsCode"));
             psc = strOrNull(raw.get("classificationCode"));
-            pop = raw.get("placeOfPerformance");
             desc = strOrNull(raw.get("description"));
             Object pocObj = raw.get("pointOfContact");
             if (pocObj instanceof List<?> list) {
@@ -127,7 +126,7 @@ public class OpportunityAdminDto {
                 .setAside(setAside)
                 .naicsCode(naics)
                 .classificationCode(psc)
-                .placeOfPerformance(pop)
+                .placeOfPerformance(place)
                 .description(desc)
                 .descriptionBody(opp.getDescriptionBody())
                 .pointOfContact(pocs)

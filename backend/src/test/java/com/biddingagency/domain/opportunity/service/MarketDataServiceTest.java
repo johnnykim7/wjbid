@@ -1,7 +1,10 @@
 package com.biddingagency.domain.opportunity.service;
 
 import com.biddingagency.domain.notice.repository.NoticeRepository;
+import com.biddingagency.domain.base.entity.MilitaryBase;
+import com.biddingagency.domain.base.repository.MilitaryBaseRepository;
 import com.biddingagency.domain.base.service.MilitaryBaseService;
+import com.biddingagency.domain.base.service.PerformancePlaceService;
 import com.biddingagency.domain.notice.service.NoticeService;
 import com.biddingagency.domain.opportunity.MarketGroup;
 import com.biddingagency.domain.opportunity.dto.MarketResponses.AmendmentGroup;
@@ -67,12 +70,15 @@ class MarketDataServiceTest {
     private NoticeService noticeService;
     @Mock
     private MilitaryBaseService baseService;
+    @Mock
+    private MilitaryBaseRepository militaryBaseRepository;
 
     private MarketRowAssembler rowAssembler;
 
     @BeforeEach
     void setUp() {
-        rowAssembler = new MarketRowAssembler(opportunityRepository, noticeRepository);
+        rowAssembler = new MarketRowAssembler(opportunityRepository, noticeRepository,
+                new PerformancePlaceService(militaryBaseRepository));
         ReflectionTestUtils.setField(rowAssembler, "publicOpportunityUrl", "https://sam.gov/opp/{noticeId}/view");
     }
 
@@ -430,8 +436,26 @@ class MarketDataServiceTest {
 
         MarketRowDto row = service().collected(open(null, null, null), 0, 20).content().get(0);
 
+        // CR-191: 원본 JSON 의 이행 장소는 계약 사무소 주소였으므로 읽지 않는다(BIZ-103)
         assertThat(row).extracting(MarketRowDto::agencyName, MarketRowDto::naicsCode, MarketRowDto::placeOfPerformance)
-                .containsExactly("DEPT OF THE ARMY", "236220", "APO, AP");
+                .containsExactly("DEPT OF THE ARMY", "236220", null);
+    }
+
+    // TC-BROWSE-025
+    @Test
+    @DisplayName("줄칸_짧은장소없고제목기지_기지이름")
+    void 줄칸_짧은장소없고제목기지_기지이름() {
+        MilitaryBase humphreys = MilitaryBase.builder().nameKo("캠프 험프리스").nameEn("Camp Humphreys")
+                .matchTerms("HUMPHREYS").sortOrder(0).build();
+        ReflectionTestUtils.setField(humphreys, "id", UUID.randomUUID());
+        given(militaryBaseRepository.findAllByOrderBySortOrderAscNameKoAsc()).willReturn(List.of(humphreys));
+        given모은공고(new MarketSource(UUID.randomUUID(), "N1", "W1", "REPAIR ROOF, CAMP HUMPHREYS", null,
+                "Solicitation", null, NOW_KST.minusDays(1), NOW_KST.plusDays(5), null, null, null, null,
+                "DEPT OF THE ARMY", null, Map.of("placeOfPerformance", "APO, AP")));
+
+        MarketRowDto row = service().collected(open(null, null, null), 0, 20).content().get(0);
+
+        assertThat(row.placeOfPerformance()).isEqualTo("캠프 험프리스");
     }
 
     // TC-BROWSE-022
