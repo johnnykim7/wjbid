@@ -14,7 +14,7 @@ const PLACE = findMenuItem('awards', 'recent-awards')
 const PAGE_SIZE = 20
 const SORTS: AwardSort[] = ['LATEST', 'AMOUNT']
 
-/** 최근 낙찰 (CR-135, BID-MKT-004, T3-3 「최근 낙찰」). 낙찰 공지와 공개된 금액, 같은 공고번호의 원래 공고 */
+/** 최근 낙찰 (CR-135, BID-MKT-004, T3-3 「최근 낙찰」). 낙찰 공지와 공개된 금액, 같은 공고번호의 입찰 공고(CR-192) */
 export default function RecentAwardsPage() {
   const [params, setParams] = useSearchParams()
   const month = params.get('month') ?? ''
