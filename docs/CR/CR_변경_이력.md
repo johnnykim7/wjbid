@@ -1584,4 +1584,4 @@
 - **영향 모듈**: BE OpportunitySelectionEnricher, OpportunityCollectorService, MarketSource, MarketRowAssembler, OpportunityDto, OpportunityAdminDto, OpportunityAdminController, 신규 PerformancePlaceService, Flyway V62. 화면 코드는 바뀌지 않는다
 - **영향 설계서**: T1-1 1.37(BID-OPP-001, BID-BROWSE-001), T1-3 1.24(BIZ-103), T3-1 1.24(place_of_performance_short, raw_json, V62), T3-2 1.34(목록 줄 placeOfPerformance, 관리자 원본 상세), T3-3 1.32(홈 기지 칸), T3-5 1.32(TC-OPP-029 ~ 032, TC-MKT-054 ~ 056, TC-BROWSE-025, TC-BROWSE-015 고침). 영향 없음 확인: T1-2(기능 수 그대로), T1-4, T1-5, T1-6, T1-7, T1-10(새 이름 없음), T2-1, T2-2, T3-4(화면 동작 그대로), execution-spec(새 API 없음). CR 문서 [CR-191_수행_장소_바로잡기.md](CR-191_수행_장소_바로잡기.md)
 - **규모**: 중 (수집이 남기는 장소 값, 장소 계산 두 곳, 이미 모은 공고의 값 정리)
-- **상태**: 구현, 로컬 확인 (11/8). 단위시험 693건 통과, 로컬 DB 에서 V62 가 군사우편 값 332건을 비우고 수정 시각은 그대로. 상용 배포 대기
+- **상태**: 상용 배포, 확인 끝 (11/8 10:14, 커밋 579dd9d). 단위시험 693건 통과. 상용 V62 가 군사우편 값 413건을 비우고 수정 시각은 그대로, 목록 485줄 중 APO 0줄. 장표 11장 완료 상자
