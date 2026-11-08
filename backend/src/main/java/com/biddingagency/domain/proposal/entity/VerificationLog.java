@@ -84,6 +84,10 @@ public class VerificationLog {
     @Builder.Default
     private LocalDateTime verifiedAt = LocalDateTime.now();
 
+    /** 절 검증이 쓴 입력의 식별자 (CR-194, BIZ-107). 지금 값과 다르면 제출 판정에 쓰지 않는다 */
+    @Column(name = "input_bundle_json", columnDefinition = "TEXT")
+    private String inputBundleJson;
+
     public int hallucinationCount() {
         return hallucinations != null ? hallucinations.size() : 0;
     }

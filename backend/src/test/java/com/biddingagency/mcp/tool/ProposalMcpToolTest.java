@@ -77,6 +77,8 @@ class ProposalMcpToolTest {
     @Mock private RequirementFulfillmentMapRepository fulfillmentMapRepository;
     @Mock private BidDocumentRepository documentRepository;
     @Mock private DocumentReadingService documentReadingService;
+    @Mock private com.biddingagency.domain.analysis.service.BidAnalysisService bidAnalysisService;
+    @Mock private com.biddingagency.domain.compliance.service.SubmissionCheckService submissionCheckService;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final ComplianceFixture f = new ComplianceFixture();
@@ -92,7 +94,9 @@ class ProposalMcpToolTest {
                 Clock.systemDefaultZone());
         tool = new ProposalMcpTool(bidRequestService, bidDocumentService, noticeRepository, proposalService,
                 referenceSampleService, verificationLogService, complianceService, compositionService, documentReadingService,
-                objectMapper);
+                bidAnalysisService, submissionCheckService, objectMapper);
+        lenient().when(bidAnalysisService.decisionConditions(any())).thenReturn(
+                new com.biddingagency.domain.analysis.service.BidAnalysisService.DecisionConditions(null, List.of()));
         req1 = f.shallPlatform("REQ-001", ComplianceFixture.QC);
         req2 = f.shallPlatform("REQ-002", ComplianceFixture.PP);
         lenient().when(documentRepository.findById(f.document.getId())).thenReturn(Optional.of(f.document));
@@ -557,5 +561,37 @@ class ProposalMcpToolTest {
         assertThat(List.<Object>of(texts(input.get("formRequirements"), "reqId"), input.get("company").get("companyName").asText(),
                 input.get("evaluatedDocument").asBoolean(), input.get("factorTree").isNull(), input.get("complianceMatrix").size()))
                 .containsExactly(Arrays.asList(null, "REQ-050"), "Woojin E&C", false, true, 0);
+    }
+    @Test
+    @org.junit.jupiter.api.DisplayName("TC-DOC-313 절작성입력_결정조건_목록으로실림")
+    void 결정조건_두입력에_실림() throws Exception {
+        ProposalSection section = f.section("Quality", List.of("REQ-001"));
+        givenMatrix(req1);
+        given(proposalService.getSection(section.getId())).willReturn(section);
+        given(proposalService.getChapter(f.chapter.getId())).willReturn(f.chapter);
+        given(proposalService.getBlocks(section.getId())).willReturn(List.of());
+        given(bidRequestService.findByIdWithDetails(f.bidRequest.getId())).willReturn(f.bidRequest);
+        given(bidAnalysisService.decisionConditions(f.bidRequest.getId())).willReturn(
+                new com.biddingagency.domain.analysis.service.BidAnalysisService.DecisionConditions(UUID.randomUUID(), List.of("a", "b")));
+        Map<String, Object> args = Map.of("sectionId", section.getId().toString());
+
+        org.assertj.core.api.Assertions.assertThat(List.of(
+                objectMapper.readTree(tool.getSectionContext(args)).get("decisionConditions").size(),
+                objectMapper.readTree(tool.getSectionVerifyInput(args)).get("decisionConditions").size()))
+                .containsExactly(2, 2);
+    }
+
+    @Test
+    @org.junit.jupiter.api.DisplayName("TC-DOC-314 절작성입력_입찰분석없음_빈목록")
+    void 입찰분석없음_빈목록() throws Exception {
+        ProposalSection section = f.section("Quality", List.of("REQ-001"));
+        givenMatrix(req1);
+        given(proposalService.getSection(section.getId())).willReturn(section);
+        given(proposalService.getChapter(f.chapter.getId())).willReturn(f.chapter);
+        given(bidRequestService.findByIdWithDetails(f.bidRequest.getId())).willReturn(f.bidRequest);
+
+        org.assertj.core.api.Assertions.assertThat(objectMapper.readTree(
+                tool.getSectionContext(Map.of("sectionId", section.getId().toString()))).get("decisionConditions").size())
+                .isZero();
     }
 }

@@ -142,4 +142,9 @@ class VerificationLogServiceTest {
                 VerificationTargetType.PROPOSAL_SECTION, id)).willReturn(Optional.of(prev));
         assertThat(service.nextAttempt(VerificationTargetType.PROPOSAL_SECTION, id)).isEqualTo(2);
     }
+    @org.junit.jupiter.api.Test
+    @org.junit.jupiter.api.DisplayName("TC-DOC-315 절규칙검사_하한없음_분량미달안남음")
+    void 절규칙검사_하한없음() {
+        org.assertj.core.api.Assertions.assertThat(service.evaluateSectionRules(1, 10, null)).isEmpty();
+    }
 }

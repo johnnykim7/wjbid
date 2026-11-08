@@ -299,12 +299,12 @@ public class AIWorkflowService {
     }
 
     /**
-     * verify-fidelity WF 1회 실행 후 최신 LLM 검증 결과의 verdict 반환.
-     * WF/검증 자체 실패 시 보수적으로 FAIL 로 간주하지 않고 PASS 폴백 — 검증 부재로 파이프라인을 막지 않는다.
+     * verify-fidelity WF 1회 실행 후 이번 시도의 LLM 검증 결과를 돌려준다.
+     * WF 가 실패하거나 이번 시도 결과가 없으면 검증 못 함을 남긴다. 통과가 아니고, 실패가 아니라 자동 다시 쓰기도 돌지 않는다 (BIZ-104).
      */
     private Verdict runVerifyFidelity(UUID sectionId) {
+        int attempt = verificationLogService.nextAttempt(VerificationTargetType.PROPOSAL_SECTION, sectionId);
         try {
-            int attempt = verificationLogService.nextAttempt(VerificationTargetType.PROPOSAL_SECTION, sectionId);
             Map<String, Object> input = new HashMap<>();
             input.put("targetType", VerificationTargetType.PROPOSAL_SECTION.name());
             input.put("targetId", sectionId.toString());
@@ -312,15 +312,18 @@ public class AIWorkflowService {
             WorkflowRunResponse run = llmPlatformClient.runVerifyFidelity(input);
             logGeneration(GenerationTargetType.VERIFY, sectionId, run);
 
-            // 최신 LLM 검증 결과 (WF 가 save_verification_result 콜백으로 이미 저장)
-            return verificationLogService.findLatest(VerificationTargetType.PROPOSAL_SECTION, sectionId)
-                    .filter(v -> v.getMethod() == com.biddingagency.domain.proposal.entity.VerificationMethod.LLM)
-                    .map(VerificationLog::getVerdict)
-                    .orElse(Verdict.PASS);
+            // WF 가 save_verification_result 콜백으로 이미 저장했다
+            Optional<VerificationLog> result = verificationLogService.findLlmOfAttempt(
+                    VerificationTargetType.PROPOSAL_SECTION, sectionId, attempt);
+            if (result.isPresent()) {
+                return result.get().getVerdict();
+            }
+            log.warn("[CR-194] 이번 시도의 검증 결과 없음: sectionId={}, attempt={}", sectionId, attempt);
         } catch (Exception e) {
-            log.warn("[CR-031] section 충실성 검증 실패(PASS 폴백): sectionId={}", sectionId, e);
-            return Verdict.PASS;
+            log.warn("[CR-194] section 충실성 검증 실패: sectionId={}", sectionId, e);
         }
+        verificationLogService.recordUnverified(VerificationTargetType.PROPOSAL_SECTION, sectionId, attempt);
+        return Verdict.UNVERIFIED;
     }
 
     private List<Map<String, Object>> latestHallucinations(UUID sectionId) {

@@ -61,12 +61,24 @@ public class VerificationLogService {
                                      List<Map<String, Object>> hallucinations,
                                      List<Map<String, Object>> missingFromSource,
                                      Integer wordCount, int attempt) {
+        return recordLlm(targetType, targetId, workflowRunId, verdict, hallucinations, missingFromSource,
+                wordCount, attempt, null);
+    }
+
+    /** 입력 묶음을 함께 남긴다 (CR-194, BIZ-107) */
+    @Transactional
+    public VerificationLog recordLlm(VerificationTargetType targetType, UUID targetId,
+                                     String workflowRunId, Verdict verdict,
+                                     List<Map<String, Object>> hallucinations,
+                                     List<Map<String, Object>> missingFromSource,
+                                     Integer wordCount, int attempt, String inputBundleJson) {
         VerificationLog saved = repository.save(VerificationLog.builder()
                 .targetType(targetType)
                 .targetId(targetId)
                 .method(VerificationMethod.LLM)
                 .verdict(verdict)
                 .workflowRunId(workflowRunId)
+                .inputBundleJson(inputBundleJson)
                 .hallucinations(hallucinations != null ? hallucinations : List.of())
                 .missingFromSource(missingFromSource != null ? missingFromSource : List.of())
                 .wordCount(wordCount)
@@ -79,7 +91,29 @@ public class VerificationLogService {
         return saved;
     }
 
+    /** 절 검증이 돌지 못했거나 이번 시도 결과가 없을 때 서버가 남긴다 (CR-194, BIZ-104) */
+    @Transactional
+    public VerificationLog recordUnverified(VerificationTargetType targetType, UUID targetId, int attempt) {
+        VerificationLog saved = repository.save(VerificationLog.builder()
+                .targetType(targetType)
+                .targetId(targetId)
+                .method(VerificationMethod.LLM)
+                .verdict(Verdict.UNVERIFIED)
+                .attempt(attempt)
+                .build());
+        log.warn("[CR-194] 검증 못 함 적재: target={}/{}, attempt={}", targetType, targetId, attempt);
+        return saved;
+    }
+
     // ─── 조회 ──────────────────────────────────────────────────
+
+    /** 이번 시도 번호의 LLM 검증 결과. 앞 시도의 판정을 이번 판정으로 읽지 않는다 (CR-194, BIZ-104) */
+    @Transactional(readOnly = true)
+    public Optional<VerificationLog> findLlmOfAttempt(VerificationTargetType targetType, UUID targetId, int attempt) {
+        return repository.findByTargetTypeAndTargetIdOrderByVerifiedAtDesc(targetType, targetId).stream()
+                .filter(v -> v.getMethod() == VerificationMethod.LLM && v.getAttempt() == attempt)
+                .findFirst();
+    }
 
     @Transactional(readOnly = true)
     public Optional<VerificationLog> findLatest(VerificationTargetType targetType, UUID targetId) {

@@ -540,12 +540,12 @@ public class ComplianceService {
         return section.getRequirementRefs() != null ? section.getRequirementRefs() : List.of();
     }
 
-    private static String text(OpportunityRequirementItem item) {
+    static String text(OpportunityRequirementItem item) {
         String text = json(item, RequirementSyncService.KEY_TEXT);
         return text != null ? text : item.getTitle();
     }
 
-    private static String json(OpportunityRequirementItem item, String key) {
+    static String json(OpportunityRequirementItem item, String key) {
         Object value = item.getRequirementJson() == null ? null : item.getRequirementJson().get(key);
         return value == null ? null : value.toString();
     }

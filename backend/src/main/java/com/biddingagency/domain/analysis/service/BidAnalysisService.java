@@ -203,6 +203,34 @@ public class BidAnalysisService {
         });
     }
 
+    /** 지금 입찰 분석의 결정 조건. 회차가 없거나 결과가 없으면 빈 목록이다 (CR-194, BIZ-109) */
+    @Transactional(readOnly = true)
+    public DecisionConditions decisionConditions(UUID bidRequestId) {
+        return analysisRepository.findFirstByBidRequestIdOrderByStartedAtDesc(bidRequestId)
+                .filter(a -> a.getDecisionJson() != null)
+                .map(a -> new DecisionConditions(a.getId(), conditionTexts(a.getDecisionJson())))
+                .orElse(new DecisionConditions(null, List.of()));
+    }
+
+    private List<String> conditionTexts(String decisionJson) {
+        try {
+            List<String> texts = new ArrayList<>();
+            for (com.fasterxml.jackson.databind.JsonNode node : objectMapper.readTree(decisionJson).path("conditions")) {
+                String text = node.isTextual() ? node.asText() : node.toString();
+                if (!text.isBlank()) {
+                    texts.add(text);
+                }
+            }
+            return texts;
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            log.warn("[CR-194] 결정 조건을 읽지 못함", e);
+            return List.of();
+        }
+    }
+
+    public record DecisionConditions(UUID analysisId, List<String> texts) {
+    }
+
     /** 회차가 이 입찰 건의 것인지 확인한다. 입력 도구와 저장 도구가 쓴다 */
     @Transactional(readOnly = true)
     public BidAnalysis analysisOf(UUID bidRequestId, UUID analysisId) {

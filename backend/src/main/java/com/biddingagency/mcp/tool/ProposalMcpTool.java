@@ -59,6 +59,8 @@ public class ProposalMcpTool {
     private final ComplianceService complianceService;
     private final DocumentCompositionService documentCompositionService;
     private final DocumentReadingService documentReadingService;
+    private final com.biddingagency.domain.analysis.service.BidAnalysisService bidAnalysisService;
+    private final com.biddingagency.domain.compliance.service.SubmissionCheckService submissionCheckService;
     private final ObjectMapper objectMapper;
 
     // ─── 도구 정의 ────────────────────────────────────────────────────────
@@ -353,6 +355,7 @@ public class ProposalMcpTool {
         result.put("scope", section.getScope());
         result.put("minWords", section.getMinWords());
         result.put("requirementRefs", section.getRequirementRefs());
+        result.put("decisionConditions", bidAnalysisService.decisionConditions(bidRequest.getId()).texts());
         result.put("status", section.getStatus().name());
         result.put("factorLabel", chapter.getFactorLabel());
         result.put("factorTitle", chapter.getFactorTitle());
@@ -424,6 +427,7 @@ public class ProposalMcpTool {
         result.put("scope", section.getScope());
         result.put("minWords", section.getMinWords());
         result.put("requirementRefs", section.getRequirementRefs());
+        result.put("decisionConditions", bidAnalysisService.decisionConditions(bidRequest.getId()).texts());
         result.put("requirements", complianceService.sectionRequirements(chapter.getDocumentId(), section.getRequirementRefs()));
         result.put("generatedBody", body.toString().trim());
         result.put("blockCount", blocks.size());
@@ -467,8 +471,10 @@ public class ProposalMcpTool {
         List<Map<String, Object>> missing = castList(args.get("missingFromSource"));
         Integer wordCount = intOrNull(args.get("wordCount"));
 
+        String inputBundle = targetType == VerificationTargetType.PROPOSAL_SECTION
+                ? submissionCheckService.currentBundle(targetId) : null;
         verificationLogService.recordLlm(targetType, targetId, null, verdict,
-                hallucinations, missing, wordCount, attempt);
+                hallucinations, missing, wordCount, attempt, inputBundle);
         int requirementsRecorded = targetType == VerificationTargetType.PROPOSAL_SECTION
                 ? complianceService.recordSectionChecks(targetId, castList(args.get("requirementChecks"))) : 0;
 
@@ -495,11 +501,16 @@ public class ProposalMcpTool {
 
     private Verdict parseVerdict(Object raw) {
         if (raw == null) throw new IllegalArgumentException("verdict 가 필요합니다 (PASS | FAIL)");
+        Verdict verdict;
         try {
-            return Verdict.valueOf(raw.toString().toUpperCase());
+            verdict = Verdict.valueOf(raw.toString().toUpperCase());
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("알 수 없는 verdict: " + raw);
         }
+        if (verdict == Verdict.UNVERIFIED) {
+            throw new IllegalArgumentException("verdict 는 PASS 또는 FAIL 만 받습니다: " + raw);
+        }
+        return verdict;
     }
 
     /** TipTap node 의 text 평탄화 (공백 결합). */

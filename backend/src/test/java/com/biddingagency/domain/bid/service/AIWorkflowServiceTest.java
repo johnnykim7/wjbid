@@ -68,6 +68,7 @@ class AIWorkflowServiceTest {
     @Mock private com.biddingagency.domain.reading.service.DocumentReadingService documentReadingService;
     @Mock private com.biddingagency.domain.analysis.service.BidAnalysisService bidAnalysisService;
     @Mock private DocumentCompositionService documentCompositionService;
+    @Mock private com.biddingagency.domain.proposal.service.VerificationLogService verificationLogService;
 
     @InjectMocks
     private AIWorkflowService aiWorkflowService;
@@ -290,5 +291,53 @@ class AIWorkflowServiceTest {
         aiWorkflowService.generateDocumentsAsync(br);
 
         assertThat(designed).containsExactly("TECHNICAL_PROPOSAL", "PAST_PERFORMANCE", "PRICING_SUMMARY");
+    }
+    private void givenAttempt(UUID sectionId, int attempt) {
+        given(verificationLogService.nextAttempt(com.biddingagency.domain.proposal.entity.VerificationTargetType.PROPOSAL_SECTION, sectionId))
+                .willReturn(attempt);
+    }
+
+    @Test
+    @DisplayName("TC-DOC-310 절검증_작업흐름실패_검증못함남음")
+    void 절검증_작업흐름실패_검증못함() {
+        UUID sectionId = UUID.randomUUID();
+        givenAttempt(sectionId, 2);
+        given(llmPlatformClient.runVerifyFidelity(any())).willThrow(new RuntimeException("boom"));
+
+        aiWorkflowService.writeSectionAsync(sectionId);
+
+        verify(verificationLogService).recordUnverified(
+                com.biddingagency.domain.proposal.entity.VerificationTargetType.PROPOSAL_SECTION, sectionId, 2);
+        verify(llmPlatformClient, org.mockito.Mockito.times(1)).runWriteSection(any());
+    }
+
+    @Test
+    @DisplayName("TC-DOC-311 절검증_이번시도결과없음_검증못함")
+    void 절검증_이번시도결과없음_앞시도PASS안씀() {
+        UUID sectionId = UUID.randomUUID();
+        givenAttempt(sectionId, 4);
+        given(verificationLogService.findLlmOfAttempt(
+                com.biddingagency.domain.proposal.entity.VerificationTargetType.PROPOSAL_SECTION, sectionId, 4))
+                .willReturn(Optional.empty());
+
+        aiWorkflowService.verifySectionAsync(sectionId);
+
+        verify(verificationLogService).recordUnverified(
+                com.biddingagency.domain.proposal.entity.VerificationTargetType.PROPOSAL_SECTION, sectionId, 4);
+    }
+
+    @Test
+    @DisplayName("TC-DOC-312 절검증_이번시도실패_자동다시쓰기1회")
+    void 절검증_실패_자동다시쓰기한번() {
+        UUID sectionId = UUID.randomUUID();
+        givenAttempt(sectionId, 2);
+        given(verificationLogService.findLlmOfAttempt(any(), eq(sectionId), org.mockito.ArgumentMatchers.anyInt()))
+                .willReturn(Optional.of(com.biddingagency.domain.proposal.entity.VerificationLog.builder()
+                        .verdict(com.biddingagency.domain.proposal.entity.Verdict.FAIL).build()));
+        given(verificationLogService.findLatest(any(), eq(sectionId))).willReturn(Optional.empty());
+
+        aiWorkflowService.writeSectionAsync(sectionId);
+
+        verify(llmPlatformClient, org.mockito.Mockito.times(2)).runWriteSection(any());
     }
 }
