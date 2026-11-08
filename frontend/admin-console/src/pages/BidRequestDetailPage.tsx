@@ -38,6 +38,7 @@ import { Loading } from '../components/LoadState'
 import { docTypeLabel } from '../utils/documentType'
 import DocumentReadingPanel from '../components/DocumentReadingPanel'
 import BidAnalysisPanel from '../components/BidAnalysisPanel'
+import SubmissionCheckPanel from '../components/SubmissionCheckPanel'
 
 const NEXT_STATES: Record<string, string[]> = {
   CREATED: ['DOCS_PENDING', 'CLOSED'],
@@ -360,6 +361,8 @@ export default function BidRequestDetailPage() {
           onDecisionChange={setDecisionAllowsGeneration}
         />
       )}
+
+      <SubmissionCheckPanel bidRequestId={bidRequest.id} />
 
       <Card>
         <CardHeader>

@@ -4,6 +4,7 @@ import { Button as DsButton } from '@therecommerce-develop/ds-ui'
 import { Badge } from '../components/ui/badge'
 import { LoadingSpinner } from '../components/ui/loading-spinner'
 import { PreCheckBoard } from '../components/precheck/PreCheckBoard'
+import { PriceTablePanel } from '../components/price/PriceTablePanel'
 import {
   getBidRequest,
   getBidRequestDocuments,
@@ -64,9 +65,9 @@ export default function ProposalDetailPage() {
   const [searchParams] = useSearchParams()
   // 기본 탭은 '제출 서류'(uploads). ?tab= 으로 딥링크 시 해당 탭으로 진입
   const tabParam = searchParams.get('tab')
-  const initialTab: 'uploads' | 'documents' | 'history' =
-    tabParam === 'documents' || tabParam === 'history' ? tabParam : 'uploads'
-  const [activeTab, setActiveTab] = useState<'uploads' | 'documents' | 'history'>(initialTab)
+  const initialTab: 'uploads' | 'documents' | 'price' | 'history' =
+    tabParam === 'documents' || tabParam === 'price' || tabParam === 'history' ? tabParam : 'uploads'
+  const [activeTab, setActiveTab] = useState<'uploads' | 'documents' | 'price' | 'history'>(initialTab)
   const [activeDocIdx, setActiveDocIdx] = useState(0)
 
   const loadAll = async () => {
@@ -146,6 +147,7 @@ export default function ProposalDetailPage() {
         {([
           { key: 'uploads', label: '제출 서류', icon: 'fa-solid fa-cloud-arrow-up', count: preCheck?.clientItems.length ?? 0 },
           { key: 'documents', label: '작성 문서', icon: 'fa-solid fa-file-lines', count: documents.length },
+          { key: 'price', label: '가격 표', icon: 'fa-solid fa-table-list', count: 0 },
           { key: 'history', label: '진행 이력', icon: 'fa-solid fa-clock-rotate-left', count: history.length },
         ] as const).map(tab => (
           <button
@@ -256,6 +258,8 @@ export default function ProposalDetailPage() {
             )}
           </div>
         )}
+
+        {activeTab === 'price' && id && <PriceTablePanel bidRequestId={id} />}
 
         {/* History Tab */}
         {activeTab === 'history' && (

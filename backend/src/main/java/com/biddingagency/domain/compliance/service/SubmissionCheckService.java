@@ -219,7 +219,7 @@ public class SubmissionCheckService {
         for (BidDocument document : documentRepository.findByBidRequestId(bidRequest.getId())) {
             for (ProposalService.ChapterWithSections chapter : proposalService.getTree(document.getId())) {
                 for (ProposalSection section : chapter.sections()) {
-                    SectionRow row = sectionRow(section, shared);
+                    SectionRow row = sectionRow(document.getId(), section, shared);
                     sections.add(row);
                     byId.put(section.getId(), row);
                     if (section.getRequirementRefs() != null) {
@@ -233,16 +233,16 @@ public class SubmissionCheckService {
     }
 
     /** 가장 늦은 기록이 절 규칙 검사면 본문이 그 뒤로 다시 쓰인 것이라 앞 검증을 쓰지 않는다 */
-    private SectionRow sectionRow(ProposalSection section, SharedInput shared) {
+    private SectionRow sectionRow(UUID documentId, ProposalSection section, SharedInput shared) {
         Optional<VerificationLog> latest = verificationLogService
                 .findLatest(VerificationTargetType.PROPOSAL_SECTION, section.getId());
         if (latest.isEmpty() || latest.get().getMethod() != VerificationMethod.LLM) {
-            return new SectionRow(section.getId(), section.getTitle(), Verdict.UNVERIFIED.name(), false);
+            return new SectionRow(documentId, section.getId(), section.getTitle(), Verdict.UNVERIFIED.name(), false);
         }
         VerificationLog log = latest.get();
         boolean changed = log.getVerdict() != Verdict.UNVERIFIED
                 && !Objects.equals(log.getInputBundleJson(), bundle(shared, section));
-        return new SectionRow(section.getId(), section.getTitle(), log.getVerdict().name(), changed);
+        return new SectionRow(documentId, section.getId(), section.getTitle(), log.getVerdict().name(), changed);
     }
 
     private List<LineRow> lines(BidRequest bidRequest, Map<String, SubmissionCheckNote> notes,
@@ -451,7 +451,7 @@ public class SubmissionCheckService {
     public record Blocker(String code, long count) {
     }
 
-    public record SectionRow(UUID sectionId, String title, String verdict, boolean inputChanged) {
+    public record SectionRow(UUID documentId, UUID sectionId, String title, String verdict, boolean inputChanged) {
     }
 
     public record LineRow(String reqId, String text, String translation, String fulfillmentParty, String status,

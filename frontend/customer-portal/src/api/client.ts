@@ -1,6 +1,7 @@
 import axios from 'axios'
 import type { EligibilityAnswerValue, EligibilityDetail, EligibilityNoticeRow, EligibilitySaved, OpportunityFile, VaultListResponse } from '../types'
 import type { PreCheckClientItem, PreCheckDetail, PreCheckRow } from '../types/preCheck'
+import type { PriceTable, UnitPriceInput } from '../types/priceTable'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
@@ -312,3 +313,13 @@ export const attachEligibilityDocument = (noticeId: string, itemNo: number, docu
 
 // 서류 고르기 창용. 서류함 화면은 자기 모양으로 받는다
 export const getVaultDocuments = () => api.get<VaultListResponse>('/member-documents')
+
+// CR-194 가격 표
+export const getPriceTable = (bidRequestId: string) =>
+  api.get<PriceTable>(`/bid-requests/${bidRequestId}/price-table`)
+
+export const savePriceTable = (bidRequestId: string, unitPrices: UnitPriceInput[]) =>
+  api.put<PriceTable>(`/bid-requests/${bidRequestId}/price-table`, { unitPrices })
+
+export const exportPriceTable = (bidRequestId: string) =>
+  api.get<Blob>(`/bid-requests/${bidRequestId}/price-table/export`, { responseType: 'blob' })

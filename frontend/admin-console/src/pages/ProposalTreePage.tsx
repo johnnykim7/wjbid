@@ -83,7 +83,7 @@ type SectionStatus = 'PENDING' | 'DRAFTING' | 'DRAFTED' | 'VERIFIED' | 'NEEDS_RE
 interface VerificationView {
   available: boolean
   method?: 'RULE' | 'LLM'
-  verdict?: 'PASS' | 'FAIL'
+  verdict?: 'PASS' | 'FAIL' | 'UNVERIFIED'
   hallucinations?: { sentence?: string; reason?: string }[]
   hallucinationCount?: number
   missingFromSource?: { source_quote?: string; reason?: string }[]
@@ -459,8 +459,8 @@ export default function ProposalTreePage() {
                   ) : (
                     <div className="space-y-2 rounded border border-border p-2 text-sm">
                       <div className="flex items-center gap-2">
-                        <ToneBadge tone={verification.verdict === 'PASS' ? 'success' : 'destructive'}>
-                          {verification.verdict === 'PASS' ? '검증 통과' : '검증 실패'}
+                        <ToneBadge tone={verification.verdict === 'PASS' ? 'success' : verification.verdict === 'UNVERIFIED' ? 'warning' : 'destructive'}>
+                          {verification.verdict === 'PASS' ? '검증 통과' : verification.verdict === 'UNVERIFIED' ? '검증 못 함' : '검증 실패'}
                         </ToneBadge>
                         <span className="text-xs text-muted-foreground">
                           {verification.method === 'RULE' ? '정형 룰' : 'LLM 충실성'}

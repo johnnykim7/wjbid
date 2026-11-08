@@ -1011,7 +1011,7 @@ app.aimbase:
 
 | 메서드 | 경로 | 설명 |
 |--------|------|------|
-| GET | `/admin/bid-requests/{id}/submission-check` | 제출 검사 결과. 응답: `submittable`, `blockers[]`(이유 코드와 건수), `sections[]`(sectionId, title, verdict, inputChanged), `lines[]`(reqId, text, translation, fulfillmentParty, status, evidenceQuote, reason, note), `conditions[]`(key, text, resolved, note), `price`(status, lineCount, filledCount, total) |
+| GET | `/admin/bid-requests/{id}/submission-check` | 제출 검사 결과. 응답: `submittable`, `blockers[]`(이유 코드와 건수), `sections[]`(documentId, sectionId, title, verdict, inputChanged), `lines[]`(reqId, text, translation, fulfillmentParty, status, evidenceQuote, reason, note), `conditions[]`(key, text, resolved, note), `price`(status, lineCount, filledCount, total) |
 | PUT | `/admin/bid-requests/{id}/submission-check/lines/{reqId}` | 줄의 처리를 적는다. 본문 `{"disposition", "reason", "sourceRef"}`. NOT_ANSWERED 는 reason, sourceRef 필수, EQUIVALENT 는 reason 필수. 빠지면 400 |
 | DELETE | `/admin/bid-requests/{id}/submission-check/lines/{reqId}` | 줄의 처리를 지운다 |
 | PUT | `/admin/bid-requests/{id}/submission-check/conditions/{key}` | 결정 조건의 해소 근거를 적는다. 본문 `{"reason"}` 필수 |

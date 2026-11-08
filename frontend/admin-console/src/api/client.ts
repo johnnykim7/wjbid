@@ -215,6 +215,31 @@ export const getDocumentReading = (readingId: string) =>
 export const rerunDocumentReadings = (bidRequestId: string, readingIds?: string[]) =>
   api.post(`/admin/bid-requests/${bidRequestId}/document-readings/run`, { readingIds: readingIds ?? null })
 
+// CR-194 제출 검사와 가격 표
+export const getSubmissionCheck = (bidRequestId: string) =>
+  api.get(`/admin/bid-requests/${bidRequestId}/submission-check`)
+
+export const saveSubmissionLineNote = (
+  bidRequestId: string,
+  reqId: string,
+  body: { disposition: string; reason: string | null; sourceRef: string | null },
+) => api.put(`/admin/bid-requests/${bidRequestId}/submission-check/lines/${encodeURIComponent(reqId)}`, body)
+
+export const clearSubmissionLineNote = (bidRequestId: string, reqId: string) =>
+  api.delete(`/admin/bid-requests/${bidRequestId}/submission-check/lines/${encodeURIComponent(reqId)}`)
+
+export const resolveSubmissionCondition = (bidRequestId: string, key: string, reason: string) =>
+  api.put(`/admin/bid-requests/${bidRequestId}/submission-check/conditions/${encodeURIComponent(key)}`, { reason })
+
+export const clearSubmissionCondition = (bidRequestId: string, key: string) =>
+  api.delete(`/admin/bid-requests/${bidRequestId}/submission-check/conditions/${encodeURIComponent(key)}`)
+
+export const getAdminPriceTable = (bidRequestId: string) =>
+  api.get(`/admin/bid-requests/${bidRequestId}/price-table`)
+
+export const exportAdminPriceTable = (bidRequestId: string) =>
+  api.get(`/admin/bid-requests/${bidRequestId}/price-table/export`, { responseType: 'blob' })
+
 // CR-170 입찰 분석과 Bid/No-Bid 결정
 export const getBidAnalysis = (bidRequestId: string) =>
   api.get(`/admin/bid-requests/${bidRequestId}/bid-analysis`)
