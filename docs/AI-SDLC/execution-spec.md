@@ -1,6 +1,6 @@
 # 실행 지시서: SAM.gov Bidding Agency Platform
 
-> 설계 버전: 1.26 | 최종 수정: 2026-11-06 | 관련 CR: CR-003, CR-132, CR-133, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-146, CR-147, CR-153, CR-155, CR-157, CR-159, CR-160, CR-162, CR-169, CR-170, CR-178, CR-180, CR-181, CR-182, CR-183, CR-186, CR-187, CR-188, CR-189
+> 설계 버전: 1.27 | 최종 수정: 2026-11-08 | 관련 CR: CR-003, CR-132, CR-133, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-146, CR-147, CR-153, CR-155, CR-157, CR-159, CR-160, CR-162, CR-169, CR-170, CR-178, CR-180, CR-181, CR-182, CR-183, CR-186, CR-187, CR-188, CR-189, CR-194
 
 > **프로젝트:** bidding-agency-platform (미군 조달 입찰 AI 대행 서비스)
 > **프로젝트 유형:** 풀스택 (BE: Java 17 + Spring Boot 3.2 / FE: React 19 × 2)
@@ -343,6 +343,7 @@ SAM.gov에 올라오는 미군(USFK) 조달 입찰 공고를 자동 수집하고
 - **(CR-178)** 목차 설계는 문서 종류를 따른다. 평가받는 문서(TECHNICAL_PROPOSAL, PAST_PERFORMANCE, PRICING_SUMMARY)만 설계 입력에 factorTree, priceItems, complianceMatrix 를 받고 절에 requirementRefs 를 건다. 커버레터는 장 1, 절 1 의 1쪽 제출 편지로 짠다. 평가받지 않는 문서의 requirementRefs 는 저장 거부, unassignedReqIds 는 빈 배열, 커버리지 응답은 evaluatedDocument false(BIZ-095). Aimbase 소스는 고치지 않고 `docs/workflows/proposal-design.steps.json` 의 설계 지시를 고쳐 다시 올린다
 - **(CR-180)** 문서 구성은 공고를 따른다. 공고 분석 build_compliance_matrix 가 factorTree.factors[].documentType(TECHNICAL_PROPOSAL, PAST_PERFORMANCE, PRICING_SUMMARY, Section L 볼륨 구분이 없으면 TECHNICAL_PROPOSAL)과 factorTree.coverLetterRequired(Section L 이 cover letter, transmittal letter 를 요구할 때만 true)를 내고, save_opportunity_analysis 가 factor_tree_json 에 그대로 담는다(마이그레이션 없음). 문서 작성 시작은 구성(평가 항목의 문서 종류를 enum 순으로 한 번씩, 커버레터는 요구할 때만 맨 앞)대로 문서를 만들고, 두 키가 다 없는 옛 공고는 `app.ai.auto-generate-document-types`(POL-005)를 쓴다. 매트릭스 줄은 그 줄 factorId 의 평가 항목(하위 항목 ID 면 상위 항목)이 담기는 문서에 속하고, factorId 가 없거나 모르는 줄과 문서 종류가 없거나 모르는 평가 항목은 구성의 첫 평가받는 문서에 속한다. get_proposal_design_input, save_proposal_structure, 커버리지를 이 문서별 범위로 좁힌다(BIZ-096). Aimbase 소스는 고치지 않고 `docs/workflows/opportunity-analysis.steps.v3.json` 과 `docs/workflows/proposal-design.steps.json` 의 지시를 고쳐 다시 올린다
 - **(CR-189)** 공고 분석 build_compliance_matrix 가 priceItems.items[{clin, description, quantity, unit, period, sourceRef}](가격 표를 옵션 연도까지 줄마다, 단가와 금액 없음)를 내고, save 단계 입력에 실어 save_opportunity_analysis 가 price_items_json 에 담는다. 보내지 않으면 앞 값을 둔다(BIZ-100). get_section_context, get_section_verify_input 은 documentType, noticeFacts(설계가 보는 공고문의 extracted_facts_json 전부), priceItems(그 문서가 구성의 priceOwner 일 때만), company(회원 회사 칸)를 더 주고, write-section, verify-fidelity 지시문이 공고 사실은 거기서만 쓰고 대조하게 한다(BIZ-101). 문서 구성은 공고문 required_documents_json 의 하위 항목이나 compliance_matrix_json 줄에 fulfillmentParty SYSTEM_FORM 이 있으면 구성 맨 끝에 GOVERNMENT_FORMS(평가받지 않음)를 더한다. 옛 공고(POL-005 목록)도 같다. get_proposal_design_input 은 company 를 모든 문서에, formRequirements(SYSTEM_FORM 요구 항목, opportunity_requirement_items 에서)를 GOVERNMENT_FORMS 에 준다. proposal-design 지시문은 양식마다 장 하나, 절 하나로 짠다(BIZ-102). 마이그레이션 없음. Aimbase 소스는 고치지 않고 `docs/workflows/` 의 opportunity-analysis.steps.v3, proposal-design, proposal-write-section, proposal-verify-fidelity 를 고쳐 다시 올리고, BE 배포 뒤 Aimbase 연결을 다시 맺는다. 화면은 문서 이름표에 Government Forms 를 더한다
+- **(CR-194)** 절 검증은 작업 흐름이 실패하거나 이번 시도 결과가 없으면 UNVERIFIED 를 남기고 통과로 치지 않는다. SubmissionCheckService 가 SHALL 줄 전부, 절 판정, 결정 조건, 가격 표, 입력 묶음으로 제출 가능을 내고 산출물을 바꾸지 않는다. 입찰 상태 전이는 막지 않는다. 가격 표는 공고문 가격 항목과 bid_price_inputs 의 단가로 서버가 계산한다. 절 작성과 검증 입력에 decisionConditions 를 더한다. 최소 단어를 끄는 자리는 기준선 결과를 본 뒤 정한다
 
 **핵심 검증:** 템플릿 등록 → **사전 분석 캐시 확인** → Aimbase Workflow 실행 (3파이프라인 입력) → 문서 생성 → DB 저장 → 관리자 이메일
 
@@ -571,6 +572,8 @@ sequenceDiagram
 | Admin 제안서 Section 관리 (CR-030, CR-159) | `GET /admin/bid-documents/{documentId}/chapters`, `/sections/{sectionId}[/verification]`, `POST .../regenerate, /lock, /unlock, /reverify`, `GET .../coverage` | 커버리지 검증은 볼 때 계산, 경고만 하고 막지 않는다(BIZ-078). CR-169: 절 상세에 근거 서류 |
 | Admin 입찰 상세 관리의 고객 서류 읽기 (CR-169) | `GET /admin/bid-requests/{id}/document-readings`, `GET /admin/document-readings/{readingId}`, `POST /admin/bid-requests/{id}/document-readings/run` | 읽는 중이면 10초마다 다시 부르고 문서 작성 중 전환을 막는다(BIZ-087) |
 | Admin 입찰 상세 관리의 입찰 분석 (CR-170) | `GET /admin/bid-requests/{id}/bid-analysis`, `POST /admin/bid-requests/{id}/bid-analysis/run`, `POST /admin/bid-requests/{id}/bid-analysis/decision` | 분석 중이거나 읽는 중이면 10초마다 다시 부른다. Go, 조건부 Go 가 아니면 문서 작성 중 전환을 막는다(BIZ-092). PDF 다운로드는 서버 호출 없이 불러온 회차로 인쇄용 문서를 그린다(CR-181) |
+| 입찰 상세 관리 제출 검사 | `GET /admin/bid-requests/{id}/submission-check`, `PUT, DELETE .../lines/{reqId}`, `PUT, DELETE .../conditions/{key}` | CR-194 |
+| 입찰 상세 가격 표 | `GET, PUT /bid-requests/{id}/price-table`, `GET .../export` | CR-194, 관리자는 조회와 내려받기 |
 
 ### 8-4. 리뷰 체크리스트
 

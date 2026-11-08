@@ -1,6 +1,6 @@
 # SAM.gov Bidding Agency Platform API 설계
 
-> 설계 버전: 1.34 | 최종 수정: 2026-11-08 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-144, CR-146, CR-147, CR-152, CR-153, CR-155, CR-157, CR-159, CR-160, CR-162, CR-168, CR-169, CR-170, CR-178, CR-179, CR-180, CR-182, CR-183, CR-186, CR-187, CR-188, CR-189, CR-191
+> 설계 버전: 1.35 | 최종 수정: 2026-11-08 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-144, CR-146, CR-147, CR-152, CR-153, CR-155, CR-157, CR-159, CR-160, CR-162, CR-168, CR-169, CR-170, CR-178, CR-179, CR-180, CR-182, CR-183, CR-186, CR-187, CR-188, CR-189, CR-191, CR-194
 
 > 단계: 3. Detail Design | 실행스펙 섹션 3에 포함
 >
@@ -970,7 +970,8 @@ app.aimbase:
 | MCP Tools | 23 | 5, CR-003, CR-013, CR-028, CR-031, CR-141, CR-169, CR-170 |
 | MCP SSE 엔드포인트 | 2 | CR-002 |
 | Aimbase 워크플로우 호출 | 2 | CR-002 |
-| **합계** | **REST 146 + MCP 23 + SSE 2 + Aimbase 2** | |
+| CR-194. 제출 검사와 가격 표 | 10 | CR-194 |
+| **합계** | **REST 156 + MCP 23 + SSE 2 + Aimbase 2** | |
 
 > CR-141: G 는 문서 3, 슬롯 3(올리기, 서류함에서 고르기, 빼기. 목록 조회는 걷어냄), 제출 전 검사 2 다. 그전에는 슬롯을 세지 않았다.
 
@@ -1003,3 +1004,31 @@ app.aimbase:
 - CR-136: POST·PUT 에 `expiresOn?`(YYYY-MM-DD) 를 더하고 MemberDocumentDto 에 `expiresOn` 을 싣는다. 날짜 형식이 틀리면 400.
 - CR-136 만료 상태(ExpiryStatus): `EXPIRED`(만료일이 오늘보다 앞), `SOON`(남은 날 0 이상 soonDays 이하), `OK`(그보다 많이 남음, 알림이 꺼져 있으면 0 이상 전부), `NONE`(만료일 없음). daysLeft = 만료일 - 오늘(Asia/Seoul). lastAlertedAt 은 이 서류의 알림 이력(DOCUMENT_EXPIRY) 중 보내기에 성공한 마지막 시각.
 - **변경 (CR-147)**: 고정 칸은 6슬롯에서 다섯 칸(BUSINESS_REGISTRATION, BUSINESS_REGISTRATION_CERTIFICATE, COMPANY_PROFILE, FINANCIAL_STATEMENT, LICENSE, 이 순서)이 된다. POST `/member-documents` 에 `language`(KO, EN)를 받는다. 국문·영문 칸(BUSINESS_REGISTRATION_CERTIFICATE, COMPANY_PROFILE)에 language 가 없으면 400(언어를 고르라는 안내), 다른 칸에 오면 무시하고 비워 둔다. 같은 칸·같은 언어로 다시 올리면 그 언어 서류만 바뀐다(BIZ-065). PUT `/member-documents/{id}` 는 그 서류의 분류와 언어를 그대로 둔다. GET `/member-documents` 응답의 `fixedSlots[]` 는 칸마다 `files[]` 를 낸다. `files[]` 한 줄은 `{ language(KO, EN 또는 null), document(서류 또는 null) }` 이고, 국문·영문 칸은 KO, EN 두 줄, 다른 칸은 language null 한 줄이다. MemberDocumentDto 에 `language` 를 더한다. auto-fill 처럼 분류로 서류 하나를 고를 때 국문·영문 칸은 EN 을 먼저, 없으면 KO 를 고른다(BIZ-065). 근거: 원문 "서류함 필요리스트", 사용자 10/11 20:01 /전승(정할 것 3)
+
+## CR-194: 제출 검사와 가격 표
+
+### 제출 검사 (관리자)
+
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| GET | `/admin/bid-requests/{id}/submission-check` | 제출 검사 결과. 응답: `submittable`, `blockers[]`(이유 코드와 건수), `sections[]`(sectionId, title, verdict, inputChanged), `lines[]`(reqId, text, translation, fulfillmentParty, status, evidenceQuote, reason, note), `conditions[]`(key, text, resolved, note), `price`(status, lineCount, filledCount, total) |
+| PUT | `/admin/bid-requests/{id}/submission-check/lines/{reqId}` | 줄의 처리를 적는다. 본문 `{"disposition", "reason", "sourceRef"}`. NOT_ANSWERED 는 reason, sourceRef 필수, EQUIVALENT 는 reason 필수. 빠지면 400 |
+| DELETE | `/admin/bid-requests/{id}/submission-check/lines/{reqId}` | 줄의 처리를 지운다 |
+| PUT | `/admin/bid-requests/{id}/submission-check/conditions/{key}` | 결정 조건의 해소 근거를 적는다. 본문 `{"reason"}` 필수 |
+| DELETE | `/admin/bid-requests/{id}/submission-check/conditions/{key}` | 해소를 지운다 |
+
+### 가격 표
+
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| GET | `/bid-requests/{id}/price-table` | 본인 건의 가격 표. 응답: `status`(NOT_READY, NOT_APPLICABLE, INCOMPLETE, COMPLETE), `editable`, `periods[]`(period, lines[](clin, description, quantity, unit, sourceRef, unitPrice, amount), subtotal), `total` |
+| PUT | `/bid-requests/{id}/price-table` | 단가를 저장한다. 본문 `{"unitPrices": [{"clin", "period", "unitPrice"}]}`. 금액은 받지 않는다. 음수이거나 공고 가격 항목에 없는 줄이면 400, 건이 확정 뒤면 409, 본인 건이 아니면 404 |
+| GET | `/bid-requests/{id}/price-table/export` | 엑셀 내려받기 |
+| GET | `/admin/bid-requests/{id}/price-table` | 관리자 조회. 응답은 고객 조회와 같고 `editable` 은 false |
+| GET | `/admin/bid-requests/{id}/price-table/export` | 관리자 엑셀 내려받기 |
+
+### MCP 도구 변경
+
+- `get_section_context`, `get_section_verify_input` 응답에 `decisionConditions`(글 목록, 입찰 분석이 없거나 조건이 없으면 빈 목록)를 더한다
+- `save_verification_result` 는 저장할 때 입력 묶음을 서버가 계산해 남긴다. 도구 입력은 그대로다
+- BE 배포 뒤 Aimbase 연결을 다시 맺는다
