@@ -220,7 +220,9 @@ public class OpportunityCollectorService {
         rawJson.put("classificationCode", data.getClassificationCode());
         rawJson.put("setAside", data.getTypeOfSetAsideDescription());
         rawJson.put("description", extractDescription(data.getDescription()));
-        rawJson.put("placeOfPerformance", extractPlaceOfPerformance(data.getOfficeAddress()));
+        // 수행 장소와 계약 사무소 주소는 받은 그대로 둔다(BIZ-004). 계약 사무소는 장소가 아니다(BIZ-103)
+        rawJson.put("placeOfPerformance", data.getPlaceOfPerformance());
+        rawJson.put("officeAddress", data.getOfficeAddress());
         rawJson.put("resourceLinks", data.getResourceLinks());
         rawJson.put("postedDate", data.getPostedDate());
         rawJson.put("responseDeadLine", data.getResponseDeadLine());
@@ -315,20 +317,6 @@ public class OpportunityCollectorService {
                 }
             }
         }
-        return null;
-    }
-
-    /**
-     * Extract place of performance from officeAddress map
-     * API returns: {"city": "...", "state": "...", "countryCode": "US"}
-     */
-    private String extractPlaceOfPerformance(Map<String, Object> officeAddress) {
-        if (officeAddress == null) return null;
-        String city = String.valueOf(officeAddress.getOrDefault("city", "")).trim();
-        String state = String.valueOf(officeAddress.getOrDefault("state", "")).trim();
-        if (!city.isEmpty() && !state.isEmpty()) return city + ", " + state;
-        if (!city.isEmpty()) return city;
-        if (!state.isEmpty()) return state;
         return null;
     }
 

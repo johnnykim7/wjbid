@@ -1,5 +1,6 @@
 package com.biddingagency.domain.opportunity.service;
 
+import com.biddingagency.domain.base.service.PerformancePlaceService;
 import com.biddingagency.domain.notice.repository.NoticeRepository;
 import com.biddingagency.domain.opportunity.MarketGroup;
 import com.biddingagency.domain.opportunity.NoticeTypeTranslator;
@@ -42,6 +43,7 @@ public class MarketRowAssembler {
 
     private final OpportunityRepository opportunityRepository;
     private final NoticeRepository noticeRepository;
+    private final PerformancePlaceService placeService;
 
     @Value("${app.sam-gov.public-opportunity-url}")
     private String publicOpportunityUrl;
@@ -68,7 +70,7 @@ public class MarketRowAssembler {
         for (Object[] r : noticeRepository.findOpportunityAndNoticeIds(OpportunityVisibility.VISIBLE)) {
             publicNotice.put((UUID) r[0], (UUID) r[1]);
         }
-        return new Context(bySol, publicNotice);
+        return new Context(bySol, publicNotice, placeService.resolver());
     }
 
     MarketRowDto toRow(MarketSource s, Context ctx) {
@@ -94,7 +96,7 @@ public class MarketRowAssembler {
                 s.titleKo(),
                 s.organizationName(),
                 s.naicsCode(),
-                s.placeOfPerformance(),
+                ctx.place().placeOf(s.placeOfPerformance(), s.title()),
                 s.type(),
                 s.typeKo() != null ? s.typeKo() : NoticeTypeTranslator.toKorean(s.type()),
                 group,
@@ -130,6 +132,7 @@ public class MarketRowAssembler {
                 && s.responseDeadline() != null && s.responseDeadline().isAfter(nowKst);
     }
 
-    record Context(Map<String, List<MarketSource>> bySol, Map<UUID, UUID> publicNoticeByOpportunity) {
+    record Context(Map<String, List<MarketSource>> bySol, Map<UUID, UUID> publicNoticeByOpportunity,
+                   PerformancePlaceService.Resolver place) {
     }
 }

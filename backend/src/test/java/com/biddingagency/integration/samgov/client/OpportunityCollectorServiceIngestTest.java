@@ -11,6 +11,7 @@ import com.biddingagency.integration.samgov.dto.SAMOpportunityResponse.Opportuni
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -20,6 +21,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.util.Map;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -62,5 +64,30 @@ class OpportunityCollectorServiceIngestTest {
         service.ingest(data);
 
         then(selectionEnricher).should().applyAward(id, award);
+    }
+
+    @Test
+    @DisplayName("TC-OPP-032 수집원본_수행장소와계약사무소_받은그대로")
+    @SuppressWarnings("unchecked")
+    void 수집원본_수행장소와계약사무소_받은그대로() {
+        Map<String, Object> pop = Map.of("streetAddress", "Vehicle Maintenance for Daegu", "zip", "");
+        Map<String, Object> office = Map.of("city", "APO", "state", "AP", "zipcode", "96271-5289");
+        OpportunityData data = new OpportunityData();
+        data.setNoticeId("N-2");
+        data.setType("Sources Sought");
+        data.setPlaceOfPerformance(pop);
+        data.setOfficeAddress(office);
+        Opportunity saved = Opportunity.builder().noticeId("N-2").title("t").active(true).build();
+        ReflectionTestUtils.setField(saved, "id", UUID.randomUUID());
+        given(opportunityService.existsByNoticeId("N-2")).willReturn(false);
+        given(opportunityService.existsLiveByContentHash(anyString())).willReturn(false);
+        ArgumentCaptor<Map<String, Object>> raw = ArgumentCaptor.forClass(Map.class);
+        given(opportunityService.createOrUpdate(eq("N-2"), any(), any(), any(), any(), any(), any(), any(), any(),
+                raw.capture(), any(), any(), any()))
+                .willReturn(new UpsertOutcome(saved, UpsertResult.NEW));
+
+        service.ingest(data);
+
+        assertThat(raw.getValue()).containsEntry("placeOfPerformance", pop).containsEntry("officeAddress", office);
     }
 }

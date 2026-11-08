@@ -28,7 +28,7 @@ public record OpportunityDto(
         String responseDeadline,    // formatted date string
         OffsetDateTime responseDeadlineAt, // 마감 시각(서울). 날짜만 있는 값은 브라우저가 UTC 자정으로 읽는다
         String postedDate,          // formatted date string
-        String placeOfPerformance,  // extracted from rawJson
+        String placeOfPerformance,  // 짧은 수행 장소(BIZ-103). 원본 JSON 의 옛 값은 계약 사무소 주소라 읽지 않는다
         String description,         // extracted from rawJson
         String status,              // "active" or "closed"
         String type,
@@ -58,7 +58,7 @@ public record OpportunityDto(
                 formatDate(opp.getResponseDeadline()),
                 toKst(opp.getResponseDeadline()),
                 formatDate(opp.getPostedDate()),
-                getString(raw, "placeOfPerformance"),
+                opp.getPlaceOfPerformanceShort(),
                 getString(raw, "description"),
                 Boolean.TRUE.equals(opp.getActive()) ? "active" : "closed",
                 opp.getTypeKo() != null && !opp.getTypeKo().isBlank() ? opp.getTypeKo() : opp.getType(),
@@ -96,7 +96,7 @@ public record OpportunityDto(
                 formatDate(opp.getResponseDeadline()),
                 toKst(opp.getResponseDeadline()),
                 formatDate(opp.getPostedDate()),
-                getString(raw, "placeOfPerformance"),
+                opp.getPlaceOfPerformanceShort(),
                 getString(raw, "description"),
                 Boolean.TRUE.equals(opp.getActive()) ? "active" : "closed",
                 displayType,
@@ -132,7 +132,7 @@ public record OpportunityDto(
                 formatDate(opp.getResponseDeadline()),
                 toKst(opp.getResponseDeadline()),
                 formatDate(opp.getPostedDate()),
-                getString(raw, "placeOfPerformance"),
+                opp.getPlaceOfPerformanceShort(),
                 opp.getDescriptionBody() != null && !opp.getDescriptionBody().isBlank() ? opp.getDescriptionBody() : null,
                 Boolean.TRUE.equals(opp.getActive()) ? "active" : "closed",
                 displayType,

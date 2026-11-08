@@ -1,5 +1,6 @@
 package com.biddingagency.controller.admin;
 
+import com.biddingagency.domain.base.service.PerformancePlaceService;
 import com.biddingagency.domain.notice.service.NoticeService;
 import com.biddingagency.domain.opportunity.dto.OpportunityAdminDto;
 import com.biddingagency.domain.opportunity.dto.OpportunityAttachmentDto;
@@ -53,6 +54,7 @@ public class OpportunityAdminController {
     private final com.biddingagency.domain.opportunity.service.OpportunityTranslationService translationService;
     private final OpportunityAttachmentIngestService attachmentIngestService;
     private final PieeSettings pieeSettings;
+    private final PerformancePlaceService placeService;
 
     @GetMapping
     @Operation(summary = "원본 공고 목록 (관리자)",
@@ -92,7 +94,7 @@ public class OpportunityAdminController {
                 id, AttachmentDownloadStatus.MANUAL_FETCH_REQUIRED);
         int noticeCount = noticeService.findByOpportunityId(id).size();
         return ResponseEntity.ok(OpportunityAdminDto.from(opp, attachmentCount, manualFetchCount, noticeCount,
-                pieeSettings.noticeUrl(opp.getSolicitationNumber()).orElse(null)));
+                pieeSettings.noticeUrl(opp.getSolicitationNumber()).orElse(null), placeService.placeOf(opp)));
     }
 
     @PostMapping("/manual")
