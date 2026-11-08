@@ -1,5 +1,41 @@
 # 영역 01 인증/회원 시험항목. 근거는 T1-1 기능요구사항 명세서(BID-AUTH-001~009), T1-3 BIZ-008·062·063·064·071·072·097, T1-4 POL-008·037·038, T3-2 A·K, T3-3 로그인·회원가입·비밀번호 재설정·회원 전용 화면·회원 관리, T3-4 로그인·회원가입·공고문 회원 전용 이다.
 
+# 비밀번호 재설정(CR-186) 서버 판정은 상용 시험 고객 RESET_H 하나로 돌고, 바꾼 비밀번호는 그 기대결과 안에서 처음 값($QA_PASSWORD)으로 되돌린다.
+# 인증번호는 DB 에 해시로만 남아 알림 서버가 보낸 메일 기록(notification_db.message_logs)에서 읽는다.
+# 같은 메일로 다시 받으려면 60초를 기다려야 해서(POL-037) 보내기 앞에 기다림을 둔다. 메일 하나에 하루 10통 한도라 한 회차에 5통만 쓴다.
+# 073 과 080 은 기대결과 순서대로 이어 돈다(앞 줄이 바꾼 비밀번호와 확인한 번호를 뒤 줄이 쓴다).
+RESET_H = 'qa-cr143@example.com'
+RESET_N = 'qa-not-registered-186@example.com'
+EC = '/api/auth/email-codes'
+LOGIN = '/api/auth/login'
+PW_RESET = '/api/auth/password-reset'
+RESEND_WAIT = ('poll', 'guest', '/', 'False', 90, 15)
+RESET_SEND = ('api', 'guest', 'POST', EC, {'email': RESET_H, 'purpose': 'PASSWORD_RESET'})
+RESET_CODE = ('sql', "SELECT REGEXP_SUBSTR(content, '(?<![0-9])[0-9][0-9][0-9][0-9][0-9][0-9](?![0-9])') AS code "
+                     "FROM notification_db.message_logs WHERE recipient = 'qa-cr143@example.com' "
+                     "AND template_code = 'BID_PASSWORD_RESET_CODE' ORDER BY id DESC LIMIT 1")
+
+
+def reset_verify(n, purpose='PASSWORD_RESET'):
+    body = {'email': RESET_H, 'code': '{val:%d:code}' % n}
+    if purpose:
+        body['purpose'] = purpose
+    return ('api', 'guest', 'POST', EC + '/verify', body)
+
+
+def reset_to(password):
+    return ('api', 'guest', 'POST', PW_RESET, {'email': RESET_H, 'newPassword': password})
+
+
+def login_as(password):
+    return ('api', 'guest', 'POST', LOGIN, {'email': RESET_H, 'password': password})
+
+
+def restore_from(k):
+    """k 번째 단계부터 비밀번호를 처음 값으로 되돌린다. 앞 단계가 멈춰도 돌게 always 에 적는다"""
+    return [RESEND_WAIT, RESET_SEND, RESET_CODE, reset_verify(k + 2), reset_to('$QA_PASSWORD')], list(range(k, k + 5))
+
+
 ITEMS = [
 
 dict(id='IT-01-001', flow='이메일 가입', kind='정상', title='인증을 마친 이메일로 회원가입한다',
@@ -811,7 +847,23 @@ dict(id='IT-01-073', flow='비밀번호 재설정', kind='정상', title='가입
             '10. 바꾼 뒤 POST /auth/login 에 H 의 이메일과 P2 를 넣으면 200 과 토큰이 온다\n'
             '11. H 의 재설정 인증번호 기록(purpose PASSWORD_RESET)이 쓴 것으로 바뀐다',
      judge=['서버', '합동', '서버', '가상', '가상', '가상', '가상', '가상', '서버', '서버', '서버'],
-     req=['BID-AUTH-009', 'BID-AUTH-005'], fc=['BID-AUTH-009', 'BID-AUTH-005'], screen='/password-reset', pri='High'),
+     req=['BID-AUTH-009', 'BID-AUTH-005'], fc=['BID-AUTH-009', 'BID-AUTH-005'], screen='/password-reset', pri='High',
+     probe={1: dict(steps=[RESEND_WAIT, RESET_SEND],
+                    check="r[1]['status'] == 200 and r[1]['body'].get('expiresInSeconds') == 600 and r[1]['body'].get('resendAfterSeconds') == 60"),
+            3: dict(steps=[('sql', "SELECT purpose FROM email_verification_codes WHERE email = 'qa-cr143@example.com' ORDER BY created_at DESC LIMIT 1"),
+                           ('sql', "SELECT template_code FROM notification_db.message_logs WHERE recipient = 'qa-cr143@example.com' "
+                                   "AND template_code IN ('BID_EMAIL_CODE', 'BID_PASSWORD_RESET_CODE') ORDER BY id DESC LIMIT 1")],
+                    need="len(r[0]) > 0 and r[0][0]['purpose'] == 'PASSWORD_RESET' and len(r[1]) > 0",
+                    check="r[1][0]['template_code'] == 'BID_PASSWORD_RESET_CODE'"),
+            9: dict(steps=[RESEND_WAIT, RESET_SEND, RESET_CODE, reset_verify(2), reset_to('$QA_PASSWORDn2'), login_as('$QA_PASSWORD')],
+                    check="r[4]['status'] == 200 and r[5]['status'] == 401"),
+            10: dict(steps=[login_as('$QA_PASSWORDn2')],
+                     check="r[0]['status'] == 200 and len(r[0]['body'].get('accessToken') or '') > 20"),
+            11: dict(steps=[('sql', "SELECT consumed_at FROM email_verification_codes WHERE email = 'qa-cr143@example.com' "
+                                    "AND purpose = 'PASSWORD_RESET' ORDER BY created_at DESC LIMIT 1")] + restore_from(1)[0],
+                     always=restore_from(1)[1],
+                     need="len(r[0]) > 0",
+                     check="r[0][0]['consumed_at'] is not None")}),
 
 dict(id='IT-01-074', flow='비밀번호 재설정', kind='정상', title='비밀번호 재설정 화면의 구역과 칸, 들어오고 나가는 길을 본다',
      pre='비로그인',
@@ -837,7 +889,15 @@ dict(id='IT-01-075', flow='비밀번호 재설정', kind='예외', title='가입
             '4. N 으로 인증번호 기록과 알림 서버 발송 기록이 생기지 않는다\n'
             '5. 2번 뒤 회원가입 화면(/register)이 열린다',
      judge=['가상', '가상', '서버', '서버', '가상'],
-     req=['BID-AUTH-009'], fc=['BID-AUTH-009'], screen='/password-reset', pri='High'),
+     req=['BID-AUTH-009'], fc=['BID-AUTH-009'], screen='/password-reset', pri='High',
+     probe={3: dict(steps=[('api', 'guest', 'POST', EC, {'email': RESET_N, 'purpose': 'PASSWORD_RESET'})],
+                    check="r[0]['status'] == 404 and r[0]['body'].get('error') == 'EMAIL_NOT_REGISTERED'"),
+            4: dict(steps=[('sql', "SELECT COUNT(*) AS n FROM members WHERE email = 'qa-not-registered-186@example.com'"),
+                           ('api', 'guest', 'POST', EC, {'email': RESET_N, 'purpose': 'PASSWORD_RESET'}),
+                           ('sql', "SELECT COUNT(*) AS n FROM email_verification_codes WHERE email = 'qa-not-registered-186@example.com'"),
+                           ('sql', "SELECT COUNT(*) AS n FROM notification_db.message_logs WHERE recipient = 'qa-not-registered-186@example.com'")],
+                    need="r[0][0]['n'] == '0'",
+                    check="r[1]['status'] == 404 and r[2][0]['n'] == '0' and r[3][0]['n'] == '0'")}),
 
 dict(id='IT-01-076', flow='비밀번호 재설정', kind='예외', title='새 비밀번호가 8자 미만이거나 확인과 다르면 바꾸지 않는다',
      pre='비로그인, 비밀번호 P1 으로 가입한 고객 H, H 의 이메일 확인을 마친 비밀번호 재설정 화면',
@@ -850,7 +910,12 @@ dict(id='IT-01-076', flow='비밀번호 재설정', kind='예외', title='새 �
             '4. 3번 응답이 400 이다\n'
             '5. 3번 뒤 H 가 P1 으로 로그인된다',
      judge=['가상', '가상', '가상', '서버', '서버'],
-     req=['BID-AUTH-009'], fc=['BID-AUTH-009'], screen='/password-reset', pri='High'),
+     req=['BID-AUTH-009'], fc=['BID-AUTH-009'], screen='/password-reset', pri='High',
+     probe={4: dict(steps=[reset_to('abc1234')],
+                    # 길이 검사를 지나치면 확인 안 된 이메일이라 같은 400 이 EMAIL_NOT_VERIFIED 로 온다. 그것과 갈라 본다
+                    check="r[0]['status'] == 400 and r[0]['body'].get('error') != 'EMAIL_NOT_VERIFIED'"),
+            5: dict(steps=[reset_to('abc1234'), login_as('$QA_PASSWORD')],
+                    check="r[1]['status'] == 200 and len(r[1]['body'].get('accessToken') or '') > 20")}),
 
 dict(id='IT-01-077', flow='비밀번호 재설정', kind='예외', title='재설정 인증번호를 확인하지 않은 이메일은 비밀번호를 바꾸지 않는다',
      pre='비밀번호 P1 으로 가입한 고객 H, H 의 이메일로 재설정 인증번호를 확인한 적 없음',
@@ -858,7 +923,14 @@ dict(id='IT-01-077', flow='비밀번호 재설정', kind='예외', title='재설
      expect='1. 응답이 400 과 error EMAIL_NOT_VERIFIED 다\n'
             '2. 1번 뒤 H 가 P1 으로 로그인된다',
      judge=['서버', '서버'],
-     req=['BID-AUTH-009'], fc=['BID-AUTH-009'], screen='', pri='High'),
+     req=['BID-AUTH-009'], fc=['BID-AUTH-009'], screen='', pri='High',
+     probe={1: dict(steps=[('sql', "SELECT COUNT(*) AS n FROM email_verification_codes WHERE email = 'qa-cr143@example.com' "
+                                   "AND purpose = 'PASSWORD_RESET' AND verified_at IS NOT NULL AND consumed_at IS NULL"),
+                           reset_to('$QA_PASSWORDn7')],
+                    need="r[0][0]['n'] == '0'",
+                    check="r[1]['status'] == 400 and r[1]['body'].get('error') == 'EMAIL_NOT_VERIFIED'"),
+            2: dict(steps=[reset_to('$QA_PASSWORDn7'), login_as('$QA_PASSWORD')],
+                    check="r[1]['status'] == 200 and len(r[1]['body'].get('accessToken') or '') > 20")}),
 
 dict(id='IT-01-078', flow='비밀번호 재설정', kind='예외', title='확인 뒤 비밀번호를 바꾸기까지 남는 시간이 지나면 다시 인증하게 한다',
      pre='비로그인, 비밀번호 P1 으로 가입한 고객 H, H 의 이메일 확인을 마치고 30분이 지난 비밀번호 재설정 화면, POL-037 처음 값',
@@ -867,7 +939,7 @@ dict(id='IT-01-078', flow='비밀번호 재설정', kind='예외', title='확인
             '2. 초록 줄 "이메일이 확인되었습니다" 가 사라지고 이메일 칸이 다시 열린다\n'
             '3. 바꾸기 응답(POST /auth/password-reset)이 400 과 error EMAIL_NOT_VERIFIED 다\n'
             '4. 1번 뒤 H 가 P1 으로 로그인된다',
-     judge=['가상', '가상', '서버', '서버'],
+     judge=['가상', '가상', '단위', '단위'],
      req=['BID-AUTH-009', 'BID-AUTH-005'], fc=['BID-AUTH-009', 'BID-AUTH-005'], screen='/password-reset', pri='High'),
 
 dict(id='IT-01-079', flow='비밀번호 재설정', kind='예외', title='비밀번호 바꾸기 중 그 밖의 서버 오류는 정해진 문구로 알린다',
@@ -893,7 +965,20 @@ dict(id='IT-01-080', flow='비밀번호 재설정', kind='예외', title='재설
             '6. 확인을 마친 가입 인증번호로는 비밀번호를 바꾸지 않는다\n'
             '7. 확인을 마친 재설정 인증번호로는 가입하지 않는다',
      judge=['서버', '서버', '서버', '서버', '서버', '단위', '단위'],
-     req=['BID-AUTH-009', 'BID-AUTH-005'], fc=['BID-AUTH-009', 'BID-AUTH-005'], screen='', pri='High'),
+     req=['BID-AUTH-009', 'BID-AUTH-005'], fc=['BID-AUTH-009', 'BID-AUTH-005'], screen='', pri='High',
+     probe={1: dict(steps=[('sql', "SELECT COUNT(*) AS n FROM email_verification_codes WHERE email = 'qa-cr143@example.com' AND purpose = 'SIGNUP'"),
+                           RESEND_WAIT, RESET_SEND, RESET_CODE, reset_verify(3, None)],
+                    need="r[0][0]['n'] == '0' and r[2]['status'] == 200",
+                    check="r[4]['status'] == 410 and r[4]['body'].get('error') == 'EMAIL_CODE_EXPIRED'"),
+            2: dict(steps=[RESET_CODE, reset_verify(0)],
+                    check="r[1]['status'] == 200"),
+            3: dict(steps=[reset_to('$QA_PASSWORDn2')],
+                    check="r[0]['status'] == 200"),
+            4: dict(steps=[reset_to('$QA_PASSWORDn3')],
+                    check="r[0]['status'] == 400 and r[0]['body'].get('error') == 'EMAIL_NOT_VERIFIED'"),
+            5: dict(steps=[login_as('$QA_PASSWORDn2')] + restore_from(1)[0],
+                    always=restore_from(1)[1],
+                    check="r[0]['status'] == 200 and len(r[0]['body'].get('accessToken') or '') > 20")}),
 
 dict(id='IT-01-081', flow='비밀번호 재설정', kind='예외', title='재요청 간격은 가입 인증번호와 재설정 인증번호를 가리지 않고 메일 하나로 센다',
      pre='비로그인, 가입되지 않은 이메일 N, POL-037 처음 값(재요청 60초)',
@@ -904,7 +989,7 @@ dict(id='IT-01-081', flow='비밀번호 재설정', kind='예외', title='재요
             '2. 2번 보내기 응답이 429 와 error EMAIL_CODE_TOO_SOON, retryAfterSeconds 다\n'
             '3. 2번에서 재설정 인증번호 메일이 오지 않는다\n'
             '4. 3번 보내기 응답이 200 이다',
-     judge=['가상', '서버', '합동', '서버'],
+     judge=['가상', '단위', '합동', '단위'],
      req=['BID-AUTH-009', 'BID-AUTH-005'], fc=['BID-AUTH-009', 'BID-AUTH-005'], screen='/password-reset', pri='Medium'),
 
 ]

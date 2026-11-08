@@ -1,0 +1,175 @@
+{
+ "run": "상용CR186",
+ "results": {
+  "WJBID_01073": {
+   "testId": "WJBID_01073",
+   "result": "N/T",
+   "steps": [
+    "pass",
+    "",
+    "pass",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "pass",
+    "pass",
+    "pass"
+   ],
+   "comment": "서버 판정 기대결과 5/11개",
+   "date": "2026-11-08",
+   "at": "2026-11-08 09:43:48",
+   "tester": "SERVER",
+   "evidence": {
+    "0": {
+     "q": "GET / (guest) 끝 식 False 이 참이 될 때까지 90초\nPOST /api/auth/email-codes (guest) {\"email\": \"qa-cr143@example.com\", \"purpose\": \"PASSWORD_RESET\"}",
+     "r": "한도 넘김 6회 75초 200 \"<!doctype html>\\n<html lang=\\\"ko\\\">\\n  <head>\\n    <meta charset=\\\"UTF-8\\\" />\\n    <link rel=\\\"icon\\\" type=\\\"image/svg+xml\\\" href=\\\"/favicon.svg\\\" />\\n    <meta name=\\\"viewport\\\" content=\\\"width=device-width, initial-scale=1.0\\\" />\\n    <title>WJbid - 미군·연방 조달 입찰 정보 서비스</title>\\n    <link rel=\\\"preconnect\\\" href=\\\"https://fonts.googleapis.com\\\" />\\n    <link rel=\\\"preconnect\\\" href=\\\"https://font\n200 {\"expiresInSeconds\": 600, \"resendAfterSeconds\": 60}\ncheck r[1]['status'] == 200 and r[1]['body'].get('expiresInSeconds') == 600 and r[1]['body'].get('resendAfterSeconds') == 60 -> True",
+     "at": "2026-11-08 09:39:48"
+    },
+    "2": {
+     "q": "SELECT purpose FROM email_verification_codes WHERE email = 'qa-cr143@example.com' ORDER BY created_at DESC LIMIT 1\nSELECT template_code FROM notification_db.message_logs WHERE recipient = 'qa-cr143@example.com' AND template_code IN ('BID_EMAIL_CODE', 'BID_PASSWORD_RESET_CODE') ORDER BY id DESC LIMIT 1",
+     "r": "1행 [{\"purpose\": \"PASSWORD_RESET\"}]\n1행 [{\"template_code\": \"BID_PASSWORD_RESET_CODE\"}]\ncheck r[1][0]['template_code'] == 'BID_PASSWORD_RESET_CODE' -> True",
+     "at": "2026-11-08 09:39:48"
+    },
+    "8": {
+     "q": "GET / (guest) 끝 식 False 이 참이 될 때까지 90초\nPOST /api/auth/email-codes (guest) {\"email\": \"qa-cr143@example.com\", \"purpose\": \"PASSWORD_RESET\"}\nSELECT REGEXP_SUBSTR(content, '(?<![0-9])[0-9][0-9][0-9][0-9][0-9][0-9](?![0-9])') AS code FROM notification_db.message_logs WHERE recipient = 'qa-cr143@example.com' AND template_code = 'BID_PASSWORD_RESET_CODE' ORDER BY id DESC LIMIT 1\nPOST /api/auth/email-codes/verify (guest) {\"email\": \"qa-cr143@example.com\", \"code\": \"555671\", \"purpose\": \"PASSWORD_RESET\"}\nPOST /api/auth/password-reset (guest) {\"email\": \"qa-cr143@example.com\", \"newPassword\": \"$QA_PASSWORDn2\"}\nPOST /api/auth/login (guest) {\"email\": \"qa-cr143@example.com\", \"password\": \"$QA_PASSWORD\"}",
+     "r": "한도 넘김 6회 75초 200 \"<!doctype html>\\n<html lang=\\\"ko\\\">\\n  <head>\\n    <meta charset=\\\"UTF-8\\\" />\\n    <link rel=\\\"icon\\\" type=\\\"image/svg+xml\\\" href=\\\"/favicon.svg\\\" />\\n    <meta name=\\\"viewport\\\" content=\\\"width=device-width, initial-scale=1.0\\\" />\\n    <title>WJbid - 미군·연방 조달 입찰 정보 서비스</title>\\n    <link rel=\\\"preconnect\\\" href=\\\"https://fonts.googleapis.com\\\" />\\n    <link rel=\\\"preconnect\\\" href=\\\"https://font\n200 {\"expiresInSeconds\": 600, \"resendAfterSeconds\": 60}\n1행 [{\"code\": \"555671\"}]\n200 {\"verified\": true}\n200 {\"reset\": true}\n401 null\ncheck r[4]['status'] == 200 and r[5]['status'] == 401 -> True",
+     "at": "2026-11-08 09:39:48"
+    },
+    "9": {
+     "q": "POST /api/auth/login (guest) {\"email\": \"qa-cr143@example.com\", \"password\": \"$QA_PASSWORDn2\"}",
+     "r": "200 {\"accessToken\": \"eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJxYS1jcjE0M0BleGFtcGxlLmNvbSIsImlhdCI6MTc5NDA5ODU1MCwiZXhwIjoxNzk0MTI3MzUwLCJqdGkiOiI5NGU1MzI0Mi02ZGQxLTQ4YzctOTg3OS0xNjFjYjNkMTcwMTQifQ.GcfQ_GrArpDCVZNApoXRugiERgtjFNQuMAOw06gFe6y_m7qn9QKhN-orXwIVhgyUWfNhmTsABqYHHFgz0DxuoA\", \"refreshToken\": \"eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJxYS1jcjE0M0BleGFtcGxlLmNvbSIsImlhdCI6MTc5NDA5ODU1MCwiZXhwIjoxNzk0NzAzMzUwLCJq\ncheck r[0]['status'] == 200 and len(r[0]['body'].get('accessToken') or '') > 20 -> True",
+     "at": "2026-11-08 09:39:48"
+    },
+    "10": {
+     "q": "SELECT consumed_at FROM email_verification_codes WHERE email = 'qa-cr143@example.com' AND purpose = 'PASSWORD_RESET' ORDER BY created_at DESC LIMIT 1\nGET / (guest) 끝 식 False 이 참이 될 때까지 90초\nPOST /api/auth/email-codes (guest) {\"email\": \"qa-cr143@example.com\", \"purpose\": \"PASSWORD_RESET\"}\nSELECT REGEXP_SUBSTR(content, '(?<![0-9])[0-9][0-9][0-9][0-9][0-9][0-9](?![0-9])') AS code FROM notification_db.message_logs WHERE recipient = 'qa-cr143@example.com' AND template_code = 'BID_PASSWORD_RESET_CODE' ORDER BY id DESC LIMIT 1\nPOST /api/auth/email-codes/verify (guest) {\"email\": \"qa-cr143@example.com\", \"code\": \"801389\", \"purpose\": \"PASSWORD_RESET\"}\nPOST /api/auth/password-reset (guest) {\"email\": \"qa-cr143@example.com\", \"newPassword\": \"$QA_PASSWORD\"}",
+     "r": "1행 [{\"consumed_at\": \"2026-11-08 09:42:30.000000\"}]\n한도 넘김 6회 75초 200 \"<!doctype html>\\n<html lang=\\\"ko\\\">\\n  <head>\\n    <meta charset=\\\"UTF-8\\\" />\\n    <link rel=\\\"icon\\\" type=\\\"image/svg+xml\\\" href=\\\"/favicon.svg\\\" />\\n    <meta name=\\\"viewport\\\" content=\\\"width=device-width, initial-scale=1.0\\\" />\\n    <title>WJbid - 미군·연방 조달 입찰 정보 서비스</title>\\n    <link rel=\\\"preconnect\\\" href=\\\"https://fonts.googleapis.com\\\" />\\n    <link rel=\\\"preconnect\\\" href=\\\"https://font\n200 {\"expiresInSeconds\": 600, \"resendAfterSeconds\": 60}\n1행 [{\"code\": \"801389\"}]\n200 {\"verified\": true}\n200 {\"reset\": true}\ncheck r[0][0]['consumed_at'] is not None -> True",
+     "at": "2026-11-08 09:39:48"
+    }
+   }
+  },
+  "WJBID_01075": {
+   "testId": "WJBID_01075",
+   "result": "N/T",
+   "steps": [
+    "",
+    "",
+    "pass",
+    "pass",
+    ""
+   ],
+   "comment": "서버 판정 기대결과 2/5개",
+   "date": "2026-11-08",
+   "at": "2026-11-08 09:43:50",
+   "tester": "SERVER",
+   "evidence": {
+    "2": {
+     "q": "POST /api/auth/email-codes (guest) {\"email\": \"qa-not-registered-186@example.com\", \"purpose\": \"PASSWORD_RESET\"}",
+     "r": "404 {\"error\": \"EMAIL_NOT_REGISTERED\", \"message\": \"가입되지 않은 이메일입니다\"}\ncheck r[0]['status'] == 404 and r[0]['body'].get('error') == 'EMAIL_NOT_REGISTERED' -> True",
+     "at": "2026-11-08 09:39:48"
+    },
+    "3": {
+     "q": "SELECT COUNT(*) AS n FROM members WHERE email = 'qa-not-registered-186@example.com'\nPOST /api/auth/email-codes (guest) {\"email\": \"qa-not-registered-186@example.com\", \"purpose\": \"PASSWORD_RESET\"}\nSELECT COUNT(*) AS n FROM email_verification_codes WHERE email = 'qa-not-registered-186@example.com'\nSELECT COUNT(*) AS n FROM notification_db.message_logs WHERE recipient = 'qa-not-registered-186@example.com'",
+     "r": "1행 [{\"n\": \"0\"}]\n404 {\"error\": \"EMAIL_NOT_REGISTERED\", \"message\": \"가입되지 않은 이메일입니다\"}\n1행 [{\"n\": \"0\"}]\n1행 [{\"n\": \"0\"}]\ncheck r[1]['status'] == 404 and r[2][0]['n'] == '0' and r[3][0]['n'] == '0' -> True",
+     "at": "2026-11-08 09:39:48"
+    }
+   }
+  },
+  "WJBID_01076": {
+   "testId": "WJBID_01076",
+   "result": "N/T",
+   "steps": [
+    "",
+    "",
+    "",
+    "pass",
+    "pass"
+   ],
+   "comment": "서버 판정 기대결과 2/5개",
+   "date": "2026-11-08",
+   "at": "2026-11-08 09:43:50",
+   "tester": "SERVER",
+   "evidence": {
+    "3": {
+     "q": "POST /api/auth/password-reset (guest) {\"email\": \"qa-cr143@example.com\", \"newPassword\": \"abc1234\"}",
+     "r": "400 {\"timestamp\": \"2026-11-08T00:43:52.456+00:00\", \"status\": 400, \"error\": \"Bad Request\", \"message\": \"Validation failed for object='resetPassword'. Error count: 1\", \"errors\": [{\"codes\": [\"Size.resetPassword.newPassword\", \"Size.newPassword\", \"Size.java.lang.String\", \"Size\"], \"arguments\": [{\"codes\": [\"resetPassword.newPassword\", \"newPassword\"], \"arguments\": null, \"defaultMessage\": \"newPassword\", \"code\":\ncheck r[0]['status'] == 400 and r[0]['body'].get('error') != 'EMAIL_NOT_VERIFIED' -> True",
+     "at": "2026-11-08 09:39:48"
+    },
+    "4": {
+     "q": "POST /api/auth/password-reset (guest) {\"email\": \"qa-cr143@example.com\", \"newPassword\": \"abc1234\"}\nPOST /api/auth/login (guest) {\"email\": \"qa-cr143@example.com\", \"password\": \"$QA_PASSWORD\"}",
+     "r": "400 {\"timestamp\": \"2026-11-08T00:43:52.491+00:00\", \"status\": 400, \"error\": \"Bad Request\", \"message\": \"Validation failed for object='resetPassword'. Error count: 1\", \"errors\": [{\"codes\": [\"Size.resetPassword.newPassword\", \"Size.newPassword\", \"Size.java.lang.String\", \"Size\"], \"arguments\": [{\"codes\": [\"resetPassword.newPassword\", \"newPassword\"], \"arguments\": null, \"defaultMessage\": \"newPassword\", \"code\":\n200 {\"accessToken\": \"eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJxYS1jcjE0M0BleGFtcGxlLmNvbSIsImlhdCI6MTc5NDA5ODYzMiwiZXhwIjoxNzk0MTI3NDMyLCJqdGkiOiI2MDMzOTVkOC1iODAwLTQwNGMtYTgwMy04N2Y2YjFhMjM1OWQifQ.g-F-PaNsJb6VRB2sfqeq0sbTcdHowrW7i8znXkpNzRr61WN3fRrMz0uipkM_ZoIQW7HmFe-M6nevxZo4KGDRtQ\", \"refreshToken\": \"eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJxYS1jcjE0M0BleGFtcGxlLmNvbSIsImlhdCI6MTc5NDA5ODYzMiwiZXhwIjoxNzk0NzAzNDMyLCJq\ncheck r[1]['status'] == 200 and len(r[1]['body'].get('accessToken') or '') > 20 -> True",
+     "at": "2026-11-08 09:39:48"
+    }
+   }
+  },
+  "WJBID_01077": {
+   "testId": "WJBID_01077",
+   "result": "OK",
+   "steps": [
+    "pass",
+    "pass"
+   ],
+   "comment": "서버 판정 기대결과 2/2개",
+   "date": "2026-11-08",
+   "at": "2026-11-08 09:43:51",
+   "tester": "SERVER",
+   "evidence": {
+    "0": {
+     "q": "SELECT COUNT(*) AS n FROM email_verification_codes WHERE email = 'qa-cr143@example.com' AND purpose = 'PASSWORD_RESET' AND verified_at IS NOT NULL AND consumed_at IS NULL\nPOST /api/auth/password-reset (guest) {\"email\": \"qa-cr143@example.com\", \"newPassword\": \"$QA_PASSWORDn7\"}",
+     "r": "1행 [{\"n\": \"0\"}]\n400 {\"error\": \"EMAIL_NOT_VERIFIED\", \"message\": \"이메일 인증을 마치지 않았습니다\"}\ncheck r[1]['status'] == 400 and r[1]['body'].get('error') == 'EMAIL_NOT_VERIFIED' -> True",
+     "at": "2026-11-08 09:39:48"
+    },
+    "1": {
+     "q": "POST /api/auth/password-reset (guest) {\"email\": \"qa-cr143@example.com\", \"newPassword\": \"$QA_PASSWORDn7\"}\nPOST /api/auth/login (guest) {\"email\": \"qa-cr143@example.com\", \"password\": \"$QA_PASSWORD\"}",
+     "r": "400 {\"error\": \"EMAIL_NOT_VERIFIED\", \"message\": \"이메일 인증을 마치지 않았습니다\"}\n200 {\"accessToken\": \"eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJxYS1jcjE0M0BleGFtcGxlLmNvbSIsImlhdCI6MTc5NDA5ODYzMywiZXhwIjoxNzk0MTI3NDMzLCJqdGkiOiI5ODI3YjgzMS0zZDkwLTQxM2UtYWE5MS1lODZlNjZiMzc5YzkifQ.Yg-B1qtZLnyFHyKsPBsPuXcQN3ZcqO-0x4zYOPzeu72tTmsem4MwjOKcm_pzgeI-rZqCLVs2fCBU46g-J1vTyQ\", \"refreshToken\": \"eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJxYS1jcjE0M0BleGFtcGxlLmNvbSIsImlhdCI6MTc5NDA5ODYzMywiZXhwIjoxNzk0NzAzNDMzLCJq\ncheck r[1]['status'] == 200 and len(r[1]['body'].get('accessToken') or '') > 20 -> True",
+     "at": "2026-11-08 09:39:48"
+    }
+   }
+  },
+  "WJBID_01080": {
+   "testId": "WJBID_01080",
+   "result": "N/T",
+   "steps": [
+    "pass",
+    "pass",
+    "pass",
+    "pass",
+    "pass",
+    "",
+    ""
+   ],
+   "comment": "서버 판정 기대결과 5/7개",
+   "date": "2026-11-08",
+   "at": "2026-11-08 09:46:31",
+   "tester": "SERVER",
+   "evidence": {
+    "0": {
+     "q": "SELECT COUNT(*) AS n FROM email_verification_codes WHERE email = 'qa-cr143@example.com' AND purpose = 'SIGNUP'\nGET / (guest) 끝 식 False 이 참이 될 때까지 90초\nPOST /api/auth/email-codes (guest) {\"email\": \"qa-cr143@example.com\", \"purpose\": \"PASSWORD_RESET\"}\nSELECT REGEXP_SUBSTR(content, '(?<![0-9])[0-9][0-9][0-9][0-9][0-9][0-9](?![0-9])') AS code FROM notification_db.message_logs WHERE recipient = 'qa-cr143@example.com' AND template_code = 'BID_PASSWORD_RESET_CODE' ORDER BY id DESC LIMIT 1\nPOST /api/auth/email-codes/verify (guest) {\"email\": \"qa-cr143@example.com\", \"code\": \"494545\"}",
+     "r": "1행 [{\"n\": \"0\"}]\n한도 넘김 6회 75초 200 \"<!doctype html>\\n<html lang=\\\"ko\\\">\\n  <head>\\n    <meta charset=\\\"UTF-8\\\" />\\n    <link rel=\\\"icon\\\" type=\\\"image/svg+xml\\\" href=\\\"/favicon.svg\\\" />\\n    <meta name=\\\"viewport\\\" content=\\\"width=device-width, initial-scale=1.0\\\" />\\n    <title>WJbid - 미군·연방 조달 입찰 정보 서비스</title>\\n    <link rel=\\\"preconnect\\\" href=\\\"https://fonts.googleapis.com\\\" />\\n    <link rel=\\\"preconnect\\\" href=\\\"https://font\n200 {\"expiresInSeconds\": 600, \"resendAfterSeconds\": 60}\n1행 [{\"code\": \"494545\"}]\n410 {\"error\": \"EMAIL_CODE_EXPIRED\", \"message\": \"인증 시간이 지났습니다\"}\ncheck r[4]['status'] == 410 and r[4]['body'].get('error') == 'EMAIL_CODE_EXPIRED' -> True",
+     "at": "2026-11-08 09:39:48"
+    },
+    "1": {
+     "q": "SELECT REGEXP_SUBSTR(content, '(?<![0-9])[0-9][0-9][0-9][0-9][0-9][0-9](?![0-9])') AS code FROM notification_db.message_logs WHERE recipient = 'qa-cr143@example.com' AND template_code = 'BID_PASSWORD_RESET_CODE' ORDER BY id DESC LIMIT 1\nPOST /api/auth/email-codes/verify (guest) {\"email\": \"qa-cr143@example.com\", \"code\": \"494545\", \"purpose\": \"PASSWORD_RESET\"}",
+     "r": "1행 [{\"code\": \"494545\"}]\n200 {\"verified\": true}\ncheck r[1]['status'] == 200 -> True",
+     "at": "2026-11-08 09:39:48"
+    },
+    "2": {
+     "q": "POST /api/auth/password-reset (guest) {\"email\": \"qa-cr143@example.com\", \"newPassword\": \"$QA_PASSWORDn2\"}",
+     "r": "200 {\"reset\": true}\ncheck r[0]['status'] == 200 -> True",
+     "at": "2026-11-08 09:39:48"
+    },
+    "3": {
+     "q": "POST /api/auth/password-reset (guest) {\"email\": \"qa-cr143@example.com\", \"newPassword\": \"$QA_PASSWORDn3\"}",
+     "r": "400 {\"error\": \"EMAIL_NOT_VERIFIED\", \"message\": \"이메일 인증을 마치지 않았습니다\"}\ncheck r[0]['status'] == 400 and r[0]['body'].get('error') == 'EMAIL_NOT_VERIFIED' -> True",
+     "at": "2026-11-08 09:39:48"
+    },
+    "4": {
+     "q": "POST /api/auth/login (guest) {\"email\": \"qa-cr143@example.com\", \"password\": \"$QA_PASSWORDn2\"}\nGET / (guest) 끝 식 False 이 참이 될 때까지 90초\nPOST /api/auth/email-codes (guest) {\"email\": \"qa-cr143@example.com\", \"purpose\": \"PASSWORD_RESET\"}\nSELECT REGEXP_SUBSTR(content, '(?<![0-9])[0-9][0-9][0-9][0-9][0-9][0-9](?![0-9])') AS code FROM notification_db.message_logs WHERE recipient = 'qa-cr143@example.com' AND template_code = 'BID_PASSWORD_RESET_CODE' ORDER BY id DESC LIMIT 1\nPOST /api/auth/email-codes/verify (guest) {\"email\": \"qa-cr143@example.com\", \"code\": \"695220\", \"purpose\": \"PASSWORD_RESET\"}\nPOST /api/auth/password-reset (guest) {\"email\": \"qa-cr143@example.com\", \"newPassword\": \"$QA_PASSWORD\"}",
+     "r": "200 {\"accessToken\": \"eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJxYS1jcjE0M0BleGFtcGxlLmNvbSIsImlhdCI6MTc5NDA5ODcxMywiZXhwIjoxNzk0MTI3NTEzLCJqdGkiOiI0ZmNmMjI4My0yNThjLTQxZjgtOTVjOS1mNTc2NmI2MDYxZWYifQ.WJKHoGwN0YIRlGnLBYWsYv_BqzZySiAh8DZOkOgMYPu4_OQUlmurz6k7rTD3NyYpv2tHEiDD1wKxH4d5F6JQbg\", \"refreshToken\": \"eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJxYS1jcjE0M0BleGFtcGxlLmNvbSIsImlhdCI6MTc5NDA5ODcxMywiZXhwIjoxNzk0NzAzNTEzLCJq\n한도 넘김 6회 75초 200 \"<!doctype html>\\n<html lang=\\\"ko\\\">\\n  <head>\\n    <meta charset=\\\"UTF-8\\\" />\\n    <link rel=\\\"icon\\\" type=\\\"image/svg+xml\\\" href=\\\"/favicon.svg\\\" />\\n    <meta name=\\\"viewport\\\" content=\\\"width=device-width, initial-scale=1.0\\\" />\\n    <title>WJbid - 미군·연방 조달 입찰 정보 서비스</title>\\n    <link rel=\\\"preconnect\\\" href=\\\"https://fonts.googleapis.com\\\" />\\n    <link rel=\\\"preconnect\\\" href=\\\"https://font\n200 {\"expiresInSeconds\": 600, \"resendAfterSeconds\": 60}\n1행 [{\"code\": \"695220\"}]\n200 {\"verified\": true}\n200 {\"reset\": true}\ncheck r[0]['status'] == 200 and len(r[0]['body'].get('accessToken') or '') > 20 -> True",
+     "at": "2026-11-08 09:39:48"
+    }
+   }
+  }
+ }
+}

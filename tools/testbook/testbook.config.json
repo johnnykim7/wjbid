@@ -54,6 +54,9 @@
   "virtual": {
     "admin-console": {
       "dir": "frontend/admin-console"
+    },
+    "customer-portal": {
+      "dir": "frontend/customer-portal"
     }
   },
   "unit": {

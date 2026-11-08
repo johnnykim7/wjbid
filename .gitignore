@@ -114,3 +114,4 @@ __pycache__/
 # 시험 재료 키 값과 가상 화면 결과는 대상 서버마다 회차마다 새로 쓴다
 tools/testbook/seed/ids/
 frontend/admin-console/vtest-out/
+frontend/customer-portal/vtest-out/
