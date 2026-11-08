@@ -105,8 +105,8 @@ export const AWARD_TEXT = {
   all: '전체',
   awardee: (name: string) => `낙찰 업체 ${name}`,
   sort: { LATEST: '최신순', AMOUNT: '금액순' },
-  head: { date: '공지일', title: '제목 · 공고번호', amount: '낙찰 금액', original: '원래 공고' },
-  original: '원래 공고',
+  head: { date: '공지일', title: '제목 · 공고번호', amount: '낙찰 금액', original: '입찰 공고' },
+  original: '입찰 공고',
 }
 
 export const MONTHLY_TEXT = {
