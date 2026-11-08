@@ -444,7 +444,8 @@ public class NoticeService {
 
     /**
      * CR-004: 정제 출력 정형 포맷의 필수키 검증.
-     * 필수: koreanTitle, summary.overview, requiredDocuments.documents(1건 이상).
+     * 필수: koreanTitle, summary.overview, requiredDocuments.documents(목록 칸).
+     * 빈 목록은 요구 서류가 없는 공고(사전수요조사 등)로 받는다. 칸이 빠졌을 때만 누락이다(CR-193).
      * documentFormats/llmPromptPreset는 보조 정보라 검증 제외.
      * 반환: 누락된 항목 라벨 목록 (비면 검증 통과).
      */
@@ -462,7 +463,7 @@ public class NoticeService {
         }
 
         Object docs = requiredDocumentsJson == null ? null : requiredDocumentsJson.get("documents");
-        if (!(docs instanceof List<?> list) || list.isEmpty()) {
+        if (!(docs instanceof List<?>)) {
             missing.add("requiredDocuments.documents(필요 서류 목록)");
         }
 

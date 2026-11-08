@@ -117,17 +117,29 @@ class NoticeServiceTest {
         assertThat(result.getErrorMessage()).contains("summary.overview");
     }
 
-    // CR-004: requiredDocuments.documents 빈 목록 → FAILED
+    // CR-193: 요구 서류가 없는 공고(사전수요조사)는 빈 목록으로 온다
     @Test
-    @DisplayName("정제저장_필요서류빈목록_FAILED전이됨")
-    void 정제저장_필요서류빈목록_실패() {
+    @DisplayName("TC-NOTICE-001 정제저장_필요서류빈목록_COMPLETED저장됨")
+    void 정제저장_필요서류빈목록_완료() {
         UUID noticeId = UUID.randomUUID();
         newAnalyzingNotice(noticeId);
 
         Notice result = noticeService.saveResult(
                 noticeId, "한글 제목", validSummary(), null, Map.of("documents", List.of()), null, null, null, null, null, null);
 
-        assertThat(result.getGenerationStatus()).isEqualTo(NoticeGenerationStatus.FAILED);
+        assertThat(result.getGenerationStatus()).isEqualTo(NoticeGenerationStatus.COMPLETED);
+    }
+
+    // CR-004, CR-193: 필요 서류 목록 칸이 빠지면 FAILED
+    @Test
+    @DisplayName("TC-NOTICE-002 정제저장_필요서류칸없음_FAILED전이됨")
+    void 정제저장_필요서류칸없음_실패() {
+        UUID noticeId = UUID.randomUUID();
+        newAnalyzingNotice(noticeId);
+
+        Notice result = noticeService.saveResult(
+                noticeId, "한글 제목", validSummary(), null, Map.of("eligibility", List.of()), null, null, null, null, null, null);
+
         assertThat(result.getErrorMessage()).contains("requiredDocuments.documents");
     }
 
