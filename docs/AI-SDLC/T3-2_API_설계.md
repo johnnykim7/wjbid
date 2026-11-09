@@ -1,6 +1,6 @@
 # SAM.gov Bidding Agency Platform API 설계
 
-> 설계 버전: 1.35 | 최종 수정: 2026-11-08 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-144, CR-146, CR-147, CR-152, CR-153, CR-155, CR-157, CR-159, CR-160, CR-162, CR-168, CR-169, CR-170, CR-178, CR-179, CR-180, CR-182, CR-183, CR-186, CR-187, CR-188, CR-189, CR-191, CR-194
+> 설계 버전: 1.36 | 최종 수정: 2026-11-10 | 관련 CR: CR-001, CR-002, CR-003, CR-003a, CR-129, CR-131, CR-132, CR-135, CR-136, CR-137, CR-140, CR-141, CR-142, CR-143, CR-144, CR-146, CR-147, CR-152, CR-153, CR-155, CR-157, CR-159, CR-160, CR-162, CR-168, CR-169, CR-170, CR-178, CR-179, CR-180, CR-182, CR-183, CR-186, CR-187, CR-188, CR-189, CR-191, CR-194, CR-196
 
 > 단계: 3. Detail Design | 실행스펙 섹션 3에 포함
 >
@@ -173,6 +173,30 @@
 **사진 주소(url)**: 함께 배포된 사진은 bundled_path 그대로(`/img/...`), 올린 사진은 `<context-path>/site-photos/{id}/image`(운영 `/api/site-photos/{id}/image`).
 
 ---
+
+## B-7. 자료실 (Admin, CR-196)
+
+| 메서드 | 경로 | 설명 | 인증 | 기능 ID |
+|--------|------|------|------|---------|
+| GET | /admin/shared-files | 파일 목록(최근 순, 쪽 나눔)과 올리기 규칙 | ADMIN | BID-SHARE-003 |
+| POST | /admin/shared-files | 파일 올리기. multipart `file`. 암호화 저장 뒤 비밀번호 메일 발송(201) | ADMIN | BID-SHARE-001 |
+| POST | /admin/shared-files/{id}/download | 파일 받기. 본문 `{ password }`. 맞으면 파일 내용 | ADMIN | BID-SHARE-002 |
+| DELETE | /admin/shared-files/{id} | 지우기(204). 올린 사람만 | ADMIN | BID-SHARE-003 |
+| GET | /admin/shared-files/logs | 기록(최근 순, 쪽 나눔) | ADMIN | BID-SHARE-004 |
+
+**목록 응답**: `rules`(`maxUploadMb`, `blockedExtensions[]`), `files[]`(`id`, `fileName`, `sizeBytes`, `uploadedByEmail`, `createdAt`, `lockedUntil`, `mine`), 쪽 정보. 비밀번호와 관련된 값은 내보내지 않는다.
+
+**올리기 응답**: `id`, `fileName`, `sizeBytes`, `createdAt`, `mailedTo`(가린 주소). 비밀번호는 담지 않는다.
+
+**올리기 오류**: 400 받지 않는 확장자, 무게 상한 넘음, 빈 파일. 502 메일을 보내지 못함(저장을 되돌린다, BIZ-112).
+
+**받기 응답**: `Content-Disposition: attachment`, `Content-Type: application/octet-stream`, `X-Content-Type-Options: nosniff`.
+
+**받기 오류**: 404 파일 없음. 400 비밀번호 틀림(`remainingAttempts`). 429 잠김(`retryAfterMinutes`). 500 저장 파일이 바뀌었거나 잘림.
+
+**지우기 오류**: 403 올린 사람이 아님. 404 파일 없음.
+
+**로그인 변경 (POST /auth/login, BID-AUTH-010)**: 잠겨 있으면 429 와 `retryAfterMinutes`. 틀림은 지금과 같이 401 이다.
 
 ## C. 공고 열람 (Opportunity Browse) — Sprint 3
 
