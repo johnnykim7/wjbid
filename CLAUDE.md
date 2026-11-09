@@ -50,7 +50,7 @@ cd frontend/admin-console && npm install && npm run dev     # 관리자 콘솔 (
 **아키텍처**: 이 플랫폼은 MCP 서버 + Aimbase 워크플로우 클라이언트 이중 역할
 - **MCP 서버**: Aimbase가 이 플랫폼의 8개 Tool을 SSE로 호출 (HTTP POST도 지원)
 - **워크플로우 클라이언트**: `LLMPlatformClient`가 Aimbase Workflow API 호출 + 폴링
-- **인증**: `X-API-Key: plat-20cf57fbc623424584eeda2e355cbb43`
+- **인증**: `X-API-Key` 머리글. 값은 서버 .env 의 `AIMBASE_API_KEY` 에만 있다(CR-197)
 - **MCP 전송**: HTTP POST (`/mcp`) + SSE (`/mcp/sse` + `/mcp/message`)
 - **핵심 흐름**: FSM 상태 전이 → AIWorkflowService → LLMPlatformClient → Aimbase 워크플로우 → Aimbase가 MCP 콜백으로 데이터 저장
 - **문서 출력(Word/PDF)**: Aimbase에서 처리. 이 플랫폼은 검수용 PDF export만 보유

@@ -180,7 +180,8 @@ app:
   # 서버 이전: 14.63.25.49 → 59.8.160.12 (2026-05-28)
   aimbase:
     base-url: ${AIMBASE_URL:http://59.8.160.12:8280}
-    api-key: ${AIMBASE_API_KEY:plat-20cf57fbc623424584eeda2e355cbb43}
+    # 운영 열쇠는 서버 .env 에만 둔다(CR-197)
+    api-key: ${AIMBASE_API_KEY:}
     tenant-id: ${AIMBASE_TENANT_ID:bidding_system}
     connect-timeout: 5000     # 5 seconds
     read-timeout: 300000      # 5 minutes (워크플로우 실행 포함)
