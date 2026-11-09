@@ -23,6 +23,8 @@ public interface StorageService {
     /** storageUrl로 저장된 바이트를 로드 */
     byte[] load(String storageUrl);
 
+    java.io.InputStream open(String storageUrl);
+
     /** storageUrl로 저장된 파일 삭제 */
     void delete(String storageUrl);
 }

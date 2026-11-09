@@ -580,3 +580,61 @@ export const setAdminSitePhotoVisible = (id: string, visible: boolean) =>
   api.patch<AdminSitePhoto>(`/admin/site-photos/${id}`, { visible })
 
 export const deleteAdminSitePhoto = (id: string) => api.delete(`/admin/site-photos/${id}`)
+
+export interface SharedFileRules {
+  maxUploadMb: number
+  blockedExtensions: string[]
+}
+
+export interface SharedFileItem {
+  id: string
+  fileName: string
+  sizeBytes: number
+  uploadedByEmail: string
+  createdAt: string
+  lockedUntil: string | null
+  mine: boolean
+}
+
+export interface SharedFileList {
+  rules: SharedFileRules
+  files: SharedFileItem[]
+  page: number
+  totalPages: number
+  totalElements: number
+}
+
+export interface SharedFileLogItem {
+  id: number
+  createdAt: string
+  memberEmail: string
+  fileName: string
+  action: string
+  clientIp: string | null
+}
+
+export interface SharedFileLogPage {
+  logs: SharedFileLogItem[]
+  page: number
+  totalPages: number
+  totalElements: number
+}
+
+export const getSharedFiles = (page: number) =>
+  api.get<SharedFileList>('/admin/shared-files', { params: { page } })
+
+export const uploadSharedFile = (file: File) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  return api.post<{ id: string; fileName: string; mailedTo: string }>('/admin/shared-files', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+}
+
+export const downloadSharedFile = (id: string, password: string) =>
+  api.post<Blob>(`/admin/shared-files/${id}/download`, { password }, { responseType: 'blob' })
+
+export const deleteSharedFile = (id: string) => api.delete(`/admin/shared-files/${id}`)
+
+export const getSharedFileLogs = (page: number) =>
+  api.get<SharedFileLogPage>('/admin/shared-files/logs', { params: { page } })

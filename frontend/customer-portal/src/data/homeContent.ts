@@ -8,6 +8,12 @@
 import { comingSoonHref, serviceHref } from '../components/layout/menu'
 import type { SitePhotoSlot } from '../hooks/useSitePhoto'
 
+export const COMPANY_INTRO = {
+  label: '회사 소개',
+  title: '우진비드닷컴',
+  body: '우진비드닷컴은 (주)우진이엔씨가 운영하는 미군·연방 조달 입찰 정보 서비스입니다. 미국 연방 조달 사이트 SAM.gov의 공고를 모아 한글로 볼 수 있게 제공하고, 공고 찾기부터 입찰 서류 준비, 제안서 대행과 컨설팅까지 입찰 단계별로 돕습니다.',
+}
+
 /** 첫 화면 공고 목록 줄 수와 "N일 안 마감" 기준 */
 export const LIST_ROWS = 7
 export const SOON_DAYS = 7

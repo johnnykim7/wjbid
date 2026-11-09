@@ -18,6 +18,8 @@ public class AuthPolicy {
     static final long DEFAULT_CODE_TTL_MINUTES = 10;
     static final long DEFAULT_RESEND_SECONDS = 60;
     static final long DEFAULT_MAX_ATTEMPTS = 5;
+    static final long DEFAULT_LOGIN_MAX_ATTEMPTS = 5;
+    static final long DEFAULT_LOGIN_LOCK_MINUTES = 15;
     static final long DEFAULT_DAILY_LIMIT = 10;
     static final long DEFAULT_VERIFIED_MINUTES = 30;
     static final long DEFAULT_SIGNUP_TICKET_MINUTES = 30;
@@ -33,6 +35,14 @@ public class AuthPolicy {
 
     public Duration resendInterval() {
         return Duration.ofSeconds(read(SettingKey.EMAIL_CODE_RESEND_SECONDS, 0, DEFAULT_RESEND_SECONDS));
+    }
+
+    public int loginMaxAttempts() {
+        return (int) read(SettingKey.LOGIN_MAX_ATTEMPTS, 1, DEFAULT_LOGIN_MAX_ATTEMPTS);
+    }
+
+    public Duration loginLockDuration() {
+        return Duration.ofMinutes(read(SettingKey.LOGIN_LOCK_MINUTES, 1, DEFAULT_LOGIN_LOCK_MINUTES));
     }
 
     public int maxAttempts() {

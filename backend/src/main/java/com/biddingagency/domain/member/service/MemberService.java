@@ -161,6 +161,8 @@ public class MemberService {
                 .orElseThrow(() -> new AuthFlowException(AuthError.EMAIL_NOT_REGISTERED));
         emailCodeService.consumeVerified(email, EmailCodePurpose.PASSWORD_RESET);
         member.updatePassword(passwordEncoder.encode(newPassword));
+        // 메일로 본인을 확인했으므로 잠금 시간을 기다리게 하지 않는다
+        member.clearLoginFailures();
         log.info("Password reset for member: {}", member.getEmail());
     }
 

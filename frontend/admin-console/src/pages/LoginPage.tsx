@@ -23,8 +23,11 @@ export default function LoginPage() {
       }
       localStorage.setItem('adminToken', data.accessToken)
       navigate('/')
-    } catch {
-      setError('이메일 또는 비밀번호가 올바르지 않습니다.')
+    } catch (err) {
+      const response = (err as { response?: { status?: number; data?: { retryAfterMinutes?: number } } }).response
+      setError(response?.status === 429
+        ? `비밀번호를 많이 틀려 잠겼습니다. ${response.data?.retryAfterMinutes}분 뒤 다시 시도해 주세요.`
+        : '이메일 또는 비밀번호가 올바르지 않습니다.')
     } finally {
       setLoading(false)
     }

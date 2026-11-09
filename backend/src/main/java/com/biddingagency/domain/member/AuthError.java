@@ -12,6 +12,7 @@ public enum AuthError {
     EMAIL_CODE_MISMATCH(HttpStatus.BAD_REQUEST, "인증번호가 맞지 않습니다"),
     EMAIL_CODE_EXPIRED(HttpStatus.GONE, "인증 시간이 지났습니다"),
     EMAIL_CODE_LOCKED(HttpStatus.TOO_MANY_REQUESTS, "인증번호를 너무 많이 틀렸습니다"),
+    LOGIN_LOCKED(HttpStatus.TOO_MANY_REQUESTS, "비밀번호를 많이 틀려 잠겼습니다"),
     EMAIL_NOT_VERIFIED(HttpStatus.BAD_REQUEST, "이메일 인증을 마치지 않았습니다"),
     EMAIL_NOT_REGISTERED(HttpStatus.NOT_FOUND, "가입되지 않은 이메일입니다"),
     SNS_TICKET_EXPIRED(HttpStatus.GONE, "SNS 확인 시간이 지났습니다"),

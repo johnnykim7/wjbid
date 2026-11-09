@@ -4,6 +4,7 @@ import {
   ChartLine,
   FilePenLine,
   FileText,
+  FolderLock,
   Headset,
   Images,
   Inbox,
@@ -30,6 +31,7 @@ const NAV: { to: string; icon: LucideIcon; label: string; exact?: boolean }[] = 
   { to: '/site-photos', icon: Images, label: '고객 화면 사진' },
   { to: '/templates', icon: FileText, label: '문서 템플릿' },
   { to: '/rfp-samples', icon: Trophy, label: '성공 제안서 패턴' },
+  { to: '/shared-files', icon: FolderLock, label: '자료실' },
   { to: '/inquiries', icon: Headset, label: '1:1 문의' },
 ]
 

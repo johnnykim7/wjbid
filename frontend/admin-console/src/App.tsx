@@ -7,6 +7,7 @@ import BidRequestAdminPage from './pages/BidRequestAdminPage'
 import CollectionPage from './pages/CollectionPage'
 import BaseAdminPage from './pages/BaseAdminPage'
 import SitePhotoAdminPage from './pages/SitePhotoAdminPage'
+import SharedFilePage from './pages/SharedFilePage'
 import DocumentTemplatePage from './pages/DocumentTemplatePage'
 import DocumentEditPage from './pages/DocumentEditPage'
 import ProposalTreePage from './pages/ProposalTreePage'
@@ -54,6 +55,7 @@ export default function App() {
           <Route path="templates" element={<DocumentTemplatePage />} />
           <Route path="rfp-samples" element={<RfpSamplePage />} />
           <Route path="rfp-samples/:id" element={<RfpSampleDetailPage />} />
+          <Route path="shared-files" element={<SharedFilePage />} />
           <Route path="inquiries" element={<InquiryAdminPage />} />
           <Route path="inquiries/:id" element={<InquiryAdminDetailPage />} />
           <Route path="documents/:id/edit" element={<DocumentEditPage />} />

@@ -60,6 +60,13 @@ public class Member extends BaseEntity {
     @Column(name = "last_login_at")
     private LocalDateTime lastLoginAt;
 
+    @Column(name = "failed_login_count", nullable = false)
+    @Builder.Default
+    private int failedLoginCount = 0;
+
+    @Column(name = "login_locked_until")
+    private LocalDateTime loginLockedUntil;
+
     // Business methods
 
     public void updatePassword(String newPasswordHash) {
@@ -85,6 +92,24 @@ public class Member extends BaseEntity {
 
     public void updateLastLogin() {
         this.lastLoginAt = LocalDateTime.now();
+    }
+
+    public boolean isLoginLocked(LocalDateTime now) {
+        return loginLockedUntil != null && now.isBefore(loginLockedUntil);
+    }
+
+    /** 한도에 이르면 잠그고 횟수를 비운다. 잠금이 풀린 뒤에는 다시 한도만큼 시도할 수 있다. */
+    public void recordLoginFailure(int maxAttempts, LocalDateTime lockUntil) {
+        failedLoginCount++;
+        if (failedLoginCount >= maxAttempts) {
+            failedLoginCount = 0;
+            loginLockedUntil = lockUntil;
+        }
+    }
+
+    public void clearLoginFailures() {
+        failedLoginCount = 0;
+        loginLockedUntil = null;
     }
 
     public boolean isAdmin() {

@@ -50,9 +50,12 @@ export default function LoginPage() {
       const { data } = await login(email.trim(), password)
       signIn(data.email ?? email.trim(), data.accessToken, data.refreshToken)
       navigate(from?.startsWith('/') ? from : '/search', { replace: true })
-    } catch {
+    } catch (err) {
+      const response = (err as { response?: { status?: number; data?: { retryAfterMinutes?: number } } }).response
       // 이메일은 남기고 비밀번호만 다시 넣게 한다
-      setError('이메일 또는 비밀번호가 맞지 않습니다. 다시 확인해 주세요.')
+      setError(response?.status === 429
+        ? `비밀번호를 많이 틀려 잠겼습니다. ${response.data?.retryAfterMinutes}분 뒤 다시 시도해 주세요.`
+        : '이메일 또는 비밀번호가 맞지 않습니다. 다시 확인해 주세요.')
       setPassword('')
       passwordRef.current?.focus()
     } finally {

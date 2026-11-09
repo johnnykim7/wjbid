@@ -15,6 +15,7 @@ import { rowTarget } from '../components/market/marketUtils'
 import {
   BENEFIT_FIT,
   BENEFIT_TRANSLATE,
+  COMPANY_INTRO,
   FLOW,
   FREE_BENEFITS,
   HELP_LINKS,
@@ -299,6 +300,12 @@ export default function HomePage() {
           ))}
         </div>
       </div>
+
+      <section className="band company-intro">
+        <div className="wrap">
+          <div className="bh"><small>{COMPANY_INTRO.label}</small><h2>{COMPANY_INTRO.title}</h2><p>{COMPANY_INTRO.body}</p></div>
+        </div>
+      </section>
 
       <section className="band g" id="svc">
         <div className="wrap">

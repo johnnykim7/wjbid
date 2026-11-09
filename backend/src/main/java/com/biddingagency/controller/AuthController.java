@@ -1,6 +1,7 @@
 package com.biddingagency.controller;
 
 import com.biddingagency.domain.member.entity.Member;
+import com.biddingagency.domain.member.service.LoginService;
 import com.biddingagency.domain.member.service.MemberService;
 import com.biddingagency.dto.AuthRequest;
 import com.biddingagency.dto.AuthResponse;
@@ -12,8 +13,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -29,7 +28,7 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Authentication", description = "User authentication and registration")
 public class AuthController {
 
-    private final AuthenticationManager authenticationManager;
+    private final LoginService loginService;
     private final MemberService memberService;
     private final JwtTokenProvider tokenProvider;
 
@@ -42,12 +41,7 @@ public class AuthController {
         log.info("Login attempt for email: {}", request.getEmail());
 
         // Authenticate
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.getEmail(),
-                        request.getPassword()
-                )
-        );
+        Authentication authentication = loginService.authenticate(request.getEmail(), request.getPassword());
 
         // Generate tokens
         String accessToken = tokenProvider.generateToken(authentication);

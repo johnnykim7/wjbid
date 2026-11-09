@@ -390,6 +390,9 @@ footer.wj { font-size: 14px; }
 .wj .pv .cmp ul { list-style: disc; }
 .wj .pv .cmp .sub { margin-top: 4px; color: var(--color-ink-mute); }
 .wj .band.last { padding-bottom: 20px; }
+.wj .band.company-intro { padding: 48px 0px; }
+.wj .band.company-intro .bh { margin-bottom: 0px; }
+.wj .band.company-intro .bh p { max-width: 860px; margin: 0px auto; line-height: 1.7; }
 .wj .mega li a:hover { color: var(--color-brand); }
 .wj .dd.n { background: var(--color-surface); color: var(--color-ink-sub); }
 .wj .bids .none { display: flex; align-items: center; justify-content: center; min-height: 126px; border-bottom: 1px solid var(--color-line-soft); font-size: 15px; color: var(--color-ink-sub); }

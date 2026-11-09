@@ -81,6 +81,15 @@ public class LocalFileStorageService implements StorageService {
     }
 
     @Override
+    public java.io.InputStream open(String storageUrl) {
+        try {
+            return Files.newInputStream(resolveWithin(storageUrl));
+        } catch (IOException e) {
+            throw new UncheckedIOException("파일 열기 실패: " + storageUrl, e);
+        }
+    }
+
+    @Override
     public void delete(String storageUrl) {
         try {
             Files.deleteIfExists(resolveWithin(storageUrl));

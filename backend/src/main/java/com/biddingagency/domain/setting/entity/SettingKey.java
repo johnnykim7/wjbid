@@ -26,6 +26,19 @@ public final class SettingKey {
     /** 미 연방 계약 자료가 늦게 올라오는 날 수. 화면 안내에만 쓴다 (POL-036, CR-142) */
     public static final String FEDERAL_DATA_LAG_DAYS = "FEDERAL_DATA_LAG_DAYS";
 
+    /** 자료실 한 파일 크기 상한(MB). 비었거나 1 보다 작으면 50 (POL-042, CR-196) */
+    public static final String SHARED_FILE_MAX_UPLOAD_MB = "SHARED_FILE_MAX_UPLOAD_MB";
+    /** 자료실에서 받지 않는 확장자(쉼표로 나눔) (POL-042, CR-196) */
+    public static final String SHARED_FILE_BLOCKED_EXTENSIONS = "SHARED_FILE_BLOCKED_EXTENSIONS";
+    /** 자료실 파일 비밀번호를 틀릴 수 있는 횟수. 비었거나 1 보다 작으면 5 (POL-042, CR-196) */
+    public static final String SHARED_FILE_MAX_ATTEMPTS = "SHARED_FILE_MAX_ATTEMPTS";
+    /** 자료실 파일 잠금 시간(분). 비었거나 1 보다 작으면 30 (POL-042, CR-196) */
+    public static final String SHARED_FILE_LOCK_MINUTES = "SHARED_FILE_LOCK_MINUTES";
+    /** 로그인을 틀릴 수 있는 횟수. 비었거나 1 보다 작으면 5 (POL-042, CR-196) */
+    public static final String LOGIN_MAX_ATTEMPTS = "LOGIN_MAX_ATTEMPTS";
+    /** 로그인 잠금 시간(분). 비었거나 1 보다 작으면 15 (POL-042, CR-196) */
+    public static final String LOGIN_LOCK_MINUTES = "LOGIN_LOCK_MINUTES";
+
     /** 이메일 인증번호 유효 시간(분). 비었거나 1 보다 작으면 10 (POL-037, CR-146) */
     public static final String EMAIL_CODE_TTL_MINUTES = "EMAIL_CODE_TTL_MINUTES";
     /** 인증번호 다시 받기 간격(초). 비었거나 0 보다 작으면 60 (POL-037, CR-146) */
